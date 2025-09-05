@@ -1,0 +1,24 @@
+Generate a realistic customer service call transcript between a mortgage loan servicing advisor and a customer requesting hardship assistance.
+
+Scenario Details:
+- Customer is experiencing financial hardship due to job loss/medical expenses/divorce
+- Customer is 2-3 months behind on mortgage payments
+- Customer wants to explore options like payment deferral, loan modification, or payment plan
+- Call should last 12-18 minutes
+- Include required compliance disclosures
+- Show advisor empathy and professionalism
+- Include verification process (last 4 SSN, address confirmation)
+
+Call Flow:
+1. Greeting and verification (2-3 minutes)
+2. Issue explanation by customer (3-4 minutes)  
+3. Advisor explains options and gathers financial information (5-7 minutes)
+4. Discussion of next steps and disclosures (3-4 minutes)
+5. Wrap up with follow-up plan (1-2 minutes)
+
+Generate realistic dialogue with:
+- Customer emotions (stress, relief, gratitude)
+- Advisor following scripts but showing empathy
+- Realistic hesitations, clarifications, brief holds
+- Compliance language for hardship options
+- Specific dollar amounts and dates

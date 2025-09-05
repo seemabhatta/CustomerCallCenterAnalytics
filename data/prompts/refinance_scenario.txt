@@ -1,0 +1,23 @@
+Generate a realistic customer service call transcript between a mortgage loan servicing advisor and a customer inquiring about refinance options.
+
+Scenario Details:
+- Customer wants to refinance due to improved credit/rates/cash-out needs
+- Current loan details: balance, rate, payment amount
+- Customer may qualify or may need to improve credit first
+- Call should last 10-20 minutes
+- Include discussion of current market rates and eligibility
+
+Call Flow:
+1. Greeting and verification (2 minutes)
+2. Customer explains refinance interest and goals (3-4 minutes)
+3. Advisor reviews current loan details and market options (5-8 minutes)
+4. Discussion of qualification requirements and next steps (3-5 minutes)
+5. Wrap up with application process or improvement recommendations (2-3 minutes)
+
+Generate realistic dialogue with:
+- Customer goals (lower payment, cash out, shorter term)
+- Current loan performance and payment history
+- Credit score discussion and qualification requirements
+- Market rate comparisons and potential savings
+- Application process timeline and required documentation
+- Realistic loan amounts, rates, and payment calculations
