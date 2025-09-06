@@ -1,5 +1,14 @@
 from agents import Agent, Runner, handoff
-from .config import settings
+
+# Handle imports whether this is run as module or imported directly
+try:
+    from .config import settings
+except ImportError:
+    # If relative import fails, try absolute import
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(__file__))
+    from config import settings
 
 def get_agents():
     """Initialize and return all agents."""

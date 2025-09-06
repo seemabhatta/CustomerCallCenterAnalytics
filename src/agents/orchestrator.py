@@ -49,8 +49,18 @@ class CoilotOrchestrator:
         """
         
         try:
-            from .. import agents
-            triage_agent = agents.get_triage_agent()
+            import importlib.util
+            import os
+            
+            # Load main agents module directly to avoid circular imports
+            spec = importlib.util.spec_from_file_location(
+                "main_agents", 
+                os.path.join(os.path.dirname(__file__), "..", "agents.py")
+            )
+            main_agents = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(main_agents)
+            
+            triage_agent = main_agents.get_triage_agent()
             result = Runner.run_sync(triage_agent, plan_prompt)
             
             plan_output = {
@@ -102,8 +112,18 @@ class CoilotOrchestrator:
         """
         
         try:
-            from .. import agents
-            triage_agent = agents.get_triage_agent()
+            import importlib.util
+            import os
+            
+            # Load main agents module directly to avoid circular imports
+            spec = importlib.util.spec_from_file_location(
+                "main_agents", 
+                os.path.join(os.path.dirname(__file__), "..", "agents.py")
+            )
+            main_agents = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(main_agents)
+            
+            triage_agent = main_agents.get_triage_agent()
             result = Runner.run_sync(triage_agent, execution_prompt)
             
             # Parse the analysis output and execute integrations
@@ -163,8 +183,18 @@ class CoilotOrchestrator:
         """
         
         try:
-            from .. import agents  
-            triage_agent = agents.get_triage_agent()
+            import importlib.util
+            import os
+            
+            # Load main agents module directly to avoid circular imports
+            spec = importlib.util.spec_from_file_location(
+                "main_agents", 
+                os.path.join(os.path.dirname(__file__), "..", "agents.py")
+            )
+            main_agents = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(main_agents)
+            
+            triage_agent = main_agents.get_triage_agent()
             result = Runner.run_sync(triage_agent, reflect_prompt)
             
             # Record feedback in learning system
@@ -220,8 +250,18 @@ class CoilotOrchestrator:
         """
         
         try:
-            from .. import agents
-            triage_agent = agents.get_triage_agent()
+            import importlib.util
+            import os
+            
+            # Load main agents module directly to avoid circular imports
+            spec = importlib.util.spec_from_file_location(
+                "main_agents", 
+                os.path.join(os.path.dirname(__file__), "..", "agents.py")
+            )
+            main_agents = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(main_agents)
+            
+            triage_agent = main_agents.get_triage_agent()
             result = Runner.run_sync(triage_agent, analysis_prompt)
             
             # Parse and prepare for integration
