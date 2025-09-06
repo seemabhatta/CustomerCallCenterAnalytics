@@ -1,4 +1,4 @@
-openai>=1.52.0
+openai-agents>=1.0.0
 tinydb>=4.8.0
 click>=8.0.0
 python-dotenv>=1.0.0
