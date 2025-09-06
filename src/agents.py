@@ -3,12 +3,14 @@ from agents import Agent, Runner, handoff
 # Handle imports whether this is run as module or imported directly
 try:
     from .config import settings
+    from .tools import generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status
 except ImportError:
     # If relative import fails, try absolute import
     import sys
     import os
     sys.path.insert(0, os.path.dirname(__file__))
     from config import settings
+    from tools import generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status
 
 def get_agents():
     """Initialize and return all agents."""
@@ -18,7 +20,7 @@ def get_agents():
     
     # 1. Generator - Handles ALL generation tasks
     generator = Agent(
-        name="Transcript Generator",
+        name="Generator",
         instructions="""You are an expert at generating realistic customer service call transcripts for MORTGAGE LOAN SERVICING companies.
         
         IMPORTANT: You work specifically for a mortgage loan servicing company. All calls are between loan servicing advisors and borrowers about their home mortgages.
@@ -318,50 +320,62 @@ def get_agents():
         handoffs=[sentiment_agent, compliance_agent, offer_agent, coach_agent] if settings.ENABLE_HANDOFFS else []
     )
     
-    # 8. Conversation Router Agent - Pure agentic routing
+    # 8. Conversation Router Agent - Pure agentic with tools
     conversation_router = Agent(
-        name="Conversation Router",
-        instructions="""You are the primary router handling ALL user interactions for a Customer Call Center Analytics system.
-        
-        Route ALL requests to the appropriate specialist agent:
-        
-        **Route to Friendly Assistant** for:
-        - Greetings: hi, hello, hey, good morning, afternoon, evening
-        - Help requests: help, what can you do, how does this work, what are my options
-        - General questions about the system capabilities
-        - Status requests: status, stats, system information
-        - Casual conversation: thanks, bye, see you later
-        
-        **Route to Generator** for:
-        - Generation requests: generate, create, make transcripts/calls/scenarios
-        - Any request to create call center data or examples
-        - Scenario building requests
-        
-        **Route to Triage Orchestrator** for:
-        - Analysis requests: analyze, review, check, examine calls/transcripts
-        - Analysis of specific transcripts (CALL_123) or provided content
-        - Compliance checks, call reviews, insights requests
-        
-        **Route to Orchestrator** for:
-        - Co-Pilot modes: plan something, execute plan, reflect on results
-        - Strategic planning: create plan for, help me plan
-        - Execution requests: execute, implement, run plans
-        - Reflection requests: reflect on, learn from, analyze outcomes
-        
-        **Route to Friendly Assistant** for these system queries:
-        - Search requests: search, find, look for data (let assistant explain search capabilities)
-        - List requests: list, show recent transcripts/files
-        - Co-pilot help: copilot, co-pilot modes, what are the modes
-        
-        **Response Style:**
-        - For all routing decisions, handoff immediately to the specialist
-        - NEVER provide the answer yourself - always delegate to the expert
-        - The specialist will handle the actual response with proper context
-        
-        CRITICAL: Use handoffs to route - NEVER analyze content or generate responses yourself.
-        Your ONLY job is intelligent routing to the right specialist agent.""",
+        name="Co-Pilot",
+        instructions="""You are the Co-Pilot for the Customer Call Center Analytics system, handling ALL user interactions directly using your available tools.
+
+        **Your Personality:**
+        - Warm, helpful, and efficient
+        - Brief responses for simple requests
+        - Comprehensive help when needed
+        - Use emojis sparingly (👋 for greetings, 📊 for analysis, 📄 for transcripts)
+
+        **Handle these directly with appropriate tools:**
+
+        **Greetings & Help:**
+        - Greetings (hi, hello, hey): Warm brief response + suggest starting with "generate transcripts"
+        - Help requests: Explain available capabilities concisely
+        - System status: Use get_system_status() tool
+
+        **Generation Requests:**
+        - "generate", "create transcripts", "make calls": Use generate_transcript() tool
+        - Handle scenario selection interactively 
+        - Always ask user to pick specific scenarios when presented with options
+
+        **Analysis Requests:**
+        - "analyze", "analyse", "review", "check": Use analyze_transcript() tool
+        - Handle both "recent" and specific transcript IDs (CALL_123)
+        - Provide comprehensive analysis results
+
+        **Data Operations:**
+        - "search", "find": Use search_data() tool
+        - "list", "recent", "show": Use list_recent_items() tool
+        - "status", "stats": Use get_system_status() tool
+
+        **Interaction Patterns:**
+        1. **Generation Flow:** Present scenarios → Wait for user choice → Generate specific transcript
+        2. **Analysis Flow:** Analyze requested content → Present structured insights
+        3. **Search Flow:** Execute search → Present formatted results
+        4. **Help Flow:** Explain capabilities → Guide next steps
+
+        **Important Guidelines:**
+        - ALWAYS use your tools - never fake responses
+        - For generation, present scenarios and wait for user selection
+        - Handle both "analyze" and "analyse" spelling variations
+        - Keep responses focused and practical
+        - When errors occur, provide helpful guidance
+
+        **Available Tools:**
+        - generate_transcript(): Create call transcripts from scenarios
+        - analyze_transcript(): Analyze calls with multi-agent intelligence
+        - search_data(): Search transcript database
+        - list_recent_items(): Show recent transcripts and analyses
+        - get_system_status(): System information and statistics
+
+        You are the single point of interaction - handle everything directly with tools, no routing needed.""",
         model=settings.OPENAI_MODEL,
-        handoffs=[friendly_assistant, generator, triage_agent] if settings.ENABLE_HANDOFFS else []
+        tools=[generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status]
     )
     
     return {
