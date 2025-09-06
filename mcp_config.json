@@ -1,0 +1,77 @@
+{
+  "name": "CustomerCallCenterAnalytics",
+  "description": "MCP Server for Customer Call Center Analytics - AI-powered call transcript analysis and insights",
+  "version": "1.0.0",
+  "server": {
+    "command": "python",
+    "args": ["run_mcp_server.py"],
+    "env": {
+      "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+    }
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "generate_transcripts",
+        "description": "Generate realistic call center transcripts based on scenarios",
+        "parameters": {
+          "scenario": "string",
+          "count": "integer (optional, default: 1)"
+        }
+      },
+      {
+        "name": "analyze_transcript", 
+        "description": "Analyze a call transcript for insights, compliance, and action items",
+        "parameters": {
+          "transcript_id": "string (optional)",
+          "transcript_content": "string (optional)"
+        }
+      },
+      {
+        "name": "search_transcripts",
+        "description": "Search through call transcripts using natural language queries",
+        "parameters": {
+          "query": "string",
+          "limit": "integer (optional, default: 10)"
+        }
+      },
+      {
+        "name": "list_transcripts",
+        "description": "List recent call transcripts and analyses",
+        "parameters": {
+          "limit": "integer (optional, default: 10)"
+        }
+      },
+      {
+        "name": "plan_mode",
+        "description": "Create actionable plans using Co-Pilot planning mode",
+        "parameters": {
+          "request": "string"
+        }
+      },
+      {
+        "name": "execute_mode",
+        "description": "Execute plans with downstream system integrations",
+        "parameters": {
+          "plan_id": "string (optional)",
+          "auto_execute": "boolean (optional, default: false)"
+        }
+      },
+      {
+        "name": "get_system_status",
+        "description": "Get system status and statistics",
+        "parameters": {}
+      }
+    ],
+    "resources": [
+      {
+        "name": "transcripts",
+        "description": "Access to call center transcript data"
+      },
+      {
+        "name": "analyses", 
+        "description": "Access to call analysis results"
+      }
+    ]
+  }
+}
