@@ -1,12 +1,14 @@
 import click
 import sys
+import json
 from agents import Runner
-from .agents import get_generator, get_analyzer
+from .agents import get_generator, get_analyzer, get_orchestrator
 from .storage import get_storage
 from .config import settings
 
 # Initialize components
 storage = get_storage()
+orchestrator = get_orchestrator()
 
 def print_header():
     """Print welcome header"""
@@ -22,15 +24,17 @@ def cli(ctx):
         interactive_mode()
 
 def interactive_mode():
-    """Natural language interface"""
+    """Natural language interface with Co-Pilot modes"""
     print_header()
-    print("\n💬 Interactive Mode - Just tell me what you want!")
-    print("\nExamples:")
+    print("\n🤖 Co-Pilot Mode - Your AI teammate for mortgage servicing!")
+    print("\nCo-Pilot Capabilities:")
+    print("  🧭 Plan Mode: 'Plan a hardship assistance workflow'")
+    print("  ⚙️  Execute Mode: 'Execute the payment plan setup'") 
+    print("  📊 Reflect Mode: 'Reflect on recent execution outcomes'")
+    print("\nTraditional Features:")
     print("  • Generate some transcripts")
-    print("  • Analyze recent calls")
-    print("  • Show me compliance issues")
-    print("  • Create 5 calls about rate increases")
-    print("  • Search for angry customers")
+    print("  • Analyze recent calls") 
+    print("  • Search for compliance issues")
     print("\nType 'help' for more info or 'exit' to quit.\n")
     
     while True:
@@ -48,8 +52,15 @@ def interactive_mode():
                 show_help()
                 continue
                 
-            # Route based on keywords
-            if any(word in user_input.lower() for word in ['generate', 'create', 'make']):
+            # Route based on Co-Pilot modes first
+            if user_input.lower().startswith('plan '):
+                handle_plan_mode(user_input[5:])  # Remove 'plan ' prefix
+            elif user_input.lower().startswith('execute '):
+                handle_execute_mode(user_input[8:])  # Remove 'execute ' prefix  
+            elif user_input.lower().startswith('reflect'):
+                handle_reflect_mode(user_input)
+            # Traditional routing
+            elif any(word in user_input.lower() for word in ['generate', 'create', 'make']):
                 handle_generation(user_input)
             elif any(word in user_input.lower() for word in ['analyze', 'review', 'check', 'examine']):
                 handle_analysis(user_input)
@@ -59,6 +70,8 @@ def interactive_mode():
                 handle_list(user_input)
             elif user_input.lower() in ['status', 'stats']:
                 handle_status()
+            elif user_input.lower() in ['copilot', 'co-pilot', 'modes']:
+                show_copilot_help()
             else:
                 # Default to analysis for general questions
                 print("🤔 I'll analyze that for you...\n")
@@ -78,6 +91,13 @@ def interactive_mode():
 def show_help():
     """Show help information"""
     print("\n📚 Help - What I can do:")
+    
+    print("\n🤖 Co-Pilot Modes:")
+    print("  • 'plan [request]' - Create actionable plans")
+    print("  • 'execute [plan]' - Execute approved plans with integrations")
+    print("  • 'reflect' - Analyze outcomes and learn from results")
+    print("  • 'copilot' - Show detailed Co-Pilot mode help")
+    
     print("\n🎯 Generation:")
     print("  • 'Generate some calls' - I'll suggest scenarios")
     print("  • 'Create 3 calls about angry customers'")
@@ -98,6 +118,222 @@ def show_help():
     print("  • 'help' - Show this help")
     print("  • 'exit' - Quit the program")
 
+def show_copilot_help():
+    """Show detailed Co-Pilot mode help"""
+    print("\n🤖 Co-Pilot Modes - Your AI Teammate")
+    print("=" * 50)
+    
+    print("\n🧭 PLAN MODE:")
+    print("   Create actionable plans with risk assessment and approvals")
+    print("   Examples:")
+    print("   • plan hardship assistance for struggling borrower")
+    print("   • plan escrow shortage resolution workflow")
+    print("   • plan loan modification pre-qualification")
+    
+    print("\n⚙️  EXECUTE MODE:")
+    print("   Execute plans with downstream system integrations")
+    print("   Examples:")
+    print("   • execute payment plan setup")
+    print("   • execute compliance review workflow")
+    print("   • execute customer callback sequence")
+    
+    print("\n📊 REFLECT MODE:")
+    print("   Analyze execution outcomes and continuous learning")
+    print("   Examples:")
+    print("   • reflect on recent plan executions")
+    print("   • reflect on integration success rates")
+    print("   • reflect")
+    
+    print("\n💡 Vision Integration:")
+    print("   • Four-layer action plans (Borrower, Advisor, Supervisor, Leadership)")
+    print("   • Real-time compliance monitoring")
+    print("   • Automated downstream system triggers")
+    print("   • Continuous learning and improvement")
+
+def handle_plan_mode(user_request):
+    """Handle Plan Mode requests"""
+    
+    try:
+        print(f"🧭 Plan Mode: Creating plan for '{user_request}'")
+        print("🔄 Analyzing request and generating actionable plan...\n")
+        
+        result = orchestrator.plan_mode(user_request)
+        
+        if result['status'] == 'ready_for_execution':
+            print("📋 PLAN CREATED:")
+            print("=" * 40)
+            print(result['plan'])
+            print("\n" + "=" * 40)
+            print(f"✅ Plan ready (Confidence: {result['confidence']:.0%})")
+            
+            # Offer to execute
+            execute_now = input("\n⚙️  Execute this plan now? (y/n): ").lower().strip()
+            if execute_now.startswith('y'):
+                print("\n🚀 Moving to Execute Mode...\n")
+                handle_execute_mode_with_plan(result)
+        else:
+            print(f"❌ Plan creation failed: {result.get('error', 'Unknown error')}")
+            
+    except Exception as e:
+        print(f"❌ Plan Mode error: {e}")
+
+def handle_execute_mode(user_input):
+    """Handle Execute Mode requests"""
+    
+    try:
+        # Check for recent plans to execute
+        history = orchestrator.get_execution_history('PLAN')
+        
+        if not history:
+            print("📋 No recent plans found. Creating a plan first...")
+            plan_request = input("What would you like me to plan? ").strip()
+            if plan_request:
+                handle_plan_mode(plan_request)
+            return
+        
+        # Show recent plans
+        print("📋 Recent Plans:")
+        for i, plan in enumerate(history[-3:], 1):  # Show last 3 plans
+            timestamp = plan['timestamp'][:19].replace('T', ' ')
+            print(f"  {i}. {plan['user_request'][:50]}... ({timestamp})")
+        
+        # Get user choice
+        choice = input("\nWhich plan to execute? (number or describe new plan): ").strip()
+        
+        if choice.isdigit() and 1 <= int(choice) <= len(history[-3:]):
+            selected_plan = history[-(4-int(choice))]  # Reverse index
+            handle_execute_mode_with_plan(selected_plan)
+        else:
+            # Create new plan
+            print(f"\n🧭 Creating new plan for: {choice}")
+            handle_plan_mode(choice)
+            
+    except Exception as e:
+        print(f"❌ Execute Mode error: {e}")
+
+def handle_execute_mode_with_plan(plan_data):
+    """Execute a specific plan"""
+    
+    try:
+        print(f"⚙️  Execute Mode: Implementing plan")
+        print("🔄 Executing with downstream system integrations...\n")
+        
+        # Ask about auto-execution
+        auto_exec = input("Enable auto-execution for low-risk items? (y/n): ").lower().strip()
+        auto_execute = auto_exec.startswith('y')
+        
+        result = orchestrator.execute_mode(plan_data, auto_execute)
+        
+        if result['status'] in ['completed', 'partial_completion']:
+            print("🎯 EXECUTION RESULTS:")
+            print("=" * 40)
+            
+            integration_results = result.get('integration_results', {})
+            executed_actions = integration_results.get('executed_actions', [])
+            errors = integration_results.get('errors', [])
+            
+            if executed_actions:
+                print("✅ Successfully executed:")
+                for action in executed_actions:
+                    action_type = action.get('trigger', action.get('type', 'Unknown'))
+                    status = action.get('status', 'Unknown')
+                    print(f"   • {action_type}: {status}")
+            
+            if errors:
+                print("\n⚠️  Errors encountered:")
+                for error in errors:
+                    print(f"   • {error}")
+            
+            print(f"\n📊 Overall Status: {result['status']}")
+            
+            # Offer reflection
+            reflect_now = input("\n📊 Reflect on this execution? (y/n): ").lower().strip()
+            if reflect_now.startswith('y'):
+                print("\n🔍 Moving to Reflect Mode...\n")
+                handle_reflect_mode_with_result(result)
+        else:
+            print(f"❌ Execution failed: {result.get('error', 'Unknown error')}")
+            
+    except Exception as e:
+        print(f"❌ Execution error: {e}")
+
+def handle_reflect_mode(user_input):
+    """Handle Reflect Mode requests"""
+    
+    try:
+        # Check for recent executions to reflect on
+        history = orchestrator.get_execution_history('EXECUTE')
+        
+        if not history:
+            print("📊 No recent executions found to reflect on.")
+            print("💡 Execute some plans first, then come back to reflect!")
+            return
+        
+        # Show recent executions
+        print("📊 Recent Executions:")
+        for i, execution in enumerate(history[-3:], 1):  # Show last 3
+            timestamp = execution['timestamp'][:19].replace('T', ' ')
+            status = execution.get('status', 'unknown')
+            print(f"  {i}. {timestamp} - Status: {status}")
+        
+        # Get user choice or reflect on all
+        choice = input("\nReflect on which execution? (number or 'all'): ").strip()
+        
+        if choice.lower() == 'all':
+            # Reflect on most recent execution
+            selected_execution = history[-1]
+        elif choice.isdigit() and 1 <= int(choice) <= len(history[-3:]):
+            selected_execution = history[-(4-int(choice))]  # Reverse index
+        else:
+            selected_execution = history[-1]  # Default to most recent
+        
+        handle_reflect_mode_with_result(selected_execution)
+        
+    except Exception as e:
+        print(f"❌ Reflect Mode error: {e}")
+
+def handle_reflect_mode_with_result(execution_result):
+    """Reflect on a specific execution result"""
+    
+    try:
+        print("📊 Reflect Mode: Analyzing execution outcome")
+        print("🔄 Gathering insights and lessons learned...\n")
+        
+        # Optional human feedback
+        print("💭 Provide feedback on this execution (optional):")
+        satisfaction = input("   Satisfaction (1-5): ").strip()
+        improvements = input("   What could be improved: ").strip()
+        
+        human_feedback = {}
+        if satisfaction.isdigit():
+            human_feedback['satisfaction_score'] = int(satisfaction)
+        if improvements:
+            human_feedback['improvement_suggestions'] = improvements
+        
+        result = orchestrator.reflect_mode(execution_result, human_feedback if human_feedback else None)
+        
+        if result['status'] == 'completed':
+            print("🔍 REFLECTION ANALYSIS:")
+            print("=" * 40)
+            print(result['reflection'])
+            
+            learning_updates = result.get('learning_updates', {})
+            if learning_updates and learning_updates.get('total_feedback_items', 0) > 0:
+                print("\n📈 LEARNING METRICS:")
+                print(f"   Analysis Accuracy: {learning_updates.get('analysis_accuracy', 0):.0%}")
+                print(f"   Integration Success: {learning_updates.get('integration_success_rate', 0):.0%}")
+                
+                recommendations = learning_updates.get('improvement_recommendations', [])
+                if recommendations:
+                    print("\n💡 Recommendations:")
+                    for rec in recommendations:
+                        print(f"   • {rec}")
+        else:
+            print(f"❌ Reflection failed: {result.get('error', 'Unknown error')}")
+            
+    except Exception as e:
+        print(f"❌ Reflection error: {e}")
+
 def handle_generation(user_input):
     """Handle generation requests"""
     
@@ -112,17 +348,18 @@ def handle_generation(user_input):
             if want_suggestions.startswith('y'):
                 print("\n🎯 Let me suggest some interesting scenarios...")
                 
-                suggestion_prompt = """Suggest 5-7 diverse customer service call scenarios for mortgage/loan servicing.
+                suggestion_prompt = """Suggest 5-7 diverse MORTGAGE LOAN SERVICING call scenarios.
                 
                 Format as a clean numbered list with ONLY concise titles (2-4 words each):
                 1. Escrow Shortage Confusion
-                2. Hurricane Damage Claim  
-                3. Rate Increase Complaint
-                4. First-Time Buyer Questions
-                5. Payment Processing Error
-                6. Loan Modification Request
-                7. Insurance Removal Inquiry
+                2. PMI Removal Request  
+                3. ARM Rate Adjustment
+                4. Payment Plan Setup
+                5. Hardship Forbearance
+                6. Payoff Quote Request
+                7. Late Fee Dispute
                 
+                Focus on mortgage servicing topics: escrow, PMI, payments, modifications, etc.
                 Make each title descriptive but brief. Include mix of routine/complex, different emotions, various outcomes."""
                 
                 result = Runner.run_sync(generator, suggestion_prompt)
@@ -221,19 +458,59 @@ def handle_analysis(user_input):
                     print(existing_analyses[0]['content'])
                     return
             
-            # Run new analysis
-            print(f"\n🔄 Analyzing transcript {transcript_id}...")
+            # Run new comprehensive multi-agent analysis
+            print(f"\n🔄 Running comprehensive multi-agent analysis on {transcript_id}...")
             
-            analysis_prompt = f"Analyze this customer service call transcript thoroughly:\n\n{transcript_data['content']}"
-            result = Runner.run_sync(analyzer, analysis_prompt)
+            comprehensive_result = orchestrator.comprehensive_analysis(
+                transcript_data['content'], 
+                transcript_id
+            )
             
-            print("\n📊 Analysis Results:")
-            print("=" * 50)
-            print(result.final_output)
-            
-            # Save analysis
-            analysis_id = storage.save_analysis(transcript_id, result.final_output)
-            print(f"\n💾 Analysis saved: {analysis_id}")
+            if comprehensive_result['status'] == 'completed':
+                print("\n📊 Multi-Agent Analysis Results:")
+                print("=" * 50)
+                print(comprehensive_result['raw_analysis'])
+                
+                # Save analysis
+                analysis_id = storage.save_analysis(transcript_id, comprehensive_result['raw_analysis'])
+                print(f"\n💾 Analysis saved: {analysis_id}")
+                
+                # Show integration readiness
+                if comprehensive_result.get('ready_for_integration'):
+                    print(f"\n🔗 Analysis ready for downstream integration")
+                    
+                    # Offer to execute integrations
+                    execute_integrations = input("\n⚙️  Execute downstream integrations now? (y/n): ").lower().strip()
+                    if execute_integrations.startswith('y'):
+                        integration_results = orchestrator.integration_layer.execute_integrations(
+                            comprehensive_result['parsed_analysis']
+                        )
+                        print("\n🎯 Integration Results:")
+                        print("=" * 30)
+                        executed = integration_results.get('executed_actions', [])
+                        errors = integration_results.get('errors', [])
+                        
+                        if executed:
+                            print("✅ Executed actions:")
+                            for action in executed:
+                                print(f"   • {action.get('trigger', 'Action')}: {action.get('status', 'Done')}")
+                        
+                        if errors:
+                            print("\n⚠️  Errors:")
+                            for error in errors:
+                                print(f"   • {error}")
+            else:
+                print(f"\n❌ Analysis failed: {comprehensive_result.get('error', 'Unknown error')}")
+                # Fallback to traditional analysis
+                print("🔄 Falling back to traditional analysis...")
+                result = Runner.run_sync(analyzer, f"Analyze this customer service call transcript thoroughly:\n\n{transcript_data['content']}")
+                print("\n📊 Analysis Results:")
+                print("=" * 50)
+                print(result.final_output)
+                
+                # Save analysis
+                analysis_id = storage.save_analysis(transcript_id, result.final_output)
+                print(f"\n💾 Analysis saved: {analysis_id}")
             
         else:
             # General analysis query
@@ -359,6 +636,36 @@ def status():
 def chat():
     """Start interactive chat mode"""
     interactive_mode()
+
+@cli.command()
+@click.argument('request', required=False)
+def plan(request):
+    """Co-Pilot Plan Mode - Create actionable plans"""
+    if request:
+        handle_plan_mode(request)
+    else:
+        request = input("What would you like me to plan? ").strip()
+        if request:
+            handle_plan_mode(request)
+
+@cli.command() 
+@click.argument('description', required=False)
+def execute(description):
+    """Co-Pilot Execute Mode - Execute plans with integrations"""
+    if description:
+        handle_execute_mode(description)
+    else:
+        handle_execute_mode("")
+
+@cli.command()
+def reflect():
+    """Co-Pilot Reflect Mode - Analyze outcomes and learn"""
+    handle_reflect_mode("")
+
+@cli.command()
+def copilot():
+    """Show Co-Pilot mode capabilities"""
+    show_copilot_help()
 
 if __name__ == '__main__':
     cli()
