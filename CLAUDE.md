@@ -93,3 +93,9 @@ async def main():
 
     except InputGuardrailTripwireTriggered:
         print("Math homework guardrail tripped")
+
+
+- Streaming - https://openai.github.io/openai-agents-python/streaming/
+Streaming lets you subscribe to updates of the agent run as it proceeds. This can be useful for showing the end-user progress updates and partial responses.
+
+To stream, you can call Runner.run_streamed(), which will give you a RunResultStreaming. Calling result.stream_events() gives you an async stream of StreamEvent objects, which are described below.
