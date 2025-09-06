@@ -131,19 +131,41 @@ def interactive_mode():
                     print(response)
                 continue
             
-            # Pure agentic approach - router handles everything except system controls
-            try:
-                router = get_conversation_router()
-                response = run_agent_sync(router, user_input)
-                
-                # Use configurable display formatting
-                display = response.format_display(
-                    mode=settings.AGENT_DISPLAY_MODE,
-                    override=settings.AGENT_NAME_OVERRIDE
-                )
-                print(display)
-            except Exception as e:
-                print(f"❌ Error: {e}")
+            # Hybrid approach: Interactive commands use handlers, conversations use router
+            
+            # Commands requiring multi-step interaction
+            if any(word in user_input.lower() for word in ['generate', 'create', 'make']):
+                handle_generation(user_input)
+            elif user_input.lower().startswith('search '):
+                handle_search(user_input)
+            elif user_input.lower().startswith('plan '):
+                handle_plan_mode(user_input[5:])  # Remove 'plan ' prefix
+            elif user_input.lower().startswith('execute '):
+                handle_execute_mode(user_input[8:])  # Remove 'execute ' prefix
+            elif user_input.lower().startswith('reflect'):
+                handle_reflect_mode(user_input)
+            elif any(word in user_input.lower() for word in ['list', 'show', 'recent']):
+                handle_list(user_input)
+            elif user_input.lower() in ['status', 'stats']:
+                handle_status()
+            elif user_input.lower() in ['help', '?']:
+                show_help()
+            elif user_input.lower() in ['copilot', 'co-pilot', 'modes']:
+                show_copilot_help()
+            else:
+                # Pure agentic approach for conversations, greetings, analysis
+                try:
+                    router = get_conversation_router()
+                    response = run_agent_sync(router, user_input)
+                    
+                    # Use configurable display formatting
+                    display = response.format_display(
+                        mode=settings.AGENT_DISPLAY_MODE,
+                        override=settings.AGENT_NAME_OVERRIDE
+                    )
+                    print(display)
+                except Exception as e:
+                    print(f"❌ Error: {e}")
                     
         except KeyboardInterrupt:
             print("\n👋 Goodbye!")
@@ -401,6 +423,10 @@ def handle_generation(user_input):
     """Handle generation requests"""
     
     try:
+        # Show agent name for consistency with router approach
+        agent_name = settings.AGENT_NAME_OVERRIDE or "Generator"
+        print(f"[{agent_name}]: Let me help you generate transcripts.")
+        
         generator = get_generator()
         
         # Check if user wants suggestions first
@@ -409,7 +435,7 @@ def handle_generation(user_input):
             want_suggestions = input("\n💡 Would you like me to suggest some scenarios? (y/n): ").lower().strip()
             
             if want_suggestions.startswith('y'):
-                print("\n🎯 Let me suggest some interesting scenarios...")
+                print(f"\n[{agent_name}]: Here are some interesting scenarios...")
                 
                 suggestion_prompt = """Suggest 5-7 diverse MORTGAGE LOAN SERVICING call scenarios.
                 
@@ -442,7 +468,7 @@ def handle_generation(user_input):
                     user_input = f"Generate transcript: {choice}"
         
         # Generate transcripts
-        print(f"\n🔄 Generating transcripts...")
+        print(f"\n[{agent_name}]: Generating transcripts...")
         response = run_agent_sync(generator, user_input)
         
         # Save the output
@@ -479,6 +505,10 @@ def handle_analysis(user_input):
     """Handle analysis requests"""
     
     try:
+        # Show agent name for consistency
+        agent_name = settings.AGENT_NAME_OVERRIDE or "Analyzer"
+        print(f"[{agent_name}]: I'll analyze that for you.")
+        
         analyzer = get_analyzer()
         
         # Extract transcript ID if mentioned
