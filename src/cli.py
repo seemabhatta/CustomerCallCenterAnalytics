@@ -2,11 +2,12 @@ import click
 import sys
 import json
 import asyncio
-from .agents import get_generator, get_analyzer, get_orchestrator
+from .agents import get_generator, get_analyzer, get_orchestrator, get_conversation_router
 from .storage import get_storage
 from .config import settings
 from .commands import VisionCommandHandler
 from .interactive_commands import create_command_selector
+from .agent_response import AgentResponse
 
 # Initialize components
 storage = get_storage()
@@ -26,7 +27,15 @@ def run_agent_sync(agent, prompt):
     
     try:
         # First try the sync version as recommended by SDK
-        return Runner.run_sync(agent, prompt)
+        result = Runner.run_sync(agent, prompt)
+        
+        # Wrap in AgentResponse for consistent display formatting
+        return AgentResponse(
+            content=result.final_output,
+            agent_name=agent.name,
+            agent_chain=[agent.name]
+        )
+        
     except RuntimeError as e:
         if "event loop" in str(e).lower():
             # Event loop conflict - use async version in isolated thread
@@ -47,15 +56,21 @@ def run_agent_sync(agent, prompt):
             # Run in thread pool to completely isolate from any existing loops
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(run_in_isolated_thread)
-                return future.result(timeout=60)  # 60 second timeout
+                result = future.result(timeout=60)  # 60 second timeout
+                
+                # Wrap in AgentResponse for consistent display formatting
+                return AgentResponse(
+                    content=result.final_output,
+                    agent_name=agent.name,
+                    agent_chain=[agent.name]
+                )
         else:
             # Re-raise non-event-loop errors
             raise
 
 def print_header():
     """Print welcome header"""
-    print("🤖 Customer Call Center Analytics - AI-Powered Analysis")
-    print("=" * 60)
+    print("🤖 Call Center Analytics")
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -68,17 +83,11 @@ def cli(ctx):
 def interactive_mode():
     """Natural language interface with Co-Pilot modes"""
     print_header()
-    print("\n🤖 Co-Pilot Mode - Your AI teammate for mortgage servicing!")
-    print("\n💬 Vision-Aligned Commands:")
-    print("  • Type '/', '@', or '?' to see all commands")
-    print("  • / = Actions (Execute & Change State)")
-    print("  • @ = References (Focus Context)")  
-    print("  • ? = Queries (Intelligence & Predictions)")
-    print("\n🗣️ Natural Language:")
-    print("  • Generate some transcripts")
-    print("  • Analyze recent calls") 
-    print("  • Search for compliance issues")
-    print("\nType '/help' or 'help' for more info, 'exit' to quit.\n")
+    print("\nHi! I can help you:")
+    print("• Generate transcripts")
+    print("• Analyze calls") 
+    print("• Search data")
+    print("\nType 'help' for options or just tell me what you need.\n")
     
     # Register CLI handlers with command handler
     cli_handlers = {
@@ -122,40 +131,19 @@ def interactive_mode():
                     print(response)
                 continue
             
-            # Traditional command handling
-            if user_input.lower() in ['help', '?']:
-                show_help()
-                continue
+            # Pure agentic approach - router handles everything except system controls
+            try:
+                router = get_conversation_router()
+                response = run_agent_sync(router, user_input)
                 
-            # Route based on Co-Pilot modes  
-            if user_input.lower().startswith('plan '):
-                handle_plan_mode(user_input[5:])  # Remove 'plan ' prefix
-            elif user_input.lower().startswith('execute '):
-                handle_execute_mode(user_input[8:])  # Remove 'execute ' prefix  
-            elif user_input.lower().startswith('reflect'):
-                handle_reflect_mode(user_input)
-            # Traditional routing
-            elif any(word in user_input.lower() for word in ['generate', 'create', 'make']):
-                handle_generation(user_input)
-            elif any(word in user_input.lower() for word in ['analyze', 'review', 'check', 'examine']):
-                handle_analysis(user_input)
-            elif any(word in user_input.lower() for word in ['search', 'find', 'look']):
-                handle_search(user_input)
-            elif any(word in user_input.lower() for word in ['list', 'show', 'recent']):
-                handle_list(user_input)
-            elif user_input.lower() in ['status', 'stats']:
-                handle_status()
-            elif user_input.lower() in ['copilot', 'co-pilot', 'modes']:
-                show_copilot_help()
-            else:
-                # Default to analysis for general questions
-                print("🤔 I'll analyze that for you...\n")
-                try:
-                    analyzer = get_analyzer()
-                    result = run_agent_sync(analyzer, user_input)
-                    print(result.final_output)
-                except Exception as e:
-                    print(f"❌ Error: {e}")
+                # Use configurable display formatting
+                display = response.format_display(
+                    mode=settings.AGENT_DISPLAY_MODE,
+                    override=settings.AGENT_NAME_OVERRIDE
+                )
+                print(display)
+            except Exception as e:
+                print(f"❌ Error: {e}")
                     
         except KeyboardInterrupt:
             print("\n👋 Goodbye!")
@@ -437,8 +425,12 @@ def handle_generation(user_input):
                 Focus on mortgage servicing topics: escrow, PMI, payments, modifications, etc.
                 Make each title descriptive but brief. Include mix of routine/complex, different emotions, various outcomes."""
                 
-                result = run_agent_sync(generator, suggestion_prompt)
-                print(result.final_output)
+                response = run_agent_sync(generator, suggestion_prompt)
+                display = response.format_display(
+                    mode=settings.AGENT_DISPLAY_MODE,
+                    override=settings.AGENT_NAME_OVERRIDE
+                )
+                print(display)
                 
                 choice = input("\nYour choice (number, description, or 'all'): ").strip()
                 
@@ -451,21 +443,28 @@ def handle_generation(user_input):
         
         # Generate transcripts
         print(f"\n🔄 Generating transcripts...")
-        result = run_agent_sync(generator, user_input)
+        response = run_agent_sync(generator, user_input)
         
         # Save the output
-        transcript_id = storage.save_transcript(result.final_output, 
+        transcript_id = storage.save_transcript(response.content, 
                                               metadata={"generated_from": user_input})
         
         print(f"\n✅ Generated and saved: {transcript_id}")
         print("\n📄 Preview:")
         print("-" * 50)
         
-        # Show preview (first 500 characters)
-        preview = result.final_output[:500]
-        if len(result.final_output) > 500:
-            preview += "\n... [truncated]"
-        print(preview)
+        # Show preview (first 500 characters) with agent display
+        preview_content = response.content[:500]
+        if len(response.content) > 500:
+            preview_content += "\n... [truncated]"
+            
+        # Create preview response for display formatting
+        preview_response = AgentResponse(preview_content, response.agent_name, response.agent_chain)
+        display = preview_response.format_display(
+            mode=settings.AGENT_DISPLAY_MODE,
+            override=settings.AGENT_NAME_OVERRIDE
+        )
+        print(display)
         
         # Offer immediate analysis
         analyze_now = input("\n🔍 Analyze this transcript now? (y/n): ").lower().strip()
@@ -578,22 +577,34 @@ def handle_analysis(user_input):
                 print(f"\n❌ Analysis failed: {comprehensive_result.get('error', 'Unknown error')}")
                 # Fallback to traditional analysis
                 print("🔄 Falling back to traditional analysis...")
-                result = run_agent_sync(analyzer, f"Analyze this customer service call transcript thoroughly:\n\n{transcript_data['content']}")
+                response = run_agent_sync(analyzer, f"Analyze this customer service call transcript thoroughly:\n\n{transcript_data['content']}")
                 print("\n📊 Analysis Results:")
                 print("=" * 50)
-                print(result.final_output)
+                
+                # Display with formatting
+                display = response.format_display(
+                    mode=settings.AGENT_DISPLAY_MODE,
+                    override=settings.AGENT_NAME_OVERRIDE
+                )
+                print(display)
                 
                 # Save analysis
-                analysis_id = storage.save_analysis(transcript_id, result.final_output)
+                analysis_id = storage.save_analysis(transcript_id, response.content)
                 print(f"\n💾 Analysis saved: {analysis_id}")
             
         else:
             # General analysis query
             print("\n🔄 Processing your request...")
-            result = run_agent_sync(analyzer, user_input)
+            response = run_agent_sync(analyzer, user_input)
             print("\n📊 Response:")
             print("=" * 30)
-            print(result.final_output)
+            
+            # Display with formatting
+            display = response.format_display(
+                mode=settings.AGENT_DISPLAY_MODE,
+                override=settings.AGENT_NAME_OVERRIDE
+            )
+            print(display)
             
     except Exception as e:
         print(f"❌ Analysis failed: {e}")

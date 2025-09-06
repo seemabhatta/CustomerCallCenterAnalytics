@@ -55,9 +55,20 @@ def get_coach_agent():
     main_agents = _get_main_agents()
     return main_agents.get_coach_agent()
 
+def get_friendly_assistant():
+    """Get the friendly assistant agent"""
+    main_agents = _get_main_agents()
+    return main_agents.get_friendly_assistant()
+
+def get_conversation_router():
+    """Get the conversation router agent"""
+    main_agents = _get_main_agents()
+    return main_agents.get_conversation_router()
+
 __all__ = [
     'get_orchestrator', 'CoilotOrchestrator',
     'get_generator', 'get_analyzer', 'get_triage_agent',
     'get_sentiment_agent', 'get_compliance_agent', 
-    'get_offer_agent', 'get_coach_agent'
+    'get_offer_agent', 'get_coach_agent',
+    'get_friendly_assistant', 'get_conversation_router'
 ]

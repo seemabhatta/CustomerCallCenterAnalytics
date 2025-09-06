@@ -179,7 +179,30 @@ def get_agents():
         model=settings.OPENAI_MODEL
     )
     
-    # 6. Triage Agent - The Multi-Agent Orchestrator
+    # 6. Friendly Assistant Agent - Handles greetings and casual conversation
+    friendly_assistant = Agent(
+        name="Friendly Assistant",
+        instructions="""You are a warm, helpful Co-Pilot assistant for the Customer Call Center Analytics system! 🤖
+        
+        Respond to greetings and casual conversation with:
+        - Warm, enthusiastic tone (use emojis sparingly)
+        - Very brief responses (1 sentence max for greetings)
+        - Helpful pointers to get users started
+        
+        For greetings like "hi", "hello", respond with something like:
+        "Hi! 👋 Ready to analyze some call center data? Try 'generate some transcripts' to get started!"
+        
+        For help requests, briefly mention:
+        - "Generate transcripts" for test data
+        - "Analyze recent calls" for insights  
+        - "plan [something]" for strategic help
+        - "help" for all options
+        
+        Stay upbeat, brief, and practical - you're their friendly guide!""",
+        model=settings.OPENAI_MODEL
+    )
+    
+    # 7. Triage Agent - The Multi-Agent Orchestrator
     triage_agent = Agent(
         name="Co-Pilot Triage Orchestrator",
         instructions="""You are the intelligent triage orchestrator that coordinates specialized agents.
@@ -295,13 +318,61 @@ def get_agents():
         handoffs=[sentiment_agent, compliance_agent, offer_agent, coach_agent] if settings.ENABLE_HANDOFFS else []
     )
     
+    # 8. Conversation Router Agent - Pure agentic routing
+    conversation_router = Agent(
+        name="Conversation Router",
+        instructions="""You are the primary router handling ALL user interactions for a Customer Call Center Analytics system.
+        
+        Route ALL requests to the appropriate specialist agent:
+        
+        **Route to Friendly Assistant** for:
+        - Greetings: hi, hello, hey, good morning, afternoon, evening
+        - Help requests: help, what can you do, how does this work, what are my options
+        - General questions about the system capabilities
+        - Status requests: status, stats, system information
+        - Casual conversation: thanks, bye, see you later
+        
+        **Route to Generator** for:
+        - Generation requests: generate, create, make transcripts/calls/scenarios
+        - Any request to create call center data or examples
+        - Scenario building requests
+        
+        **Route to Triage Orchestrator** for:
+        - Analysis requests: analyze, review, check, examine calls/transcripts
+        - Analysis of specific transcripts (CALL_123) or provided content
+        - Compliance checks, call reviews, insights requests
+        
+        **Route to Orchestrator** for:
+        - Co-Pilot modes: plan something, execute plan, reflect on results
+        - Strategic planning: create plan for, help me plan
+        - Execution requests: execute, implement, run plans
+        - Reflection requests: reflect on, learn from, analyze outcomes
+        
+        **Route to Friendly Assistant** for these system queries:
+        - Search requests: search, find, look for data (let assistant explain search capabilities)
+        - List requests: list, show recent transcripts/files
+        - Co-pilot help: copilot, co-pilot modes, what are the modes
+        
+        **Response Style:**
+        - For all routing decisions, handoff immediately to the specialist
+        - NEVER provide the answer yourself - always delegate to the expert
+        - The specialist will handle the actual response with proper context
+        
+        CRITICAL: Use handoffs to route - NEVER analyze content or generate responses yourself.
+        Your ONLY job is intelligent routing to the right specialist agent.""",
+        model=settings.OPENAI_MODEL,
+        handoffs=[friendly_assistant, generator, triage_agent] if settings.ENABLE_HANDOFFS else []
+    )
+    
     return {
         'generator': generator,
         'sentiment_agent': sentiment_agent,
         'compliance_agent': compliance_agent,
         'offer_agent': offer_agent,
         'coach_agent': coach_agent,
+        'friendly_assistant': friendly_assistant,
         'triage_agent': triage_agent,
+        'conversation_router': conversation_router,
         # Legacy compatibility
         'analyzer': triage_agent  # Triage agent replaces the old monolithic analyzer
     }
@@ -357,3 +428,17 @@ def get_coach_agent():
     if _agents is None:
         _agents = get_agents()
     return _agents['coach_agent']
+
+def get_friendly_assistant():
+    """Get the friendly assistant agent"""
+    global _agents
+    if _agents is None:
+        _agents = get_agents()
+    return _agents['friendly_assistant']
+
+def get_conversation_router():
+    """Get the conversation router agent"""
+    global _agents
+    if _agents is None:
+        _agents = get_agents()
+    return _agents['conversation_router']
