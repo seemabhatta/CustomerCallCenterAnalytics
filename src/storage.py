@@ -203,9 +203,13 @@ class Storage:
 # Global storage instance
 _storage = None
 
-def get_storage() -> Storage:
-    """Get the global storage instance"""
+def get_storage():
+    """Get the global storage instance (JSON or SQLite based on config)"""
     global _storage
     if _storage is None:
-        _storage = Storage()
+        if settings.USE_SQLITE:
+            from .storage_sqlite import SQLiteStorage
+            _storage = SQLiteStorage()
+        else:
+            _storage = Storage()
     return _storage
