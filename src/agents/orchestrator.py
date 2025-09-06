@@ -5,9 +5,47 @@ Coordinates the execution of specialized agents and integrates their outputs.
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from agents import Runner
+import asyncio
 from ..llm.integrations import IntegrationOrchestrator, ContinuousLearningSystem
 from ..config import settings
+
+def run_agent_sync(agent, prompt):
+    """Run an agent with proper async handling using SDK best practices"""
+    from agents import Runner
+    import asyncio
+    import nest_asyncio
+    import concurrent.futures
+    
+    # Allow nested event loops (helps with CLI environments)
+    nest_asyncio.apply()
+    
+    try:
+        # First try the sync version as recommended by SDK
+        return Runner.run_sync(agent, prompt)
+    except RuntimeError as e:
+        if "event loop" in str(e).lower():
+            # Event loop conflict - use async version in isolated thread
+            async def run_async():
+                return await Runner.run(agent, prompt)
+            
+            def run_in_isolated_thread():
+                # Create completely new event loop in this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    return new_loop.run_until_complete(run_async())
+                finally:
+                    new_loop.close()
+                    # Clean up the thread's event loop reference
+                    asyncio.set_event_loop(None)
+            
+            # Run in thread pool to completely isolate from any existing loops
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_in_isolated_thread)
+                return future.result(timeout=60)  # 60 second timeout
+        else:
+            # Re-raise non-event-loop errors
+            raise
 
 
 class CoilotOrchestrator:
@@ -61,7 +99,7 @@ class CoilotOrchestrator:
             spec.loader.exec_module(main_agents)
             
             triage_agent = main_agents.get_triage_agent()
-            result = Runner.run_sync(triage_agent, plan_prompt)
+            result = run_agent_sync(triage_agent, plan_prompt)
             
             plan_output = {
                 'mode': 'PLAN',
@@ -124,7 +162,7 @@ class CoilotOrchestrator:
             spec.loader.exec_module(main_agents)
             
             triage_agent = main_agents.get_triage_agent()
-            result = Runner.run_sync(triage_agent, execution_prompt)
+            result = run_agent_sync(triage_agent, execution_prompt)
             
             # Parse the analysis output and execute integrations
             parsed_analysis = self.integration_layer.parse_analysis_output(result.final_output)
@@ -195,7 +233,7 @@ class CoilotOrchestrator:
             spec.loader.exec_module(main_agents)
             
             triage_agent = main_agents.get_triage_agent()
-            result = Runner.run_sync(triage_agent, reflect_prompt)
+            result = run_agent_sync(triage_agent, reflect_prompt)
             
             # Record feedback in learning system
             if human_feedback:
@@ -262,7 +300,7 @@ class CoilotOrchestrator:
             spec.loader.exec_module(main_agents)
             
             triage_agent = main_agents.get_triage_agent()
-            result = Runner.run_sync(triage_agent, analysis_prompt)
+            result = run_agent_sync(triage_agent, analysis_prompt)
             
             # Parse and prepare for integration
             parsed_analysis = self.integration_layer.parse_analysis_output(result.final_output)

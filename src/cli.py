@@ -1,14 +1,56 @@
 import click
 import sys
 import json
-from agents import Runner
+import asyncio
 from .agents import get_generator, get_analyzer, get_orchestrator
 from .storage import get_storage
 from .config import settings
+from .commands import VisionCommandHandler
+from .interactive_commands import create_command_selector
 
 # Initialize components
 storage = get_storage()
 orchestrator = get_orchestrator()
+command_handler = VisionCommandHandler()
+interactive_selector = create_command_selector(command_handler)
+
+def run_agent_sync(agent, prompt):
+    """Run an agent with proper async handling using SDK best practices"""
+    from agents import Runner
+    import asyncio
+    import nest_asyncio
+    import concurrent.futures
+    
+    # Allow nested event loops (helps with CLI environments)
+    nest_asyncio.apply()
+    
+    try:
+        # First try the sync version as recommended by SDK
+        return Runner.run_sync(agent, prompt)
+    except RuntimeError as e:
+        if "event loop" in str(e).lower():
+            # Event loop conflict - use async version in isolated thread
+            async def run_async():
+                return await Runner.run(agent, prompt)
+            
+            def run_in_isolated_thread():
+                # Create completely new event loop in this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    return new_loop.run_until_complete(run_async())
+                finally:
+                    new_loop.close()
+                    # Clean up the thread's event loop reference
+                    asyncio.set_event_loop(None)
+            
+            # Run in thread pool to completely isolate from any existing loops
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_in_isolated_thread)
+                return future.result(timeout=60)  # 60 second timeout
+        else:
+            # Re-raise non-event-loop errors
+            raise
 
 def print_header():
     """Print welcome header"""
@@ -27,15 +69,29 @@ def interactive_mode():
     """Natural language interface with Co-Pilot modes"""
     print_header()
     print("\n🤖 Co-Pilot Mode - Your AI teammate for mortgage servicing!")
-    print("\nCo-Pilot Capabilities:")
-    print("  🧭 Plan Mode: 'Plan a hardship assistance workflow'")
-    print("  ⚙️  Execute Mode: 'Execute the payment plan setup'") 
-    print("  📊 Reflect Mode: 'Reflect on recent execution outcomes'")
-    print("\nTraditional Features:")
+    print("\n💬 Vision-Aligned Commands:")
+    print("  • Type '/', '@', or '?' to see all commands")
+    print("  • / = Actions (Execute & Change State)")
+    print("  • @ = References (Focus Context)")  
+    print("  • ? = Queries (Intelligence & Predictions)")
+    print("\n🗣️ Natural Language:")
     print("  • Generate some transcripts")
     print("  • Analyze recent calls") 
     print("  • Search for compliance issues")
-    print("\nType 'help' for more info or 'exit' to quit.\n")
+    print("\nType '/help' or 'help' for more info, 'exit' to quit.\n")
+    
+    # Register CLI handlers with command handler
+    cli_handlers = {
+        'handle_generation': handle_generation,
+        'handle_analysis': handle_analysis,
+        'handle_plan_mode': handle_plan_mode,
+        'handle_execute_mode': handle_execute_mode,
+        'handle_reflect_mode': handle_reflect_mode,
+        'handle_search': handle_search,
+        'handle_list': handle_list,
+        'handle_status': handle_status
+    }
+    command_handler.register_cli_handlers(cli_handlers)
     
     while True:
         try:
@@ -48,11 +104,30 @@ def interactive_mode():
                 print("👋 Goodbye!")
                 break
                 
+            # Handle vision-aligned commands first (/, @, ?)
+            if command_handler.is_command(user_input):
+                # Check if user typed just a prefix for interactive selection
+                if user_input.strip() in ['/', '@', '?']:
+                    selected_command = interactive_selector.show_prefix_commands(user_input.strip())
+                    if selected_command:
+                        # Process the selected command
+                        handled, response = command_handler.process_command(selected_command)
+                        if handled and response:
+                            print(response)
+                    continue
+                
+                # Handle regular command processing
+                handled, response = command_handler.process_command(user_input)
+                if handled and response:
+                    print(response)
+                continue
+            
+            # Traditional command handling
             if user_input.lower() in ['help', '?']:
                 show_help()
                 continue
                 
-            # Route based on Co-Pilot modes first
+            # Route based on Co-Pilot modes  
             if user_input.lower().startswith('plan '):
                 handle_plan_mode(user_input[5:])  # Remove 'plan ' prefix
             elif user_input.lower().startswith('execute '):
@@ -77,7 +152,7 @@ def interactive_mode():
                 print("🤔 I'll analyze that for you...\n")
                 try:
                     analyzer = get_analyzer()
-                    result = Runner.run_sync(analyzer, user_input)
+                    result = run_agent_sync(analyzer, user_input)
                     print(result.final_output)
                 except Exception as e:
                     print(f"❌ Error: {e}")
@@ -362,7 +437,7 @@ def handle_generation(user_input):
                 Focus on mortgage servicing topics: escrow, PMI, payments, modifications, etc.
                 Make each title descriptive but brief. Include mix of routine/complex, different emotions, various outcomes."""
                 
-                result = Runner.run_sync(generator, suggestion_prompt)
+                result = run_agent_sync(generator, suggestion_prompt)
                 print(result.final_output)
                 
                 choice = input("\nYour choice (number, description, or 'all'): ").strip()
@@ -376,7 +451,7 @@ def handle_generation(user_input):
         
         # Generate transcripts
         print(f"\n🔄 Generating transcripts...")
-        result = Runner.run_sync(generator, user_input)
+        result = run_agent_sync(generator, user_input)
         
         # Save the output
         transcript_id = storage.save_transcript(result.final_output, 
@@ -503,7 +578,7 @@ def handle_analysis(user_input):
                 print(f"\n❌ Analysis failed: {comprehensive_result.get('error', 'Unknown error')}")
                 # Fallback to traditional analysis
                 print("🔄 Falling back to traditional analysis...")
-                result = Runner.run_sync(analyzer, f"Analyze this customer service call transcript thoroughly:\n\n{transcript_data['content']}")
+                result = run_agent_sync(analyzer, f"Analyze this customer service call transcript thoroughly:\n\n{transcript_data['content']}")
                 print("\n📊 Analysis Results:")
                 print("=" * 50)
                 print(result.final_output)
@@ -515,7 +590,7 @@ def handle_analysis(user_input):
         else:
             # General analysis query
             print("\n🔄 Processing your request...")
-            result = Runner.run_sync(analyzer, user_input)
+            result = run_agent_sync(analyzer, user_input)
             print("\n📊 Response:")
             print("=" * 30)
             print(result.final_output)
@@ -666,6 +741,12 @@ def reflect():
 def copilot():
     """Show Co-Pilot mode capabilities"""
     show_copilot_help()
+
+@cli.command()
+def commands():
+    """Show available vision-aligned commands"""
+    handler = VisionCommandHandler()
+    print(handler.show_command_help())
 
 if __name__ == '__main__':
     cli()
