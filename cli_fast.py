@@ -125,8 +125,8 @@ def format_transcript_table(transcripts: List[Dict], detailed: bool = False):
             print("-" * 50)
     else:
         # Table format
-        print(f"\n{'ID':<12} {'Customer':<12} {'Topic':<15} {'Sentiment':<10} {'Msgs':<5} Preview")
-        print("-" * 80)
+        print(f"\n{'ID':<16} {'Customer':<12} {'Topic':<15} {'Sentiment':<10} {'Msgs':<5} Preview")
+        print("-" * 85)
         
         for transcript in transcripts:
             customer_id = transcript.get('customer_id', 'N/A')[:11]
@@ -138,7 +138,10 @@ def format_transcript_table(transcripts: List[Dict], detailed: bool = False):
             preview = messages[0].get('speaker', 'No messages') if messages else "No messages"
             preview = preview[:20] + "..." if len(preview) > 20 else preview
             
-            print(f"{transcript['id'][:11]:<12} {customer_id:<12} {topic:<15} {sentiment:<10} {msg_count:<5} {preview}")
+            # Show full ID for copy-paste into delete commands
+            full_id = transcript['id']
+            display_id = full_id if len(full_id) <= 16 else full_id[:13] + "..."
+            print(f"{display_id:<16} {customer_id:<12} {topic:<15} {sentiment:<10} {msg_count:<5} {preview}")
 
 
 def cmd_generate(client: CLIClient, args):

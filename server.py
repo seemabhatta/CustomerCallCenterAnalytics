@@ -52,6 +52,8 @@ generator: Optional[TranscriptGenerator] = None
 store: Optional[TranscriptStore] = None
 cli_app = None
 fastapi_app = None
+fastapi_thread = None
+shutdown_event = threading.Event()
 
 
 def init_business_logic():
@@ -364,8 +366,13 @@ def start_cli_server():
             if port != 9999:
                 print(f"⚠️  Note: Using alternate port {port} (9999 was busy)")
                 print(f"    Update CLI_SERVER_URL in cli_fast.py to http://localhost:{port}")
-            cli_app.serve_forever()
+            
+            # Serve with periodic shutdown check
+            while not shutdown_event.is_set():
+                cli_app.timeout = 1  # Check every 1 second
+                cli_app.handle_request()
             return
+            
         except OSError as e:
             if "Address already in use" in str(e):
                 logger.warning(f"Port {port} is busy, trying next port...")
@@ -616,8 +623,32 @@ def start_fastapi_server():
             print(f"📚 API Documentation: http://localhost:{port}/docs")
             if port != 8000:
                 print(f"⚠️  Note: Using alternate port {port} (8000 was busy)")
-            uvicorn.run(fastapi_app, host="0.0.0.0", port=port, log_level="error")
+            
+            # Run with explicit signal handling
+            config = uvicorn.Config(
+                fastapi_app, 
+                host="0.0.0.0", 
+                port=port, 
+                log_level="error",
+                loop="asyncio"
+            )
+            server = uvicorn.Server(config)
+            
+            # Check for shutdown signal periodically
+            import asyncio
+            async def serve_with_shutdown():
+                while not shutdown_event.is_set():
+                    try:
+                        await asyncio.wait_for(server.serve(), timeout=1.0)
+                        break  # Server exited normally
+                    except asyncio.TimeoutError:
+                        continue  # Check shutdown signal again
+                    except Exception:
+                        break
+            
+            asyncio.run(serve_with_shutdown())
             return
+            
         except OSError as e:
             if "Address already in use" in str(e):
                 logger.warning(f"FastAPI port {port} is busy, trying next port...")
@@ -638,8 +669,12 @@ def signal_handler(signum, frame):
     """Handle shutdown signals gracefully."""
     print(f"\n🛑 Received signal {signum}, shutting down...")
     
-    if cli_app:
-        cli_app.shutdown()
+    # Set shutdown event to stop both servers
+    shutdown_event.set()
+    
+    # Give servers a moment to shut down gracefully
+    import time
+    time.sleep(1)
     
     print("✅ Universal server shutdown complete")
     sys.exit(0)
@@ -662,7 +697,8 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # Start FastAPI in background thread
-    fastapi_thread = threading.Thread(target=start_fastapi_server, daemon=True)
+    global fastapi_thread
+    fastapi_thread = threading.Thread(target=start_fastapi_server, daemon=False)
     fastapi_thread.start()
     
     # Start CLI server in main thread
@@ -676,6 +712,15 @@ def main():
         start_cli_server()
     except KeyboardInterrupt:
         signal_handler(signal.SIGINT, None)
+    except Exception as e:
+        logger.error(f"CLI server error: {e}")
+        shutdown_event.set()
+    
+    # Wait for FastAPI thread to finish
+    if fastapi_thread and fastapi_thread.is_alive():
+        fastapi_thread.join(timeout=2)
+    
+    print("✅ Both servers stopped")
 
 
 if __name__ == "__main__":
