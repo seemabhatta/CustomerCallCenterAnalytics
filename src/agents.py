@@ -3,14 +3,20 @@ from agents import Agent, Runner, handoff
 # Handle imports whether this is run as module or imported directly
 try:
     from .config import settings
-    from .tools import generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status
+    from .tools import (generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status,
+                       view_action_queue, approve_action, reject_action, complete_action, 
+                       process_approved_items, view_integration_results,
+                       record_satisfaction, trigger_reanalysis, view_outcomes)
 except ImportError:
     # If relative import fails, try absolute import
     import sys
     import os
     sys.path.insert(0, os.path.dirname(__file__))
     from config import settings
-    from tools import generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status
+    from tools import (generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status,
+                      view_action_queue, approve_action, reject_action, complete_action,
+                      process_approved_items, view_integration_results, 
+                      record_satisfaction, trigger_reanalysis, view_outcomes)
 
 def get_agents():
     """Initialize and return all agents."""
@@ -375,7 +381,10 @@ def get_agents():
 
         You are the single point of interaction - handle everything directly with tools, no routing needed.""",
         model=settings.OPENAI_MODEL,
-        tools=[generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status]
+        tools=[generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status,
+               view_action_queue, approve_action, reject_action, complete_action,
+               process_approved_items, view_integration_results,
+               record_satisfaction, trigger_reanalysis, view_outcomes]
     )
     
     return {
