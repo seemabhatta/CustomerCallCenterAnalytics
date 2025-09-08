@@ -10,7 +10,7 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
 from .storage import get_storage
-from .agents import get_generator, get_analyzer, get_orchestrator
+from .agents import get_generator, get_analyzer
 from agents import Runner
 
 
@@ -37,15 +37,6 @@ class ListTranscriptsArgs(BaseModel):
     limit: Optional[int] = 10
 
 
-class PlanModeArgs(BaseModel):
-    """Arguments for plan mode"""
-    request: str
-
-
-class ExecuteModeArgs(BaseModel):
-    """Arguments for execute mode"""
-    plan_id: Optional[str] = None
-    auto_execute: bool = False
 
 
 # Initialize MCP server
@@ -87,7 +78,6 @@ async def analyze_transcript(args: AnalyzeTranscriptArgs) -> str:
     """Analyze a call transcript for insights, compliance, and action items"""
     try:
         analyzer = get_analyzer()
-        orchestrator = get_orchestrator()
         
         # Get transcript content
         if args.transcript_id:
@@ -101,21 +91,19 @@ async def analyze_transcript(args: AnalyzeTranscriptArgs) -> str:
         else:
             return "Either transcript_id or transcript_content must be provided"
         
-        # Run comprehensive multi-agent analysis
+        # Run analysis using the analyzer agent directly
         def run_analysis():
-            return orchestrator.comprehensive_analysis(content, args.transcript_id)
+            return Runner.run_sync(analyzer, f"Analyze this customer service call transcript:\n\n{content}")
         
         result = await asyncio.get_event_loop().run_in_executor(None, run_analysis)
+        analysis_content = result.final_output
         
-        if result['status'] == 'completed':
-            # Save analysis if we have a real transcript ID
-            if args.transcript_id != "TEMP_ANALYSIS":
-                analysis_id = storage.save_analysis(args.transcript_id, result['raw_analysis'])
-                return f"Analysis saved as {analysis_id}:\n\n{result['raw_analysis']}"
-            else:
-                return result['raw_analysis']
+        # Save analysis if we have a real transcript ID
+        if args.transcript_id != "TEMP_ANALYSIS":
+            analysis_id = storage.save_analysis(args.transcript_id, analysis_content)
+            return f"Analysis saved as {analysis_id}:\n\n{analysis_content}"
         else:
-            return f"Analysis failed: {result.get('error', 'Unknown error')}"
+            return analysis_content
             
     except Exception as e:
         return f"Error analyzing transcript: {str(e)}"
@@ -165,84 +153,6 @@ async def list_transcripts(args: ListTranscriptsArgs) -> str:
         return f"Error listing transcripts: {str(e)}"
 
 
-@mcp.tool()
-async def plan_mode(args: PlanModeArgs) -> str:
-    """Create actionable plans using Co-Pilot planning mode"""
-    try:
-        orchestrator = get_orchestrator()
-        
-        def run_plan():
-            return orchestrator.plan_mode(args.request)
-        
-        result = await asyncio.get_event_loop().run_in_executor(None, run_plan)
-        
-        if result['status'] == 'ready_for_execution':
-            response = f"Plan created (Confidence: {result['confidence']:.0%}):\n\n"
-            response += result['plan']
-            return response
-        else:
-            return f"Plan creation failed: {result.get('error', 'Unknown error')}"
-            
-    except Exception as e:
-        return f"Error in plan mode: {str(e)}"
-
-
-@mcp.tool()
-async def execute_mode(args: ExecuteModeArgs) -> str:
-    """Execute plans with downstream system integrations"""
-    try:
-        orchestrator = get_orchestrator()
-        
-        # Get plan to execute
-        if args.plan_id:
-            # Get specific plan from history
-            history = orchestrator.get_execution_history('PLAN')
-            plan_data = None
-            for plan in history:
-                if plan.get('id') == args.plan_id:
-                    plan_data = plan
-                    break
-            
-            if not plan_data:
-                return f"Plan {args.plan_id} not found"
-        else:
-            # Get most recent plan
-            history = orchestrator.get_execution_history('PLAN')
-            if not history:
-                return "No plans available for execution. Create a plan first."
-            plan_data = history[-1]
-        
-        def run_execute():
-            return orchestrator.execute_mode(plan_data, args.auto_execute)
-        
-        result = await asyncio.get_event_loop().run_in_executor(None, run_execute)
-        
-        if result['status'] in ['completed', 'partial_completion']:
-            response = "Execution Results:\n\n"
-            
-            integration_results = result.get('integration_results', {})
-            executed_actions = integration_results.get('executed_actions', [])
-            errors = integration_results.get('errors', [])
-            
-            if executed_actions:
-                response += "✅ Successfully executed:\n"
-                for action in executed_actions:
-                    action_type = action.get('trigger', action.get('type', 'Unknown'))
-                    status = action.get('status', 'Unknown')
-                    response += f"   • {action_type}: {status}\n"
-            
-            if errors:
-                response += "\n⚠️ Errors encountered:\n"
-                for error in errors:
-                    response += f"   • {error}\n"
-            
-            response += f"\nOverall Status: {result['status']}"
-            return response
-        else:
-            return f"Execution failed: {result.get('error', 'Unknown error')}"
-            
-    except Exception as e:
-        return f"Error in execute mode: {str(e)}"
 
 
 @mcp.tool()

@@ -2,8 +2,6 @@
 Agents package for the Customer Call Center Analytics system.
 """
 
-from .orchestrator import get_orchestrator, CoilotOrchestrator
-
 # Import main agents module using importlib to avoid circular imports
 import importlib.util
 import sys
@@ -66,7 +64,6 @@ def get_conversation_router():
     return main_agents.get_conversation_router()
 
 __all__ = [
-    'get_orchestrator', 'CoilotOrchestrator',
     'get_generator', 'get_analyzer', 'get_triage_agent',
     'get_sentiment_agent', 'get_compliance_agent', 
     'get_offer_agent', 'get_coach_agent',
