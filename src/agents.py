@@ -452,16 +452,3 @@ def get_coach_agent():
         _agents = get_agents()
     return _agents['coach_agent']
 
-def get_friendly_assistant():
-    """Get the friendly assistant agent"""
-    global _agents
-    if _agents is None:
-        _agents = get_agents()
-    return _agents['friendly_assistant']
-
-def get_conversation_router():
-    """Get the conversation router agent"""
-    global _agents
-    if _agents is None:
-        _agents = get_agents()
-    return _agents['conversation_router']

@@ -10,7 +10,7 @@ import re
 from datetime import datetime, timedelta
 
 from .storage_sqlite import get_storage
-from .agents import get_generator, get_analyzer
+from . import agents
 
 
 storage = get_storage()
@@ -101,7 +101,7 @@ def _extract_and_save_action_items(analysis_id: str, analysis_content: str) -> i
 def generate_transcript(request: str) -> str:
     """Generate call transcript based on request"""
     try:
-        generator = get_generator()
+        generator = agents.get_generator()
         result = Runner.run_sync(generator, request)
         
         # Save the transcript
@@ -125,7 +125,7 @@ def generate_transcript(request: str) -> str:
 def analyze_transcript(request: str) -> str:
     """Analyze transcript - handles 'recent', specific ID, or general request"""
     try:
-        analyzer = get_analyzer()
+        analyzer = agents.get_analyzer()
         
         # Handle different types of analysis requests
         if "recent" in request.lower() or not request.strip():
@@ -576,7 +576,7 @@ def record_satisfaction(transcript_id: str, satisfied: bool, feedback: str = "")
 def trigger_reanalysis(transcript_id: str, focus_areas: str = "") -> str:
     """Trigger reanalysis of a transcript with optional focus areas"""
     try:
-        analyzer = get_analyzer()
+        analyzer = agents.get_analyzer()
         
         # Load transcript
         transcript_data = storage.get_transcript_with_analysis(transcript_id)
