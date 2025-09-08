@@ -14,6 +14,7 @@
 
   # Start the universal server (handles both CLI and API)
   ./start_services.sh
+  ./stop_services.sh
 
   # Use instant CLI (no import delays!)
   python cli_fast.py demo
@@ -120,7 +121,7 @@
   # Press Ctrl+C once - server shuts down gracefully
 
   # Force cleanup if needed
-  ./cleanup.sh
+  ./stop_services.sh
 
   Custom Parameters
 

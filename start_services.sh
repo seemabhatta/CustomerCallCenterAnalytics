@@ -9,7 +9,7 @@ echo ""
 
 # Run cleanup first
 echo "🧹 Running cleanup to ensure clean start..."
-./cleanup.sh
+./stop_services.sh
 echo ""
 
 # Check if server is already running (with timeout)

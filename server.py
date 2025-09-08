@@ -114,6 +114,8 @@ class CLIHandler(BaseHTTPRequestHandler):
                 result = self.handle_search(params)
             elif command == 'delete':
                 result = self.handle_delete(params)
+            elif command == 'delete_all':
+                result = self.handle_delete_all(params)
             elif command == 'stats':
                 result = self.handle_stats(params)
             elif command == 'export':
@@ -232,6 +234,19 @@ class CLIHandler(BaseHTTPRequestHandler):
                 return {'success': True, 'message': f'Deleted transcript {transcript_id}'}
             else:
                 return {'success': False, 'error': f'Transcript {transcript_id} not found'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_delete_all(self, params):
+        """Handle delete all command."""
+        try:
+            # Get count before deletion for confirmation
+            count = store.delete_all()
+            
+            if count > 0:
+                return {'success': True, 'message': f'Deleted {count} transcripts', 'count': count}
+            else:
+                return {'success': True, 'message': 'No transcripts to delete', 'count': 0}
         except Exception as e:
             return {'success': False, 'error': str(e)}
     

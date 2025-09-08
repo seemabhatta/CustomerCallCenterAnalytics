@@ -293,3 +293,29 @@ class TranscriptStore:
         """
         # For now, update is the same as store (INSERT OR REPLACE)
         return self.store(transcript)
+    
+    def delete_all(self):
+        """Delete all transcripts from the database.
+        
+        Returns:
+            Number of transcripts deleted
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            # Get count before deletion
+            cursor.execute('SELECT COUNT(*) FROM transcripts')
+            count = cursor.fetchone()[0]
+            
+            # Delete all messages first (foreign key constraint)
+            cursor.execute('DELETE FROM messages')
+            
+            # Delete all transcripts
+            cursor.execute('DELETE FROM transcripts')
+            
+            conn.commit()
+            return count
+        
+        finally:
+            conn.close()

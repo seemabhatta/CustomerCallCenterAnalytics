@@ -287,6 +287,56 @@ def delete(
         client.print_error(f"Delete failed: {result['error']}")
 
 
+@app.command("delete-all")
+def delete_all(
+    force: bool = typer.Option(False, "--force", "-f", help="Skip first confirmation")
+):
+    """Delete ALL transcripts from the database."""
+    client = CLIClient()
+    
+    # First get count to show in warning
+    stats_result = client.send_command('stats')
+    if not stats_result['success']:
+        client.print_error("Could not get transcript count")
+        return
+    
+    count = stats_result['stats']['total_transcripts']
+    if count == 0:
+        client.print_info("No transcripts to delete")
+        return
+    
+    # Safety warning
+    console.print(f"⚠️  [bold red]WARNING:[/bold red] This will delete [bold yellow]{count}[/bold yellow] transcripts from the database!")
+    console.print("This action cannot be undone.", style="red")
+    
+    # First confirmation (can be skipped with --force)
+    if not force:
+        if not typer.confirm("Are you sure you want to delete all transcripts?"):
+            client.print_info("Delete cancelled")
+            return
+    
+    # Second confirmation - safety check (cannot be skipped)
+    console.print("\n[bold red]FINAL CONFIRMATION REQUIRED[/bold red]")
+    console.print(f"Type 'DELETE ALL {count}' to confirm deletion of {count} transcripts:")
+    
+    confirmation = typer.prompt("", show_default=False)
+    expected = f"DELETE ALL {count}"
+    
+    if confirmation.strip() != expected:
+        client.print_error(f"Confirmation failed. Expected '{expected}' but got '{confirmation.strip()}'")
+        client.print_info("Delete cancelled")
+        return
+    
+    # Perform deletion
+    console.print("🗑️  Deleting all transcripts...")
+    result = client.send_command('delete_all')
+    
+    if result['success']:
+        client.print_success(result['message'])
+    else:
+        client.print_error(f"Delete all failed: {result['error']}")
+
+
 @app.command()
 def stats():
     """Show statistics about stored transcripts."""
