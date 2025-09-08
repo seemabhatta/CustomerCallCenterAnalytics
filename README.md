@@ -210,7 +210,7 @@
   Common Issues
 
   Server won't start:
-  ./cleanup.sh  # Clean up port conflicts
+  ./server_stop.sh  # Clean up port conflicts
   python server.py  # Start in foreground to see errors
 
   CLI client can't connect:
