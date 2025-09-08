@@ -15,8 +15,8 @@ from src.tools import (generate_transcript, analyze_transcript, search_data, lis
 def get_router_agent():
     """Create the conversation router agent with tools"""
     return Agent(
-        name="Co-Pilot",
-        instructions="""You are the Co-Pilot for the Customer Call Center Analytics system, handling ALL user interactions directly using your available tools.
+        name="Mortgage Analytics Co-Pilot",
+        instructions="""You are the Co-Pilot for the Mortgage Servicing Call Center Analytics system, helping loan servicers analyze customer interactions and manage workflows.
 
         **Your Personality:**
         - Warm, helpful, and efficient
@@ -33,6 +33,7 @@ def get_router_agent():
 
         **Generation Requests:**
         - "generate", "create transcripts", "make calls": Use generate_transcript() tool
+        - Suggest mortgage servicing scenarios like: payment issues, escrow problems, loan modifications, PMI removal, forbearance requests, rate adjustments, payoff inquiries
         - Handle scenario selection interactively 
         - Always ask user to pick specific scenarios when presented with options
 
@@ -62,24 +63,24 @@ def get_router_agent():
         **Available Tools (14 total):**
         
         **Generation & Analysis:**
-        - generate_transcript(): Create realistic call transcripts
-        - analyze_transcript(): Multi-agent analysis with action items
-        - search_data(): Full-text search through calls
+        - generate_transcript(): Create realistic mortgage servicing call transcripts
+        - analyze_transcript(): Multi-agent analysis for compliance, sentiment, and action items
+        - search_data(): Full-text search through mortgage call database
         - list_recent_items(): View recent transcripts and analyses
         
         **Action Queue Management:**
-        - view_action_queue(): View pending/approved action items
+        - view_action_queue(): View pending fee waivers, modifications, and action items
         - approve_action(): Approve action items for execution
         - reject_action(): Reject action items with reason
         - complete_action(): Mark action items as completed
         
         **Integration & Execution:**
-        - process_approved_items(): Execute approved items via integrations
+        - process_approved_items(): Execute approved items via loan servicing systems
         - view_integration_results(): See integration execution status
         
         **Feedback & Analytics:**
-        - record_satisfaction(): Track resolution satisfaction
-        - trigger_reanalysis(): Re-analyze if unsatisfactory
+        - record_satisfaction(): Track borrower satisfaction with resolution
+        - trigger_reanalysis(): Re-analyze if borrower unsatisfied
         - view_outcomes(): View analytics and satisfaction rates
         
         **System:**
@@ -107,7 +108,7 @@ def run_agent_sync(agent, prompt):
 
 def print_header():
     """Print welcome header"""
-    print("🤖 Call Center Analytics")
+    print("🏠 Mortgage Servicing Call Center Analytics")
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -120,12 +121,12 @@ def cli(ctx):
 def interactive_mode():
     """Pure agentic interface using conversation router with tools"""
     print_header()
-    print("\nHi! I can help you with the complete call center workflow:")
-    print("• Generate & analyze calls")
-    print("• Manage action queue (approve/reject items)")
-    print("• Execute integrations")
-    print("• Track satisfaction & outcomes")
-    print("\nJust tell me what you need - I have 14 tools available!\n")
+    print("\nWelcome! I help mortgage servicing teams with AI-powered call analytics:")
+    print("• Generate realistic mortgage servicing call transcripts")
+    print("• Analyze calls for compliance, sentiment, and action items") 
+    print("• Manage approval queue for fee waivers and modifications")
+    print("• Track customer satisfaction and resolution outcomes")
+    print("\nTry: 'generate a call about payment issues' or 'analyze recent'\n")
     
     router = get_router_agent()
     
