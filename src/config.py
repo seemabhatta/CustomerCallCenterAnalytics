@@ -9,9 +9,8 @@ class Settings:
     ENABLE_HANDOFFS = os.getenv("ENABLE_HANDOFFS", "false").lower() == "true"
     DATA_DIR = os.getenv("DATA_DIR", "./data")
     
-    # SQLite database settings
+    # Database settings  
     DATABASE_PATH = os.getenv("DATABASE_PATH", "./data/call_center.db")
-    USE_SQLITE = os.getenv("USE_SQLITE", "false").lower() == "true"
     
     # Agent display configuration
     AGENT_DISPLAY_MODE = os.getenv("AGENT_DISPLAY_MODE", "full")

@@ -9,7 +9,7 @@ import json
 import re
 from datetime import datetime, timedelta
 
-from .storage import get_storage
+from .storage_sqlite import get_storage
 from .agents import get_generator, get_analyzer
 
 

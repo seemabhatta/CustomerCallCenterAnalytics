@@ -1,6 +1,6 @@
 """
 SQLite-based storage for transcripts and analysis results.
-Provides better performance, querying capabilities, and data integrity.
+Provides performance, querying capabilities, data integrity, and action queue management.
 """
 
 import sqlite3
@@ -449,11 +449,14 @@ class SQLiteStorage:
 
 
 # Singleton instance
-_sqlite_storage = None
+_storage = None
 
-def get_sqlite_storage() -> SQLiteStorage:
-    """Get the global SQLite storage instance."""
-    global _sqlite_storage
-    if _sqlite_storage is None:
-        _sqlite_storage = SQLiteStorage()
-    return _sqlite_storage
+def get_storage() -> SQLiteStorage:
+    """Get the global storage instance."""
+    global _storage
+    if _storage is None:
+        _storage = SQLiteStorage()
+    return _storage
+
+# Backward compatibility alias
+get_sqlite_storage = get_storage
