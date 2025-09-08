@@ -7,7 +7,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from src.config import settings
 from agents import Agent, Runner
-from src.tools import generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status
+from src.tools import (generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status,
+                      view_action_queue, approve_action, reject_action, complete_action,
+                      process_approved_items, view_integration_results, 
+                      record_satisfaction, trigger_reanalysis, view_outcomes)
 
 def get_router_agent():
     """Create the conversation router agent with tools"""
@@ -56,16 +59,38 @@ def get_router_agent():
         - Keep responses focused and practical
         - When errors occur, provide helpful guidance
 
-        **Available Tools:**
-        - generate_transcript(): Create call transcripts from scenarios
-        - analyze_transcript(): Analyze calls with multi-agent intelligence
-        - search_data(): Search transcript database
-        - list_recent_items(): Show recent transcripts and analyses
+        **Available Tools (14 total):**
+        
+        **Generation & Analysis:**
+        - generate_transcript(): Create realistic call transcripts
+        - analyze_transcript(): Multi-agent analysis with action items
+        - search_data(): Full-text search through calls
+        - list_recent_items(): View recent transcripts and analyses
+        
+        **Action Queue Management:**
+        - view_action_queue(): View pending/approved action items
+        - approve_action(): Approve action items for execution
+        - reject_action(): Reject action items with reason
+        - complete_action(): Mark action items as completed
+        
+        **Integration & Execution:**
+        - process_approved_items(): Execute approved items via integrations
+        - view_integration_results(): See integration execution status
+        
+        **Feedback & Analytics:**
+        - record_satisfaction(): Track resolution satisfaction
+        - trigger_reanalysis(): Re-analyze if unsatisfactory
+        - view_outcomes(): View analytics and satisfaction rates
+        
+        **System:**
         - get_system_status(): System information and statistics
 
         You are the single point of interaction - handle everything directly with tools, no routing needed.""",
         model=settings.OPENAI_MODEL,
-        tools=[generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status]
+        tools=[generate_transcript, analyze_transcript, search_data, list_recent_items, get_system_status,
+               view_action_queue, approve_action, reject_action, complete_action,
+               process_approved_items, view_integration_results,
+               record_satisfaction, trigger_reanalysis, view_outcomes]
     )
 
 def run_agent_sync(agent, prompt):
@@ -95,11 +120,12 @@ def cli(ctx):
 def interactive_mode():
     """Pure agentic interface using conversation router with tools"""
     print_header()
-    print("\nHi! I can help you:")
-    print("• Generate transcripts")
-    print("• Analyze calls")
-    print("• Search data")
-    print("\nType 'help' for options or just tell me what you need.\n")
+    print("\nHi! I can help you with the complete call center workflow:")
+    print("• Generate & analyze calls")
+    print("• Manage action queue (approve/reject items)")
+    print("• Execute integrations")
+    print("• Track satisfaction & outcomes")
+    print("\nJust tell me what you need - I have 14 tools available!\n")
     
     router = get_router_agent()
     
@@ -124,10 +150,6 @@ def interactive_mode():
         except Exception as e:
             print(f"❌ Unexpected error: {e}")
 
-@cli.command()
-def chat():
-    """Start interactive chat mode"""
-    interactive_mode()
 
 if __name__ == '__main__':
     cli()
