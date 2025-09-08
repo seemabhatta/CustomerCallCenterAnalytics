@@ -7,12 +7,21 @@ No heavy imports - just HTTP requests to pre-loaded server.
 import json
 import requests
 import sys
-import argparse
+import typer
+from rich.console import Console
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
 CLI_SERVER_URL = "http://localhost:9999"
+
+# Create Typer app and Rich console  
+app = typer.Typer(
+    name="cli-fast",
+    help="Customer Call Center Analytics - Fast CLI (via server)",
+    add_completion=False
+)
+console = Console()
 
 
 class CLIClient:
@@ -61,15 +70,15 @@ class CLIClient:
     
     def print_error(self, message: str):
         """Print error message in red."""
-        print(f"❌ {message}")
+        console.print(f"❌ {message}", style="red")
     
     def print_success(self, message: str):
         """Print success message in green."""
-        print(f"✅ {message}")
+        console.print(f"✅ {message}", style="green")
     
     def print_info(self, message: str):
         """Print info message."""
-        print(f"💡 {message}")
+        console.print(f"💡 {message}", style="cyan")
 
 
 def parse_dynamic_params(params: List[str]) -> Dict[str, Any]:
@@ -103,30 +112,31 @@ def parse_dynamic_params(params: List[str]) -> Dict[str, Any]:
 def format_transcript_table(transcripts: List[Dict], detailed: bool = False):
     """Format transcripts for display."""
     if not transcripts:
-        print("💡 No transcripts found")
+        console.print("💡 No transcripts found", style="cyan")
         return
     
     if detailed:
         for transcript in transcripts:
-            print(f"\n📄 Transcript ID: {transcript['id']}")
+            console.print(f"\n📄 [bold cyan]Transcript ID:[/bold cyan] {transcript['id']}")
             
             # Show attributes
+            console.print("\n[bold cyan]Attributes:[/bold cyan]")
             for key, value in transcript.items():
                 if key not in ['id', 'messages']:
-                    print(f"  {key}: {value}")
+                    console.print(f"  {key}: {value}")
             
             # Show messages
             messages = transcript.get('messages', [])
-            print(f"\nMessages ({len(messages)}):")
+            console.print(f"\n[bold cyan]Messages ({len(messages)}):[/bold cyan]")
             for i, msg in enumerate(messages, 1):
-                speaker_emoji = "👤" if 'customer' in msg.get('speaker', '').lower() else "🎧"
-                print(f"  {i}. {speaker_emoji} {msg.get('speaker', 'Unknown')}: {msg.get('text', '')}")
+                speaker_color = "cyan" if 'customer' in msg.get('speaker', '').lower() else "green"
+                console.print(f"  {i}. [{speaker_color}]{msg.get('speaker', 'Unknown')}:[/{speaker_color}] {msg.get('text', '')}")
             
-            print("-" * 50)
+            console.print("-" * 50, style="dim")
     else:
         # Table format
-        print(f"\n{'ID':<16} {'Customer':<12} {'Topic':<15} {'Sentiment':<10} {'Msgs':<5} Preview")
-        print("-" * 85)
+        console.print(f"\n{'ID':<16} {'Customer':<12} {'Topic':<15} {'Sentiment':<10} {'Msgs':<5} Preview")
+        console.print("-" * 85)
         
         for transcript in transcripts:
             customer_id = transcript.get('customer_id', 'N/A')[:11]
@@ -141,22 +151,30 @@ def format_transcript_table(transcripts: List[Dict], detailed: bool = False):
             # Show full ID for copy-paste into delete commands
             full_id = transcript['id']
             display_id = full_id if len(full_id) <= 16 else full_id[:13] + "..."
-            print(f"{display_id:<16} {customer_id:<12} {topic:<15} {sentiment:<10} {msg_count:<5} {preview}")
+            console.print(f"{display_id:<16} {customer_id:<12} {topic:<15} {sentiment:<10} {msg_count:<5} {preview}")
 
 
-def cmd_generate(client: CLIClient, args):
-    """Handle generate command."""
-    # Parse dynamic parameters from remaining args
-    generation_params = parse_dynamic_params(args.params or [])
+@app.command()
+def generate(
+    params: List[str] = typer.Argument(None, help="Parameters in key=value format (e.g., scenario='PMI Removal')"),
+    count: int = typer.Option(1, "--count", "-c", help="Number of transcripts to generate"),
+    store: bool = typer.Option(False, "--store", "-s", help="Store in database"),
+    show: bool = typer.Option(False, "--show", help="Show generated transcript(s)")
+):
+    """Generate new transcript(s) with dynamic parameters."""
+    client = CLIClient()
     
-    params = {
-        'count': args.count,
-        'store': args.store,
+    # Parse dynamic parameters from remaining args
+    generation_params = parse_dynamic_params(params or [])
+    
+    request_params = {
+        'count': count,
+        'store': store,
         'generation_params': generation_params
     }
     
-    print("🎤 Generating transcript(s)...")
-    result = client.send_command('generate', params)
+    console.print("🎤 [bold magenta]Generating transcript(s)...[/bold magenta]")
+    result = client.send_command('generate', request_params)
     
     if result['success']:
         transcripts = result['transcripts']
@@ -165,38 +183,49 @@ def cmd_generate(client: CLIClient, args):
         if result.get('stored'):
             client.print_success(f"Stored {len(transcripts)} transcript(s) in database")
         
-        if args.show:
+        if show:
             format_transcript_table(transcripts, detailed=True)
     else:
         client.print_error(f"Generation failed: {result['error']}")
 
 
-def cmd_list(client: CLIClient, args):
-    """Handle list command."""
-    print("📋 Listing transcripts...")
+@app.command("list")
+def list_transcripts(
+    detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed view")
+):
+    """List all transcripts."""
+    client = CLIClient()
+    
+    console.print("📋 [bold magenta]Listing transcripts...[/bold magenta]")
     result = client.send_command('list')
     
     if result['success']:
         transcripts = result['transcripts']
-        print(f"Found {len(transcripts)} transcript(s)")
-        format_transcript_table(transcripts, detailed=args.detailed)
+        console.print(f"Found [cyan]{len(transcripts)}[/cyan] transcript(s)")
+        format_transcript_table(transcripts, detailed=detailed)
     else:
         client.print_error(f"List failed: {result['error']}")
 
 
-def cmd_get(client: CLIClient, args):
-    """Handle get command."""
-    params = {'transcript_id': args.transcript_id}
+@app.command()
+def get(
+    transcript_id: str = typer.Argument(..., help="Transcript ID"),
+    export: bool = typer.Option(False, "--export", "-e", help="Export to JSON file")
+):
+    """Get a specific transcript by ID."""
+    client = CLIClient()
     
-    print(f"📄 Getting transcript: {args.transcript_id}")
+    params = {'transcript_id': transcript_id}
+    
+    console.print(f"📄 [bold magenta]Getting transcript: {transcript_id}[/bold magenta]")
     result = client.send_command('get', params)
     
     if result['success']:
         transcript = result['transcript']
         format_transcript_table([transcript], detailed=True)
         
-        if args.export:
-            filename = f"{args.transcript_id}.json"
+        if export:
+            filename = f"{transcript_id}.json"
             with open(filename, 'w') as f:
                 json.dump(transcript, f, indent=2)
             client.print_success(f"Exported to {filename}")
@@ -204,39 +233,52 @@ def cmd_get(client: CLIClient, args):
         client.print_error(f"Get failed: {result['error']}")
 
 
-def cmd_search(client: CLIClient, args):
-    """Handle search command."""
+@app.command()
+def search(
+    customer: Optional[str] = typer.Option(None, "--customer", "-c", help="Search by customer ID"),
+    topic: Optional[str] = typer.Option(None, "--topic", "-t", help="Search by topic"),
+    text: Optional[str] = typer.Option(None, "--text", help="Search by text content"),
+    detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed results")
+):
+    """Search transcripts by customer, topic, or text."""
+    client = CLIClient()
+    
     params = {}
-    if args.customer:
-        params['customer'] = args.customer
-    elif args.topic:
-        params['topic'] = args.topic
-    elif args.text:
-        params['text'] = args.text
+    if customer:
+        params['customer'] = customer
+    elif topic:
+        params['topic'] = topic
+    elif text:
+        params['text'] = text
     else:
         client.print_error("Please specify --customer, --topic, or --text")
-        return
+        raise typer.Exit(1)
     
-    print("🔍 Searching...")
+    console.print("🔍 [bold magenta]Searching...[/bold magenta]")
     result = client.send_command('search', params)
     
     if result['success']:
         transcripts = result['transcripts']
-        print(f"Found {len(transcripts)} matching transcript(s)")
-        format_transcript_table(transcripts, detailed=args.detailed)
+        console.print(f"Found [cyan]{len(transcripts)}[/cyan] matching transcript(s)")
+        format_transcript_table(transcripts, detailed=detailed)
     else:
         client.print_error(f"Search failed: {result['error']}")
 
 
-def cmd_delete(client: CLIClient, args):
-    """Handle delete command."""
-    if not args.force:
-        response = input(f"Delete transcript {args.transcript_id}? (y/N): ")
-        if response.lower() not in ['y', 'yes']:
+@app.command()
+def delete(
+    transcript_id: str = typer.Argument(..., help="Transcript ID to delete"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation")
+):
+    """Delete a transcript."""
+    client = CLIClient()
+    
+    if not force:
+        if not typer.confirm(f"Delete transcript {transcript_id}?"):
             client.print_info("Delete cancelled")
             return
     
-    params = {'transcript_id': args.transcript_id}
+    params = {'transcript_id': transcript_id}
     result = client.send_command('delete', params)
     
     if result['success']:
@@ -245,45 +287,53 @@ def cmd_delete(client: CLIClient, args):
         client.print_error(f"Delete failed: {result['error']}")
 
 
-def cmd_stats(client: CLIClient, args):
-    """Handle stats command."""
-    print("📊 Getting statistics...")
+@app.command()
+def stats():
+    """Show statistics about stored transcripts."""
+    client = CLIClient()
+    
+    console.print("📊 [bold magenta]Getting statistics...[/bold magenta]")
     result = client.send_command('stats')
     
     if result['success']:
         stats = result['stats']
         
-        print("\nDatabase Statistics:")
-        print(f"  Total Transcripts: {stats['total_transcripts']}")
-        print(f"  Total Messages: {stats['total_messages']}")
-        print(f"  Unique Customers: {stats['unique_customers']}")
-        print(f"  Avg Messages/Transcript: {stats['avg_messages_per_transcript']:.1f}")
+        console.print("\n[bold cyan]Database Statistics:[/bold cyan]")
+        console.print(f"  Total Transcripts: [green]{stats['total_transcripts']}[/green]")
+        console.print(f"  Total Messages: [green]{stats['total_messages']}[/green]")
+        console.print(f"  Unique Customers: [green]{stats['unique_customers']}[/green]")
+        console.print(f"  Avg Messages/Transcript: [green]{stats['avg_messages_per_transcript']:.1f}[/green]")
         
         if stats['top_topics']:
-            print("\nTop Topics:")
+            console.print("\n[bold cyan]Top Topics:[/bold cyan]")
             for topic, count in list(stats['top_topics'].items())[:5]:
-                print(f"  {topic}: {count}")
+                console.print(f"  {topic}: [green]{count}[/green]")
         
         if stats['sentiments']:
-            print("\nSentiments:")
+            console.print("\n[bold cyan]Sentiments:[/bold cyan]")
             for sentiment, count in stats['sentiments'].items():
-                print(f"  {sentiment}: {count}")
+                console.print(f"  {sentiment}: [green]{count}[/green]")
         
         if stats.get('speakers'):
-            print("\nTop Speakers:")
+            console.print("\n[bold cyan]Top Speakers:[/bold cyan]")
             for speaker, count in list(stats['speakers'].items())[:5]:
-                print(f"  {speaker}: {count} messages")
+                console.print(f"  {speaker}: [green]{count}[/green] messages")
     else:
         client.print_error(f"Stats failed: {result['error']}")
 
 
-def cmd_export(client: CLIClient, args):
-    """Handle export command."""
-    params = {}
-    if args.output:
-        params['output'] = args.output
+@app.command()
+def export(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output filename")
+):
+    """Export transcripts to JSON."""
+    client = CLIClient()
     
-    print("📤 Exporting transcripts...")
+    params = {}
+    if output:
+        params['output'] = output
+    
+    console.print("📤 [bold magenta]Exporting transcripts...[/bold magenta]")
     result = client.send_command('export', params)
     
     if result['success']:
@@ -292,105 +342,27 @@ def cmd_export(client: CLIClient, args):
         client.print_error(f"Export failed: {result['error']}")
 
 
-def cmd_demo(client: CLIClient, args):
-    """Handle demo command."""
-    params = {'no_store': args.no_store}
+@app.command()
+def demo(
+    no_store: bool = typer.Option(False, "--no-store", help="Don't store demo transcripts")
+):
+    """Run a quick demo with sample transcripts."""
+    client = CLIClient()
     
-    print("🎭 Running demo...")
+    params = {'no_store': no_store}
+    
+    console.print("🎭 [bold magenta]Running demo...[/bold magenta]")
     result = client.send_command('demo', params)
     
     if result['success']:
         client.print_success(result['message'])
         
-        if not args.no_store:
+        if not no_store:
             client.print_info("Use 'python cli_fast.py list' to see all transcripts")
             client.print_info("Use 'python cli_fast.py stats' to see statistics")
     else:
         client.print_error(f"Demo failed: {result['error']}")
 
 
-def main():
-    """Main CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Customer Call Center Analytics - Fast CLI",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python cli_fast.py generate scenario="PMI Removal" --store --show
-  python cli_fast.py generate --count 3 customer_id=DEMO_001 --store
-  python cli_fast.py list
-  python cli_fast.py get TRANSCRIPT_ID
-  python cli_fast.py search --customer CUST_123
-  python cli_fast.py stats
-  python cli_fast.py demo
-        """
-    )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
-    
-    # Generate command
-    gen_parser = subparsers.add_parser('generate', help='Generate new transcript(s)')
-    gen_parser.add_argument('params', nargs='*', help='Parameters in key=value format')
-    gen_parser.add_argument('--count', '-c', type=int, default=1, help='Number of transcripts')
-    gen_parser.add_argument('--store', '-s', action='store_true', help='Store in database')
-    gen_parser.add_argument('--show', action='store_true', help='Show generated transcript(s)')
-    gen_parser.set_defaults(func=cmd_generate)
-    
-    # List command
-    list_parser = subparsers.add_parser('list', help='List all transcripts')
-    list_parser.add_argument('--detailed', '-d', action='store_true', help='Show detailed view')
-    list_parser.set_defaults(func=cmd_list)
-    
-    # Get command
-    get_parser = subparsers.add_parser('get', help='Get specific transcript')
-    get_parser.add_argument('transcript_id', help='Transcript ID')
-    get_parser.add_argument('--export', '-e', action='store_true', help='Export to JSON file')
-    get_parser.set_defaults(func=cmd_get)
-    
-    # Search command
-    search_parser = subparsers.add_parser('search', help='Search transcripts')
-    search_parser.add_argument('--customer', '-c', help='Search by customer ID')
-    search_parser.add_argument('--topic', '-t', help='Search by topic')
-    search_parser.add_argument('--text', help='Search by text content')
-    search_parser.add_argument('--detailed', '-d', action='store_true', help='Show detailed results')
-    search_parser.set_defaults(func=cmd_search)
-    
-    # Delete command
-    delete_parser = subparsers.add_parser('delete', help='Delete transcript')
-    delete_parser.add_argument('transcript_id', help='Transcript ID to delete')
-    delete_parser.add_argument('--force', '-f', action='store_true', help='Skip confirmation')
-    delete_parser.set_defaults(func=cmd_delete)
-    
-    # Stats command
-    stats_parser = subparsers.add_parser('stats', help='Show statistics')
-    stats_parser.set_defaults(func=cmd_stats)
-    
-    # Export command
-    export_parser = subparsers.add_parser('export', help='Export transcripts to JSON')
-    export_parser.add_argument('--output', '-o', help='Output filename')
-    export_parser.set_defaults(func=cmd_export)
-    
-    # Demo command
-    demo_parser = subparsers.add_parser('demo', help='Run demo with sample transcripts')
-    demo_parser.add_argument('--no-store', action='store_true', help="Don't store demo transcripts")
-    demo_parser.set_defaults(func=cmd_demo)
-    
-    args = parser.parse_args()
-    
-    if not args.command:
-        parser.print_help()
-        return
-    
-    # Create client and execute command
-    client = CLIClient()
-    
-    try:
-        args.func(client, args)
-    except KeyboardInterrupt:
-        client.print_info("Operation cancelled by user")
-    except Exception as e:
-        client.print_error(f"Unexpected error: {str(e)}")
-
-
 if __name__ == "__main__":
-    main()
+    app()
