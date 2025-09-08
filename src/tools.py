@@ -3,15 +3,15 @@ Function tools for the Customer Call Center Analytics system.
 Provides essential tools for the router agent to interact with the system.
 """
 
-from agents import function_tool
+from agents import function_tool, Runner
 from typing import Optional
 import json
 import re
-import openai
 from datetime import datetime, timedelta
 
 from .storage_sqlite import get_storage
 from .config import settings
+from .agent_definitions import get_transcript_generator, get_transcript_analyzer
 
 
 storage = get_storage()
@@ -102,55 +102,10 @@ def _extract_and_save_action_items(analysis_id: str, analysis_content: str) -> i
 def generate_transcript(request: str) -> str:
     """Generate call transcript based on request"""
     try:
-        client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-        
-        system_prompt = """You are an expert at generating realistic customer service call transcripts for MORTGAGE LOAN SERVICING companies.
-        
-        IMPORTANT: You work specifically for a mortgage loan servicing company. All calls are between loan servicing advisors and borrowers about their home mortgages.
-        
-        Common mortgage servicing topics:
-        - Escrow account issues (taxes, homeowners insurance)
-        - Payment problems or late fees
-        - Loan modifications and hardship assistance
-        - PMI (Private Mortgage Insurance) removal requests
-        - Rate adjustments (ARM loans)
-        - Payoff requests and refinancing
-        - Account information and payment history
-        - Forbearance and deferment options
-        
-        When suggesting scenarios:
-        - Present as a clean numbered list with just the scenario titles
-        - Make titles concise and descriptive (2-4 words)
-        - Focus on MORTGAGE SERVICING situations only
-        - Include diverse situations (routine, complex, emotional states, outcomes)
-        - Mix common issues with interesting edge cases
-        
-        When generating transcripts:
-        - Always use "Loan Servicing Advisor" or "Advisor" for company representative
-        - Always use "Customer" or "Borrower" for the caller
-        - Include mortgage-specific terminology (loan number, escrow, principal, PMI, etc.)
-        - Use natural dialogue with realistic speech patterns
-        - Include appropriate emotions and customer reactions
-        - Add compliance language where appropriate for mortgage servicing
-        - Show realistic call flow (greeting, account verification, issue discussion, resolution, wrap-up)
-        - Make each transcript unique even for the same scenario
-        - Include realistic outcomes (resolved, escalated, pending)
-        
-        Format transcripts as:
-        Advisor: [dialogue]
-        Customer: [dialogue]
-        
-        Remember: This is ALWAYS about mortgage loan servicing, not general insurance or banking."""
-        
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request}
-            ]
-        )
-        
-        content = response.choices[0].message.content
+        # Use Agent SDK with Responses API instead of chat completions
+        generator_agent = get_transcript_generator()
+        result = Runner.run_sync(generator_agent, request)
+        content = result.final_output
         
         # Save the transcript
         transcript_id = storage.save_transcript(
@@ -173,96 +128,6 @@ def generate_transcript(request: str) -> str:
 def analyze_transcript(request: str) -> str:
     """Analyze transcript - handles 'recent', specific ID, or general request"""
     try:
-        client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-        
-        analysis_system_prompt = """You are an expert analyst for mortgage loan servicing call center operations.
-
-Analyze the provided call transcript and output a comprehensive analysis in this EXACT format:
-
-═══════════════════════════════════════════
-ANALYSIS_START
-═══════════════════════════════════════════
-
-## METADATA
-transcript_id: [extract from context]
-analysis_timestamp: [current ISO timestamp]
-confidence_score: [0.0-1.0 overall analysis confidence]
-
-## QUICK_VERDICT
-resolution_status: [RESOLVED|PENDING|ESCALATED]
-customer_sentiment_trajectory: [😡|😐|😊] → [😡|😐|😊] → [😡|😐|😊]
-risk_level: [LOW|MEDIUM|HIGH]
-risk_score: [0-100]
-
-## PREDICTIONS
-fcr_achieved: [true|false]
-fcr_confidence: [0.0-1.0]
-churn_risk: [0.0-1.0]
-delinquency_risk: [0.0-1.0]
-refinance_likelihood: [0.0-1.0]
-next_contact_days: [number or null]
-csat_predicted: [1.0-5.0]
-
-## COMPLIANCE_SIGNALS
-compliance_score: [0-100]
-missing_disclosures: [list specific mortgage servicing disclosures]
-regulatory_violations: [list RESPA, TILA, FCRA violations or "none"]
-approval_required: [NONE|ADVISOR|SUPERVISOR|COMPLIANCE]
-
-## ACTION_QUEUES
-
-### BORROWER_ACTIONS
-- action: [specific action description]
-  type: [DOCUMENT|CALLBACK|PAYMENT|REVIEW]
-  priority: [LOW|MEDIUM|HIGH|URGENT]
-  due_date: [ISO date]
-  auto_executable: [true|false]
-
-### ADVISOR_TASKS
-- task: [specific task description]
-  system: [CRM|EMAIL|WORKFLOW|MANUAL]
-  deadline: [ISO timestamp]
-  blocking: [true|false]
-
-### SUPERVISOR_ITEMS
-- item: [specific item description]
-  approval_type: [FEE_WAIVER|MODIFICATION|EXCEPTION|ESCALATION]
-  amount: [dollar amount if applicable or null]
-  risk_level: [LOW|MEDIUM|HIGH]
-
-### LEADERSHIP_INSIGHTS
-- pattern: [identified pattern or trend]
-  frequency: [how often this occurs]
-  impact: [OPERATIONAL|FINANCIAL|COMPLIANCE|STRATEGIC]
-  recommendation: [specific leadership action]
-
-## COACHING_INTELLIGENCE
-advisor_performance_score: [0-100]
-strengths: [list of specific strengths observed]
-improvements: [list of specific areas to improve]
-training_modules: [list of specific training recommendations]
-
-## AUTOMATION_TRIGGERS
-- trigger: [CRM_UPDATE]
-  payload: {customer_status: value, next_action: value}
-- trigger: [EMAIL_TEMPLATE]
-  template_id: [appropriate template name]
-  variables: {customer_name: value, loan_number: value}
-- trigger: [WORKFLOW_START]
-  workflow_id: [appropriate workflow]
-
-## AUDIT_TRAIL
-verification_completed: [true|false]
-disclosures_provided: [list of disclosures actually given]
-call_recording_available: [assume true]
-transcript_confidence: [0.0-1.0]
-
-## EXECUTIVE_SUMMARY
-[2-3 sentences maximum describing call outcome and critical next steps]
-
-═══════════════════════════════════════════
-ANALYSIS_END
-═══════════════════════════════════════════"""
         
         # Handle different types of analysis requests
         if "recent" in request.lower() or not request.strip():
@@ -298,16 +163,11 @@ ANALYSIS_END
         else:
             return "Please specify 'recent' or a transcript ID (e.g., CALL_123)."
             
-        # Perform analysis using direct OpenAI API call
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": analysis_system_prompt},
-                {"role": "user", "content": f"Analyze this mortgage servicing call transcript:\n\n{transcript_content}"}
-            ]
-        )
-        
-        analysis_result = response.choices[0].message.content
+        # Use Agent SDK with Responses API instead of chat completions
+        analyzer_agent = get_transcript_analyzer()
+        analysis_prompt = f"Analyze this mortgage servicing call transcript:\n\n{transcript_content}"
+        result = Runner.run_sync(analyzer_agent, analysis_prompt)
+        analysis_result = result.final_output
         
         # Save analysis
         analysis_id = storage.save_analysis(transcript_id, analysis_result)
@@ -715,8 +575,6 @@ def record_satisfaction(transcript_id: str, satisfied: bool, feedback: str = "")
 def trigger_reanalysis(transcript_id: str, focus_areas: str = "") -> str:
     """Trigger reanalysis of a transcript with optional focus areas"""
     try:
-        client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
-        
         # Load transcript
         transcript_data = storage.get_transcript_with_analysis(transcript_id)
         if not transcript_data or 'error' in transcript_data:
@@ -728,106 +586,10 @@ def trigger_reanalysis(transcript_id: str, focus_areas: str = "") -> str:
             prompt += f" with special focus on: {focus_areas}"
         prompt += f"\n\nPrevious analysis may have missed important details. Please provide fresh analysis.\n\n{transcript_data['content']}"
         
-        # Use the same system prompt as analyze_transcript
-        analysis_system_prompt = """You are an expert analyst for mortgage loan servicing call center operations.
-
-Analyze the provided call transcript and output a comprehensive analysis in this EXACT format:
-
-═══════════════════════════════════════════
-ANALYSIS_START
-═══════════════════════════════════════════
-
-## METADATA
-transcript_id: [extract from context]
-analysis_timestamp: [current ISO timestamp]
-confidence_score: [0.0-1.0 overall analysis confidence]
-
-## QUICK_VERDICT
-resolution_status: [RESOLVED|PENDING|ESCALATED]
-customer_sentiment_trajectory: [😡|😐|😊] → [😡|😐|😊] → [😡|😐|😊]
-risk_level: [LOW|MEDIUM|HIGH]
-risk_score: [0-100]
-
-## PREDICTIONS
-fcr_achieved: [true|false]
-fcr_confidence: [0.0-1.0]
-churn_risk: [0.0-1.0]
-delinquency_risk: [0.0-1.0]
-refinance_likelihood: [0.0-1.0]
-next_contact_days: [number or null]
-csat_predicted: [1.0-5.0]
-
-## COMPLIANCE_SIGNALS
-compliance_score: [0-100]
-missing_disclosures: [list specific mortgage servicing disclosures]
-regulatory_violations: [list RESPA, TILA, FCRA violations or "none"]
-approval_required: [NONE|ADVISOR|SUPERVISOR|COMPLIANCE]
-
-## ACTION_QUEUES
-
-### BORROWER_ACTIONS
-- action: [specific action description]
-  type: [DOCUMENT|CALLBACK|PAYMENT|REVIEW]
-  priority: [LOW|MEDIUM|HIGH|URGENT]
-  due_date: [ISO date]
-  auto_executable: [true|false]
-
-### ADVISOR_TASKS
-- task: [specific task description]
-  system: [CRM|EMAIL|WORKFLOW|MANUAL]
-  deadline: [ISO timestamp]
-  blocking: [true|false]
-
-### SUPERVISOR_ITEMS
-- item: [specific item description]
-  approval_type: [FEE_WAIVER|MODIFICATION|EXCEPTION|ESCALATION]
-  amount: [dollar amount if applicable or null]
-  risk_level: [LOW|MEDIUM|HIGH]
-
-### LEADERSHIP_INSIGHTS
-- pattern: [identified pattern or trend]
-  frequency: [how often this occurs]
-  impact: [OPERATIONAL|FINANCIAL|COMPLIANCE|STRATEGIC]
-  recommendation: [specific leadership action]
-
-## COACHING_INTELLIGENCE
-advisor_performance_score: [0-100]
-strengths: [list of specific strengths observed]
-improvements: [list of specific areas to improve]
-training_modules: [list of specific training recommendations]
-
-## AUTOMATION_TRIGGERS
-- trigger: [CRM_UPDATE]
-  payload: {customer_status: value, next_action: value}
-- trigger: [EMAIL_TEMPLATE]
-  template_id: [appropriate template name]
-  variables: {customer_name: value, loan_number: value}
-- trigger: [WORKFLOW_START]
-  workflow_id: [appropriate workflow]
-
-## AUDIT_TRAIL
-verification_completed: [true|false]
-disclosures_provided: [list of disclosures actually given]
-call_recording_available: [assume true]
-transcript_confidence: [0.0-1.0]
-
-## EXECUTIVE_SUMMARY
-[2-3 sentences maximum describing call outcome and critical next steps]
-
-═══════════════════════════════════════════
-ANALYSIS_END
-═══════════════════════════════════════════"""
-        
-        # Run reanalysis
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": analysis_system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        
-        result_content = response.choices[0].message.content
+        # Use Agent SDK with Responses API instead of chat completions
+        analyzer_agent = get_transcript_analyzer()
+        result = Runner.run_sync(analyzer_agent, prompt)
+        result_content = result.final_output
         
         # Save new analysis
         analysis_id = storage.save_analysis(transcript_id, result_content, 
@@ -852,7 +614,7 @@ ANALYSIS_END
         summary += f"New analysis saved as {analysis_id}\n"
         if action_items_saved > 0:
             summary += f"📋 {action_items_saved} new action items added to queue\n"
-        summary += f"\nReanalysis Results:\n{result.final_output}"
+        summary += f"\nReanalysis Results:\n{result_content}"
         
         return summary
         
