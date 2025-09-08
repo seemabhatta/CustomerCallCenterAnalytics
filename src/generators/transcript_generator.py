@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import datetime
 import openai
 from dotenv import load_dotenv
+
 from src.models.transcript import Transcript, Message
 from src.generators.prompt_builder import PromptBuilder
 from src.generators.response_parser import ResponseParser

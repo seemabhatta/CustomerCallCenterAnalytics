@@ -2,6 +2,7 @@
 import sqlite3
 import json
 from typing import List, Optional
+
 from src.models.transcript import Transcript, Message
 
 
