@@ -1,0 +1,4 @@
+#!/bin/bash
+# Simple wrapper script for the Customer Call Center Analytics CLI
+
+python cli.py "$@"

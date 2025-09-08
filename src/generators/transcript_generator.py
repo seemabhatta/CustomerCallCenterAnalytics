@@ -86,7 +86,17 @@ class TranscriptGenerator:
                     temperature=0.7,
                     max_output_tokens=1500
                 )
-                return response
+                # Extract text from Responses API format
+                if hasattr(response, 'output') and response.output:
+                    if isinstance(response.output, list) and len(response.output) > 0:
+                        output_item = response.output[0]
+                        if hasattr(output_item, 'content') and output_item.content:
+                            if isinstance(output_item.content, list) and len(output_item.content) > 0:
+                                content_item = output_item.content[0]
+                                if hasattr(content_item, 'text'):
+                                    return content_item.text
+                # If we can't extract properly, fall back to string conversion
+                return str(response)
             except:
                 pass  # Fall through to next method
         
