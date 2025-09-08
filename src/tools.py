@@ -240,7 +240,7 @@ def get_system_status() -> str:
         
         output = "System Status:\n\n"
         output += f"Model: {settings.OPENAI_MODEL}\n"
-        output += f"Handoffs: {'Enabled' if settings.ENABLE_HANDOFFS else 'Disabled'}\n"
+        output += f"Handoffs: Enabled\n"
         
         if 'error' not in stats:
             output += f"\nStorage Statistics:\n"
