@@ -32,8 +32,8 @@ class TranscriptStore:
                 timestamp TEXT NOT NULL,
                 topic TEXT NOT NULL,
                 duration INTEGER NOT NULL,
-                sentiment TEXT NOT NULL,
-                urgency TEXT NOT NULL,
+                sentiment TEXT,  -- Optional, can be NULL
+                urgency TEXT,   -- Optional, can be NULL
                 compliance_flags TEXT,  -- JSON array
                 outcome TEXT
             )
@@ -84,8 +84,8 @@ class TranscriptStore:
                 getattr(transcript, 'timestamp', ''),
                 getattr(transcript, 'topic', ''),
                 getattr(transcript, 'duration', 0),
-                getattr(transcript, 'sentiment', 'neutral'),
-                getattr(transcript, 'urgency', 'medium'),
+                getattr(transcript, 'sentiment', None),
+                getattr(transcript, 'urgency', None),
                 json.dumps(getattr(transcript, 'compliance_flags', [])),
                 getattr(transcript, 'outcome', None)
             ))
@@ -157,19 +157,26 @@ class TranscriptStore:
                 for msg_row in message_rows
             ]
             
-            transcript = Transcript(
-                id=row[0],
-                messages=messages,
-                customer_id=row[1] if row[1] else '',
-                advisor_id=row[2] if row[2] else '',
-                timestamp=row[3] if row[3] else '',
-                topic=row[4] if row[4] else '',
-                duration=row[5] if row[5] else 0,
-                sentiment=row[6] if row[6] else 'neutral',
-                urgency=row[7] if row[7] else 'medium',
-                compliance_flags=json.loads(row[8]) if row[8] else [],
-                outcome=row[9] if row[9] else None
-            )
+            # Build transcript with only provided attributes
+            transcript_kwargs = {
+                'id': row[0],
+                'messages': messages,
+                'customer_id': row[1] if row[1] else '',
+                'advisor_id': row[2] if row[2] else '',
+                'timestamp': row[3] if row[3] else '',
+                'topic': row[4] if row[4] else '',
+                'duration': row[5] if row[5] else 0,
+                'compliance_flags': json.loads(row[8]) if row[8] else [],
+                'outcome': row[9] if row[9] else None
+            }
+            
+            # Only add sentiment and urgency if they have values
+            if row[6]:  # sentiment
+                transcript_kwargs['sentiment'] = row[6]
+            if row[7]:  # urgency  
+                transcript_kwargs['urgency'] = row[7]
+                
+            transcript = Transcript(**transcript_kwargs)
             
             return transcript
         
