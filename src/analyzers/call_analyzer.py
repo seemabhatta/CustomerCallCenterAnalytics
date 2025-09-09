@@ -151,16 +151,47 @@ class CallAnalyzer:
                 text={"format": text_format},
                 temperature=0.3  # Lower temperature for consistent analysis
             )
-            
-            analysis = response.output_parsed
-            
+
+            # Robust extraction of structured output across SDK variants
+            analysis: Optional[Dict[str, Any]] = None
+
+            # Preferred: output_parsed when available
+            if hasattr(response, "output_parsed"):
+                analysis = getattr(response, "output_parsed")  # type: ignore
+
+            # Try nested response.output -> content[0].parsed/text
+            if analysis is None and hasattr(response, "output"):
+                try:
+                    out = getattr(response, "output")
+                    if isinstance(out, list) and out:
+                        content = getattr(out[0], "content", None)
+                        if isinstance(content, list) and content:
+                            item = content[0]
+                            # Some SDKs expose a parsed field for structured outputs
+                            if hasattr(item, "parsed") and getattr(item, "parsed"):
+                                analysis = getattr(item, "parsed")
+                            elif hasattr(item, "text") and getattr(item, "text"):
+                                # If text contains JSON, parse it
+                                text_val = getattr(item, "text")
+                                try:
+                                    maybe_json = json.loads(text_val)
+                                    if isinstance(maybe_json, dict):
+                                        analysis = maybe_json
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+
+            if analysis is None:
+                raise AttributeError("Could not extract structured analysis from response")
+
             # Add metadata
             analysis['transcript_id'] = transcript.id
             analysis['analysis_id'] = str(uuid.uuid4())
             analysis['analyzer_version'] = "1.0"
-            
+
             return analysis
-            
+
         except Exception as e:
             raise Exception(f"Analysis failed: {str(e)}")
     
