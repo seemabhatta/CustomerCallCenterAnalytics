@@ -127,9 +127,11 @@ class TestCallAnalyzer:
         
         # Check that it used the Responses API correctly
         assert call_args.kwargs['model'] == "gpt-4.1"
-        assert 'response_format' in call_args.kwargs
-        assert call_args.kwargs['response_format']['type'] == "json_schema"
-        assert 'MortgageCallAnalysis' in call_args.kwargs['response_format']['json_schema']['name']
+        assert 'text' in call_args.kwargs
+        assert 'format' in call_args.kwargs['text']
+        fmt = call_args.kwargs['text']['format']
+        assert fmt['type'] == "json_schema"
+        assert 'MortgageCallAnalysis' in fmt['name']
         assert call_args.kwargs['temperature'] == 0.3
         
         # Check prompt contains transcript data
@@ -235,7 +237,8 @@ class TestCallAnalyzer:
         
         # Get the schema that was sent to OpenAI
         call_args = mock_client.responses.create.call_args
-        schema = call_args.kwargs['response_format']['json_schema']['schema']
+        fmt = call_args.kwargs['text']['format']
+        schema = fmt['schema']
         
         # Verify required schema structure
         assert 'properties' in schema
@@ -262,4 +265,4 @@ class TestCallAnalyzer:
         
         # Check that strict mode is enabled
         assert schema.get('additionalProperties') == False
-        assert call_args.kwargs['response_format']['json_schema']['strict'] == True
+        assert fmt['strict'] == True

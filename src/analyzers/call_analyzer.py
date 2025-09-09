@@ -38,85 +38,89 @@ class CallAnalyzer:
         # Build transcript text for analysis
         transcript_text = self._build_transcript_text(transcript)
         
-        # Define the analysis schema aligned with mortgage servicing vision
-        response_format = {
+        # Define the structured output schema aligned with mortgage servicing vision
+        # Note: For the Responses API, structured outputs are configured via
+        # `text={"format": {"type": "json_schema", ...}}`.
+        schema_properties = {
+            # Core Analysis
+            "call_summary": {"type": "string"},
+            "primary_intent": {"type": "string"},  # refinance, hardship, payment, escrow, PMI
+            "urgency_level": {"type": "string"},   # high, medium, low
+
+            # Borrower Insights
+            "borrower_sentiment": {
+                "type": "object",
+                "properties": {
+                    "overall": {"type": "string"},
+                    "start": {"type": "string"},
+                    "end": {"type": "string"},
+                    "trend": {"type": "string"}  # improving, declining, stable
+                },
+                "required": ["overall", "start", "end", "trend"],
+                "additionalProperties": False
+            },
+            "borrower_risks": {
+                "type": "object",
+                "properties": {
+                    "delinquency_risk": {"type": "number", "minimum": 0, "maximum": 1},
+                    "churn_risk": {"type": "number", "minimum": 0, "maximum": 1},
+                    "complaint_risk": {"type": "number", "minimum": 0, "maximum": 1},
+                    "refinance_likelihood": {"type": "number", "minimum": 0, "maximum": 1}
+                },
+                "required": ["delinquency_risk", "churn_risk", "complaint_risk", "refinance_likelihood"],
+                "additionalProperties": False
+            },
+
+            # Advisor Performance
+            "advisor_metrics": {
+                "type": "object",
+                "properties": {
+                    "empathy_score": {"type": "number", "minimum": 0, "maximum": 10},
+                    "compliance_adherence": {"type": "number", "minimum": 0, "maximum": 10},
+                    "solution_effectiveness": {"type": "number", "minimum": 0, "maximum": 10},
+                    "coaching_opportunities": {"type": "array", "items": {"type": "string"}}
+                },
+                "required": ["empathy_score", "compliance_adherence", "solution_effectiveness", "coaching_opportunities"],
+                "additionalProperties": False
+            },
+
+            # Compliance & Risk
+            "compliance_flags": {"type": "array", "items": {"type": "string"}},
+            "required_disclosures": {"type": "array", "items": {"type": "string"}},
+
+            # Resolution
+            "issue_resolved": {"type": "boolean"},
+            "first_call_resolution": {"type": "boolean"},
+            "escalation_needed": {"type": "boolean"},
+
+            # Key Topics & Metadata
+            "topics_discussed": {"type": "array", "items": {"type": "string"}},
+            "confidence_score": {"type": "number", "minimum": 0, "maximum": 1},
+
+            # Mortgage-Specific Insights
+            "product_opportunities": {"type": "array", "items": {"type": "string"}},
+            "payment_concerns": {"type": "array", "items": {"type": "string"}},
+            "property_related_issues": {"type": "array", "items": {"type": "string"}},
+        }
+
+        schema = {
+            "type": "object",
+            "properties": schema_properties,
+            "required": [
+                "call_summary", "primary_intent", "urgency_level", "borrower_sentiment",
+                "borrower_risks", "advisor_metrics", "compliance_flags", "required_disclosures",
+                "issue_resolved", "first_call_resolution", "escalation_needed",
+                "topics_discussed", "confidence_score", "product_opportunities",
+                "payment_concerns", "property_related_issues"
+            ],
+            "additionalProperties": False,
+        }
+
+        text_format = {
             "type": "json_schema",
-            "json_schema": {
-                "name": "MortgageCallAnalysis",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        # Core Analysis
-                        "call_summary": {"type": "string"},
-                        "primary_intent": {"type": "string"},  # refinance, hardship, payment, escrow, PMI
-                        "urgency_level": {"type": "string"},   # high, medium, low
-                        
-                        # Borrower Insights
-                        "borrower_sentiment": {
-                            "type": "object",
-                            "properties": {
-                                "overall": {"type": "string"},
-                                "start": {"type": "string"},
-                                "end": {"type": "string"},
-                                "trend": {"type": "string"}  # improving, declining, stable
-                            },
-                            "required": ["overall", "start", "end", "trend"],
-                            "additionalProperties": False
-                        },
-                        "borrower_risks": {
-                            "type": "object",
-                            "properties": {
-                                "delinquency_risk": {"type": "number", "minimum": 0, "maximum": 1},
-                                "churn_risk": {"type": "number", "minimum": 0, "maximum": 1},
-                                "complaint_risk": {"type": "number", "minimum": 0, "maximum": 1},
-                                "refinance_likelihood": {"type": "number", "minimum": 0, "maximum": 1}
-                            },
-                            "required": ["delinquency_risk", "churn_risk", "complaint_risk", "refinance_likelihood"],
-                            "additionalProperties": False
-                        },
-                        
-                        # Advisor Performance
-                        "advisor_metrics": {
-                            "type": "object",
-                            "properties": {
-                                "empathy_score": {"type": "number", "minimum": 0, "maximum": 10},
-                                "compliance_adherence": {"type": "number", "minimum": 0, "maximum": 10},
-                                "solution_effectiveness": {"type": "number", "minimum": 0, "maximum": 10},
-                                "coaching_opportunities": {"type": "array", "items": {"type": "string"}}
-                            },
-                            "required": ["empathy_score", "compliance_adherence", "solution_effectiveness", "coaching_opportunities"],
-                            "additionalProperties": False
-                        },
-                        
-                        # Compliance & Risk
-                        "compliance_flags": {"type": "array", "items": {"type": "string"}},
-                        "required_disclosures": {"type": "array", "items": {"type": "string"}},
-                        
-                        # Resolution
-                        "issue_resolved": {"type": "boolean"},
-                        "first_call_resolution": {"type": "boolean"},
-                        "escalation_needed": {"type": "boolean"},
-                        
-                        # Key Topics & Metadata
-                        "topics_discussed": {"type": "array", "items": {"type": "string"}},
-                        "confidence_score": {"type": "number", "minimum": 0, "maximum": 1},
-                        
-                        # Mortgage-Specific Insights
-                        "product_opportunities": {"type": "array", "items": {"type": "string"}},
-                        "payment_concerns": {"type": "array", "items": {"type": "string"}},
-                        "property_related_issues": {"type": "array", "items": {"type": "string"}}
-                    },
-                    "required": [
-                        "call_summary", "primary_intent", "urgency_level", "borrower_sentiment", 
-                        "borrower_risks", "advisor_metrics", "compliance_flags", "required_disclosures",
-                        "issue_resolved", "first_call_resolution", "escalation_needed", 
-                        "topics_discussed", "confidence_score", "product_opportunities", 
-                        "payment_concerns", "property_related_issues"
-                    ],
-                    "additionalProperties": False
-                }
-            }
+            "name": "MortgageCallAnalysis",
+            "strict": True,
+            "schema": schema,
         }
         
         # Create analysis prompt
@@ -144,7 +148,7 @@ class CallAnalyzer:
             response = self.client.responses.create(
                 model="gpt-4.1",
                 input=prompt,
-                text={"format": response_format},
+                text={"format": text_format},
                 temperature=0.3  # Lower temperature for consistent analysis
             )
             
