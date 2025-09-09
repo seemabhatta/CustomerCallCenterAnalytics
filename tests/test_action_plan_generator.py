@@ -347,7 +347,263 @@ class TestActionPlanGenerator:
             
             assert "Action plan generation failed" in str(exc_info.value)
     
-    def test_empty_transcript_handling(self, mock_openai_client, sample_analysis):
+    
+class TestActionPlanGeneratorDecisionAgentIntegration:
+    """Test cases for ActionPlanGenerator integration with DecisionAgent."""
+    
+    @pytest.fixture
+    def mock_decision_agent(self):
+        """Mock DecisionAgent for testing."""
+        with patch('src.agents.decision_agent.DecisionAgent') as mock:
+            agent = Mock()
+            mock.return_value = agent
+            
+            # Mock function that preserves original transcript_id
+            def mock_process_action_plan(action_plans, context):
+                processed_plan = {
+                    'plan_id': action_plans.get('plan_id', 'PLAN_TEST_001'),
+                    'transcript_id': action_plans.get('transcript_id', 'CALL_TEST_001'),
+                    'analysis_id': action_plans.get('analysis_id', 'ANALYSIS_TEST_001'),
+                    'borrower_plan': {
+                    'immediate_actions': [
+                        {
+                            'action': 'Send payment confirmation email',
+                            'description': 'Confirm payment processing',
+                            'needs_approval': False,
+                            'approval_status': 'auto_approved',
+                            'risk_level': 'low',
+                            'risk_score': 0.25,
+                            'auto_executable': True,
+                            'financial_impact': False,
+                            'compliance_impact': False,
+                            'customer_facing': True,
+                            'routing_decision': 'auto_approved'
+                        }
+                    ],
+                    'follow_ups': [
+                        {
+                            'action': 'Call customer satisfaction check',
+                            'description': 'Follow-up call to ensure satisfaction',
+                            'needs_approval': True,
+                            'approval_status': 'pending',
+                            'risk_level': 'medium',
+                            'risk_score': 0.55,
+                            'auto_executable': False,
+                            'financial_impact': False,
+                            'compliance_impact': True,
+                            'customer_facing': True,
+                            'routing_decision': 'supervisor_approval'
+                        }
+                    ]
+                },
+                'advisor_plan': {
+                    'coaching_items': [
+                        {
+                            'action': 'Review active listening techniques',
+                            'needs_approval': False,
+                            'approval_status': 'auto_approved',
+                            'risk_level': 'low',
+                            'auto_executable': True,
+                            'routing_decision': 'auto_approved'
+                        }
+                    ]
+                },
+                'supervisor_plan': {
+                    'escalation_items': [
+                        {
+                            'action': 'Review compliance deviation',
+                            'needs_approval': True,
+                            'approval_status': 'pending',
+                            'risk_level': 'high',
+                            'auto_executable': False,
+                            'routing_decision': 'supervisor_approval'
+                        }
+                    ]
+                },
+                'leadership_plan': {
+                    'portfolio_insights': 'Customer satisfaction improving',
+                    'needs_approval': False,
+                    'approval_status': 'auto_approved',
+                    'risk_level': 'low'
+                },
+                'decision_agent_processed': True,
+                    'processed_at': '2024-01-01T12:00:00',
+                    'routing_decision': 'supervisor_approval',
+                    'routing_summary': {
+                        'auto_approved_actions': 2,
+                        'advisor_approval_actions': 0,
+                        'supervisor_approval_actions': 2,
+                        'total_actions_processed': 4
+                    }
+                }
+                return processed_plan
+            
+            agent.process_action_plan.side_effect = mock_process_action_plan
+            yield agent
+    
+    @pytest.fixture  
+    def mock_approval_store(self):
+        """Mock ApprovalStore for testing."""
+        with patch('src.storage.approval_store.ApprovalStore') as mock:
+            store = Mock()
+            mock.return_value = store
+            store.store_action_approval.return_value = 'APPR_001'
+            yield store
+    
+    def test_generate_with_decision_agent_integration(self, sample_transcript, sample_analysis, 
+                                                     mock_openai_client, mock_decision_agent, 
+                                                     mock_approval_store):
+        """Test action plan generation integrates with DecisionAgent for risk evaluation."""
+        with patch('openai.OpenAI') as mock_openai:
+            mock_openai.return_value = mock_openai_client
+            
+            generator = ActionPlanGenerator()
+            generator.decision_agent = mock_decision_agent
+            generator.approval_store = mock_approval_store
+            
+            result = generator.generate(sample_analysis, sample_transcript)
+            
+            # Verify DecisionAgent was called
+            mock_decision_agent.process_action_plan.assert_called_once()
+            
+            # Verify result has Decision Agent processed fields
+            assert result['decision_agent_processed'] == True
+            assert 'processed_at' in result
+            assert 'routing_decision' in result
+            assert 'routing_summary' in result
+            
+            # Verify individual actions have risk evaluation fields
+            immediate_action = result['borrower_plan']['immediate_actions'][0]
+            assert 'needs_approval' in immediate_action
+            assert 'approval_status' in immediate_action
+            assert 'risk_level' in immediate_action
+            assert 'risk_score' in immediate_action
+            assert 'routing_decision' in immediate_action
+            
+    def test_approval_records_stored_for_pending_actions(self, sample_transcript, sample_analysis,
+                                                        mock_openai_client, mock_decision_agent,
+                                                        mock_approval_store):
+        """Test that approval records are stored for actions needing approval."""
+        with patch('openai.OpenAI') as mock_openai:
+            mock_openai.return_value = mock_openai_client
+            
+            generator = ActionPlanGenerator()
+            generator.decision_agent = mock_decision_agent
+            generator.approval_store = mock_approval_store
+            
+            result = generator.generate(sample_analysis, sample_transcript)
+            
+            # Should store approval records for pending actions
+            # (2 pending actions in the mock: 1 follow-up, 1 escalation)
+            assert mock_approval_store.store_action_approval.call_count >= 2
+            
+            # Verify approval records have correct structure
+            calls = mock_approval_store.store_action_approval.call_args_list
+            for call in calls:
+                approval_record = call[0][0]  # First argument
+                assert 'action_id' in approval_record
+                assert 'plan_id' in approval_record
+                assert 'action_text' in approval_record
+                assert 'risk_level' in approval_record
+                assert 'needs_approval' in approval_record
+                assert 'approval_status' in approval_record
+    
+    def test_generate_without_decision_agent_fails_gracefully(self, sample_transcript, sample_analysis,
+                                                              mock_openai_client):
+        """Test that generator fails gracefully when DecisionAgent is not configured."""
+        with patch('openai.OpenAI') as mock_openai:
+            mock_openai.return_value = mock_openai_client
+            
+            generator = ActionPlanGenerator()
+            # Don't set decision_agent - should fail gracefully
+            
+            with pytest.raises(Exception) as exc_info:
+                generator.generate(sample_analysis, sample_transcript)
+            
+            assert "DecisionAgent not configured" in str(exc_info.value)
+    
+    def test_routing_summary_accuracy(self, sample_transcript, sample_analysis,
+                                     mock_openai_client, mock_decision_agent, mock_approval_store):
+        """Test that routing summary accurately reflects action distribution."""
+        with patch('openai.OpenAI') as mock_openai:
+            mock_openai.return_value = mock_openai_client
+            
+            generator = ActionPlanGenerator()
+            generator.decision_agent = mock_decision_agent
+            generator.approval_store = mock_approval_store
+            
+            result = generator.generate(sample_analysis, sample_transcript)
+            
+            summary = result['routing_summary']
+            assert summary['auto_approved_actions'] == 2
+            assert summary['supervisor_approval_actions'] == 2
+            assert summary['total_actions_processed'] == 4
+            assert result['routing_decision'] == 'supervisor_approval'  # Highest level needed
+    
+    def test_decision_agent_context_creation(self, sample_transcript, sample_analysis,
+                                           mock_openai_client, mock_decision_agent, mock_approval_store):
+        """Test that proper context is passed to DecisionAgent."""
+        with patch('openai.OpenAI') as mock_openai:
+            mock_openai.return_value = mock_openai_client
+            
+            generator = ActionPlanGenerator()
+            generator.decision_agent = mock_decision_agent
+            generator.approval_store = mock_approval_store
+            
+            generator.generate(sample_analysis, sample_transcript)
+            
+            # Verify DecisionAgent was called with proper context
+            call_args = mock_decision_agent.process_action_plan.call_args
+            action_plan = call_args[0][0]  # First argument
+            context = call_args[0][1]      # Second argument
+            
+            # Context should include analysis risk data
+            assert 'complaint_risk' in context
+            assert 'urgency_level' in context
+            assert 'compliance_flags' in context
+            assert context['transcript_id'] == sample_transcript.id
+    
+    def test_end_to_end_integration_flow(self, sample_transcript, sample_analysis,
+                                        mock_openai_client, mock_decision_agent, mock_approval_store):
+        """Test complete end-to-end flow: Generate → DecisionAgent → ApprovalStore."""
+        with patch('openai.OpenAI') as mock_openai:
+            mock_openai.return_value = mock_openai_client
+            
+            generator = ActionPlanGenerator()
+            generator.decision_agent = mock_decision_agent
+            generator.approval_store = mock_approval_store
+            
+            result = generator.generate(sample_analysis, sample_transcript)
+            
+            # 1. OpenAI called for action plan generation
+            mock_openai_client.responses.create.assert_called_once()
+            
+            # 2. DecisionAgent called for risk evaluation
+            mock_decision_agent.process_action_plan.assert_called_once()
+            
+            # 3. Approval records stored for pending actions
+            mock_approval_store.store_action_approval.assert_called()
+            
+            # 4. Result contains integrated data
+            assert result['decision_agent_processed'] == True
+            assert 'routing_summary' in result
+            
+            # 5. Actions have complete evaluation data
+            all_actions = []
+            for plan_type in ['borrower_plan', 'advisor_plan', 'supervisor_plan']:
+                if plan_type in result:
+                    for action_type in ['immediate_actions', 'follow_ups', 'coaching_items', 'escalation_items']:
+                        if action_type in result[plan_type]:
+                            all_actions.extend(result[plan_type][action_type])
+            
+            # All actions should have risk evaluation fields
+            for action in all_actions:
+                assert 'needs_approval' in action
+                assert 'risk_level' in action
+                assert 'routing_decision' in action
+    
+    def test_empty_transcript_handling(self, mock_openai_client, sample_analysis, 
+                                      mock_decision_agent, mock_approval_store):
         """Test handling of transcript with no messages."""
         empty_transcript = Transcript("EMPTY_001")
         empty_transcript.messages = []
@@ -355,6 +611,8 @@ class TestActionPlanGenerator:
         
         with patch('openai.OpenAI', return_value=mock_openai_client):
             generator = ActionPlanGenerator()
+            generator.decision_agent = mock_decision_agent
+            generator.approval_store = mock_approval_store
             
             # Should not crash, but might produce empty extractions
             result = generator.generate(sample_analysis, empty_transcript)

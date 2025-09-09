@@ -64,6 +64,16 @@ class ApprovalStore:
                 approved_at TIMESTAMP,
                 rejection_reason TEXT,
                 
+                -- Execution tracking (for feedback loop)
+                execution_id TEXT,
+                executed_at TIMESTAMP,
+                execution_status TEXT,  -- success, failed, partial, skipped
+                execution_result TEXT,  -- JSON with execution details
+                assigned_actor TEXT,    -- advisor, supervisor, leadership, customer
+                actor_assignment_reason TEXT,
+                execution_artifacts TEXT, -- JSON array of created artifacts
+                execution_errors TEXT,   -- JSON array of errors encountered
+                
                 -- Audit trail
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -476,6 +486,167 @@ class ApprovalStore:
             conn.commit()
             
             return rows_deleted
+            
+        finally:
+            conn.close()
+    
+    def update_execution_result(self, action_id: str, execution_data: Dict[str, Any]) -> bool:
+        """Update approval record with execution results.
+        
+        Args:
+            action_id: Action ID that was executed
+            execution_data: Dictionary containing execution details:
+                - execution_id: Unique execution identifier
+                - execution_status: 'success', 'failed', 'partial', 'skipped'
+                - execution_result: Dict with execution outcome details
+                - assigned_actor: Actor who executed ('advisor', 'supervisor', etc.)
+                - actor_assignment_reason: Why this actor was chosen
+                - execution_artifacts: List of artifacts created
+                - execution_errors: List of errors encountered
+                
+        Returns:
+            True if update was successful, False otherwise
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                UPDATE action_approvals 
+                SET execution_id = ?,
+                    executed_at = CURRENT_TIMESTAMP,
+                    execution_status = ?,
+                    execution_result = ?,
+                    assigned_actor = ?,
+                    actor_assignment_reason = ?,
+                    execution_artifacts = ?,
+                    execution_errors = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE action_id = ?
+            ''', (
+                execution_data.get('execution_id'),
+                execution_data.get('execution_status', 'unknown'),
+                json.dumps(execution_data.get('execution_result', {})),
+                execution_data.get('assigned_actor'),
+                execution_data.get('actor_assignment_reason'),
+                json.dumps(execution_data.get('execution_artifacts', [])),
+                json.dumps(execution_data.get('execution_errors', [])),
+                action_id
+            ))
+            
+            rows_updated = cursor.rowcount
+            conn.commit()
+            
+            return rows_updated > 0
+            
+        finally:
+            conn.close()
+    
+    def get_execution_results_by_execution_id(self, execution_id: str) -> List[Dict[str, Any]]:
+        """Get all execution results for a specific execution.
+        
+        Args:
+            execution_id: Execution ID
+            
+        Returns:
+            List of action records with execution results
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                SELECT * FROM action_approvals 
+                WHERE execution_id = ? AND executed_at IS NOT NULL
+                ORDER BY executed_at
+            ''', (execution_id,))
+            
+            rows = cursor.fetchall()
+            columns = [desc[0] for desc in cursor.description]
+            
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row))
+                # Parse JSON fields
+                if record.get('execution_result'):
+                    try:
+                        record['execution_result'] = json.loads(record['execution_result'])
+                    except json.JSONDecodeError:
+                        pass
+                        
+                if record.get('execution_artifacts'):
+                    try:
+                        record['execution_artifacts'] = json.loads(record['execution_artifacts'])
+                    except json.JSONDecodeError:
+                        record['execution_artifacts'] = []
+                        
+                if record.get('execution_errors'):
+                    try:
+                        record['execution_errors'] = json.loads(record['execution_errors'])
+                    except json.JSONDecodeError:
+                        record['execution_errors'] = []
+                        
+                results.append(record)
+                
+            return results
+            
+        finally:
+            conn.close()
+    
+    def get_actor_performance_metrics(self, actor: Optional[str] = None) -> Dict[str, Any]:
+        """Get performance metrics for actors.
+        
+        Args:
+            actor: Specific actor to get metrics for, or None for all actors
+            
+        Returns:
+            Dictionary with actor performance metrics
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        try:
+            base_query = '''
+                SELECT assigned_actor, execution_status, COUNT(*) as count
+                FROM action_approvals 
+                WHERE executed_at IS NOT NULL
+            '''
+            
+            if actor:
+                cursor.execute(base_query + ' AND assigned_actor = ? GROUP BY assigned_actor, execution_status', (actor,))
+            else:
+                cursor.execute(base_query + ' GROUP BY assigned_actor, execution_status')
+            
+            performance_data = cursor.fetchall()
+            
+            # Calculate success rates by actor
+            metrics = {}
+            for assigned_actor, status, count in performance_data:
+                if not assigned_actor:
+                    continue
+                    
+                if assigned_actor not in metrics:
+                    metrics[assigned_actor] = {
+                        'total_executions': 0,
+                        'successful_executions': 0,
+                        'failed_executions': 0,
+                        'success_rate': 0.0
+                    }
+                
+                metrics[assigned_actor]['total_executions'] += count
+                
+                if status == 'success':
+                    metrics[assigned_actor]['successful_executions'] += count
+                elif status == 'failed':
+                    metrics[assigned_actor]['failed_executions'] += count
+            
+            # Calculate success rates
+            for actor_name in metrics:
+                total = metrics[actor_name]['total_executions']
+                successful = metrics[actor_name]['successful_executions']
+                metrics[actor_name]['success_rate'] = round((successful / total) * 100, 1) if total > 0 else 0
+            
+            return metrics
             
         finally:
             conn.close()

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(source:*)",
       "Bash(python:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Read(//home/ujjal/.claude/**)"
     ],
     "deny": [],
     "ask": []

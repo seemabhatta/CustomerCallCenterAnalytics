@@ -12,6 +12,7 @@ from src.tools.mock_tools import MockTools
 from src.storage.action_plan_store import ActionPlanStore
 from src.storage.analysis_store import AnalysisStore
 from src.storage.transcript_store import TranscriptStore
+from src.storage.approval_store import ApprovalStore
 
 
 class SmartExecutor:
@@ -23,6 +24,13 @@ class SmartExecutor:
         self.action_plan_store = ActionPlanStore(db_path)
         self.analysis_store = AnalysisStore(db_path) 
         self.transcript_store = TranscriptStore(db_path)
+        
+        # Initialize ApprovalStore for approval-aware execution
+        try:
+            self.approval_store = ApprovalStore(db_path)
+        except Exception:
+            # Graceful degradation if ApprovalStore unavailable
+            self.approval_store = None
         
         # Initialize OpenAI client
         if api_key:
@@ -70,9 +78,9 @@ class SmartExecutor:
                 'errors': []
             }
             
-            # Execute borrower-facing actions
+            # Execute borrower-facing actions with actor assignment
             if 'borrower_plan' in action_plan:
-                borrower_results = self._execute_borrower_actions(
+                borrower_results = self._execute_borrower_actions_with_actors(
                     action_plan['borrower_plan'], context
                 )
                 execution_results['results']['borrower_actions'] = borrower_results
@@ -110,6 +118,15 @@ class SmartExecutor:
                 r.get('artifact_path') or r.get('file_path') 
                 for r in all_results if r.get('artifact_path') or r.get('file_path')
             ]
+            
+            # Store execution results for feedback loop
+            all_action_results = (
+                execution_results['results']['borrower_actions'] +
+                execution_results['results']['advisor_actions'] +
+                execution_results['results']['supervisor_actions'] +
+                execution_results['results']['leadership_actions']
+            )
+            self._store_execution_results(execution_results['execution_id'], all_action_results)
             
             # Update action plan status
             self._update_plan_execution_status(plan_id, execution_results['execution_id'])
@@ -171,6 +188,27 @@ class SmartExecutor:
         
         return context
     
+    def _check_action_approval_status(self, action: Dict[str, Any]) -> str:
+        """Check action approval status, consulting ApprovalStore if available."""
+        
+        # Try to get action_id for ApprovalStore lookup
+        action_id = action.get('action_id')
+        
+        if self.approval_store and action_id:
+            try:
+                # Query ApprovalStore for current approval status
+                approval_record = self.approval_store.get_approval_by_action_id(action_id)
+                if approval_record:
+                    approval_status = approval_record.get('approval_status')
+                    if approval_status:
+                        return approval_status
+            except Exception:
+                # Graceful degradation on ApprovalStore errors
+                pass
+        
+        # Fallback to action plan's approval status
+        return action.get('approval_status', 'unknown')
+    
     def _execute_borrower_actions(self, borrower_plan: Dict[str, Any], 
                                  context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Execute borrower-facing actions with LLM intelligence"""
@@ -180,14 +218,15 @@ class SmartExecutor:
         # Execute immediate actions
         for action in borrower_plan.get('immediate_actions', []):
             try:
-                # Check individual action approval status
-                if action.get('needs_approval') and action.get('approval_status') != 'approved':
+                # Check individual action approval status using ApprovalStore-aware method
+                current_approval_status = self._check_action_approval_status(action)
+                if action.get('needs_approval') and current_approval_status != 'approved':
                     results.append({
                         'status': 'skipped',
                         'reason': 'Awaiting approval',
-                        'action': action,
+                        'original_action': action,
                         'action_source': 'borrower_immediate',
-                        'approval_status': action.get('approval_status', 'unknown'),
+                        'approval_status': current_approval_status,
                         'risk_level': action.get('risk_level', 'unknown')
                     })
                     continue
@@ -212,14 +251,15 @@ class SmartExecutor:
         # Schedule follow-up actions
         for followup in borrower_plan.get('follow_ups', []):
             try:
-                # Check individual action approval status
-                if followup.get('needs_approval') and followup.get('approval_status') != 'approved':
+                # Check individual action approval status using ApprovalStore-aware method
+                current_approval_status = self._check_action_approval_status(followup)
+                if followup.get('needs_approval') and current_approval_status != 'approved':
                     results.append({
                         'status': 'skipped',
                         'reason': 'Awaiting approval',
-                        'action': followup,
+                        'original_action': followup,
                         'action_source': 'borrower_followup',
-                        'approval_status': followup.get('approval_status', 'unknown'),
+                        'approval_status': current_approval_status,
                         'risk_level': followup.get('risk_level', 'unknown')
                     })
                     continue
@@ -251,14 +291,15 @@ class SmartExecutor:
         # Create coaching notes
         for coaching_item in advisor_plan.get('coaching_items', []):
             try:
-                # Check individual action approval status
-                if coaching_item.get('needs_approval') and coaching_item.get('approval_status') != 'approved':
+                # Check individual action approval status using ApprovalStore-aware method
+                current_approval_status = self._check_action_approval_status(coaching_item)
+                if coaching_item.get('needs_approval') and current_approval_status != 'approved':
                     results.append({
                         'status': 'skipped',
                         'reason': 'Awaiting approval',
-                        'action': coaching_item,
+                        'original_action': coaching_item,
                         'action_source': 'advisor_coaching',
-                        'approval_status': coaching_item.get('approval_status', 'unknown'),
+                        'approval_status': current_approval_status,
                         'risk_level': coaching_item.get('risk_level', 'unknown')
                     })
                     continue
@@ -296,14 +337,15 @@ class SmartExecutor:
         # Handle escalation items
         for escalation in supervisor_plan.get('escalation_items', []):
             try:
-                # Check individual action approval status
-                if escalation.get('needs_approval') and escalation.get('approval_status') != 'approved':
+                # Check individual action approval status using ApprovalStore-aware method
+                current_approval_status = self._check_action_approval_status(escalation)
+                if escalation.get('needs_approval') and current_approval_status != 'approved':
                     results.append({
                         'status': 'skipped',
                         'reason': 'Awaiting approval',
-                        'action': escalation,
+                        'original_action': escalation,
                         'action_source': 'supervisor_escalation',
-                        'approval_status': escalation.get('approval_status', 'unknown'),
+                        'approval_status': current_approval_status,
                         'risk_level': escalation.get('risk_level', 'unknown')
                     })
                     continue
@@ -340,19 +382,21 @@ class SmartExecutor:
             try:
                 # For leadership actions, treat the entire plan as an action for approval checking
                 leadership_action = {
+                    'action_id': leadership_plan.get('action_id'),  # May be None
                     'needs_approval': leadership_plan.get('needs_approval', False),
                     'approval_status': leadership_plan.get('approval_status', 'auto_approved'),
                     'risk_level': leadership_plan.get('risk_level', 'low')
                 }
                 
-                # Check individual action approval status
-                if leadership_action.get('needs_approval') and leadership_action.get('approval_status') != 'approved':
+                # Check individual action approval status using ApprovalStore-aware method
+                current_approval_status = self._check_action_approval_status(leadership_action)
+                if leadership_action.get('needs_approval') and current_approval_status != 'approved':
                     results.append({
                         'status': 'skipped',
                         'reason': 'Awaiting approval',
                         'action': 'portfolio_insights_generation',
                         'action_source': 'leadership_insights',
-                        'approval_status': leadership_action.get('approval_status', 'unknown'),
+                        'approval_status': current_approval_status,
                         'risk_level': leadership_action.get('risk_level', 'unknown')
                     })
                     return results
@@ -541,3 +585,277 @@ class SmartExecutor:
         })
         
         return summary
+    
+    def _assign_action_to_actor(self, action: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Use LLM to intelligently assign action to appropriate actor.
+        
+        Args:
+            action: Action to be executed
+            context: Execution context
+            
+        Returns:
+            Dict with actor assignment decision
+        """
+        prompt = f"""
+        You are an intelligent action assignment agent. Analyze this action and determine the most appropriate actor to execute it.
+        
+        Action Details:
+        {json.dumps(action, indent=2)}
+        
+        Context:
+        - Customer ID: {context.get('customer_id', 'UNKNOWN')}
+        - Risk Level: {context.get('risk_level', 'medium')}
+        - Plan Type: {action.get('action_source', 'unknown')}
+        - Financial Impact: {action.get('financial_impact', False)}
+        - Customer Facing: {action.get('customer_facing', False)}
+        
+        Available Actors:
+        - advisor: Customer service representatives, handles routine communications
+        - supervisor: Management oversight, handles escalations and high-risk actions
+        - leadership: Strategic decisions, portfolio-level insights
+        - customer: Customer-initiated actions (surveys, responses, etc.)
+        - system: Automated system actions (CRM updates, notifications)
+        
+        Consider:
+        1. Actor expertise and authority level
+        2. Action complexity and risk
+        3. Customer interaction requirements
+        4. Compliance and approval needs
+        5. Efficiency and workflow optimization
+        
+        Provide reasoning for your choice and confidence level.
+        """
+        
+        try:
+            response = self.client.responses.create(
+                model="gpt-4",
+                input=prompt,
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "ActorAssignment",
+                        "strict": True,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "assigned_actor": {
+                                    "type": "string",
+                                    "enum": ["advisor", "supervisor", "leadership", "customer", "system"]
+                                },
+                                "reasoning": {"type": "string"},
+                                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                                "alternative_actors": {
+                                    "type": "array", 
+                                    "items": {"type": "string"}
+                                },
+                                "execution_priority": {
+                                    "type": "string",
+                                    "enum": ["immediate", "scheduled", "deferred"]
+                                }
+                            },
+                            "required": ["assigned_actor", "reasoning", "confidence"],
+                            "additionalProperties": False
+                        }
+                    }
+                }
+            )
+            
+            return response.output_parsed
+            
+        except Exception as e:
+            # NO FALLBACK per requirements - fail fast
+            raise RuntimeError(f"Actor assignment failed: {str(e)}. NO FALLBACK per requirements.")
+    
+    def _simulate_actor_execution(self, actor: str, action: Dict[str, Any], 
+                                 execution_decision: Dict[str, Any], 
+                                 context: Dict[str, Any]) -> Dict[str, Any]:
+        """Simulate execution by assigned actor for demo purposes.
+        
+        Args:
+            actor: Assigned actor ('advisor', 'supervisor', etc.)
+            action: Action being executed
+            execution_decision: LLM decision on how to execute
+            context: Execution context
+            
+        Returns:
+            Dict with execution results including actor information
+        """
+        try:
+            # Execute the action using existing tools
+            result = self._execute_single_action(execution_decision, context)
+            
+            # Enhance result with actor information
+            actor_enhanced_result = {
+                **result,
+                'executed_by_actor': actor,
+                'action_id': action.get('action_id', 'UNKNOWN'),
+                'actor_execution_timestamp': datetime.now().isoformat(),
+                'simulation_mode': True  # Mark as demo simulation
+            }
+            
+            # Add actor-specific execution details
+            if actor == 'advisor':
+                actor_enhanced_result['execution_notes'] = 'Executed by customer service advisor'
+                actor_enhanced_result['customer_interaction'] = action.get('customer_facing', False)
+            elif actor == 'supervisor':
+                actor_enhanced_result['execution_notes'] = 'Executed with supervisory oversight'
+                actor_enhanced_result['escalation_handled'] = True
+            elif actor == 'leadership':
+                actor_enhanced_result['execution_notes'] = 'Strategic leadership execution'
+                actor_enhanced_result['strategic_impact'] = True
+            elif actor == 'customer':
+                actor_enhanced_result['execution_notes'] = 'Customer-initiated action simulation'
+                actor_enhanced_result['customer_response'] = True
+            elif actor == 'system':
+                actor_enhanced_result['execution_notes'] = 'Automated system execution'
+                actor_enhanced_result['automated'] = True
+            
+            return actor_enhanced_result
+            
+        except Exception as e:
+            # Return error result with actor information
+            return {
+                'status': 'error',
+                'error': str(e),
+                'executed_by_actor': actor,
+                'action_id': action.get('action_id', 'UNKNOWN'),
+                'actor_execution_timestamp': datetime.now().isoformat(),
+                'simulation_mode': True
+            }
+    
+    def _store_execution_results(self, execution_id: str, action_results: List[Dict[str, Any]]) -> None:
+        """Store execution results in ApprovalStore for feedback loop.
+        
+        Args:
+            execution_id: Unique execution identifier
+            action_results: List of action execution results
+        """
+        if not self.approval_store:
+            # Skip if ApprovalStore not available
+            return
+            
+        for result in action_results:
+            action_id = result.get('action_id') or result.get('original_action', {}).get('action_id')
+            if not action_id:
+                continue
+                
+            try:
+                # Prepare execution data for storage
+                execution_data = {
+                    'execution_id': execution_id,
+                    'execution_status': 'success' if result.get('status') == 'success' else 'failed',
+                    'execution_result': {
+                        'tool_used': result.get('tool_used'),
+                        'artifacts_created': result.get('artifact_path') or result.get('file_path'),
+                        'execution_details': result.get('execution_notes'),
+                        'customer_interaction': result.get('customer_interaction'),
+                        'automated': result.get('automated', False)
+                    },
+                    'assigned_actor': result.get('executed_by_actor', 'unknown'),
+                    'actor_assignment_reason': f"LLM assigned based on action type and context",
+                    'execution_artifacts': [result.get('artifact_path'), result.get('file_path')] if result.get('artifact_path') or result.get('file_path') else [],
+                    'execution_errors': [result.get('error')] if result.get('error') else []
+                }
+                
+                # Store in ApprovalStore
+                success = self.approval_store.update_execution_result(action_id, execution_data)
+                
+                if not success:
+                    # Log but don't fail - graceful degradation
+                    self.tools._log_action('execution_storage_failed', {
+                        'action_id': action_id,
+                        'execution_id': execution_id,
+                        'reason': 'ApprovalStore update failed'
+                    })
+                    
+            except Exception as e:
+                # Log error but don't fail execution
+                self.tools._log_action('execution_storage_error', {
+                    'action_id': action_id,
+                    'execution_id': execution_id,
+                    'error': str(e)
+                })
+    
+    def _execute_borrower_actions_with_actors(self, borrower_plan: Dict[str, Any], 
+                                            context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Execute borrower-facing actions with actor assignment."""
+        results = []
+        
+        # Execute immediate actions with actor assignment
+        for action in borrower_plan.get('immediate_actions', []):
+            try:
+                # Check approval status
+                current_approval_status = self._check_action_approval_status(action)
+                if action.get('needs_approval') and current_approval_status != 'approved':
+                    results.append({
+                        'status': 'skipped',
+                        'reason': 'Awaiting approval',
+                        'original_action': action,
+                        'action_source': 'borrower_immediate',
+                        'approval_status': current_approval_status,
+                        'risk_level': action.get('risk_level', 'unknown')
+                    })
+                    continue
+                
+                # Assign actor using LLM
+                actor_assignment = self._assign_action_to_actor(action, context)
+                assigned_actor = actor_assignment['assigned_actor']
+                
+                # Get execution decision
+                execution_decision = self._llm_decide_execution(action, context, 'borrower')
+                
+                # Simulate actor execution
+                result = self._simulate_actor_execution(assigned_actor, action, execution_decision, context)
+                result['action_source'] = 'borrower_immediate'
+                result['original_action'] = action
+                result['actor_assignment'] = actor_assignment
+                
+                results.append(result)
+                
+            except Exception as e:
+                results.append({
+                    'status': 'error',
+                    'error': str(e),
+                    'action': action,
+                    'action_source': 'borrower_immediate'
+                })
+        
+        # Execute follow-ups with actor assignment
+        for followup in borrower_plan.get('follow_ups', []):
+            try:
+                current_approval_status = self._check_action_approval_status(followup)
+                if followup.get('needs_approval') and current_approval_status != 'approved':
+                    results.append({
+                        'status': 'skipped',
+                        'reason': 'Awaiting approval',
+                        'original_action': followup,
+                        'action_source': 'borrower_followup',
+                        'approval_status': current_approval_status,
+                        'risk_level': followup.get('risk_level', 'unknown')
+                    })
+                    continue
+                
+                # Assign actor using LLM
+                actor_assignment = self._assign_action_to_actor(followup, context)
+                assigned_actor = actor_assignment['assigned_actor']
+                
+                # Get execution decision
+                execution_decision = self._llm_decide_execution(followup, context, 'borrower_followup')
+                
+                # Simulate actor execution
+                result = self._simulate_actor_execution(assigned_actor, followup, execution_decision, context)
+                result['action_source'] = 'borrower_followup'
+                result['original_action'] = followup
+                result['actor_assignment'] = actor_assignment
+                
+                results.append(result)
+                
+            except Exception as e:
+                results.append({
+                    'status': 'error',
+                    'error': str(e),
+                    'action': followup,
+                    'action_source': 'borrower_followup'
+                })
+        
+        return results

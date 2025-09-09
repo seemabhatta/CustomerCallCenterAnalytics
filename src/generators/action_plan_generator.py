@@ -21,13 +21,24 @@ class ActionPlanGenerator:
     - Implements approval routing based on risk assessment
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, db_path: Optional[str] = None):
         """Initialize the action plan generator.
         
         Args:
             api_key: OpenAI API key (optional, uses environment variable if not provided)
+            db_path: Database path for DecisionAgent integration (optional)
         """
         self.client = openai.OpenAI(api_key=api_key or os.getenv('OPENAI_API_KEY'))
+        
+        # Initialize Decision Agent components if database path provided
+        if db_path:
+            from src.agents.decision_agent import DecisionAgent
+            from src.storage.approval_store import ApprovalStore
+            self.decision_agent = DecisionAgent()
+            self.approval_store = ApprovalStore(db_path)
+        else:
+            self.decision_agent = None
+            self.approval_store = None
     
     def generate(self, analysis: Dict[str, Any], transcript: Transcript) -> Dict[str, Any]:
         """Generate four-layer action plans from analysis and transcript.
@@ -118,8 +129,12 @@ class ActionPlanGenerator:
             # Add approval routing based on risk assessment
             action_plans = self._add_approval_routing(action_plans, analysis)
             
-            # PHASE 1: Add per-action risk evaluation
-            action_plans = self._evaluate_individual_actions(action_plans, analysis)
+            # PHASE 1: DecisionAgent integration - per-action risk evaluation and approval routing
+            if self.decision_agent is not None:
+                action_plans = self._integrate_decision_agent(action_plans, analysis, transcript)
+            else:
+                # Fail gracefully if DecisionAgent not configured
+                raise AttributeError("DecisionAgent not configured. Initialize ActionPlanGenerator with db_path parameter.")
             
             return action_plans
             
@@ -671,3 +686,113 @@ class ActionPlanGenerator:
             return "Low risk - auto-approved"
         
         return "; ".join(reasons)
+    
+    def _integrate_decision_agent(self, action_plans: Dict[str, Any], analysis: Dict[str, Any], transcript: Transcript) -> Dict[str, Any]:
+        """
+        Integrate DecisionAgent for comprehensive risk evaluation and approval routing.
+        
+        Args:
+            action_plans: Generated action plans from OpenAI
+            analysis: Analysis results for context
+            transcript: Original transcript for context
+            
+        Returns:
+            Enhanced action plans with per-action risk evaluation and approval routing
+        """
+        # Create analysis context for DecisionAgent
+        analysis_context = {
+            'complaint_risk': analysis.get('borrower_risks', {}).get('complaint_risk', 0),
+            'urgency_level': analysis.get('urgency_level', 'medium'),
+            'compliance_flags': analysis.get('compliance_flags', []),
+            'borrower_risks': analysis.get('borrower_risks', {}),
+            'confidence_score': analysis.get('confidence_score', 0.5),
+            'transcript_id': transcript.id
+        }
+        
+        # Process action plan through DecisionAgent
+        enhanced_plan = self.decision_agent.process_action_plan(action_plans, analysis_context)
+        
+        # Store approval records for actions needing approval
+        if self.approval_store is not None:
+            self._store_approval_records(enhanced_plan)
+        
+        return enhanced_plan
+    
+    def _store_approval_records(self, action_plans: Dict[str, Any]) -> None:
+        """
+        Store approval records for actions that need approval.
+        
+        Args:
+            action_plans: Enhanced action plans with approval data
+        """
+        # Extract all actions from all layers
+        all_actions = []
+        
+        # Collect actions from each layer
+        for layer_name in ['borrower_plan', 'advisor_plan', 'supervisor_plan']:
+            if layer_name not in action_plans:
+                continue
+                
+            layer_data = action_plans[layer_name]
+            
+            # Collect immediate actions
+            for action in layer_data.get('immediate_actions', []):
+                if isinstance(action, dict) and action.get('needs_approval'):
+                    all_actions.append((action, layer_name, 'immediate_actions'))
+            
+            # Collect follow-ups (borrower layer)
+            if layer_name == 'borrower_plan':
+                for action in layer_data.get('follow_ups', []):
+                    if isinstance(action, dict) and action.get('needs_approval'):
+                        all_actions.append((action, layer_name, 'follow_ups'))
+            
+            # Collect coaching items (advisor layer)
+            if layer_name == 'advisor_plan':
+                for action in layer_data.get('coaching_items', []):
+                    if isinstance(action, dict) and action.get('needs_approval'):
+                        all_actions.append((action, layer_name, 'coaching_items'))
+                        
+            # Collect escalation items (supervisor layer)
+            if layer_name == 'supervisor_plan':
+                for action in layer_data.get('escalation_items', []):
+                    if isinstance(action, dict) and action.get('needs_approval'):
+                        all_actions.append((action, layer_name, 'escalation_items'))
+        
+        # Handle leadership plan separately (single action)
+        if 'leadership_plan' in action_plans and action_plans['leadership_plan'].get('needs_approval'):
+            leadership_action = {
+                'action': 'Leadership portfolio insights',
+                'description': action_plans['leadership_plan'].get('portfolio_insights', ''),
+                'needs_approval': action_plans['leadership_plan']['needs_approval'],
+                'approval_status': action_plans['leadership_plan']['approval_status'],
+                'risk_level': action_plans['leadership_plan']['risk_level'],
+                'action_id': action_plans['leadership_plan'].get('action_id', 'ACT_LEAD_001')
+            }
+            all_actions.append((leadership_action, 'leadership_plan', 'portfolio_insights'))
+        
+        # Store approval records
+        for action, layer, action_type in all_actions:
+            approval_record = {
+                'id': f"APPR_{action.get('action_id', 'UNKNOWN')[4:]}",  # Remove ACT_ prefix
+                'plan_id': action_plans['plan_id'],
+                'action_id': action.get('action_id', f"ACT_MISSING_{len(all_actions)}"),
+                'transcript_id': action_plans['transcript_id'],
+                'analysis_id': action_plans['analysis_id'],
+                'action_text': action['action'],
+                'action_description': action.get('description', ''),
+                'action_layer': layer,
+                'action_type': action.get('action_type', 'general_action'),
+                'risk_score': action.get('risk_score', 0.5),
+                'risk_level': action['risk_level'],
+                'financial_impact': action.get('financial_impact', False),
+                'compliance_impact': action.get('compliance_impact', False),
+                'customer_facing': action.get('customer_facing', False),
+                'needs_approval': action['needs_approval'],
+                'approval_status': action['approval_status'],
+                'approval_route': action.get('routing_decision', 'pending'),
+                'approval_reason': action.get('approval_reason', ''),
+                'decision_agent_version': 'v1.0'
+            }
+            
+            # Store in approval database
+            self.approval_store.store_action_approval(approval_record)
