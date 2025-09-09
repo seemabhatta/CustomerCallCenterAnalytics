@@ -608,5 +608,238 @@ def risk_report(
         client.print_error(f"Risk report failed: {result['error']}")
 
 
+@app.command("generate-action-plan")
+def generate_action_plan(
+    analysis_id: Optional[str] = typer.Option(None, "--analysis-id", "-a", help="Analysis ID to generate plan from"),
+    transcript_id: Optional[str] = typer.Option(None, "--transcript-id", "-t", help="Transcript ID to generate plan from")
+):
+    """Generate four-layer action plan from analysis."""
+    client = CLIClient()
+    
+    if not analysis_id and not transcript_id:
+        console.print("❌ Must specify either --analysis-id or --transcript-id")
+        raise typer.Exit(1)
+    
+    params = {}
+    if analysis_id:
+        params['analysis_id'] = analysis_id
+    if transcript_id:
+        params['transcript_id'] = transcript_id
+    
+    console.print("🔄 [bold blue]Generating action plan...[/bold blue]")
+    result = client.send_command('generate_action_plan', params)
+    
+    if result['success']:
+        console.print(f"✅ Generated action plan: {result['plan_id']}")
+        console.print(f"Risk Level: {result['risk_level']}")
+        console.print(f"Approval Route: {result['approval_route']}")
+        console.print(f"Queue Status: {result['queue_status']}")
+        console.print(f"Message: {result['message']}")
+            
+    else:
+        client.print_error(f"Action plan generation failed: {result['error']}")
+
+
+@app.command("view-action-plan")
+def view_action_plan(
+    plan_id: str = typer.Argument(..., help="Action plan ID"),
+    layer: Optional[str] = typer.Option(None, "--layer", "-l", help="Specific layer to view (borrower, advisor, supervisor, leadership)")
+):
+    """View action plan details."""
+    client = CLIClient()
+    
+    params = {'plan_id': plan_id}
+    if layer:
+        params['layer'] = layer
+    
+    console.print(f"📋 [bold blue]Getting action plan {plan_id}...[/bold blue]")
+    result = client.send_command('get_action_plan', params)
+    
+    if result['success']:
+        plan = result['action_plan']
+        
+        console.print(f"\n📄 [bold green]Action Plan Report[/bold green]")
+        console.print(f"Plan ID: {plan['plan_id']}")
+        console.print(f"Transcript ID: {plan['transcript_id']}")
+        console.print(f"Risk Level: {plan['risk_level']}")
+        console.print(f"Status: {plan['queue_status']}")
+        console.print(f"Created: {plan.get('created_at', 'N/A')}")
+        
+        if layer:
+            # Show specific layer
+            if layer in plan:
+                console.print(f"\n🎯 [bold cyan]{layer.title()} Plan[/bold cyan]")
+                _display_plan_layer(plan[layer], layer)
+        else:
+            # Show all layers
+            for layer_name in ['borrower_plan', 'advisor_plan', 'supervisor_plan', 'leadership_plan']:
+                if layer_name in plan:
+                    layer_display = layer_name.replace('_plan', '').title()
+                    console.print(f"\n🎯 [bold cyan]{layer_display} Plan[/bold cyan]")
+                    _display_plan_layer(plan[layer_name], layer_name)
+                    
+    else:
+        client.print_error(f"Failed to get action plan: {result['error']}")
+
+
+@app.command("action-plan-queue")
+def action_plan_queue(
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by queue status")
+):
+    """View action plan approval queue."""
+    client = CLIClient()
+    
+    params = {}
+    if status:
+        params['status'] = status
+    
+    console.print("📋 [bold blue]Getting approval queue...[/bold blue]")
+    result = client.send_command('get_action_queue', params)
+    
+    if result['success']:
+        queue = result['plans']
+        
+        if not queue:
+            console.print("✅ No action plans in queue")
+            return
+        
+        console.print(f"\n📊 [bold green]Action Plan Queue ({len(queue)} items)[/bold green]")
+        
+        for plan in queue:
+            console.print(f"\nPlan ID: {plan['plan_id']}")
+            console.print(f"  Transcript: {plan['transcript_id']}")
+            console.print(f"  Risk Level: {plan['risk_level']}")
+            console.print(f"  Status: {plan['queue_status']}")
+            console.print(f"  Routing: {plan['approval_route']}")
+            if plan.get('routing_reason'):
+                console.print(f"  Reason: {plan['routing_reason']}")
+            console.print(f"  Created: {plan.get('created_at', 'N/A')}")
+            
+    else:
+        client.print_error(f"Failed to get queue: {result['error']}")
+
+
+@app.command("approve-action-plan")
+def approve_action_plan(
+    plan_id: str = typer.Argument(..., help="Action plan ID to approve"),
+    approver: str = typer.Option("CLI_USER", "--approver", "-by", help="Approver identifier")
+):
+    """Approve an action plan."""
+    client = CLIClient()
+    
+    params = {
+        'plan_id': plan_id,
+        'approved_by': approver,
+        'action': 'approve'
+    }
+    
+    console.print(f"✅ [bold green]Approving action plan {plan_id}...[/bold green]")
+    result = client.send_command('approve_action_plan', params)
+    
+    if result['success']:
+        console.print("✅ Action plan approved successfully")
+    else:
+        client.print_error(f"Approval failed: {result['error']}")
+
+
+@app.command("action-plan-summary")
+def action_plan_summary():
+    """Show action plan summary metrics."""
+    client = CLIClient()
+    
+    console.print("📊 [bold blue]Getting action plan metrics...[/bold blue]")
+    result = client.send_command('action_plan_summary', {})
+    
+    if result['success']:
+        metrics = result['summary']
+        
+        console.print(f"\n📈 [bold green]Action Plan Dashboard[/bold green]")
+        console.print(f"Total Plans: {metrics['total_plans']}")
+        console.print(f"Pending Approvals: {metrics['pending_approvals']}")
+        console.print(f"Auto-Executable: {metrics['auto_executable_percentage']}%")
+        
+        console.print(f"\n📋 Status Distribution:")
+        for status, count in metrics['status_distribution'].items():
+            console.print(f"  {status}: {count}")
+        
+        console.print(f"\n⚠️  Risk Distribution:")
+        for risk, count in metrics['risk_distribution'].items():
+            console.print(f"  {risk}: {count}")
+        
+        console.print(f"\n🔄 Route Distribution:")
+        for route, count in metrics['route_distribution'].items():
+            console.print(f"  {route}: {count}")
+            
+    else:
+        client.print_error(f"Failed to get metrics: {result['error']}")
+
+
+def _display_plan_layer(layer_data: Dict[str, Any], layer_type: str):
+    """Display a specific action plan layer."""
+    if layer_type == 'borrower_plan':
+        if 'immediate_actions' in layer_data:
+            console.print("\n🚀 Immediate Actions:")
+            for action in layer_data['immediate_actions']:
+                priority_color = "red" if action.get('priority') == 'high' else "yellow" if action.get('priority') == 'medium' else "green"
+                console.print(f"  • [{priority_color}]{action.get('action', 'N/A')}[/{priority_color}]")
+                console.print(f"    Timeline: {action.get('timeline', 'N/A')}")
+                console.print(f"    Priority: {action.get('priority', 'N/A')}")
+                if action.get('auto_executable'):
+                    console.print("    ✅ Auto-executable")
+                console.print()
+        
+        if 'follow_ups' in layer_data:
+            console.print("📅 Follow-ups:")
+            for followup in layer_data['follow_ups']:
+                console.print(f"  • {followup.get('action', 'N/A')}")
+                console.print(f"    Due: {followup.get('due_date', 'N/A')}")
+                console.print(f"    Owner: {followup.get('owner', 'N/A')}")
+                console.print()
+    
+    elif layer_type == 'advisor_plan':
+        if 'coaching_items' in layer_data:
+            console.print("\n💡 Coaching Items:")
+            for item in layer_data['coaching_items']:
+                console.print(f"  • {item}")
+        
+        if 'performance_feedback' in layer_data and layer_data['performance_feedback']:
+            feedback = layer_data['performance_feedback']
+            console.print("\n📊 Performance Feedback:")
+            if 'strengths' in feedback:
+                console.print("  ✅ Strengths:")
+                for strength in feedback['strengths']:
+                    console.print(f"    • {strength}")
+            if 'improvements' in feedback:
+                console.print("  🔧 Areas for Improvement:")
+                for improvement in feedback['improvements']:
+                    console.print(f"    • {improvement}")
+    
+    elif layer_type == 'supervisor_plan':
+        if 'escalation_items' in layer_data:
+            console.print("\n⚠️  Escalation Items:")
+            for item in layer_data['escalation_items']:
+                priority_color = "red" if item.get('priority') == 'high' else "yellow" if item.get('priority') == 'medium' else "green"
+                console.print(f"  • [{priority_color}]{item.get('item', 'N/A')}[/{priority_color}]")
+                console.print(f"    Reason: {item.get('reason', 'N/A')}")
+                console.print(f"    Action: {item.get('action_required', 'N/A')}")
+                console.print()
+        
+        if 'team_patterns' in layer_data:
+            console.print("📊 Team Patterns:")
+            for pattern in layer_data['team_patterns']:
+                console.print(f"  • {pattern}")
+    
+    elif layer_type == 'leadership_plan':
+        if 'portfolio_insights' in layer_data:
+            console.print("\n📈 Portfolio Insights:")
+            for insight in layer_data['portfolio_insights']:
+                console.print(f"  • {insight}")
+        
+        if 'strategic_opportunities' in layer_data:
+            console.print("💰 Strategic Opportunities:")
+            for opp in layer_data['strategic_opportunities']:
+                console.print(f"  • {opp}")
+
+
 if __name__ == "__main__":
     app()

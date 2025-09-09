@@ -130,6 +130,16 @@ class CLIHandler(BaseHTTPRequestHandler):
                 result = self.handle_analysis_metrics(params)
             elif command == 'risk_report':
                 result = self.handle_risk_report(params)
+            elif command == 'generate_action_plan':
+                result = self.handle_generate_action_plan(params)
+            elif command == 'get_action_plan':
+                result = self.handle_get_action_plan(params)
+            elif command == 'get_action_queue':
+                result = self.handle_get_action_queue(params)
+            elif command == 'approve_action_plan':
+                result = self.handle_approve_action_plan(params)
+            elif command == 'action_plan_summary':
+                result = self.handle_action_plan_summary(params)
             else:
                 result = {'success': False, 'error': f'Unknown command: {command}'}
             
@@ -471,6 +481,148 @@ class CLIHandler(BaseHTTPRequestHandler):
                 'high_risk_analyses': high_risk,
                 'threshold': threshold,
                 'count': len(high_risk)
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_generate_action_plan(self, params):
+        """Handle generate-action-plan command."""
+        try:
+            from src.generators.action_plan_generator import ActionPlanGenerator
+            from src.storage.action_plan_store import ActionPlanStore
+            from src.storage.analysis_store import AnalysisStore
+            
+            transcript_id = params.get('transcript_id')
+            if not transcript_id:
+                return {'success': False, 'error': 'transcript_id required'}
+            
+            # Get transcript
+            transcript = store.get_by_id(transcript_id)
+            if not transcript:
+                return {'success': False, 'error': f'Transcript {transcript_id} not found'}
+            
+            # Get analysis
+            analysis_store = AnalysisStore('data/call_center.db')
+            analysis = analysis_store.get_by_transcript_id(transcript_id)
+            if not analysis:
+                return {'success': False, 'error': f'Analysis for transcript {transcript_id} not found. Run analyze first.'}
+            
+            # Generate action plan
+            generator = ActionPlanGenerator()
+            action_plan = generator.generate(analysis, transcript)
+            
+            # Store action plan
+            plan_store = ActionPlanStore('data/call_center.db')
+            plan_id = plan_store.store(action_plan)
+            
+            return {
+                'success': True,
+                'message': f'Generated action plan {plan_id} for transcript {transcript_id}',
+                'plan_id': plan_id,
+                'risk_level': action_plan.get('risk_level'),
+                'approval_route': action_plan.get('approval_route'),
+                'queue_status': action_plan.get('queue_status')
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_get_action_plan(self, params):
+        """Handle get-action-plan command."""
+        try:
+            from src.storage.action_plan_store import ActionPlanStore
+            
+            plan_id = params.get('plan_id')
+            transcript_id = params.get('transcript_id')
+            
+            if not plan_id and not transcript_id:
+                return {'success': False, 'error': 'Must specify either --plan-id or --transcript-id'}
+            
+            plan_store = ActionPlanStore('data/call_center.db')
+            
+            if plan_id:
+                plan = plan_store.get_by_id(plan_id)
+            else:
+                plan = plan_store.get_by_transcript_id(transcript_id)
+            
+            if not plan:
+                return {'success': False, 'error': 'Action plan not found'}
+            
+            return {
+                'success': True,
+                'action_plan': plan
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_get_action_queue(self, params):
+        """Handle get-action-queue command."""
+        try:
+            from src.storage.action_plan_store import ActionPlanStore
+            
+            status = params.get('status')
+            
+            plan_store = ActionPlanStore('data/call_center.db')
+            plans = plan_store.get_approval_queue(status)
+            
+            return {
+                'success': True,
+                'plans': plans,
+                'count': len(plans),
+                'status_filter': status
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_approve_action_plan(self, params):
+        """Handle approve-action-plan command."""
+        try:
+            from src.storage.action_plan_store import ActionPlanStore
+            
+            plan_id = params.get('plan_id')
+            approved_by = params.get('approved_by')
+            action = params.get('action', 'approve')
+            
+            if not plan_id:
+                return {'success': False, 'error': 'plan_id required'}
+            if not approved_by:
+                return {'success': False, 'error': 'approved_by required'}
+            
+            plan_store = ActionPlanStore('data/call_center.db')
+            
+            if action == 'approve':
+                result = plan_store.approve_plan(plan_id, approved_by)
+                action_msg = 'approved'
+            elif action == 'reject':
+                result = plan_store.reject_plan(plan_id, approved_by)
+                action_msg = 'rejected'
+            else:
+                return {'success': False, 'error': 'action must be "approve" or "reject"'}
+            
+            if result:
+                return {
+                    'success': True,
+                    'message': f'Action plan {plan_id} {action_msg} by {approved_by}',
+                    'plan_id': plan_id,
+                    'action': action,
+                    'approved_by': approved_by
+                }
+            else:
+                return {'success': False, 'error': f'Failed to {action} action plan {plan_id}'}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_action_plan_summary(self, params):
+        """Handle action-plan-summary command."""
+        try:
+            from src.storage.action_plan_store import ActionPlanStore
+            
+            plan_store = ActionPlanStore('data/call_center.db')
+            metrics = plan_store.get_summary_metrics()
+            
+            return {
+                'success': True,
+                'summary': metrics
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
