@@ -42,20 +42,22 @@ This project implements a Universal Server Architecture with clean separation of
 - **Fast CLI**: ~1 second (10x faster via pre-loaded server)
 - **Same business logic** powers both CLI and API interfaces
 
-### Analytics Pipeline
-Generate Calls → Store → Analyze → Store Analysis → Reports & Insights
+### Complete Intelligence Pipeline
+Generate Calls → Store → Analyze → Store Analysis → Generate Action Plans → Approval Routing → Reports & Insights
 
 ## 📁 Project Structure
 
 ```
 ├── src/                           # Pure Business Logic
 │   ├── generators/
-│   │   └── transcript_generator.py   # Core transcript generation
+│   │   ├── transcript_generator.py   # Core transcript generation
+│   │   └── action_plan_generator.py  # AI-powered action plan generation
 │   ├── analyzers/
 │   │   └── call_analyzer.py          # Post-call intelligence
 │   ├── storage/
 │   │   ├── transcript_store.py       # Transcript storage
-│   │   └── analysis_store.py         # Analysis results storage
+│   │   ├── analysis_store.py         # Analysis results storage
+│   │   └── action_plan_store.py      # Action plan & approval storage
 │   ├── models/
 │   │   └── transcript.py             # Data models
 │   └── tools.py                      # LLM tools & utilities
@@ -68,6 +70,9 @@ Generate Calls → Store → Analyze → Store Analysis → Reports & Insights
 │   ├── test_transcript_generator.py  # Business logic tests
 │   ├── test_call_analyzer.py         # Analytics tests
 │   ├── test_analysis_store.py        # Analysis storage tests
+│   ├── test_action_plan_generator.py # Action plan generation tests
+│   ├── test_action_plan_store.py     # Action plan storage tests
+│   ├── test_integration.py           # Complete system integration tests
 │   └── test_cli.py                   # CLI interface tests
 ├── scripts/                       # Utilities
 │   ├── cleanup.sh                    # Port cleanup
@@ -84,12 +89,19 @@ Generate Calls → Store → Analyze → Store Analysis → Reports & Insights
 - Flexible parameters: customer sentiment, urgency, outcomes
 - Consistent formatting with speaker identification
 
-### 🧠 Post-Call Intelligence Analytics
+### 🧠 Post-Call Intelligence & Action Planning
 - **Mortgage-specific risk assessment** (delinquency, churn, complaint risks)
-- **Advisor performance metrics** and coaching opportunities
+- **Advisor performance metrics** and coaching opportunities  
 - **Compliance monitoring** and disclosure tracking
 - **Multi-layer insights**: Borrower, Advisor, Supervisor, Leadership
 - **Structured analysis** using OpenAI Responses API with confidence scoring
+- **AI-generated action plans** with four-layer approach:
+  - **Borrower Plan**: Immediate actions, follow-ups, personalized offers
+  - **Advisor Plan**: Coaching items, performance feedback, training recommendations
+  - **Supervisor Plan**: Escalation items, team patterns, compliance review
+  - **Leadership Plan**: Portfolio insights, strategic opportunities, trend analysis
+- **Risk-based approval routing** (Low→Auto-approved, Medium→Advisor, High→Supervisor)
+- **Approval workflow management** with queue status tracking
 - **Comprehensive reporting** and metrics dashboard
 
 ### Data Management
@@ -98,6 +110,8 @@ Generate Calls → Store → Analyze → Store Analysis → Reports & Insights
 - Export functionality to JSON format
 - Statistics and analytics on conversation patterns
 - Enriched analysis storage with quick-access fields for reporting
+- Action plan storage with approval workflow tracking
+- Comprehensive metrics across transcripts, analyses, and action plans
 
 ### Multiple Interfaces
 - **Fast CLI**: Instant execution for development workflow
@@ -125,12 +139,19 @@ python cli_fast.py search --text "payment"
 python cli_fast.py stats
 python cli_fast.py export --output backup.json
 
-# Post-Call Intelligence
+# Post-Call Intelligence & Action Plans
 python cli_fast.py analyze --transcript-id CALL_001
 python cli_fast.py analyze --all
 python cli_fast.py analysis-report --transcript-id CALL_001
 python cli_fast.py analysis-metrics
 python cli_fast.py risk-report --threshold 0.8
+
+# Action Plan Generation & Management
+python cli_fast.py generate-action-plan --analysis-id ANALYSIS_001
+python cli_fast.py action-plan --plan-id PLAN_001
+python cli_fast.py approval-queue --status pending_supervisor
+python cli_fast.py approve-plan --plan-id PLAN_001 --approver SUPERVISOR_001
+python cli_fast.py action-plan-metrics
 
 # Demo data
 python cli_fast.py demo
@@ -187,6 +208,30 @@ python cli_fast.py generate scenario="Escrow Shortage" customer_id="CUST_123" ou
 python cli_fast.py generate --count 10 scenario="Payment Dispute" --store
 ```
 
+### Action Plan Workflow
+The system generates comprehensive action plans based on call analysis:
+
+```bash
+# Complete workflow example
+# 1. Generate and analyze a call
+python cli_fast.py generate scenario="Payment Dispute" --store
+python cli_fast.py analyze --transcript-id CALL_001
+
+# 2. Generate action plan from analysis
+python cli_fast.py generate-action-plan --analysis-id ANALYSIS_001
+
+# 3. Review approval queues by role
+python cli_fast.py approval-queue --status pending_advisor
+python cli_fast.py approval-queue --status pending_supervisor
+
+# 4. Approve or reject plans
+python cli_fast.py approve-plan --plan-id PLAN_001 --approver SUPERVISOR_001
+python cli_fast.py reject-plan --plan-id PLAN_002 --approver SUPERVISOR_001
+
+# 5. Monitor system metrics
+python cli_fast.py action-plan-metrics
+```
+
 ### Export and Integration
 ```bash
 # Export all data
@@ -226,9 +271,12 @@ pytest
 pytest tests/test_transcript_generator.py
 pytest tests/test_cli.py
 
-# Analytics testing
-pytest tests/test_call_analyzer.py     # OpenAI Responses API tests
-pytest tests/test_analysis_store.py    # Analysis storage tests
+# Analytics and Action Plan testing
+pytest tests/test_call_analyzer.py          # OpenAI Responses API analysis tests
+pytest tests/test_analysis_store.py         # Analysis storage tests
+pytest tests/test_action_plan_generator.py  # Action plan generation tests
+pytest tests/test_action_plan_store.py      # Action plan storage tests
+pytest tests/test_integration.py            # Complete system integration tests
 
 # Performance comparison
 time python cli.py stats     # ~12 seconds
