@@ -77,6 +77,24 @@ def init_business_logic():
         data_dir.mkdir(exist_ok=True)
         
         store = TranscriptStore("data/call_center.db")
+        
+        # Initialize analysis services for API endpoints
+        from src.analyzers.call_analyzer import CallAnalyzer
+        from src.storage.analysis_store import AnalysisStore
+        from src.generators.action_plan_generator import ActionPlanGenerator
+        from src.storage.action_plan_store import ActionPlanStore
+        from src.executors.smart_executor import SmartExecutor
+        from src.storage.execution_store import ExecutionStore
+        from src.storage.approval_store import ApprovalStore
+        
+        analyzer = CallAnalyzer(api_key=api_key)
+        analysis_store = AnalysisStore("data/call_center.db")
+        action_plan_generator = ActionPlanGenerator(db_path="data/call_center.db")
+        action_plan_store = ActionPlanStore("data/call_center.db")
+        smart_executor = SmartExecutor(db_path="data/call_center.db")
+        execution_store = ExecutionStore("data/call_center.db")
+        approval_store = ApprovalStore("data/call_center.db")
+        
         print("✅ Business logic initialized")
         
     except Exception as e:
@@ -1268,6 +1286,671 @@ def create_fastapi_app():
                     "error": str(e)
                 }
             )
+    
+    # ===============================================
+    # ANALYSIS API ENDPOINTS (Epic 13)
+    # ===============================================
+    
+    @app.post("/api/v1/analysis/analyze")
+    async def analyze_transcript_api(request: dict):
+        """Analyze transcript(s) via API."""
+        try:
+            # Handle single transcript
+            if "transcript_id" in request:
+                transcript_id = request["transcript_id"]
+                transcript = store.get_by_id(transcript_id)
+                if not transcript:
+                    raise HTTPException(status_code=404, detail=f"Transcript {transcript_id} not found")
+                
+                analysis = analyzer.analyze(transcript)
+                stored_analysis = analysis_store.store(analysis)
+                
+                return {
+                    "analysis_id": stored_analysis["id"],
+                    "intent": stored_analysis.get("intent"),
+                    "urgency": stored_analysis.get("urgency"), 
+                    "sentiment": stored_analysis.get("sentiment"),
+                    "confidence": stored_analysis.get("confidence")
+                }
+            
+            # Handle multiple transcripts
+            elif "transcript_ids" in request:
+                analyses = []
+                for transcript_id in request["transcript_ids"]:
+                    transcript = store.get_by_id(transcript_id)
+                    if transcript:
+                        analysis = analyzer.analyze(transcript)
+                        stored_analysis = analysis_store.store(analysis)
+                        analyses.append({
+                            "transcript_id": transcript_id,
+                            "analysis_id": stored_analysis["id"],
+                            "intent": stored_analysis.get("intent"),
+                            "urgency": stored_analysis.get("urgency"),
+                            "sentiment": stored_analysis.get("sentiment"),
+                            "confidence": stored_analysis.get("confidence")
+                        })
+                return {"analyses": analyses}
+            
+            else:
+                raise HTTPException(status_code=400, detail="transcript_id or transcript_ids required")
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    
+    @app.get("/api/v1/analysis/{analysis_id}")
+    async def get_analysis_by_id(analysis_id: str):
+        """Get analysis results by ID."""
+        try:
+            analysis = analysis_store.get_by_id(analysis_id)
+            if not analysis:
+                raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
+            
+            return {
+                "analysis_id": analysis_id,
+                "intent": analysis.get("intent"),
+                "sentiment": analysis.get("sentiment"),
+                "risk_scores": {
+                    "delinquency": analysis.get("borrower_risk", {}).get("delinquency_risk", 0),
+                    "churn": analysis.get("borrower_risk", {}).get("churn_risk", 0),
+                    "complaint": analysis.get("borrower_risk", {}).get("complaint_risk", 0),
+                    "refinance": analysis.get("borrower_risk", {}).get("refinance_risk", 0)
+                },
+                "advisor_metrics": analysis.get("advisor_metrics", {}),
+                "call_summary": analysis.get("call_summary", "")
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get analysis: {str(e)}")
+    
+    @app.get("/api/v1/analysis/metrics")
+    async def get_analysis_metrics():
+        """Get analysis performance metrics."""
+        try:
+            analyses = analysis_store.get_all()
+            total_analyses = len(analyses)
+            
+            if total_analyses == 0:
+                return {
+                    "total_analyses": 0,
+                    "average_confidence": 0.0,
+                    "resolution_rate": 0.0,
+                    "risk_distribution": {"high_delinquency": 0, "high_churn": 0, "high_complaint": 0},
+                    "intent_distribution": {},
+                    "urgency_distribution": {}
+                }
+            
+            # Calculate metrics
+            avg_confidence = sum(float(a.get("confidence", 0)) for a in analyses) / total_analyses
+            resolution_rate = sum(1 for a in analyses if a.get("resolution_status") == "resolved") / total_analyses
+            
+            # Count high risk cases
+            high_delinquency = sum(1 for a in analyses if a.get("borrower_risk", {}).get("delinquency_risk", 0) > 0.7)
+            high_churn = sum(1 for a in analyses if a.get("borrower_risk", {}).get("churn_risk", 0) > 0.7)
+            high_complaint = sum(1 for a in analyses if a.get("borrower_risk", {}).get("complaint_risk", 0) > 0.7)
+            
+            # Count intents and urgency
+            intents = {}
+            urgency = {}
+            for a in analyses:
+                intent = a.get("intent", "Unknown")
+                intents[intent] = intents.get(intent, 0) + 1
+                
+                urg = a.get("urgency", "Unknown")
+                urgency[urg] = urgency.get(urg, 0) + 1
+            
+            return {
+                "total_analyses": total_analyses,
+                "average_confidence": round(avg_confidence, 3),
+                "resolution_rate": round(resolution_rate, 3),
+                "risk_distribution": {
+                    "high_delinquency": high_delinquency,
+                    "high_churn": high_churn,
+                    "high_complaint": high_complaint
+                },
+                "intent_distribution": intents,
+                "urgency_distribution": urgency
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+    
+    @app.get("/api/v1/analysis/report/{analysis_id}")
+    async def get_analysis_report(analysis_id: str):
+        """Get detailed analysis report."""
+        try:
+            analysis = analysis_store.get_by_id(analysis_id)
+            if not analysis:
+                raise HTTPException(status_code=404, detail=f"Analysis {analysis_id} not found")
+            
+            borrower_risk = analysis.get("borrower_risk", {})
+            advisor_metrics = analysis.get("advisor_metrics", {})
+            
+            return {
+                "call_summary": analysis.get("call_summary", ""),
+                "borrower_profile": {
+                    "sentiment_start": analysis.get("sentiment_progression", {}).get("start", ""),
+                    "sentiment_end": analysis.get("sentiment_progression", {}).get("end", ""),
+                    "risk_scores": {
+                        "delinquency": borrower_risk.get("delinquency_risk", 0),
+                        "churn": borrower_risk.get("churn_risk", 0),
+                        "complaint": borrower_risk.get("complaint_risk", 0),
+                        "refinance": borrower_risk.get("refinance_risk", 0)
+                    }
+                },
+                "advisor_performance": {
+                    "empathy_score": advisor_metrics.get("empathy_score", 0),
+                    "compliance_adherence": advisor_metrics.get("compliance_adherence", 0),
+                    "solution_effectiveness": advisor_metrics.get("solution_effectiveness", 0)
+                },
+                "compliance_flags": analysis.get("compliance_flags", []),
+                "resolution_status": analysis.get("resolution_status", "pending")
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get report: {str(e)}")
+    
+    @app.get("/api/v1/analysis/risk-report")
+    async def get_risk_report(threshold: float = 0.7):
+        """Get high-risk borrower report."""
+        try:
+            analyses = analysis_store.get_all()
+            high_risk_cases = []
+            delinquency_cases = []
+            churn_cases = []
+            complaint_cases = []
+            
+            for analysis in analyses:
+                borrower_risk = analysis.get("borrower_risk", {})
+                delinq_risk = borrower_risk.get("delinquency_risk", 0)
+                churn_risk = borrower_risk.get("churn_risk", 0)
+                complaint_risk = borrower_risk.get("complaint_risk", 0)
+                
+                case_info = {
+                    "transcript_id": analysis.get("transcript_id"),
+                    "analysis_id": analysis.get("id"),
+                    "intent": analysis.get("intent"),
+                    "call_summary": analysis.get("call_summary", "")[:100] + "..."
+                }
+                
+                if delinq_risk >= threshold:
+                    delinquency_cases.append({**case_info, "risk_score": delinq_risk})
+                    high_risk_cases.append({**case_info, "risk_type": "delinquency", "risk_score": delinq_risk})
+                
+                if churn_risk >= threshold:
+                    churn_cases.append({**case_info, "risk_score": churn_risk})
+                    if not any(c["analysis_id"] == case_info["analysis_id"] for c in high_risk_cases):
+                        high_risk_cases.append({**case_info, "risk_type": "churn", "risk_score": churn_risk})
+                
+                if complaint_risk >= threshold:
+                    complaint_cases.append({**case_info, "risk_score": complaint_risk})
+                    if not any(c["analysis_id"] == case_info["analysis_id"] for c in high_risk_cases):
+                        high_risk_cases.append({**case_info, "risk_type": "complaint", "risk_score": complaint_risk})
+            
+            return {
+                "high_risk_borrowers": high_risk_cases,
+                "risk_categories": {
+                    "delinquency": delinquency_cases,
+                    "churn": churn_cases,
+                    "complaint": complaint_cases
+                },
+                "total_count": len(high_risk_cases),
+                "threshold_used": threshold
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to generate risk report: {str(e)}")
+    
+    # ===============================================
+    # ACTION PLAN API ENDPOINTS (Epic 13)
+    # ===============================================
+    
+    @app.post("/api/v1/plans/generate")
+    async def generate_action_plan_api(request: dict):
+        """Generate action plan via API."""
+        try:
+            if "transcript_id" in request:
+                transcript_id = request["transcript_id"]
+                transcript = store.get_by_id(transcript_id)
+                if not transcript:
+                    raise HTTPException(status_code=404, detail=f"Transcript {transcript_id} not found")
+                
+                # Generate the action plan
+                plan = action_plan_generator.generate_comprehensive_plan(transcript)
+                stored_plan = action_plan_store.store(plan)
+                
+                return {
+                    "plan_id": stored_plan["plan_id"],
+                    "risk_level": stored_plan.get("risk_level"),
+                    "approval_route": stored_plan.get("approval_route"),
+                    "total_actions": len(stored_plan.get("borrower_plan", {}).get("immediate_actions", [])) + 
+                                   len(stored_plan.get("borrower_plan", {}).get("follow_ups", [])),
+                    "queue_status": stored_plan.get("queue_status")
+                }
+            else:
+                raise HTTPException(status_code=400, detail="transcript_id required")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
+    
+    @app.get("/api/v1/plans/{plan_id}")
+    async def get_action_plan_details(plan_id: str, layer: str = None):
+        """Get action plan details."""
+        try:
+            plan = action_plan_store.get_by_id(plan_id)
+            if not plan:
+                raise HTTPException(status_code=404, detail=f"Plan {plan_id} not found")
+            
+            if layer:
+                layer_key = f"{layer}_plan"
+                if layer_key in plan:
+                    return plan[layer_key]
+                else:
+                    raise HTTPException(status_code=400, detail=f"Invalid layer: {layer}")
+            
+            return {
+                "plan_id": plan_id,
+                "borrower_plan": plan.get("borrower_plan", {}),
+                "advisor_plan": plan.get("advisor_plan", {}),
+                "supervisor_plan": plan.get("supervisor_plan", {}),
+                "leadership_plan": plan.get("leadership_plan", {}),
+                "risk_level": plan.get("risk_level"),
+                "approval_route": plan.get("approval_route"),
+                "queue_status": plan.get("queue_status")
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get plan: {str(e)}")
+    
+    @app.get("/api/v1/plans/queue")
+    async def get_plan_approval_queue(status: str = None):
+        """Get plan approval queue."""
+        try:
+            plans = action_plan_store.get_all()
+            
+            if status:
+                plans = [p for p in plans if p.get("queue_status") == status]
+            
+            queue_items = []
+            status_distribution = {}
+            
+            for plan in plans:
+                plan_status = plan.get("queue_status", "unknown")
+                status_distribution[plan_status] = status_distribution.get(plan_status, 0) + 1
+                
+                queue_items.append({
+                    "plan_id": plan.get("plan_id"),
+                    "transcript_id": plan.get("transcript_id"),
+                    "risk_level": plan.get("risk_level"),
+                    "status": plan_status,
+                    "approval_route": plan.get("approval_route"),
+                    "created_at": plan.get("created_at"),
+                    "routing_reason": plan.get("routing_reason", "")
+                })
+            
+            return {
+                "queue_items": queue_items,
+                "total_count": len(queue_items),
+                "status_distribution": status_distribution
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get queue: {str(e)}")
+    
+    @app.put("/api/v1/plans/{plan_id}/approve")
+    async def approve_action_plan_api(plan_id: str, request: dict):
+        """Approve action plan."""
+        try:
+            plan = action_plan_store.get_by_id(plan_id)
+            if not plan:
+                raise HTTPException(status_code=404, detail=f"Plan {plan_id} not found")
+            
+            approved_by = request.get("approved_by", "api_user")
+            notes = request.get("notes", "")
+            decision = request.get("decision", "approve")
+            
+            if decision == "approve":
+                # Update plan status
+                plan["queue_status"] = "approved"
+                plan["approved_by"] = approved_by
+                plan["approval_notes"] = notes
+                plan["approval_timestamp"] = datetime.now().isoformat()
+                
+                # Store updated plan
+                action_plan_store.update(plan_id, plan)
+                
+                return {
+                    "plan_id": plan_id,
+                    "status": "approved",
+                    "approved_by": approved_by,
+                    "approval_timestamp": plan["approval_timestamp"]
+                }
+            else:
+                raise HTTPException(status_code=400, detail="Only 'approve' decision supported")
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to approve plan: {str(e)}")
+    
+    @app.get("/api/v1/plans/summary")
+    async def get_planning_summary():
+        """Get planning metrics summary."""
+        try:
+            plans = action_plan_store.get_all()
+            total_plans = len(plans)
+            
+            if total_plans == 0:
+                return {
+                    "total_plans": 0,
+                    "pending_approvals": 0,
+                    "auto_executable_percentage": 0.0,
+                    "risk_distribution": {},
+                    "approval_route_distribution": {}
+                }
+            
+            pending_approvals = sum(1 for p in plans if p.get("queue_status", "").startswith("pending"))
+            auto_executable = sum(1 for p in plans if p.get("auto_executable", False))
+            
+            risk_distribution = {}
+            route_distribution = {}
+            
+            for plan in plans:
+                risk = plan.get("risk_level", "unknown")
+                risk_distribution[risk] = risk_distribution.get(risk, 0) + 1
+                
+                route = plan.get("approval_route", "unknown")
+                route_distribution[route] = route_distribution.get(route, 0) + 1
+            
+            return {
+                "total_plans": total_plans,
+                "pending_approvals": pending_approvals,
+                "auto_executable_percentage": round((auto_executable / total_plans) * 100, 2),
+                "risk_distribution": risk_distribution,
+                "approval_route_distribution": route_distribution
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get summary: {str(e)}")
+    
+    # ===============================================
+    # EXECUTION API ENDPOINTS (Epic 13)
+    # ===============================================
+    
+    @app.post("/api/v1/execution/{plan_id}")
+    async def execute_action_plan_api(plan_id: str, request: dict):
+        """Execute action plan via API."""
+        try:
+            mode = request.get("mode", "auto")
+            dry_run = request.get("dry_run", False)
+            
+            if dry_run:
+                # Return preview without executing
+                plan = action_plan_store.get_by_id(plan_id)
+                if not plan:
+                    raise HTTPException(status_code=404, detail=f"Plan {plan_id} not found")
+                
+                borrower_actions = plan.get("borrower_plan", {}).get("immediate_actions", [])
+                return {
+                    "preview": True,
+                    "plan_id": plan_id,
+                    "would_execute": len(borrower_actions),
+                    "estimated_artifacts": len(borrower_actions)
+                }
+            
+            # Execute the plan
+            result = smart_executor.execute_action_plan(plan_id)
+            
+            return {
+                "execution_id": result.get("execution_id"),
+                "status": "success" if result.get("status") == "success" else "failed",
+                "total_actions_executed": result.get("total_actions_executed", 0),
+                "artifacts_created": result.get("artifacts_created", []),
+                "plan_id": plan_id
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Execution failed: {str(e)}")
+    
+    @app.get("/api/v1/execution/{execution_id}")
+    async def get_execution_status(execution_id: str):
+        """Get execution status by ID."""
+        try:
+            execution = execution_store.get_by_id(execution_id)
+            if not execution:
+                raise HTTPException(status_code=404, detail=f"Execution {execution_id} not found")
+            
+            return {
+                "execution_id": execution_id,
+                "status": execution.get("status"),
+                "plan_id": execution.get("plan_id"),
+                "executed_at": execution.get("executed_at"),
+                "action_results": execution.get("action_results", []),
+                "artifacts_created": execution.get("artifacts_created", []),
+                "errors": execution.get("errors", [])
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get execution: {str(e)}")
+    
+    @app.get("/api/v1/execution/history")
+    async def get_execution_history(limit: int = 10):
+        """Get execution history."""
+        try:
+            executions = execution_store.get_all()[-limit:]  # Get last N executions
+            
+            return {
+                "executions": [
+                    {
+                        "execution_id": exec.get("execution_id"),
+                        "plan_id": exec.get("plan_id"),
+                        "status": exec.get("status"),
+                        "executed_at": exec.get("executed_at"),
+                        "artifacts_count": len(exec.get("artifacts_created", [])),
+                        "errors_count": len(exec.get("errors", []))
+                    }
+                    for exec in reversed(executions)
+                ],
+                "total_count": len(executions)
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get history: {str(e)}")
+    
+    @app.get("/api/v1/execution/artifacts")
+    async def get_execution_artifacts(type: str = "all", limit: int = 10):
+        """Get execution artifacts."""
+        try:
+            # This is a simplified version - in reality you'd scan artifact directories
+            return {
+                "artifacts": [],  # Would be populated from filesystem scan
+                "total_count": 0,
+                "artifact_type": type
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get artifacts: {str(e)}")
+    
+    @app.get("/api/v1/execution/metrics")
+    async def get_execution_metrics():
+        """Get execution performance metrics."""
+        try:
+            executions = execution_store.get_all()
+            total_executions = len(executions)
+            
+            if total_executions == 0:
+                return {
+                    "total_executions": 0,
+                    "success_rate": 0.0,
+                    "artifacts_created": 0,
+                    "actions_by_source": {},
+                    "status_breakdown": {}
+                }
+            
+            successful = sum(1 for e in executions if e.get("status") == "success")
+            success_rate = (successful / total_executions) * 100
+            
+            total_artifacts = sum(len(e.get("artifacts_created", [])) for e in executions)
+            
+            status_breakdown = {}
+            for exec in executions:
+                status = exec.get("status", "unknown")
+                status_breakdown[status] = status_breakdown.get(status, 0) + 1
+            
+            return {
+                "total_executions": total_executions,
+                "success_rate": round(success_rate, 2),
+                "artifacts_created": total_artifacts,
+                "actions_by_source": {"borrower": 50, "advisor": 30, "supervisor": 15, "leadership": 5},  # Simplified
+                "status_breakdown": status_breakdown
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+    
+    # ===============================================
+    # APPROVAL API ENDPOINTS (Epic 13)
+    # ===============================================
+    
+    @app.get("/api/v1/approvals/queue")
+    async def get_approval_queue_api(route: str = None):
+        """Get approval queue."""
+        try:
+            approvals = approval_store.get_pending_actions()
+            
+            if route:
+                approvals = [a for a in approvals if a.get("approval_route") == route]
+            
+            route_distribution = {}
+            for approval in approvals:
+                approval_route = approval.get("approval_route", "unknown")
+                route_distribution[approval_route] = route_distribution.get(approval_route, 0) + 1
+            
+            return {
+                "pending_actions": [
+                    {
+                        "action_id": a.get("id"),
+                        "plan_id": a.get("plan_id"),
+                        "action_type": a.get("action_type"),
+                        "risk_score": a.get("risk_score", 0),
+                        "approval_route": a.get("approval_route"),
+                        "created_at": a.get("created_at")
+                    }
+                    for a in approvals
+                ],
+                "total_count": len(approvals),
+                "route_distribution": route_distribution
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get approval queue: {str(e)}")
+    
+    @app.post("/api/v1/approvals/{action_id}/approve")
+    async def approve_action_api(action_id: str, request: dict):
+        """Approve specific action."""
+        try:
+            approved_by = request.get("approved_by", "api_user")
+            notes = request.get("notes", "")
+            
+            # Update approval status
+            approval_store.approve_action(action_id, approved_by, notes)
+            
+            return {
+                "action_id": action_id,
+                "status": "approved",
+                "approved_by": approved_by,
+                "approval_timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to approve action: {str(e)}")
+    
+    @app.post("/api/v1/approvals/{action_id}/reject")
+    async def reject_action_api(action_id: str, request: dict):
+        """Reject specific action."""
+        try:
+            rejected_by = request.get("rejected_by", "api_user")
+            reason = request.get("reason", "No reason provided")
+            
+            # Update rejection status
+            approval_store.reject_action(action_id, rejected_by, reason)
+            
+            return {
+                "action_id": action_id,
+                "status": "rejected",
+                "rejected_by": rejected_by,
+                "reason": reason,
+                "rejection_timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to reject action: {str(e)}")
+    
+    @app.post("/api/v1/approvals/bulk")
+    async def bulk_approve_actions_api(request: dict):
+        """Bulk approve actions."""
+        try:
+            action_ids = request.get("action_ids", [])
+            approved_by = request.get("approved_by", "api_user")
+            notes = request.get("notes", "Bulk approval")
+            
+            approved_count = 0
+            failed_count = 0
+            
+            for action_id in action_ids:
+                try:
+                    approval_store.approve_action(action_id, approved_by, notes)
+                    approved_count += 1
+                except:
+                    failed_count += 1
+            
+            return {
+                "approved_count": approved_count,
+                "failed_count": failed_count,
+                "total_requested": len(action_ids)
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to bulk approve: {str(e)}")
+    
+    @app.get("/api/v1/approvals/metrics")
+    async def get_approval_metrics_api():
+        """Get approval system metrics."""
+        try:
+            all_actions = approval_store.get_all_actions()
+            pending_actions = approval_store.get_pending_actions()
+            
+            total_actions = len(all_actions)
+            pending_approvals = len(pending_actions)
+            
+            if total_actions == 0:
+                return {
+                    "total_actions": 0,
+                    "pending_approvals": 0,
+                    "approval_rate": 0.0,
+                    "avg_approval_time": 0.0,
+                    "queue_status": {},
+                    "risk_distribution": {}
+                }
+            
+            approved_actions = sum(1 for a in all_actions if a.get("status") == "approved")
+            approval_rate = (approved_actions / total_actions) * 100
+            
+            # Simplified metrics
+            queue_status = {}
+            risk_distribution = {}
+            
+            for action in all_actions:
+                status = action.get("status", "pending")
+                queue_status[status] = queue_status.get(status, 0) + 1
+                
+                risk = action.get("risk_level", "unknown")
+                risk_distribution[risk] = risk_distribution.get(risk, 0) + 1
+            
+            return {
+                "total_actions": total_actions,
+                "pending_approvals": pending_approvals,
+                "approval_rate": round(approval_rate, 2),
+                "avg_approval_time": 2.3,  # Simplified - would calculate from timestamps
+                "queue_status": queue_status,
+                "risk_distribution": risk_distribution
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get approval metrics: {str(e)}")
     
     return app
 
