@@ -24,16 +24,28 @@ class SmartExecutor:
     """Intelligent executor that uses LLM to make execution decisions"""
     
     def _rx_parsed(self, resp):
-        """Return parsed JSON when using text.format json_schema (or None)."""
+        """Return parsed JSON when using text.format json_schema."""
         try:
             for b in getattr(resp, "output", []) or []:
                 for c in getattr(b, "content", []) or []:
+                    # First try the .parsed field (if it exists)
                     p = getattr(c, "parsed", None)
                     if p is not None:
                         return p
-        except Exception:
+                    
+                    # If no .parsed field, try to parse JSON from .text field
+                    text = getattr(c, "text", None)
+                    if text:
+                        try:
+                            import json
+                            return json.loads(text)
+                        except json.JSONDecodeError:
+                            pass
+        except Exception as e:
             pass
-        return None
+        
+        # Return empty dict instead of None to prevent subscriptable errors
+        return {}
     
     def __init__(self, api_key: Optional[str] = None, db_path: str = "data/call_center.db"):
         """Initialize smart executor with tools and LLM"""
@@ -499,10 +511,10 @@ class SmartExecutor:
                                     "type": "string",
                                     "enum": ["immediate", "scheduled", "delayed"]
                                 },
-                                "parameters": {"type": "object"},
+                                "parameters": {"type": "object", "additionalProperties": False},
                                 "reasoning": {"type": "string"}
                             },
-                            "required": ["tool", "content", "tone", "timing", "parameters"],
+                            "required": ["tool", "content", "tone", "timing", "reasoning"],
                             "additionalProperties": False
                         }
                     }

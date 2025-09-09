@@ -1,0 +1,28 @@
+From: Customer Service <service@demo.com>
+To: customer@demo.com
+Subject: Customer Service Follow-up
+Date: 2025-09-09 17:11:09
+Message-ID: EMAIL_44663709@demo.local
+
+
+--------------------------------------------------
+
+Subject: Your PMI Removal Status Update
+
+Body:
+
+Dear Customer,
+
+We hope this message finds you well. We are writing to update you on the status of your PMI (Private Mortgage Insurance) removal. Our team has reviewed your request, and we are pleased to inform you that the process is proceeding smoothly.
+
+If you have any questions or require further assistance, please do not hesitate to reach out. We’re here to help you with any concerns you might have.
+
+Thank you for choosing us to assist with your mortgage needs.
+
+Best regards,
+
+[Your Company Name] Customer Service Team
+
+--------------------------------------------------
+This is a simulated email for demo purposes.
+Attachments: None
