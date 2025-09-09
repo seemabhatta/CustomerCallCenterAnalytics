@@ -122,6 +122,14 @@ class CLIHandler(BaseHTTPRequestHandler):
                 result = self.handle_export(params)
             elif command == 'demo':
                 result = self.handle_demo(params)
+            elif command == 'analyze':
+                result = self.handle_analyze(params)
+            elif command == 'analysis_report':
+                result = self.handle_analysis_report(params)
+            elif command == 'analysis_metrics':
+                result = self.handle_analysis_metrics(params)
+            elif command == 'risk_report':
+                result = self.handle_risk_report(params)
             else:
                 result = {'success': False, 'error': f'Unknown command: {command}'}
             
@@ -362,6 +370,107 @@ class CLIHandler(BaseHTTPRequestHandler):
                 'message': f'Generated {len(scenarios)} demo transcripts',
                 'transcripts': [t.to_dict() for t in transcripts],
                 'stored': not no_store
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_analyze(self, params):
+        """Handle analyze command."""
+        try:
+            from src.analyzers.call_analyzer import CallAnalyzer
+            from src.storage.analysis_store import AnalysisStore
+            
+            transcript_id = params.get('transcript_id')
+            all_transcripts = params.get('all_transcripts', False)
+            
+            analyzer = CallAnalyzer()
+            analysis_store = AnalysisStore('data/call_center.db')
+            
+            analyzed_count = 0
+            
+            if all_transcripts:
+                # Analyze all transcripts
+                all_transcripts_list = store.get_all()
+                for transcript in all_transcripts_list:
+                    analysis = analyzer.analyze(transcript)
+                    analysis_store.store(analysis)
+                    analyzed_count += 1
+            elif transcript_id:
+                # Analyze specific transcript
+                transcript = store.get_by_id(transcript_id)
+                if not transcript:
+                    return {'success': False, 'error': f'Transcript {transcript_id} not found'}
+                
+                analysis = analyzer.analyze(transcript)
+                analysis_store.store(analysis)
+                analyzed_count = 1
+            else:
+                return {'success': False, 'error': 'Must specify either --transcript-id or --all'}
+            
+            return {
+                'success': True,
+                'message': f'Analyzed {analyzed_count} transcript(s)',
+                'count': analyzed_count
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_analysis_report(self, params):
+        """Handle analysis-report command."""
+        try:
+            from src.storage.analysis_store import AnalysisStore
+            
+            transcript_id = params.get('transcript_id')
+            analysis_id = params.get('analysis_id')
+            
+            analysis_store = AnalysisStore('data/call_center.db')
+            
+            if analysis_id:
+                analysis = analysis_store.get_by_id(analysis_id)
+            elif transcript_id:
+                analysis = analysis_store.get_by_transcript_id(transcript_id)
+            else:
+                return {'success': False, 'error': 'Must specify either --transcript-id or --analysis-id'}
+            
+            if not analysis:
+                return {'success': False, 'error': 'Analysis not found'}
+            
+            return {
+                'success': True,
+                'analysis': analysis
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_analysis_metrics(self, params):
+        """Handle analysis-metrics command."""
+        try:
+            from src.storage.analysis_store import AnalysisStore
+            
+            analysis_store = AnalysisStore('data/call_center.db')
+            metrics = analysis_store.get_metrics_summary()
+            
+            return {
+                'success': True,
+                'metrics': metrics
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_risk_report(self, params):
+        """Handle risk-report command."""
+        try:
+            from src.storage.analysis_store import AnalysisStore
+            
+            threshold = float(params.get('threshold', 0.7))
+            analysis_store = AnalysisStore('data/call_center.db')
+            high_risk = analysis_store.get_risk_reports(threshold)
+            
+            return {
+                'success': True,
+                'high_risk_analyses': high_risk,
+                'threshold': threshold,
+                'count': len(high_risk)
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
