@@ -198,16 +198,23 @@ class CLIHandler(BaseHTTPRequestHandler):
                     transcript = generator.generate(**generation_params)
                     transcripts.append(transcript)
             
-            # Store if requested
-            if store_flag:
-                for transcript in transcripts:
-                    store.store(transcript)
-            
-            return {
+            # Store if requested and collect IDs
+            result = {
                 'success': True,
                 'transcripts': [t.to_dict() for t in transcripts],
                 'stored': store_flag
             }
+            
+            if store_flag:
+                transcript_ids = []
+                for transcript in transcripts:
+                    store.store(transcript)
+                    transcript_ids.append(transcript.id)
+                
+                # Add transcript IDs to response when storing
+                result['transcript_ids'] = transcript_ids
+            
+            return result
             
         except Exception as e:
             return {'success': False, 'error': str(e)}

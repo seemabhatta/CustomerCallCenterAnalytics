@@ -182,6 +182,11 @@ def generate(
         
         if result.get('stored'):
             client.print_success(f"Stored {len(transcripts)} transcript(s) in database")
+            
+            # Display transcript IDs when stored (for LLM-executable demos)
+            if 'transcript_ids' in result:
+                for transcript_id in result['transcript_ids']:
+                    client.print_success(f"Stored transcript with ID: {transcript_id}")
         
         if show:
             format_transcript_table(transcripts, detailed=True)
