@@ -372,7 +372,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased."""
         mock_analysis_response_obj.output_parsed = mock_analysis_response
         mock_analysis_response_obj.output = [MagicMock()]
         mock_analysis_response_obj.output[0].content = [MagicMock()]
-        mock_analysis_response_obj.output[0].content[0].parsed = mock_analysis_response
+        mock_analysis_response_obj.output[0].content[0].text = json.dumps(mock_analysis_response)
         mock_analysis_client.responses.create.return_value = mock_analysis_response_obj
         
         # Initialize components
@@ -436,7 +436,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
         mock_analysis_response_obj.output_parsed = mock_analysis_response
         mock_analysis_response_obj.output = [MagicMock()]
         mock_analysis_response_obj.output[0].content = [MagicMock()]
-        mock_analysis_response_obj.output[0].content[0].parsed = mock_analysis_response
+        mock_analysis_response_obj.output[0].content[0].text = json.dumps(mock_analysis_response)
         mock_analysis_client.responses.create.return_value = mock_analysis_response_obj
         
         mock_action_plan_client = MagicMock()
@@ -662,7 +662,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
         mock_analysis_response_obj.output_parsed = mock_analysis_response.copy()
         mock_analysis_response_obj.output = [MagicMock()]
         mock_analysis_response_obj.output[0].content = [MagicMock()]
-        mock_analysis_response_obj.output[0].content[0].parsed = mock_analysis_response.copy()
+        mock_analysis_response_obj.output[0].content[0].text = json.dumps(mock_analysis_response)
         # Use side_effect to return a fresh response object each time
         mock_analysis_client.responses.create.side_effect = lambda **kwargs: type('MockResponse', (), {
             'output_parsed': mock_analysis_response.copy(),
@@ -932,7 +932,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
     mock_analysis_response_obj.output_parsed = mock_analysis_response
     mock_analysis_response_obj.output = [MagicMock()]
     mock_analysis_response_obj.output[0].content = [MagicMock()]
-    mock_analysis_response_obj.output[0].content[0].parsed = mock_analysis_response
+    mock_analysis_response_obj.output[0].content[0].text = json.dumps(mock_analysis_response)
     mock_analysis_client.responses.create.return_value = mock_analysis_response_obj
     
     # Mock action plan client (using Responses API)
@@ -962,7 +962,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
     mock_execution_response_obj.output_parsed = mock_execution_decision
     mock_execution_response_obj.output = [MagicMock()]
     mock_execution_response_obj.output[0].content = [MagicMock()]
-    mock_execution_response_obj.output[0].content[0].parsed = mock_execution_decision
+    mock_execution_response_obj.output[0].content[0].text = json.dumps(mock_execution_decision)
     mock_execution_client.responses.create.return_value = mock_execution_response_obj
     
     # Initialize all components
@@ -1220,7 +1220,7 @@ def test_execution_with_different_risk_levels(temp_db, temp_artifacts_dir):
         mock_response_obj.output_parsed = mock_execution_decision
         mock_response_obj.output = [MagicMock()]
         mock_response_obj.output[0].content = [MagicMock()]
-        mock_response_obj.output[0].content[0].parsed = mock_execution_decision
+        mock_response_obj.output[0].content[0].text = json.dumps(mock_execution_decision)
         mock_client.responses.create.return_value = mock_response_obj
         
         smart_executor = SmartExecutor(db_path=temp_db)
