@@ -577,7 +577,7 @@ def risk_report(
     result = client.send_command('risk_report', params)
     
     if result['success']:
-        risk_data = result['risk_data']
+        risk_data = result['high_risk_analyses']
         
         # High delinquency risk
         high_delinquency = risk_data['high_delinquency_risk']
