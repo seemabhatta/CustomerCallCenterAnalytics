@@ -71,28 +71,46 @@ class TestArtifactGeneration:
         with patch.object(executor.action_plan_store, 'get_by_id') as mock_get:
             mock_get.return_value = sample_action_plan
             
-            # Mock OpenAI to return email execution decisions
+            # Mock OpenAI to return both actor assignment and execution decisions
             with patch('src.executors.smart_executor.openai') as mock_openai:
-                mock_response = Mock()
-                mock_response.output = [Mock()]
-                mock_response.output[0].content = [Mock()]
-                # LLM should decide to use email tool for confirmation
-                mock_response.output[0].content[0].text = '''[
-                    {
-                        "tool": "email",
-                        "action": "Send confirmation email about PMI removal status",
-                        "parameters": {
-                            "recipient": "customer@example.com",
-                            "subject": "PMI Removal Status Update",
-                            "template_id": "pmi_confirmation"
-                        },
-                        "content": "Dear Customer, we have received your PMI removal request..."
-                    }
-                ]'''
-                mock_openai.responses.create.return_value = mock_response
+                # Mock actor assignment response (first call)
+                actor_response = Mock()
+                actor_response.output = [Mock()]
+                actor_response.output[0].content = [Mock()]
+                actor_response.output[0].content[0].parsed = {
+                    "assigned_actor": "advisor",
+                    "reasoning": "Email communication is best handled by advisor",
+                    "confidence": 0.9,
+                    "alternative_actors": ["supervisor"],
+                    "execution_priority": "immediate"
+                }
+                
+                # Mock execution decision response (second call) 
+                execution_response = Mock()
+                execution_response.output = [Mock()]
+                execution_response.output[0].content = [Mock()]
+                execution_response.output[0].content[0].parsed = {
+                    "tool": "email",
+                    "content": "Dear Customer, we have received your PMI removal request...",
+                    "tone": "friendly",
+                    "timing": "immediate",
+                    "parameters": {
+                        "recipient": "customer@example.com",
+                        "subject": "PMI Removal Status Update",
+                        "template_id": "pmi_confirmation"
+                    },
+                    "reasoning": "Customer expects confirmation of PMI removal status"
+                }
+                
+                # Return different responses for different calls (first actor assignment, then execution)
+                mock_openai.responses.create.side_effect = [actor_response, execution_response]
                 
                 # Act
                 result = executor.execute_action_plan("test-plan-artifacts")
+                
+                # Debug: Print the full result for analysis
+                print(f"\nDEBUG - Full execution result: {result}")
+                print(f"DEBUG - Borrower action results: {result.get('results', {}).get('borrower_actions', [])}")
                 
                 # Assert - This will FAIL until email generation is implemented
                 assert result.get('status') == 'success', f"Execution should succeed: {result}"
@@ -118,19 +136,19 @@ class TestArtifactGeneration:
                 mock_response = Mock()
                 mock_response.output = [Mock()]
                 mock_response.output[0].content = [Mock()]
-                # LLM should decide to use callback tool for follow-up
-                mock_response.output[0].content[0].text = '''[
-                    {
-                        "tool": "callback",
-                        "action": "Schedule follow-up call to discuss appraisal results",
-                        "parameters": {
-                            "scheduled_time": "2025-09-11T14:00:00",
-                            "priority": "normal",
-                            "duration": "15 minutes"
-                        },
-                        "content": "Follow-up call scheduled to discuss PMI removal appraisal results with customer"
-                    }
-                ]'''
+                # LLM should decide to use callback tool for follow-up - use parsed format
+                mock_response.output[0].content[0].parsed = {
+                    "tool": "callback",
+                    "content": "Follow-up call scheduled to discuss PMI removal appraisal results with customer",
+                    "tone": "empathetic",
+                    "timing": "scheduled",
+                    "parameters": {
+                        "scheduled_time": "2025-09-11T14:00:00",
+                        "priority": "normal",
+                        "duration": "15 minutes"
+                    },
+                    "reasoning": "Customer needs follow-up on appraisal results"
+                }
                 mock_openai.responses.create.return_value = mock_response
                 
                 # Act
@@ -158,31 +176,33 @@ class TestArtifactGeneration:
             mock_get.return_value = sample_action_plan
             
             with patch('src.executors.smart_executor.openai') as mock_openai:
-                mock_response = Mock()
-                mock_response.output = [Mock()]
-                mock_response.output[0].content = [Mock()]
-                # LLM should decide to use multiple tools
-                mock_response.output[0].content[0].text = '''[
-                    {
-                        "tool": "email",
-                        "action": "Send status email",
-                        "parameters": {"recipient": "customer@test.com", "subject": "Status Update"},
-                        "content": "Your PMI removal request update..."
-                    },
-                    {
-                        "tool": "callback", 
-                        "action": "Schedule callback",
-                        "parameters": {"scheduled_time": "2025-09-11T10:00:00"},
-                        "content": "Follow-up call scheduled"
-                    },
-                    {
-                        "tool": "document",
-                        "action": "Generate coaching note",
-                        "parameters": {"doc_type": "coaching_note"},
-                        "content": "Coaching documentation for advisor"
-                    }
-                ]'''
-                mock_openai.responses.create.return_value = mock_response
+                # Create separate mock responses for each action since LLM is called once per action
+                email_response = Mock()
+                email_response.output = [Mock()]
+                email_response.output[0].content = [Mock()]
+                email_response.output[0].content[0].parsed = {
+                    "tool": "email",
+                    "content": "Your PMI removal request update...",
+                    "tone": "friendly",
+                    "timing": "immediate",
+                    "parameters": {"recipient": "customer@test.com", "subject": "Status Update"},
+                    "reasoning": "Status update needed"
+                }
+                
+                callback_response = Mock()
+                callback_response.output = [Mock()]
+                callback_response.output[0].content = [Mock()]
+                callback_response.output[0].content[0].parsed = {
+                    "tool": "callback",
+                    "content": "Follow-up call scheduled",
+                    "tone": "empathetic", 
+                    "timing": "scheduled",
+                    "parameters": {"scheduled_time": "2025-09-11T10:00:00"},
+                    "reasoning": "Follow-up required"
+                }
+                
+                # Return different responses for different calls
+                mock_openai.responses.create.side_effect = [email_response, callback_response]
                 
                 # Act
                 result = executor.execute_action_plan("test-plan-artifacts")

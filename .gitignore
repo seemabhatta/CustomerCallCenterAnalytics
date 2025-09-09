@@ -27,8 +27,7 @@ wheels/
 *.egg
 
 # Database files
-data/db/*.db
-data/db/*.json
+data/documents
 
 # IDE
 .vscode/

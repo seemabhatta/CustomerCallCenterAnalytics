@@ -3,7 +3,7 @@
 > **Prerequisites:** 
 > 1. **OpenAI API Key Required**: Set `OPENAI_API_KEY` environment variable with valid API key
 > 2. Activate virtual environment: `source venv/bin/activate`  
-> 3. Ensure the backend is running: `./start_services.py`
+> 3. Ensure the backend is running: `./start_services.sh`
 >
 > **⚠️ NO FALLBACK Policy**: System requires proper OpenAI API integration. No mock/fallback responses.
 
@@ -75,10 +75,10 @@ Upon successful completion of this demo, you should have achieved the following 
 ### Final Validation Commands
 After completion, these commands should return meaningful data:
 ```bash
-python cli_fast.py stats                                      # Shows 2+ transcripts
-python cli_fast.py execution-history --limit 2               # Shows 2 executions  
-python cli_fast.py approval-metrics                          # Shows approval statistics
-python cli_fast.py execution-metrics --include-observer-feedback  # Observer evaluation
+python3 cli_fast.py stats                                      # Shows 2+ transcripts
+python3 cli_fast.py execution-history --limit 2               # Shows 2 executions  
+python3 cli_fast.py approval-metrics                          # Shows approval statistics
+python3 cli_fast.py execution-metrics --include-observer-feedback  # Observer evaluation
 ```
 
 ### Success Criteria Summary
@@ -96,7 +96,7 @@ python cli_fast.py execution-metrics --include-observer-feedback  # Observer eva
 
 **Command:**
 ```bash
-python cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal - dispute with property valuation and compliance requirements" urgency=high financial_impact=true
+python3 cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal - dispute with property valuation and compliance requirements" urgency=high financial_impact=true
 ```
 
 **Success Indicator:**
@@ -109,7 +109,7 @@ python cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal -
 
 **Validation:**
 ```bash
-python cli_fast.py list  # Should show the new transcript in the table
+python3 cli_fast.py list  # Should show the new transcript in the table
 ```
 
 **Expected Content:**
@@ -131,8 +131,8 @@ python cli_fast.py list  # Should show the new transcript in the table
 
 **Command:** *(Replace TRANSCRIPT_ID with actual ID from Step 1)*
 ```bash
-python cli_fast.py analyze -t TRANSCRIPT_ID
-# Alternative: python cli_fast.py analyze --transcript-id TRANSCRIPT_ID
+python3 cli_fast.py analyze -t TRANSCRIPT_ID
+# Alternative: python3 cli_fast.py analyze --transcript-id TRANSCRIPT_ID
 ```
 
 **Success Indicator:**
@@ -146,7 +146,7 @@ python cli_fast.py analyze -t TRANSCRIPT_ID
 
 **Validation:**
 ```bash
-python cli_fast.py analysis-metrics  # Should show 1+ completed analysis
+python3 cli_fast.py analysis-metrics  # Should show 1+ completed analysis
 ```
 
 **Expected Results:**
@@ -170,7 +170,7 @@ python cli_fast.py analysis-metrics  # Should show 1+ completed analysis
 
 **Command:** *(Use TRANSCRIPT_ID from Step 1)*
 ```bash
-python cli_fast.py generate-action-plan --transcript-id TRANSCRIPT_ID
+python3 cli_fast.py generate-action-plan --transcript-id TRANSCRIPT_ID
 ```
 *Alternative: Use analysis ID if you have it from Step 2*
 
@@ -186,7 +186,7 @@ python cli_fast.py generate-action-plan --transcript-id TRANSCRIPT_ID
 
 **Validation:**
 ```bash
-python cli_fast.py action-plan-summary  # Should show 1+ plan created
+python3 cli_fast.py action-plan-summary  # Should show 1+ plan created
 ```
 
 **Expected Output:**
@@ -218,9 +218,9 @@ python cli_fast.py action-plan-summary  # Should show 1+ plan created
 
 **Command:** *(Use PLAN_ID from Step 3)*
 ```bash
-python cli_fast.py view-action-plan PLAN_ID
+python3 cli_fast.py view-action-plan PLAN_ID
 # Optional layer-specific view:
-python cli_fast.py view-action-plan --layer supervisor PLAN_ID
+python3 cli_fast.py view-action-plan --layer supervisor PLAN_ID
 ```
 
 **Success Indicator:**
@@ -252,8 +252,8 @@ python cli_fast.py view-action-plan --layer supervisor PLAN_ID
 
 **Commands:**
 ```bash
-python cli_fast.py get-approval-queue --route supervisor_approval
-python cli_fast.py get-approval-queue --route advisor_approval
+python3 cli_fast.py get-approval-queue --route supervisor_approval
+python3 cli_fast.py get-approval-queue --route advisor_approval
 ```
 
 **Success Indicator:**
@@ -272,7 +272,7 @@ python cli_fast.py get-approval-queue --route advisor_approval
 
 **Alternative:** For plan-level approvals:
 ```bash
-python cli_fast.py action-plan-queue --status pending_approval
+python3 cli_fast.py action-plan-queue --status pending_approval
 ```
 
 **LLM Execution Instructions:**
@@ -290,13 +290,13 @@ python cli_fast.py action-plan-queue --status pending_approval
 **Commands:** *(Replace ACTION_IDs with actual IDs from Step 5)*
 ```bash
 # Approve supervisor-gated financial action
-python cli_fast.py approve-action ACTION_ID_HIGH_RISK --approved-by "supervisor_jane" --notes "Approved with documentation"
+python3 cli_fast.py approve-action ACTION_ID_HIGH_RISK --approved-by "supervisor_jane" --notes "Approved with documentation"
 
 # Reject expedited processing (optional)
-python cli_fast.py reject-action ACTION_ID_EXPEDITE --rejected-by "supervisor_jane" --reason "Requires supporting docs"
+python3 cli_fast.py reject-action ACTION_ID_EXPEDITE --rejected-by "supervisor_jane" --reason "Requires supporting docs"
 
 # Bulk approve advisor items
-python cli_fast.py bulk-approve "ACTION_ID_1,ACTION_ID_2" --approved-by "advisor_mike" --notes "Routine coaching items"
+python3 cli_fast.py bulk-approve "ACTION_ID_1,ACTION_ID_2" --approved-by "advisor_mike" --notes "Routine coaching items"
 ```
 
 **Success Indicator:**
@@ -306,7 +306,7 @@ python cli_fast.py bulk-approve "ACTION_ID_1,ACTION_ID_2" --approved-by "advisor
 
 **Validation:**
 ```bash
-python cli_fast.py approval-metrics  # Should show updated approval counts
+python3 cli_fast.py approval-metrics  # Should show updated approval counts
 ```
 
 **Expected Results:**
@@ -329,7 +329,7 @@ python cli_fast.py approval-metrics  # Should show updated approval counts
 
 **Command:** *(Use PLAN_ID from Step 3)*
 ```bash
-python cli_fast.py approve-action-plan PLAN_ID --approver "supervisor_jane"
+python3 cli_fast.py approve-action-plan PLAN_ID --approver "supervisor_jane"
 ```
 
 **Success Indicator:**
@@ -339,7 +339,7 @@ python cli_fast.py approve-action-plan PLAN_ID --approver "supervisor_jane"
 
 **Validation:**
 ```bash
-python cli_fast.py action-plan-queue --status approved  # Should show approved plan
+python3 cli_fast.py action-plan-queue --status approved  # Should show approved plan
 ```
 
 **LLM Execution Instructions:**
@@ -354,13 +354,10 @@ python cli_fast.py action-plan-queue --status approved  # Should show approved p
 ## Step 7. Execute the Plan (Approval-Aware)
 **Purpose:** Execute approved actions with actor simulation and artifact generation.
 
-**Commands:** *(Use PLAN_ID from Step 3)*
+**Command:** *(Use PLAN_ID from Step 3)*
 ```bash
-# Optional preview (recommended)
-python cli_fast.py execute-plan --dry-run PLAN_ID
-
 # Execute approved actions
-python cli_fast.py execute-plan PLAN_ID
+python3 cli_fast.py execute-plan PLAN_ID
 ```
 
 **Success Indicator:**
@@ -388,11 +385,10 @@ Artifacts Created: 5-8
 
 **LLM Execution Instructions:**
 1. Replace PLAN_ID with the actual ID from Step 3
-2. Execute dry-run first, then actual execution
-3. Display complete output including execution ID
-4. Capture EXECUTION_ID for monitoring steps
-5. Verify success rate and artifact counts
-6. **WAIT for user confirmation before proceeding to Step 8**
+2. Execute the command and display complete output
+3. Capture EXECUTION_ID for monitoring steps
+4. Verify success rate and artifact counts
+5. **WAIT for user confirmation before proceeding to Step 8**
 
 ---
 
@@ -401,9 +397,9 @@ Artifacts Created: 5-8
 
 **Commands:**
 ```bash
-python cli_fast.py execution-history --limit 5
-python cli_fast.py execution-metrics
-python cli_fast.py approval-metrics
+python3 cli_fast.py execution-history --limit 5
+python3 cli_fast.py execution-metrics
+python3 cli_fast.py approval-metrics
 ```
 
 **Success Indicator:**
@@ -432,9 +428,9 @@ python cli_fast.py approval-metrics
 
 **Commands:**
 ```bash
-python cli_fast.py view-artifacts --type emails --limit 20
-python cli_fast.py view-artifacts --type documents
-python cli_fast.py view-artifacts --type callbacks
+python3 cli_fast.py view-artifacts --type emails --limit 20
+python3 cli_fast.py view-artifacts --type documents
+python3 cli_fast.py view-artifacts --type callbacks
 ```
 
 **Success Indicator:**
@@ -463,13 +459,13 @@ python cli_fast.py view-artifacts --type callbacks
 **Commands:**
 ```bash
 # View execution results with Observer Agent evaluation
-python cli_fast.py execution-metrics --include-observer-feedback
+python3 cli_fast.py execution-metrics --include-observer-feedback
 
 # Check continuous learning insights
-python cli_fast.py analysis-metrics --include-learning-patterns
+python3 cli_fast.py analysis-metrics --include-learning-patterns
 
 # View Observer Agent lessons learned
-python cli_fast.py decision-agent-summary --include-feedback-loop
+python3 cli_fast.py decision-agent-summary --include-feedback-loop
 ```
 
 **Success Indicator:**
@@ -514,18 +510,18 @@ Decision Agent Feedback: Specific routing/process improvements
 **Commands:**
 ```bash
 # Generate another similar scenario to test learning
-python cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal - similar compliance dispute" urgency=high financial_impact=true
+python3 cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal - similar compliance dispute" urgency=high financial_impact=true
 
 # Analyze and generate action plan (should show Observer improvements)
-python cli_fast.py analyze --transcript-id NEW_TRANSCRIPT_ID
-python cli_fast.py generate-action-plan --transcript-id NEW_TRANSCRIPT_ID
+python3 cli_fast.py analyze --transcript-id NEW_TRANSCRIPT_ID
+python3 cli_fast.py generate-action-plan --transcript-id NEW_TRANSCRIPT_ID
 
 # Approve and execute the new plan
-python cli_fast.py approve-action-plan NEW_PLAN_ID --approver "supervisor_jane"
-python cli_fast.py execute-plan NEW_PLAN_ID
+python3 cli_fast.py approve-action-plan NEW_PLAN_ID --approver "supervisor_jane"
+python3 cli_fast.py execute-plan NEW_PLAN_ID
 
 # Compare learning velocity and improvements
-python cli_fast.py execution-metrics --compare-previous --include-learning-velocity
+python3 cli_fast.py execution-metrics --compare-previous --include-learning-velocity
 ```
 
 **Success Indicator:**
@@ -590,10 +586,10 @@ Upon successful execution of all 11 steps, verify these outcomes:
 ### ✅ **System Metrics Available**
 Run these final validation commands:
 ```bash
-python cli_fast.py stats                                         # Shows 2+ transcripts
-python cli_fast.py execution-history --limit 2                  # Shows both executions
-python cli_fast.py approval-metrics                             # Shows approval workflow stats  
-python cli_fast.py execution-metrics --include-observer-feedback # Observer evaluation summary
+python3 cli_fast.py stats                                         # Shows 2+ transcripts
+python3 cli_fast.py execution-history --limit 2                  # Shows both executions
+python3 cli_fast.py approval-metrics                             # Shows approval workflow stats  
+python3 cli_fast.py execution-metrics --include-observer-feedback # Observer evaluation summary
 ```
 
 ## 🏆 **Demo Success Criteria**

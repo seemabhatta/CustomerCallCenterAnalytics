@@ -80,6 +80,19 @@ class ExecutionStore:
             artifacts_count = len(execution_result.get('artifacts_created', []))
             errors_count = len(execution_result.get('errors', []))
             
+            # Serialize any complex data in main execution fields
+            plan_id_value = execution_result['plan_id']
+            if isinstance(plan_id_value, (dict, list)):
+                plan_id_value = json.dumps(plan_id_value)
+            
+            executed_at_value = execution_result['executed_at']
+            if isinstance(executed_at_value, (dict, list)):
+                executed_at_value = json.dumps(executed_at_value)
+            
+            status_value = execution_result['status']
+            if isinstance(status_value, (dict, list)):
+                status_value = json.dumps(status_value)
+            
             # Store main execution record
             cursor.execute('''
                 INSERT OR REPLACE INTO executions 
@@ -88,9 +101,9 @@ class ExecutionStore:
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 execution_id,
-                execution_result['plan_id'],
-                execution_result['executed_at'],
-                execution_result['status'],
+                plan_id_value,
+                executed_at_value,
+                status_value,
                 artifacts_count,
                 errors_count,
                 json.dumps(execution_result)
@@ -99,6 +112,27 @@ class ExecutionStore:
             # Store individual action executions
             for action_type, results in execution_result.get('results', {}).items():
                 for result in results:
+                    # Serialize complex data structures to JSON for SQLite compatibility
+                    error_message = result.get('error')
+                    if isinstance(error_message, (dict, list)):
+                        error_message = json.dumps(error_message)
+                    
+                    llm_reasoning = result.get('reasoning')
+                    if isinstance(llm_reasoning, (dict, list)):
+                        llm_reasoning = json.dumps(llm_reasoning)
+                    
+                    action_value = result.get('action', result.get('action_source', 'unknown'))
+                    if isinstance(action_value, (dict, list)):
+                        action_value = json.dumps(action_value)
+                    
+                    tool_used_value = result.get('tool_used', 'unknown')
+                    if isinstance(tool_used_value, (dict, list)):
+                        tool_used_value = json.dumps(tool_used_value)
+                    
+                    status_value = result.get('status', 'unknown')
+                    if isinstance(status_value, (dict, list)):
+                        status_value = json.dumps(status_value)
+                    
                     cursor.execute('''
                         INSERT INTO action_executions
                         (execution_id, action_type, action_source, tool_used, status,
@@ -106,13 +140,13 @@ class ExecutionStore:
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (
                         execution_id,
-                        result.get('action', result.get('action_source', 'unknown')),
+                        action_value,
                         action_type.replace('_actions', ''),  # borrower/advisor/etc
-                        result.get('tool_used', 'unknown'),
-                        result.get('status', 'unknown'),
+                        tool_used_value,
+                        status_value,
                         result.get('file_path') or result.get('artifact_path'),
-                        result.get('error'),
-                        result.get('reasoning'),
+                        error_message,
+                        llm_reasoning,
                         execution_result['executed_at']
                     ))
             

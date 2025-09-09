@@ -5,25 +5,25 @@
 ### Prerequisites
 ```bash
 # Start the backend server first
-python server.py
+python3 server.py
 
 # Then use CLI commands
-python cli_fast.py [command] [options]
+python3 cli_fast.py [command] [options]
 ```
 
 ### Most Common Commands
 ```bash
 # Basic workflow
-python cli_fast.py demo                                    # Generate sample data
-python cli_fast.py list                                    # View transcripts
-python cli_fast.py analyze --all                          # Analyze all transcripts
-python cli_fast.py generate-action-plan --transcript-id <id>  # Create action plan
-python cli_fast.py execute-plan <plan_id>                 # Execute approved plan
+python3 cli_fast.py demo                                    # Generate sample data
+python3 cli_fast.py list                                    # View transcripts
+python3 cli_fast.py analyze --all                          # Analyze all transcripts
+python3 cli_fast.py generate-action-plan --transcript-id <id>  # Create action plan
+python3 cli_fast.py execute-plan <plan_id>                 # Execute approved plan
 
 # Quick stats
-python cli_fast.py stats                                  # Database statistics
-python cli_fast.py analysis-metrics                      # AI analysis metrics
-python cli_fast.py approval-metrics                      # Approval system metrics
+python3 cli_fast.py stats                                  # Database statistics
+python3 cli_fast.py analysis-metrics                      # AI analysis metrics
+python3 cli_fast.py approval-metrics                      # Approval system metrics
 ```
 
 ---
@@ -45,7 +45,7 @@ python cli_fast.py approval-metrics                      # Approval system metri
 Generate realistic call transcripts with AI.
 
 ```bash
-python cli_fast.py generate [OPTIONS] [PARAMS...]
+python3 cli_fast.py generate [OPTIONS] [PARAMS...]
 ```
 
 **Options:**
@@ -63,14 +63,14 @@ python cli_fast.py generate [OPTIONS] [PARAMS...]
 **Examples:**
 ```bash
 # Basic generation
-python cli_fast.py generate --store
+python3 cli_fast.py generate --store
 
 # Complex scenario with 3 transcripts
-python cli_fast.py generate --count 3 --store --show \
+python3 cli_fast.py generate --count 3 --store --show \
     scenario='Late Payment Hardship' sentiment='worried' urgency='medium'
 
 # Specific customer interaction
-python cli_fast.py generate --store customer_id='CUST_2024_001' \
+python3 cli_fast.py generate --store customer_id='CUST_2024_001' \
     scenario='Refinance Inquiry' duration='20'
 ```
 
@@ -88,7 +88,7 @@ python cli_fast.py generate --store customer_id='CUST_2024_001' \
 Display stored transcripts in table or detailed format.
 
 ```bash
-python cli_fast.py list [OPTIONS]
+python3 cli_fast.py list [OPTIONS]
 ```
 
 **Options:**
@@ -101,17 +101,17 @@ python cli_fast.py list [OPTIONS]
 **Examples:**
 ```bash
 # Quick table view
-python cli_fast.py list
+python3 cli_fast.py list
 
 # Full conversation details
-python cli_fast.py list --detailed
+python3 cli_fast.py list --detailed
 ```
 
 ### `get` - Retrieve Specific Transcript
 Fetch a single transcript by ID.
 
 ```bash
-python cli_fast.py get [OPTIONS] TRANSCRIPT_ID
+python3 cli_fast.py get [OPTIONS] TRANSCRIPT_ID
 ```
 
 **Options:**
@@ -120,10 +120,10 @@ python cli_fast.py get [OPTIONS] TRANSCRIPT_ID
 **Examples:**
 ```bash
 # View transcript
-python cli_fast.py get transcript_20241201_001
+python3 cli_fast.py get transcript_20241201_001
 
 # Export to file
-python cli_fast.py get --export transcript_20241201_001
+python3 cli_fast.py get --export transcript_20241201_001
 # Creates: transcript_20241201_001.json
 ```
 
@@ -131,7 +131,7 @@ python cli_fast.py get --export transcript_20241201_001
 Search by customer, topic, or content.
 
 ```bash
-python cli_fast.py search [OPTIONS]
+python3 cli_fast.py search [OPTIONS]
 ```
 
 **Options:** (exactly one required)
@@ -143,20 +143,20 @@ python cli_fast.py search [OPTIONS]
 **Examples:**
 ```bash
 # Customer-specific search
-python cli_fast.py search --customer "CUST_2024"
+python3 cli_fast.py search --customer "CUST_2024"
 
 # Topic search with details
-python cli_fast.py search --topic "refinance" --detailed
+python3 cli_fast.py search --topic "refinance" --detailed
 
 # Content search across all conversations
-python cli_fast.py search --text "payment plan"
+python3 cli_fast.py search --text "payment plan"
 ```
 
 ### `delete` - Remove Transcript
 Delete a specific transcript with confirmation.
 
 ```bash
-python cli_fast.py delete [OPTIONS] TRANSCRIPT_ID
+python3 cli_fast.py delete [OPTIONS] TRANSCRIPT_ID
 ```
 
 **Options:**
@@ -171,7 +171,7 @@ python cli_fast.py delete [OPTIONS] TRANSCRIPT_ID
 **⚠️ DESTRUCTIVE OPERATION** - Remove all transcripts.
 
 ```bash
-python cli_fast.py delete-all [OPTIONS]
+python3 cli_fast.py delete-all [OPTIONS]
 ```
 
 **Options:**
@@ -187,7 +187,7 @@ python cli_fast.py delete-all [OPTIONS]
 Comprehensive database overview and analytics.
 
 ```bash
-python cli_fast.py stats
+python3 cli_fast.py stats
 ```
 
 **Output Includes:**
@@ -201,7 +201,7 @@ python cli_fast.py stats
 Export all transcripts to JSON format.
 
 ```bash
-python cli_fast.py export [OPTIONS]
+python3 cli_fast.py export [OPTIONS]
 ```
 
 **Options:**
@@ -210,18 +210,18 @@ python cli_fast.py export [OPTIONS]
 **Examples:**
 ```bash
 # Auto-generated filename
-python cli_fast.py export
+python3 cli_fast.py export
 # Creates: transcripts_export_20241201_143022.json
 
 # Custom filename
-python cli_fast.py export --output my_data.json
+python3 cli_fast.py export --output my_data.json
 ```
 
 ### `demo` - Sample Data Generator
 Create demonstration data for testing and training.
 
 ```bash
-python cli_fast.py demo [OPTIONS]
+python3 cli_fast.py demo [OPTIONS]
 ```
 
 **Options:**
@@ -241,7 +241,7 @@ python cli_fast.py demo [OPTIONS]
 Generate comprehensive mortgage servicing insights using AI.
 
 ```bash
-python cli_fast.py analyze [OPTIONS]
+python3 cli_fast.py analyze [OPTIONS]
 ```
 
 **Options:** (exactly one required)
@@ -259,10 +259,10 @@ python cli_fast.py analyze [OPTIONS]
 **Examples:**
 ```bash
 # Analyze specific conversation
-python cli_fast.py analyze --transcript-id transcript_20241201_001
+python3 cli_fast.py analyze --transcript-id transcript_20241201_001
 
 # Batch analyze all data
-python cli_fast.py analyze --all
+python3 cli_fast.py analyze --all
 ```
 
 **Output:**
@@ -280,7 +280,7 @@ python cli_fast.py analyze --all
 Comprehensive analysis report for specific transcript.
 
 ```bash
-python cli_fast.py analysis-report [OPTIONS]
+python3 cli_fast.py analysis-report [OPTIONS]
 ```
 
 **Options:** (exactly one required)
@@ -299,7 +299,7 @@ python cli_fast.py analysis-report [OPTIONS]
 System-wide analysis performance metrics.
 
 ```bash
-python cli_fast.py analysis-metrics
+python3 cli_fast.py analysis-metrics
 ```
 
 **Metrics Included:**
@@ -313,7 +313,7 @@ python cli_fast.py analysis-metrics
 Generate report of borrowers requiring immediate attention.
 
 ```bash
-python cli_fast.py risk-report [OPTIONS]
+python3 cli_fast.py risk-report [OPTIONS]
 ```
 
 **Options:**
@@ -347,7 +347,7 @@ python cli_fast.py risk-report [OPTIONS]
 Generate comprehensive action plans from analysis results.
 
 ```bash
-python cli_fast.py generate-action-plan [OPTIONS]
+python3 cli_fast.py generate-action-plan [OPTIONS]
 ```
 
 **Options:** (exactly one required)
@@ -373,7 +373,7 @@ Message: Plan ready for advisor review
 Display comprehensive action plan details.
 
 ```bash
-python cli_fast.py view-action-plan [OPTIONS] PLAN_ID
+python3 cli_fast.py view-action-plan [OPTIONS] PLAN_ID
 ```
 
 **Options:**
@@ -386,10 +386,10 @@ python cli_fast.py view-action-plan [OPTIONS] PLAN_ID
 **Examples:**
 ```bash
 # View complete plan
-python cli_fast.py view-action-plan plan_20241201_001
+python3 cli_fast.py view-action-plan plan_20241201_001
 
 # View only supervisor actions
-python cli_fast.py view-action-plan --layer supervisor plan_20241201_001
+python3 cli_fast.py view-action-plan --layer supervisor plan_20241201_001
 ```
 
 **Sample Output Sections:**
@@ -413,7 +413,7 @@ Status: pending_approval
 View plans awaiting approval in the system.
 
 ```bash
-python cli_fast.py action-plan-queue [OPTIONS]
+python3 cli_fast.py action-plan-queue [OPTIONS]
 ```
 
 **Options:**
@@ -440,7 +440,7 @@ Plan ID: plan_20241201_001
 Approve action plans for execution.
 
 ```bash
-python cli_fast.py approve-action-plan [OPTIONS] PLAN_ID
+python3 cli_fast.py approve-action-plan [OPTIONS] PLAN_ID
 ```
 
 **Options:**
@@ -456,7 +456,7 @@ python cli_fast.py approve-action-plan [OPTIONS] PLAN_ID
 Overview of action planning system performance.
 
 ```bash
-python cli_fast.py action-plan-summary
+python3 cli_fast.py action-plan-summary
 ```
 
 **Metrics Displayed:**
@@ -474,7 +474,7 @@ python cli_fast.py action-plan-summary
 Execute approved action plans using AI-powered automation.
 
 ```bash
-python cli_fast.py execute-plan [OPTIONS] PLAN_ID
+python3 cli_fast.py execute-plan [OPTIONS] PLAN_ID
 ```
 
 **Options:**
@@ -493,13 +493,13 @@ python cli_fast.py execute-plan [OPTIONS] PLAN_ID
 **Examples:**
 ```bash
 # Standard execution (requires approval)
-python cli_fast.py execute-plan plan_20241201_001
+python3 cli_fast.py execute-plan plan_20241201_001
 
 # Preview what would be executed
-python cli_fast.py execute-plan --dry-run plan_20241201_001
+python3 cli_fast.py execute-plan --dry-run plan_20241201_001
 
 # Manual override for testing
-python cli_fast.py execute-plan --mode manual plan_20241201_001
+python3 cli_fast.py execute-plan --mode manual plan_20241201_001
 ```
 
 **Execution Results:**
@@ -525,7 +525,7 @@ Total Actions Executed: 4
 View recent execution history and results.
 
 ```bash
-python cli_fast.py execution-history [OPTIONS]
+python3 cli_fast.py execution-history [OPTIONS]
 ```
 
 **Options:**
@@ -546,7 +546,7 @@ python cli_fast.py execution-history [OPTIONS]
 View generated artifacts from plan executions.
 
 ```bash
-python cli_fast.py view-artifacts [OPTIONS]
+python3 cli_fast.py view-artifacts [OPTIONS]
 ```
 
 **Options:**
@@ -560,13 +560,13 @@ python cli_fast.py view-artifacts [OPTIONS]
 **Examples:**
 ```bash
 # View all recent artifacts
-python cli_fast.py view-artifacts
+python3 cli_fast.py view-artifacts
 
 # View only email artifacts
-python cli_fast.py view-artifacts --type emails --limit 20
+python3 cli_fast.py view-artifacts --type emails --limit 20
 
 # View generated documents
-python cli_fast.py view-artifacts --type documents
+python3 cli_fast.py view-artifacts --type documents
 ```
 
 **Artifact Display:**
@@ -586,7 +586,7 @@ python cli_fast.py view-artifacts --type documents
 Execution system performance statistics.
 
 ```bash
-python cli_fast.py execution-metrics
+python3 cli_fast.py execution-metrics
 ```
 
 **7-Day Performance Metrics:**
@@ -604,7 +604,7 @@ python cli_fast.py execution-metrics
 View actions requiring approval in the Decision Agent system.
 
 ```bash
-python cli_fast.py get-approval-queue [OPTIONS]
+python3 cli_fast.py get-approval-queue [OPTIONS]
 ```
 
 **Options:**
@@ -633,7 +633,7 @@ python cli_fast.py get-approval-queue [OPTIONS]
 Approve specific action in the queue.
 
 ```bash
-python cli_fast.py approve-action [OPTIONS] ACTION_ID
+python3 cli_fast.py approve-action [OPTIONS] ACTION_ID
 ```
 
 **Options:**
@@ -643,10 +643,10 @@ python cli_fast.py approve-action [OPTIONS] ACTION_ID
 **Examples:**
 ```bash
 # Basic approval
-python cli_fast.py approve-action action_20241201_001
+python3 cli_fast.py approve-action action_20241201_001
 
 # Approval with notes
-python cli_fast.py approve-action --notes "Approved for customer retention" \
+python3 cli_fast.py approve-action --notes "Approved for customer retention" \
     --approved-by "John.Smith" action_20241201_001
 ```
 
@@ -654,7 +654,7 @@ python cli_fast.py approve-action --notes "Approved for customer retention" \
 Reject specific action with reason.
 
 ```bash
-python cli_fast.py reject-action [OPTIONS] ACTION_ID
+python3 cli_fast.py reject-action [OPTIONS] ACTION_ID
 ```
 
 **Options:**
@@ -664,10 +664,10 @@ python cli_fast.py reject-action [OPTIONS] ACTION_ID
 **Examples:**
 ```bash
 # Basic rejection
-python cli_fast.py reject-action action_20241201_002
+python3 cli_fast.py reject-action action_20241201_002
 
 # Rejection with detailed reason
-python cli_fast.py reject-action --reason "Requires additional customer verification" \
+python3 cli_fast.py reject-action --reason "Requires additional customer verification" \
     --rejected-by "Jane.Supervisor" action_20241201_002
 ```
 
@@ -675,7 +675,7 @@ python cli_fast.py reject-action --reason "Requires additional customer verifica
 Approve multiple actions simultaneously.
 
 ```bash
-python cli_fast.py bulk-approve [OPTIONS] ACTION_IDS
+python3 cli_fast.py bulk-approve [OPTIONS] ACTION_IDS
 ```
 
 **Arguments:**
@@ -688,10 +688,10 @@ python cli_fast.py bulk-approve [OPTIONS] ACTION_IDS
 **Examples:**
 ```bash
 # Bulk approve multiple actions
-python cli_fast.py bulk-approve "action_001,action_002,action_003"
+python3 cli_fast.py bulk-approve "action_001,action_002,action_003"
 
 # Bulk approve with custom notes
-python cli_fast.py bulk-approve --notes "Weekly batch approval session" \
+python3 cli_fast.py bulk-approve --notes "Weekly batch approval session" \
     --approved-by "Manager.Smith" "action_004,action_005"
 ```
 
@@ -705,7 +705,7 @@ Approved: 3/3 actions
 Comprehensive approval queue performance metrics.
 
 ```bash
-python cli_fast.py approval-metrics
+python3 cli_fast.py approval-metrics
 ```
 
 **Metrics Dashboard:**
@@ -737,7 +737,7 @@ Avg Approval Time: 2.3 hours
 View Decision Agent settings and processing summary.
 
 ```bash
-python cli_fast.py decision-agent-summary
+python3 cli_fast.py decision-agent-summary
 ```
 
 **Summary Sections:**
@@ -748,7 +748,9 @@ python cli_fast.py decision-agent-summary
 
 ---
 
-## 👁️ OBSERVER AGENT & CONTINUOUS LEARNING
+## 👁️ OBSERVER AGENT & CONTINUOUS LEARNING (PLANNED FEATURES)
+
+> **⚠️ NOTE**: The Observer Agent features documented below are **PLANNED FUNCTIONALITY** and are not yet fully implemented. The commands with `--include-observer-feedback` and similar flags may not exist in the current CLI.
 
 ### Observer Agent Overview
 The Observer Agent implements the "Co-Pilot Review & Evaluation" functionality, providing continuous learning and improvement through execution result evaluation.
@@ -764,7 +766,7 @@ The Observer Agent implements the "Co-Pilot Review & Evaluation" functionality, 
 View execution metrics with Observer Agent evaluation insights.
 
 ```bash
-python cli_fast.py execution-metrics --include-observer-feedback
+python3 cli_fast.py execution-metrics --include-observer-feedback
 ```
 
 **Enhanced Metrics Display:**
@@ -803,7 +805,7 @@ Quality Score: 4.1/5.0
 View analysis performance with continuous learning insights.
 
 ```bash
-python cli_fast.py analysis-metrics --include-learning-patterns
+python3 cli_fast.py analysis-metrics --include-learning-patterns
 ```
 
 **Learning Analytics Display:**
@@ -838,7 +840,7 @@ Learning Acceleration: 0.85
 View Decision Agent configuration with Observer feedback integration.
 
 ```bash
-python cli_fast.py decision-agent-summary --include-feedback-loop
+python3 cli_fast.py decision-agent-summary --include-feedback-loop
 ```
 
 **Feedback Loop Status:**
@@ -873,7 +875,7 @@ Success Rate: 91.7%
 Compare current execution performance with previous periods to measure learning velocity.
 
 ```bash
-python cli_fast.py execution-metrics --compare-previous --include-learning-velocity
+python3 cli_fast.py execution-metrics --compare-previous --include-learning-velocity
 ```
 
 **Learning Velocity Display:**
@@ -908,19 +910,19 @@ Current Period (Last 30 days):
 **Enhanced Command Options:**
 ```bash
 # Standard execution metrics with Observer insights
-python cli_fast.py execution-metrics --include-observer-feedback
+python3 cli_fast.py execution-metrics --include-observer-feedback
 
 # Analysis performance with learning patterns
-python cli_fast.py analysis-metrics --include-learning-patterns
+python3 cli_fast.py analysis-metrics --include-learning-patterns
 
 # Decision Agent status with feedback loop info
-python cli_fast.py decision-agent-summary --include-feedback-loop
+python3 cli_fast.py decision-agent-summary --include-feedback-loop
 
 # Performance comparison with learning velocity
-python cli_fast.py execution-metrics --compare-previous --include-learning-velocity
+python3 cli_fast.py execution-metrics --compare-previous --include-learning-velocity
 
 # Approval metrics with Observer recommendations
-python cli_fast.py approval-metrics --include-observer-insights
+python3 cli_fast.py approval-metrics --include-observer-insights
 ```
 
 ### Observer Agent Workflow Integration
@@ -928,24 +930,24 @@ python cli_fast.py approval-metrics --include-observer-insights
 **Complete Learning Cycle:**
 ```bash
 # 1. Execute action plan
-python cli_fast.py execute-plan plan_20241201_001
+python3 cli_fast.py execute-plan plan_20241201_001
 
 # 2. View Observer evaluation (automatic)
-python cli_fast.py execution-metrics --include-observer-feedback
+python3 cli_fast.py execution-metrics --include-observer-feedback
 
 # 3. Check learning insights
-python cli_fast.py analysis-metrics --include-learning-patterns
+python3 cli_fast.py analysis-metrics --include-learning-patterns
 
 # 4. Verify Decision Agent improvements
-python cli_fast.py decision-agent-summary --include-feedback-loop
+python3 cli_fast.py decision-agent-summary --include-feedback-loop
 
 # 5. Execute similar scenario to test learning
-python cli_fast.py generate --scenario "similar_scenario"
-python cli_fast.py generate-action-plan --transcript-id [new_id]
-python cli_fast.py execute-plan [new_plan_id]
+python3 cli_fast.py generate --scenario "similar_scenario"
+python3 cli_fast.py generate-action-plan --transcript-id [new_id]
+python3 cli_fast.py execute-plan [new_plan_id]
 
 # 6. Compare learning velocity
-python cli_fast.py execution-metrics --compare-previous --include-learning-velocity
+python3 cli_fast.py execution-metrics --compare-previous --include-learning-velocity
 ```
 
 ---
@@ -956,19 +958,19 @@ python cli_fast.py execution-metrics --compare-previous --include-learning-veloc
 
 ```bash
 # Database & Content Metrics
-python cli_fast.py stats              # Transcript database statistics
-python cli_fast.py analysis-metrics   # AI analysis performance
-python cli_fast.py risk-report        # High-risk borrower identification
+python3 cli_fast.py stats              # Transcript database statistics
+python3 cli_fast.py analysis-metrics   # AI analysis performance
+python3 cli_fast.py risk-report        # High-risk borrower identification
 
 # Planning & Execution Metrics  
-python cli_fast.py action-plan-summary    # Action planning statistics
-python cli_fast.py execution-metrics      # Execution system performance
-python cli_fast.py execution-history      # Recent execution audit trail
+python3 cli_fast.py action-plan-summary    # Action planning statistics
+python3 cli_fast.py execution-metrics      # Execution system performance
+python3 cli_fast.py execution-history      # Recent execution audit trail
 
 # Approval & Decision Metrics
-python cli_fast.py approval-metrics       # Approval queue statistics
-python cli_fast.py decision-agent-summary # Decision Agent configuration
-python cli_fast.py get-approval-queue     # Current pending actions
+python3 cli_fast.py approval-metrics       # Approval queue statistics
+python3 cli_fast.py decision-agent-summary # Decision Agent configuration
+python3 cli_fast.py get-approval-queue     # Current pending actions
 ```
 
 ---
@@ -986,7 +988,7 @@ python cli_fast.py get-approval-queue     # Current pending actions
 ps aux | grep server.py
 
 # Start the server
-python server.py
+python3 server.py
 
 # Verify server is listening
 curl http://localhost:9999/health
@@ -1006,13 +1008,13 @@ curl http://localhost:9999/health
 **Solutions:**
 ```bash
 # Check plan approval status
-python cli_fast.py view-action-plan plan_id
+python3 cli_fast.py view-action-plan plan_id
 
 # Approve the plan
-python cli_fast.py approve-action-plan plan_id
+python3 cli_fast.py approve-action-plan plan_id
 
 # Use dry-run to test without executing
-python cli_fast.py execute-plan --dry-run plan_id
+python3 cli_fast.py execute-plan --dry-run plan_id
 ```
 
 #### 4. Invalid ID Errors
@@ -1021,13 +1023,13 @@ python cli_fast.py execute-plan --dry-run plan_id
 **Solutions:**
 ```bash
 # List available transcripts
-python cli_fast.py list
+python3 cli_fast.py list
 
 # Search for specific content
-python cli_fast.py search --text "keyword"
+python3 cli_fast.py search --text "keyword"
 
 # Check recent analyses
-python cli_fast.py analysis-metrics
+python3 cli_fast.py analysis-metrics
 ```
 
 ### Error Codes & Status Messages
@@ -1045,20 +1047,20 @@ python cli_fast.py analysis-metrics
 #### Bulk Operations
 ```bash
 # Instead of individual analysis:
-python cli_fast.py analyze --transcript-id id1
-python cli_fast.py analyze --transcript-id id2
+python3 cli_fast.py analyze --transcript-id id1
+python3 cli_fast.py analyze --transcript-id id2
 
 # Use batch analysis:
-python cli_fast.py analyze --all
+python3 cli_fast.py analyze --all
 ```
 
 #### Efficient Searching
 ```bash
 # Broad search first
-python cli_fast.py search --topic "payment"
+python3 cli_fast.py search --topic "payment"
 
 # Then narrow down with text search
-python cli_fast.py search --text "payment plan setup"
+python3 cli_fast.py search --text "payment plan setup"
 ```
 
 #### Resource Management
@@ -1074,87 +1076,87 @@ python cli_fast.py search --text "payment plan setup"
 
 ```bash
 # 1. Generate customer interaction
-python cli_fast.py generate --store scenario='Payment Difficulty' sentiment='concerned'
+python3 cli_fast.py generate --store scenario='Payment Difficulty' sentiment='concerned'
 
 # 2. Analyze the interaction
-python cli_fast.py analyze --transcript-id transcript_20241201_001
+python3 cli_fast.py analyze --transcript-id transcript_20241201_001
 
 # 3. Generate action plan
-python cli_fast.py generate-action-plan --transcript-id transcript_20241201_001
+python3 cli_fast.py generate-action-plan --transcript-id transcript_20241201_001
 
 # 4. Review and approve plan
-python cli_fast.py view-action-plan plan_20241201_001
-python cli_fast.py approve-action-plan plan_20241201_001
+python3 cli_fast.py view-action-plan plan_20241201_001
+python3 cli_fast.py approve-action-plan plan_20241201_001
 
 # 5. Execute with preview first
-python cli_fast.py execute-plan --dry-run plan_20241201_001
-python cli_fast.py execute-plan plan_20241201_001
+python3 cli_fast.py execute-plan --dry-run plan_20241201_001
+python3 cli_fast.py execute-plan plan_20241201_001
 
 # 6. Monitor results
-python cli_fast.py execution-history --limit 1
-python cli_fast.py view-artifacts --type emails
+python3 cli_fast.py execution-history --limit 1
+python3 cli_fast.py view-artifacts --type emails
 ```
 
 ### 2. Risk Management Workflow
 
 ```bash
 # 1. Generate diverse scenarios
-python cli_fast.py generate --count 10 --store
+python3 cli_fast.py generate --count 10 --store
 
 # 2. Analyze all for risk patterns
-python cli_fast.py analyze --all
+python3 cli_fast.py analyze --all
 
 # 3. Identify high-risk cases
-python cli_fast.py risk-report --threshold 0.75
+python3 cli_fast.py risk-report --threshold 0.75
 
 # 4. Generate plans for high-risk borrowers
-python cli_fast.py generate-action-plan --transcript-id high_risk_transcript_id
+python3 cli_fast.py generate-action-plan --transcript-id high_risk_transcript_id
 
 # 5. Review approval queue
-python cli_fast.py get-approval-queue --route supervisor_approval
+python3 cli_fast.py get-approval-queue --route supervisor_approval
 
 # 6. Approve high-priority actions
-python cli_fast.py approve-action action_high_priority_id
+python3 cli_fast.py approve-action action_high_priority_id
 ```
 
 ### 3. Performance Monitoring Workflow
 
 ```bash
 # Daily metrics review
-python cli_fast.py stats
-python cli_fast.py analysis-metrics
-python cli_fast.py execution-metrics
-python cli_fast.py approval-metrics
+python3 cli_fast.py stats
+python3 cli_fast.py analysis-metrics
+python3 cli_fast.py execution-metrics
+python3 cli_fast.py approval-metrics
 
 # Weekly performance analysis
-python cli_fast.py risk-report
-python cli_fast.py action-plan-summary
-python cli_fast.py decision-agent-summary
+python3 cli_fast.py risk-report
+python3 cli_fast.py action-plan-summary
+python3 cli_fast.py decision-agent-summary
 
 # Monthly data management
-python cli_fast.py export --output monthly_backup_$(date +%Y%m).json
-python cli_fast.py execution-history --limit 100
+python3 cli_fast.py export --output monthly_backup_$(date +%Y%m).json
+python3 cli_fast.py execution-history --limit 100
 ```
 
 ### 4. Testing & Development Workflow
 
 ```bash
 # Set up test environment
-python cli_fast.py demo --no-store  # Generate test data without saving
-python cli_fast.py generate --count 5 --store  # Create test dataset
+python3 cli_fast.py demo --no-store  # Generate test data without saving
+python3 cli_fast.py generate --count 5 --store  # Create test dataset
 
 # Test analysis pipeline
-python cli_fast.py analyze --all
-python cli_fast.py analysis-metrics
+python3 cli_fast.py analyze --all
+python3 cli_fast.py analysis-metrics
 
 # Test action planning
-python cli_fast.py generate-action-plan --transcript-id test_transcript
+python3 cli_fast.py generate-action-plan --transcript-id test_transcript
 
 # Test execution with dry run
-python cli_fast.py execute-plan --dry-run --mode manual test_plan_id
+python3 cli_fast.py execute-plan --dry-run --mode manual test_plan_id
 
 # Clean up test data
-python cli_fast.py delete-all --force  # Use with extreme caution
+python3 cli_fast.py delete-all --force  # Use with extreme caution
 ```
 
 ---

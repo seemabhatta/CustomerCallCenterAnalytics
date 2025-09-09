@@ -24,7 +24,7 @@ else
     echo "🔧 Starting universal server..."
     
     # Start server in background
-    nohup python server.py > server.log 2>&1 &
+    nohup python3 server.py > server.log 2>&1 &
     SERVER_PID=$!
     
     echo "🎯 Server starting with PID: $SERVER_PID"
@@ -72,10 +72,10 @@ echo ""
 
 echo "🚀 Quick Commands:"
 echo "   # Fast CLI (instant execution)"
-echo "   python cli_fast.py demo"
-echo "   python cli_fast.py generate scenario=\"PMI Removal\" --store"
-echo "   python cli_fast.py list"
-echo "   python cli_fast.py stats"
+echo "   python3 cli_fast.py demo"
+echo "   python3 cli_fast.py generate scenario=\"PMI Removal\" --store"
+echo "   python3 cli_fast.py list"
+echo "   python3 cli_fast.py stats"
 echo ""
 echo "   # Web API"
 echo "   curl http://localhost:8000/"
@@ -91,5 +91,5 @@ echo "   • Server handles all heavy imports once at startup"
 echo ""
 
 echo "🛑 To stop the server:"
-echo "   pkill -f 'python server.py'"
+echo "   pkill -f 'python3 server.py'"
 echo ""

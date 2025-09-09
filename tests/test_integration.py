@@ -3,6 +3,7 @@ import pytest
 import tempfile
 import os
 import shutil
+import json
 from unittest.mock import patch, MagicMock
 from src.generators.transcript_generator import TranscriptGenerator
 from src.storage.transcript_store import TranscriptStore
@@ -92,7 +93,12 @@ def mock_action_plan_response():
             'risk_mitigation': ['Monitor payment history consistency']
         },
         'advisor_plan': {
-            'coaching_items': ['Review PMI removal process documentation'],
+            'coaching_items': [{
+                'action': 'Review PMI removal process documentation',
+                'coaching_point': 'Ensure advisor understands PMI removal procedures',
+                'expected_improvement': 'Better customer guidance on PMI requirements',
+                'priority': 'medium'
+            }],
             'performance_feedback': {
                 'strengths': ['Clear communication', 'Good product knowledge'],
                 'improvements': ['Could probe more about customer timeline'],
@@ -438,7 +444,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
         mock_action_plan_response_obj.output_parsed = mock_action_plan_response
         mock_action_plan_response_obj.output = [MagicMock()]
         mock_action_plan_response_obj.output[0].content = [MagicMock()]
-        mock_action_plan_response_obj.output[0].content[0].parsed = mock_action_plan_response
+        mock_action_plan_response_obj.output[0].content[0].text = json.dumps(mock_action_plan_response)
         mock_action_plan_client.responses.create.return_value = mock_action_plan_response_obj
         
         # Initialize all components
@@ -449,7 +455,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
             transcript_store = TranscriptStore(temp_db)
             call_analyzer = CallAnalyzer(api_key="test_key")
             analysis_store = AnalysisStore(temp_db)
-            action_plan_generator = ActionPlanGenerator(api_key="test_key")
+            action_plan_generator = ActionPlanGenerator(api_key="test_key", db_path=temp_db)
             action_plan_store = ActionPlanStore(temp_db)
             
             # Step 1: Generate and store transcript
@@ -670,7 +676,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
         mock_action_plan_client.responses.create.side_effect = lambda **kwargs: type('MockResponse', (), {
             'output_parsed': mock_action_plan_response.copy(),
             'output': [type('MockOutput', (), {
-                'content': [type('MockContent', (), {'parsed': mock_action_plan_response.copy()})()]
+                'content': [type('MockContent', (), {'text': json.dumps(mock_action_plan_response.copy())})()]
             })()]
         })()
         
@@ -682,7 +688,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
             transcript_store = TranscriptStore(temp_db)
             call_analyzer = CallAnalyzer(api_key="test_key")
             analysis_store = AnalysisStore(temp_db)
-            action_plan_generator = ActionPlanGenerator(api_key="test_key")
+            action_plan_generator = ActionPlanGenerator(api_key="test_key", db_path=temp_db)
             action_plan_store = ActionPlanStore(temp_db)
             
             # Generate multiple transcripts with different scenarios
@@ -935,7 +941,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
     mock_action_plan_response_obj.output_parsed = mock_action_plan_response
     mock_action_plan_response_obj.output = [MagicMock()]
     mock_action_plan_response_obj.output[0].content = [MagicMock()]
-    mock_action_plan_response_obj.output[0].content[0].parsed = mock_action_plan_response
+    mock_action_plan_response_obj.output[0].content[0].text = json.dumps(mock_action_plan_response)
     mock_action_plan_client.responses.create.return_value = mock_action_plan_response_obj
     
     # Mock execution LLM decision client
@@ -969,7 +975,7 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
         transcript_store = TranscriptStore(temp_db)
         call_analyzer = CallAnalyzer(api_key="test_key") 
         analysis_store = AnalysisStore(temp_db)
-        action_plan_generator = ActionPlanGenerator(api_key="test_key")
+        action_plan_generator = ActionPlanGenerator(api_key="test_key", db_path=temp_db)
         action_plan_store = ActionPlanStore(temp_db)
         smart_executor = SmartExecutor(db_path=temp_db)
         # Override the tools to use our temp directory

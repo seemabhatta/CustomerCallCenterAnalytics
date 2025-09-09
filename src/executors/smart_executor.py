@@ -476,7 +476,7 @@ class SmartExecutor:
         
         try:
             response = self.client.responses.create(
-                model="gpt-4",
+                model="gpt-4o",
                 input=prompt,
                 text={
                     "format": {
@@ -645,7 +645,7 @@ class SmartExecutor:
         
         try:
             response = self.client.responses.create(
-                model="gpt-4",
+                model="gpt-4o",
                 input=prompt,
                 text={
                     "format": {
@@ -670,7 +670,7 @@ class SmartExecutor:
                                     "enum": ["immediate", "scheduled", "deferred"]
                                 }
                             },
-                            "required": ["assigned_actor", "reasoning", "confidence"],
+                            "required": ["assigned_actor", "reasoning", "confidence", "alternative_actors", "execution_priority"],
                             "additionalProperties": False
                         }
                     }
