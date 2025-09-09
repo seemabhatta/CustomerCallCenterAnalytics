@@ -169,7 +169,8 @@ class ApprovalStore:
                 action_approval.get('transcript_id'),
                 action_approval.get('analysis_id'),
                 action_approval.get('action_text', ''),
-                action_approval.get('action_description', ''),
+                # NO FALLBACK: Serialize lists/dicts to JSON strings for SQLite
+                json.dumps(action_approval.get('action_description', '')) if isinstance(action_approval.get('action_description', ''), (list, dict)) else action_approval.get('action_description', ''),
                 action_approval.get('action_layer'),
                 action_approval.get('action_type'),
                 action_approval.get('risk_score', 0),
@@ -179,7 +180,7 @@ class ApprovalStore:
                 action_approval.get('customer_facing', False),
                 action_approval.get('needs_approval', False),
                 action_approval.get('approval_status', 'pending'),
-                action_approval.get('approval_route'),
+                json.dumps(action_approval.get('approval_route')) if isinstance(action_approval.get('approval_route'), (list, dict)) else action_approval.get('approval_route'),
                 action_approval.get('approval_reason', ''),
                 action_approval.get('decision_agent_version', 'v1.0')
             ))

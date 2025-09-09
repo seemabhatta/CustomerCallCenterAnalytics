@@ -8,6 +8,86 @@ from src.generators.action_plan_generator import ActionPlanGenerator
 from src.models.transcript import Transcript, Message
 
 
+class TestActionPlanGeneratorBugFix:
+    """Test ActionPlanGenerator bug where 'str' object has no attribute 'get'"""
+    
+    @pytest.fixture
+    def sample_analysis(self):
+        """Sample analysis data as returned by AnalysisStore"""
+        return {
+            'analysis_id': 'test-analysis-001',
+            'call_summary': 'Customer contacted regarding PMI removal dispute',
+            'primary_intent': 'PMI_removal', 
+            'urgency_level': 'high',
+            'borrower_sentiment': {
+                'overall': 'frustrated',
+                'start': 'frustrated',
+                'end': 'hopeful',
+                'trend': 'improving'
+            },
+            'borrower_risks': {
+                'delinquency_risk': 0.1,
+                'churn_risk': 0.2,
+                'complaint_risk': 0.4,
+                'refinance_likelihood': 0.5
+            },
+            'advisor_metrics': {
+                'empathy_score': 0.9,
+                'compliance_adherence': 0.9,
+                'solution_effectiveness': 0.8
+            },
+            'compliance_flags': [
+                'Ensure all PMI removal regulatory requirements are communicated'
+            ],
+            'topics_discussed': ['PMI removal', 'property valuation'],
+            'issue_resolved': False,
+            'first_call_resolution': False,
+            'escalation_needed': True,
+            'confidence_score': 0.95
+        }
+    
+    @pytest.fixture
+    def sample_transcript(self):
+        """Sample transcript for testing"""
+        messages = [
+            Message("Customer", "I need to dispute my PMI valuation", timestamp="2024-01-01T10:00:00Z"),
+            Message("Advisor", "I can help with that PMI dispute", timestamp="2024-01-01T10:00:30Z")
+        ]
+        return Transcript(
+            id="CALL_TEST_001",
+            messages=messages,
+            customer_id="CUST_TEST",
+            advisor_id="ADV_TEST",
+            timestamp="2024-01-01T10:00:00Z"
+        )
+
+    def test_extract_context_with_valid_analysis_dict(self, sample_analysis, sample_transcript):
+        """Test that _extract_context works with valid dictionary analysis"""
+        with patch.dict('os.environ', {'OPENAI_API_KEY': 'test_key'}):
+            generator = ActionPlanGenerator(db_path='test.db')
+            
+            # This should NOT raise 'str' object has no attribute 'get'
+            context = generator._extract_context(sample_transcript, sample_analysis)
+            
+            # Verify context extraction worked
+            assert context['primary_intent'] == 'PMI_removal'
+            assert context['urgency_level'] == 'high'
+            assert context['borrower_risks']['complaint_risk'] == 0.4
+            assert context['confidence_score'] == 0.95
+
+    def test_extract_context_fails_with_string_analysis(self, sample_transcript):
+        """Test that _extract_context fails when analysis is string (reproduces bug)"""
+        with patch.dict('os.environ', {'OPENAI_API_KEY': 'test_key'}):
+            generator = ActionPlanGenerator(db_path='test.db')
+            
+            # Pass string instead of dict to reproduce the bug
+            string_analysis = "This is a string, not a dict"
+            
+            # This SHOULD raise AttributeError: 'str' object has no attribute 'get'
+            with pytest.raises(AttributeError, match="'str' object has no attribute 'get'"):
+                generator._extract_context(sample_transcript, string_analysis)
+
+
 @pytest.fixture
 def mock_openai_client():
     """Mock OpenAI client for testing."""

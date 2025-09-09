@@ -4,7 +4,10 @@
       "Bash(source:*)",
       "Bash(python:*)",
       "Bash(pip install:*)",
-      "Read(//home/ujjal/.claude/**)"
+      "Read(//home/ujjal/.claude/**)",
+      "Bash(set -a)",
+      "Bash(set +a)",
+      "Bash(gh issue close:*)"
     ],
     "deny": [],
     "ask": []

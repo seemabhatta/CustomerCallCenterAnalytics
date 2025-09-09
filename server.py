@@ -222,7 +222,8 @@ class CLIHandler(BaseHTTPRequestHandler):
     def handle_list(self, params):
         """Handle list command."""
         try:
-            transcripts = store.get_all()
+            transcript_store = TranscriptStore('data/call_center.db')
+            transcripts = transcript_store.get_all()
             return {
                 'success': True,
                 'transcripts': [t.to_dict() for t in transcripts]
@@ -237,7 +238,8 @@ class CLIHandler(BaseHTTPRequestHandler):
             if not transcript_id:
                 return {'success': False, 'error': 'transcript_id required'}
             
-            transcript = store.get_by_id(transcript_id)
+            transcript_store = TranscriptStore('data/call_center.db')
+            transcript = transcript_store.get_by_id(transcript_id)
             if not transcript:
                 return {'success': False, 'error': f'Transcript {transcript_id} not found'}
             
@@ -251,16 +253,18 @@ class CLIHandler(BaseHTTPRequestHandler):
     def handle_search(self, params):
         """Handle search command."""
         try:
+            transcript_store = TranscriptStore('data/call_center.db')
+            
             customer = params.get('customer')
             topic = params.get('topic')
             text = params.get('text')
             
             if customer:
-                results = store.search_by_customer(customer)
+                results = transcript_store.search_by_customer(customer)
             elif topic:
-                results = store.search_by_topic(topic)
+                results = transcript_store.search_by_topic(topic)
             elif text:
-                results = store.search_by_text(text)
+                results = transcript_store.search_by_text(text)
             else:
                 return {'success': False, 'error': 'Must specify customer, topic, or text'}
             
@@ -274,11 +278,13 @@ class CLIHandler(BaseHTTPRequestHandler):
     def handle_delete(self, params):
         """Handle delete command."""
         try:
+            transcript_store = TranscriptStore('data/call_center.db')
+            
             transcript_id = params.get('transcript_id')
             if not transcript_id:
                 return {'success': False, 'error': 'transcript_id required'}
             
-            result = store.delete(transcript_id)
+            result = transcript_store.delete(transcript_id)
             if result:
                 return {'success': True, 'message': f'Deleted transcript {transcript_id}'}
             else:
@@ -289,8 +295,10 @@ class CLIHandler(BaseHTTPRequestHandler):
     def handle_delete_all(self, params):
         """Handle delete all command."""
         try:
+            transcript_store = TranscriptStore('data/call_center.db')
+            
             # Get count before deletion for confirmation
-            count = store.delete_all()
+            count = transcript_store.delete_all()
             
             if count > 0:
                 return {'success': True, 'message': f'Deleted {count} transcripts', 'count': count}
@@ -549,7 +557,8 @@ class CLIHandler(BaseHTTPRequestHandler):
                 return {'success': False, 'error': 'transcript_id required'}
             
             # Get transcript
-            transcript = store.get_by_id(transcript_id)
+            transcript_store = TranscriptStore('data/call_center.db')
+            transcript = transcript_store.get_by_id(transcript_id)
             if not transcript:
                 return {'success': False, 'error': f'Transcript {transcript_id} not found'}
             
@@ -560,7 +569,7 @@ class CLIHandler(BaseHTTPRequestHandler):
                 return {'success': False, 'error': f'Analysis for transcript {transcript_id} not found. Run analyze first.'}
             
             # Generate action plan
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path='data/call_center.db')
             action_plan = generator.generate(analysis, transcript)
             
             # Store action plan

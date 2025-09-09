@@ -75,50 +75,32 @@ class ActionPlanGenerator:
                 temperature=0.3  # Lower temperature for consistent action planning
             )
             
-            # Robust extraction of structured output across SDK variants
-            action_plans: Optional[Dict[str, Any]] = None
-
-            # Preferred: output_parsed when available
-            if hasattr(response, "output_parsed"):
-                action_plans = getattr(response, "output_parsed")  # type: ignore
-
-            # Try nested response.output -> content[0].parsed/text
-            if action_plans is None and hasattr(response, "output"):
-                try:
-                    out = getattr(response, "output")
-                    if isinstance(out, list) and out:
-                        content = getattr(out[0], "content", None)
-                        if isinstance(content, list) and content:
-                            item = content[0]
-                            # Some SDKs expose a parsed field for structured outputs
-                            if hasattr(item, "parsed") and getattr(item, "parsed"):
-                                action_plans = getattr(item, "parsed")
-                            elif hasattr(item, "text") and getattr(item, "text"):
-                                # If text contains JSON, parse it
-                                try:
-                                    action_plans = json.loads(getattr(item, "text"))
-                                except json.JSONDecodeError:
-                                    pass
-                except (AttributeError, IndexError, TypeError):
-                    pass
-
-            # Final fallback: extract raw text and try JSON parsing
-            if action_plans is None:
-                raw_text = None
-                # Check for simple text output
-                if hasattr(response, "output_text"):
-                    raw_text = getattr(response, "output_text")
-                elif hasattr(response, "text"):
-                    raw_text = getattr(response, "text")
-
-                if raw_text:
-                    try:
-                        action_plans = json.loads(raw_text)
-                    except json.JSONDecodeError:
-                        pass
-
-            if action_plans is None:
-                raise Exception("Could not extract structured output from response")
+            
+            # NO FALLBACK: Fail fast with proper OpenAI Responses API integration
+            # The response should have structured output - if not, configuration is wrong
+            # NO FALLBACK: Parse JSON from OpenAI Responses API structured output
+            if not hasattr(response, 'output') or not response.output or len(response.output) == 0:
+                raise ValueError("OpenAI response missing output field or empty output")
+            
+            output_msg = response.output[0]
+            if not hasattr(output_msg, 'content') or not output_msg.content or len(output_msg.content) == 0:
+                raise ValueError("OpenAI output message missing content field or empty content")
+            
+            # Extract JSON text from response
+            text_content = output_msg.content[0].text
+            if not text_content:
+                raise ValueError("OpenAI response content is empty")
+            
+            # Parse JSON string to dictionary
+            try:
+                action_plans = json.loads(text_content)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"OpenAI returned invalid JSON: {text_content[:200]}... Error: {e}")
+            if not action_plans:
+                raise ValueError("OpenAI Responses API returned empty output_parsed.")
+            
+            if not isinstance(action_plans, dict):
+                raise ValueError(f"OpenAI returned parsed output that is not a dictionary. Got {type(action_plans)}: {action_plans}")
             
             # Add metadata
             action_plans['plan_id'] = str(uuid.uuid4())
@@ -151,6 +133,10 @@ class ActionPlanGenerator:
         Returns:
             Context dictionary with extracted information
         """
+        # Type validation to catch the bug early
+        if not isinstance(analysis, dict):
+            raise TypeError(f"Expected analysis to be Dict[str, Any], got {type(analysis)}. Value: {repr(analysis)[:200]}...")
+        
         context = {}
         
         # Extract promises and commitments from transcript
@@ -405,7 +391,17 @@ class ActionPlanGenerator:
                     "properties": {
                         "coaching_items": {
                             "type": "array",
-                            "items": {"type": "string"}
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "action": {"type": "string"},
+                                    "coaching_point": {"type": "string"},
+                                    "expected_improvement": {"type": "string"},
+                                    "priority": {"type": "string", "enum": ["high", "medium", "low"]}
+                                },
+                                "required": ["action", "coaching_point", "expected_improvement", "priority"],
+                                "additionalProperties": False
+                            }
                         },
                         "performance_feedback": {
                             "type": "object",
