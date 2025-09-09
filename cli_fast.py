@@ -440,18 +440,25 @@ def analyze(
     result = client.send_command('analyze', params)
     
     if result['success']:
-        analyses = result.get('analyses', [])
-        client.print_success(f"Analyzed {len(analyses)} transcript(s)")
+        count = result.get('count', 0)
+        client.print_success(f"Analyzed {count} transcript(s)")
         
-        # Show summary of analyses
-        for analysis in analyses:
-            console.print(f"\n📄 Transcript: {analysis['transcript_id']}")
-            console.print(f"   Intent: {analysis.get('primary_intent', 'N/A')}")
-            console.print(f"   Urgency: {analysis.get('urgency_level', 'N/A')}")
-            console.print(f"   Sentiment: {analysis.get('borrower_sentiment', {}).get('overall', 'N/A')}")
-            console.print(f"   Confidence: {analysis.get('confidence_score', 0):.2f}")
-            if analysis.get('escalation_needed'):
-                console.print("   🚨 [bold red]Escalation needed[/bold red]")
+        # Show analysis preview if available
+        analysis_preview = result.get('analysis_preview')
+        if analysis_preview:
+            console.print(f"\n📄 Analysis Results:")
+            console.print(f"   Analysis ID: {analysis_preview.get('analysis_id', 'N/A')}")
+            console.print(f"   Intent: {analysis_preview.get('primary_intent', 'N/A')}")
+            console.print(f"   Urgency: {analysis_preview.get('urgency_level', 'N/A')}")
+            console.print(f"   Sentiment: {analysis_preview.get('sentiment', 'N/A')}")
+            console.print(f"   Confidence: {analysis_preview.get('confidence_score', 0):.2f}")
+            console.print("\n✅ Analysis stored successfully! Use 'analysis-report' command to view full details.")
+        
+        # Show any debugging information
+        if result.get('analysis_note'):
+            console.print(f"\n📝 Note: {result.get('analysis_note')}")
+        if result.get('analysis_error'):
+            console.print(f"\n⚠️ Error: {result.get('analysis_error')}")
     else:
         client.print_error(f"Analysis failed: {result['error']}")
 

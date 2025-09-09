@@ -1,8 +1,32 @@
 # 🎬 Customer Call Center Analytics - LLM-Executable Demo Script
 
 > **Prerequisites:** 
-> 1. Activate virtual environment: `source venv/bin/activate`
-> 2. Ensure the backend is running: `./start_services.py`
+> 1. **OpenAI API Key Required**: Set `OPENAI_API_KEY` environment variable with valid API key
+> 2. Activate virtual environment: `source venv/bin/activate`  
+> 3. Ensure the backend is running: `./start_services.py`
+>
+> **⚠️ NO FALLBACK Policy**: System requires proper OpenAI API integration. No mock/fallback responses.
+
+---
+
+## 🤖 Execution Instructions for LLM Agents
+
+**IMPORTANT:** This demo is designed to be executed step-by-step with user confirmation at each stage.
+
+### Execution Protocol:
+1. **Execute each step's command**
+2. **Display the complete output to the user**
+3. **Report what was captured** (IDs, success indicators, metrics)
+4. **Wait for user confirmation** before proceeding to the next step
+5. **If any step fails**, stop execution and report the issue
+
+### Success Validation:
+- Each step must show success indicators before proceeding
+- Capture and track all IDs generated during the workflow
+- Verify expected outcomes match actual results
+- Report any discrepancies immediately
+
+**Do NOT proceed to the next step without explicit user confirmation.**
 
 ---
 
@@ -93,6 +117,13 @@ python cli_fast.py list  # Should show the new transcript in the table
 - High urgency and financial impact flags
 - Compliance requirements and property valuation issues mentioned
 
+**LLM Execution Instructions:**
+1. Execute the command above
+2. Display the complete output to the user
+3. Capture and report the transcript ID (format: CALL_XXXXXXXX)
+4. Confirm the success indicators are present
+5. **WAIT for user confirmation before proceeding to Step 2**
+
 ---
 
 ## Step 2. Analyze the Conversation
@@ -100,7 +131,8 @@ python cli_fast.py list  # Should show the new transcript in the table
 
 **Command:** *(Replace TRANSCRIPT_ID with actual ID from Step 1)*
 ```bash
-python cli_fast.py analyze --transcript-id TRANSCRIPT_ID
+python cli_fast.py analyze -t TRANSCRIPT_ID
+# Alternative: python cli_fast.py analyze --transcript-id TRANSCRIPT_ID
 ```
 
 **Success Indicator:**
@@ -123,6 +155,13 @@ python cli_fast.py analysis-metrics  # Should show 1+ completed analysis
 - Risk factors: financial impact, compliance concerns
 - Delinquency, churn, and complaint risk scores
 - Structured metadata for downstream processing
+
+**LLM Execution Instructions:**
+1. Replace TRANSCRIPT_ID with the actual ID from Step 1
+2. Execute the command and display complete output
+3. Capture and report the analysis ID (if generated)
+4. Verify sentiment, intent, and risk scores are shown
+5. **WAIT for user confirmation before proceeding to Step 3**
 
 ---
 
@@ -165,6 +204,13 @@ python cli_fast.py action-plan-summary  # Should show 1+ plan created
 - **Leadership layer**: Strategic and policy actions
 - Each action has risk scoring and appropriate approval routing
 
+**LLM Execution Instructions:**
+1. Replace TRANSCRIPT_ID with the actual ID from Step 1
+2. Execute the command and display complete output
+3. Capture and report the plan ID (format: plan_YYYYMMDD_XXX)
+4. Note the action count and routing distribution
+5. **WAIT for user confirmation before proceeding to Step 4**
+
 ---
 
 ## Step 4. Review the Action Plan
@@ -191,6 +237,13 @@ python cli_fast.py view-action-plan --layer supervisor PLAN_ID
 - Example actions:
   - `action_20241201_001` → risk 0.25 → auto
   - `action_20241201_002` → risk 0.80 → supervisor_approval
+
+**LLM Execution Instructions:**
+1. Replace PLAN_ID with the actual ID from Step 3
+2. Execute the command and display complete output
+3. Note specific action IDs for use in Step 6 approvals
+4. Verify risk scores and routing decisions are shown
+5. **WAIT for user confirmation before proceeding to Step 5**
 
 ---
 
@@ -221,6 +274,13 @@ python cli_fast.py get-approval-queue --route advisor_approval
 ```bash
 python cli_fast.py action-plan-queue --status pending_approval
 ```
+
+**LLM Execution Instructions:**
+1. Execute both approval queue commands
+2. Display complete output showing pending actions
+3. Capture action IDs that need approval for Step 6
+4. Note the count of actions in each approval queue
+5. **WAIT for user confirmation before proceeding to Step 6**
 
 ---
 
@@ -255,6 +315,13 @@ python cli_fast.py approval-metrics  # Should show updated approval counts
 - Approval workflow demonstrates multi-level human oversight
 - Updated metrics show approval/rejection counts
 
+**LLM Execution Instructions:**
+1. Replace ACTION_ID placeholders with actual IDs from Step 5
+2. Execute approval/rejection commands
+3. Display confirmation outputs for each action
+4. Verify approval metrics update correctly
+5. **WAIT for user confirmation before proceeding to Step 6.5**
+
 ---
 
 ## Step 6.5 Approve the Plan (Plan-Level)
@@ -274,6 +341,13 @@ python cli_fast.py approve-action-plan PLAN_ID --approver "supervisor_jane"
 ```bash
 python cli_fast.py action-plan-queue --status approved  # Should show approved plan
 ```
+
+**LLM Execution Instructions:**
+1. Replace PLAN_ID with the actual ID from Step 3
+2. Execute the command and display output
+3. Confirm plan status shows as "approved"
+4. Verify audit trail is logged
+5. **WAIT for user confirmation before proceeding to Step 7**
 
 ---
 
@@ -312,6 +386,14 @@ Artifacts Created: 5-8
 - Artifacts generated: emails, callbacks, documents
 - Actor assignments: Advisor, Supervisor, Leadership, Customer
 
+**LLM Execution Instructions:**
+1. Replace PLAN_ID with the actual ID from Step 3
+2. Execute dry-run first, then actual execution
+3. Display complete output including execution ID
+4. Capture EXECUTION_ID for monitoring steps
+5. Verify success rate and artifact counts
+6. **WAIT for user confirmation before proceeding to Step 8**
+
 ---
 
 ## Step 8. Monitor Execution & Metrics
@@ -336,6 +418,13 @@ python cli_fast.py approval-metrics
 - Success rates, approval rates, and risk distribution
 - Counts like `actions_skipped_for_approval` and `approval_skip_rate`
 
+**LLM Execution Instructions:**
+1. Execute all three monitoring commands
+2. Display complete outputs for each command
+3. Verify execution history shows recent execution
+4. Note success rates and performance metrics
+5. **WAIT for user confirmation before proceeding to Step 9**
+
 ---
 
 ## Step 9. View Artifacts
@@ -358,6 +447,13 @@ python cli_fast.py view-artifacts --type callbacks
 - 1-2 document artifacts (agreements, forms, receipts)
 - 2-3 callback records (scheduled calls, reminders)
 - Each artifact shows relevant customer and scenario information
+
+**LLM Execution Instructions:**
+1. Execute all three artifact viewing commands
+2. Display outputs showing generated artifacts
+3. Verify artifact types and counts match expectations
+4. Note content previews for verification
+5. **WAIT for user confirmation before proceeding to Step 10**
 
 ---
 
@@ -401,6 +497,14 @@ Decision Agent Feedback: Specific routing/process improvements
 - Pattern recognition for similar scenarios
 - Decision Agent receives actionable improvement feedback
 - System demonstrates self-evaluation capability
+
+**LLM Execution Instructions:**
+1. Execute all three Observer Agent commands
+2. Display complete outputs showing evaluations
+3. Verify satisfaction scores and improvement opportunities
+4. Note actor performance assessments
+5. Capture feedback for Decision Agent improvements
+6. **WAIT for user confirmation before proceeding to Step 11**
 
 ---
 

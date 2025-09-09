@@ -426,19 +426,20 @@ class CLIHandler(BaseHTTPRequestHandler):
             
             analyzer = CallAnalyzer()
             analysis_store = AnalysisStore('data/call_center.db')
+            transcript_store = TranscriptStore('data/call_center.db')
             
             analyzed_count = 0
             
             if all_transcripts:
                 # Analyze all transcripts
-                all_transcripts_list = store.get_all()
+                all_transcripts_list = transcript_store.get_all()
                 for transcript in all_transcripts_list:
                     analysis = analyzer.analyze(transcript)
                     analysis_store.store(analysis)
                     analyzed_count += 1
             elif transcript_id:
                 # Analyze specific transcript
-                transcript = store.get_by_id(transcript_id)
+                transcript = transcript_store.get_by_id(transcript_id)
                 if not transcript:
                     return {'success': False, 'error': f'Transcript {transcript_id} not found'}
                 
@@ -448,11 +449,31 @@ class CLIHandler(BaseHTTPRequestHandler):
             else:
                 return {'success': False, 'error': 'Must specify either --transcript-id or --all'}
             
-            return {
+            result = {
                 'success': True,
                 'message': f'Analyzed {analyzed_count} transcript(s)',
                 'count': analyzed_count
             }
+            
+            # Add analysis details for debugging
+            if transcript_id and analyzed_count > 0:
+                try:
+                    # Get the stored analysis to show details
+                    analysis = analysis_store.get_by_transcript_id(transcript_id)
+                    if analysis:
+                        result['analysis_preview'] = {
+                            'analysis_id': analysis.get('analysis_id', 'N/A'),
+                            'primary_intent': analysis.get('primary_intent', 'N/A'),
+                            'urgency_level': analysis.get('urgency_level', 'N/A'),
+                            'sentiment': analysis.get('borrower_sentiment', {}).get('overall', 'N/A'),
+                            'confidence_score': analysis.get('confidence_score', 'N/A')
+                        }
+                    else:
+                        result['analysis_note'] = 'Analysis completed but not found in storage'
+                except Exception as e:
+                    result['analysis_error'] = f'Error retrieving analysis: {str(e)}'
+            
+            return result
         except Exception as e:
             return {'success': False, 'error': str(e)}
     
