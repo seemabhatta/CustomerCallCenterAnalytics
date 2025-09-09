@@ -1,6 +1,7 @@
 """Post-call intelligence analyzer for mortgage servicing."""
 import os
 import uuid
+import json
 from typing import Dict, Any, Optional
 import openai
 from dotenv import load_dotenv
@@ -143,7 +144,7 @@ class CallAnalyzer:
             response = self.client.responses.create(
                 model="gpt-4.1",
                 input=prompt,
-                response_format=response_format,
+                text={"format": response_format},
                 temperature=0.3  # Lower temperature for consistent analysis
             )
             
