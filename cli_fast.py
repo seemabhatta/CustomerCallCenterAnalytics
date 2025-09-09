@@ -1001,5 +1001,180 @@ def execution_metrics():
         client.print_error(f"Failed to get execution metrics: {result['error']}")
 
 
+# ========== Decision Agent Commands ==========
+
+@app.command("get-approval-queue")
+def get_approval_queue(
+    route: Optional[str] = typer.Option(None, help="Filter by approval route: advisor_approval, supervisor_approval")
+):
+    """Get actions pending approval in the Decision Agent queue."""
+    client = CLIClient()
+    result = client.send_command('get_approval_queue', {'route': route})
+    
+    if result['success']:
+        queue = result['queue']
+        
+        if not queue:
+            client.print_info("No actions pending approval")
+            return
+        
+        console.print(f"\n📋 Approval Queue ({result['total_pending']} items)")
+        console.print("=" * 60)
+        
+        # Group by approval route
+        by_route = {}
+        for item in queue:
+            route = item['approval_route']
+            if route not in by_route:
+                by_route[route] = []
+            by_route[route].append(item)
+        
+        for route, items in by_route.items():
+            console.print(f"\n🎯 {route.replace('_', ' ').title()} ({len(items)} items):")
+            
+            for item in items:
+                risk_color = {"high": "red", "medium": "yellow", "low": "green"}.get(item['risk_level'], "white")
+                console.print(f"  [{risk_color}]●[/] {item['action_id']}: {item['action_text'][:50]}...")
+                console.print(f"    Risk: {item['risk_level']} (score: {item['risk_score']:.3f})")
+                console.print(f"    Financial: {item['financial_impact']}, Compliance: {item['compliance_impact']}")
+                console.print(f"    Created: {item['created_at']}")
+                console.print()
+    
+    else:
+        client.print_error(f"Failed to get approval queue: {result['error']}")
+
+
+@app.command("approve-action")
+def approve_action(
+    action_id: str = typer.Argument(help="Action ID to approve"),
+    approved_by: str = typer.Option("CLI_USER", help="Approver identifier"),
+    notes: str = typer.Option("", help="Approval notes")
+):
+    """Approve a specific action in the queue."""
+    client = CLIClient()
+    result = client.send_command('approve_action', {
+        'action_id': action_id,
+        'approved_by': approved_by,
+        'notes': notes
+    })
+    
+    if result['success']:
+        client.print_success(result['message'])
+    else:
+        client.print_error(f"Failed to approve action: {result['error']}")
+
+
+@app.command("reject-action")  
+def reject_action(
+    action_id: str = typer.Argument(help="Action ID to reject"),
+    rejected_by: str = typer.Option("CLI_USER", help="Rejector identifier"),
+    reason: str = typer.Option("No reason provided", help="Rejection reason")
+):
+    """Reject a specific action in the queue."""
+    client = CLIClient()
+    result = client.send_command('reject_action', {
+        'action_id': action_id,
+        'rejected_by': rejected_by,
+        'reason': reason
+    })
+    
+    if result['success']:
+        client.print_success(f"{result['message']} - Reason: {result['reason']}")
+    else:
+        client.print_error(f"Failed to reject action: {result['error']}")
+
+
+@app.command("bulk-approve")
+def bulk_approve_actions(
+    action_ids: str = typer.Argument(help="Comma-separated list of action IDs to approve"),
+    approved_by: str = typer.Option("CLI_USER", help="Approver identifier"),
+    notes: str = typer.Option("Bulk approval", help="Approval notes")
+):
+    """Bulk approve multiple actions."""
+    client = CLIClient()
+    
+    # Parse comma-separated action IDs
+    ids_list = [aid.strip() for aid in action_ids.split(',')]
+    
+    result = client.send_command('bulk_approve_actions', {
+        'action_ids': ids_list,
+        'approved_by': approved_by,
+        'notes': notes
+    })
+    
+    if result['success']:
+        client.print_success(result['message'])
+        console.print(f"Approved: {result['approved_count']}/{result['total_requested']} actions")
+    else:
+        client.print_error(f"Failed to bulk approve: {result['error']}")
+
+
+@app.command("approval-metrics")
+def approval_metrics():
+    """Get approval queue metrics and statistics."""
+    client = CLIClient()
+    result = client.send_command('approval_metrics')
+    
+    if result['success']:
+        metrics = result['metrics']
+        
+        console.print(f"\n📊 Approval Metrics")
+        console.print("=" * 40)
+        console.print(f"Total Actions: {metrics['total_actions']}")
+        console.print(f"Pending Approvals: {metrics['pending_approvals']}")
+        console.print(f"Approval Rate: {metrics['approval_rate']}%")
+        console.print(f"Avg Approval Time: {metrics['avg_approval_time_hours']:.1f} hours")
+        
+        console.print(f"\n📈 Queue Status:")
+        for route, statuses in metrics.get('queue_status', {}).items():
+            console.print(f"  {route.replace('_', ' ').title()}:")
+            for status, count in statuses.items():
+                console.print(f"    {status}: {count}")
+        
+        console.print(f"\n⚠️  Risk Distribution:")
+        for risk_level, count in metrics.get('risk_distribution', {}).items():
+            risk_color = {"high": "red", "medium": "yellow", "low": "green"}.get(risk_level, "white")
+            console.print(f"  [{risk_color}]{risk_level}[/]: {count}")
+    
+    else:
+        client.print_error(f"Failed to get approval metrics: {result['error']}")
+
+
+@app.command("decision-agent-summary")
+def decision_agent_summary():
+    """Get Decision Agent configuration and processing summary."""
+    client = CLIClient()
+    result = client.send_command('decision_agent_summary')
+    
+    if result['success']:
+        summary = result['summary']
+        
+        console.print(f"\n🤖 Decision Agent Summary")
+        console.print("=" * 40)
+        console.print(f"Agent Version: {summary['agent_version']}")
+        
+        console.print(f"\n⚙️  Configuration:")
+        config = summary['config']
+        console.print(f"  Auto Approval Threshold: {config['auto_approval_threshold']}")
+        console.print(f"  Supervisor Threshold: {config['supervisor_threshold']}")
+        console.print(f"  Financial Always Supervisor: {config['financial_always_supervisor']}")
+        console.print(f"  Compliance Always Supervisor: {config['compliance_always_supervisor']}")
+        
+        console.print(f"\n📊 Processing Summary:")
+        processing = summary['summary']
+        console.print(f"  Total Decisions: {processing['total_decisions']}")
+        console.print(f"  Total Actions Processed: {processing.get('total_actions_processed', 0)}")
+        console.print(f"  Auto Approval Rate: {processing.get('auto_approval_rate', 0)}%")
+        console.print(f"  Avg Actions per Plan: {processing.get('avg_actions_per_plan', 0)}")
+        
+        if processing.get('routing_distribution'):
+            console.print(f"\n🎯 Routing Distribution:")
+            for route, count in processing['routing_distribution'].items():
+                console.print(f"  {route.replace('_', ' ').title()}: {count}")
+    
+    else:
+        client.print_error(f"Failed to get decision agent summary: {result['error']}")
+
+
 if __name__ == "__main__":
     app()

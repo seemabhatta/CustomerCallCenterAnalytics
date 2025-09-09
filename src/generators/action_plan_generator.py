@@ -3,6 +3,7 @@ import os
 import uuid
 import json
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 import openai
 from dotenv import load_dotenv
 
@@ -116,6 +117,9 @@ class ActionPlanGenerator:
             
             # Add approval routing based on risk assessment
             action_plans = self._add_approval_routing(action_plans, analysis)
+            
+            # PHASE 1: Add per-action risk evaluation
+            action_plans = self._evaluate_individual_actions(action_plans, analysis)
             
             return action_plans
             
@@ -516,6 +520,128 @@ class ActionPlanGenerator:
         # Add routing metadata
         action_plans['routing_reason'] = self._get_routing_reason(confidence, max_risk, compliance_flags)
         action_plans['created_at'] = str(uuid.uuid4())  # Placeholder for timestamp
+        
+        return action_plans
+    
+    def _evaluate_individual_actions(self, action_plans: Dict[str, Any], analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        PHASE 1: Evaluate each action item individually for risk and approval requirements.
+        This implements the first step towards the Decision Agent pattern.
+        """
+        
+        # Feature flag to enable/disable per-action evaluation
+        ENABLE_PER_ACTION_EVALUATION = True
+        
+        if not ENABLE_PER_ACTION_EVALUATION:
+            return action_plans
+        
+        # Import the risk evaluator
+        from src.analyzers.action_risk_evaluator import ActionRiskEvaluator
+        evaluator = ActionRiskEvaluator()
+        
+        # Create plan context for evaluation
+        plan_context = {
+            'risk_level': action_plans.get('risk_level', 'medium'),
+            'complaint_risk': analysis.get('borrower_risks', {}).get('complaint_risk', 0),
+            'churn_risk': analysis.get('borrower_risks', {}).get('churn_risk', 0),
+            'delinquency_risk': analysis.get('borrower_risks', {}).get('delinquency_risk', 0),
+            'urgency_level': analysis.get('urgency_level', 'medium'),
+            'compliance_flags': analysis.get('compliance_flags', []),
+            'confidence_score': analysis.get('confidence_score', 0.5)
+        }
+        
+        # Evaluate actions in each layer
+        action_counter = 1
+        approval_summary = {
+            'total_actions': 0,
+            'needs_approval': 0,
+            'auto_approved': 0,
+            'high_risk_actions': 0,
+            'by_layer': {}
+        }
+        
+        for layer_name in ['borrower_plan', 'advisor_plan', 'supervisor_plan', 'leadership_plan']:
+            if layer_name not in action_plans:
+                continue
+            
+            layer_data = action_plans[layer_name]
+            layer_summary = {'total': 0, 'needs_approval': 0, 'auto_approved': 0}
+            
+            # Set current layer in context
+            plan_context['current_layer'] = layer_name
+            
+            # Process immediate actions
+            if 'immediate_actions' in layer_data and isinstance(layer_data['immediate_actions'], list):
+                for i, action in enumerate(layer_data['immediate_actions']):
+                    if isinstance(action, dict):
+                        # Generate action ID
+                        action_id = f"ACT_{action_counter:03d}_{layer_name[:4].upper()}_IMM_{i+1:03d}"
+                        action['action_id'] = action_id
+                        
+                        # Evaluate action
+                        evaluated_action = evaluator.evaluate_action(action, plan_context)
+                        layer_data['immediate_actions'][i] = evaluated_action
+                        
+                        # Update counters
+                        action_counter += 1
+                        layer_summary['total'] += 1
+                        approval_summary['total_actions'] += 1
+                        
+                        if evaluated_action.get('needs_approval', False):
+                            layer_summary['needs_approval'] += 1
+                            approval_summary['needs_approval'] += 1
+                        else:
+                            layer_summary['auto_approved'] += 1
+                            approval_summary['auto_approved'] += 1
+                        
+                        if evaluated_action.get('risk_level') == 'high':
+                            approval_summary['high_risk_actions'] += 1
+            
+            # Process follow-up actions
+            if 'follow_ups' in layer_data and isinstance(layer_data['follow_ups'], list):
+                for i, action in enumerate(layer_data['follow_ups']):
+                    if isinstance(action, dict):
+                        # Generate action ID
+                        action_id = f"ACT_{action_counter:03d}_{layer_name[:4].upper()}_FUP_{i+1:03d}"
+                        action['action_id'] = action_id
+                        
+                        # Evaluate action
+                        evaluated_action = evaluator.evaluate_action(action, plan_context)
+                        layer_data['follow_ups'][i] = evaluated_action
+                        
+                        # Update counters
+                        action_counter += 1
+                        layer_summary['total'] += 1
+                        approval_summary['total_actions'] += 1
+                        
+                        if evaluated_action.get('needs_approval', False):
+                            layer_summary['needs_approval'] += 1
+                            approval_summary['needs_approval'] += 1
+                        else:
+                            layer_summary['auto_approved'] += 1
+                            approval_summary['auto_approved'] += 1
+                        
+                        if evaluated_action.get('risk_level') == 'high':
+                            approval_summary['high_risk_actions'] += 1
+            
+            approval_summary['by_layer'][layer_name] = layer_summary
+        
+        # Calculate approval percentage
+        if approval_summary['total_actions'] > 0:
+            approval_summary['approval_percentage'] = (
+                approval_summary['needs_approval'] / approval_summary['total_actions']
+            ) * 100
+        else:
+            approval_summary['approval_percentage'] = 0
+        
+        # Add summary to action plans
+        action_plans['action_evaluation_summary'] = approval_summary
+        action_plans['per_action_evaluation_enabled'] = True
+        action_plans['evaluation_timestamp'] = datetime.now().isoformat()
+        
+        # Add evaluator summary
+        evaluator_summary = evaluator.get_evaluation_summary()
+        action_plans['evaluator_summary'] = evaluator_summary
         
         return action_plans
     

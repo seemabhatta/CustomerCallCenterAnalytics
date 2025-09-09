@@ -180,6 +180,18 @@ class SmartExecutor:
         # Execute immediate actions
         for action in borrower_plan.get('immediate_actions', []):
             try:
+                # Check individual action approval status
+                if action.get('needs_approval') and action.get('approval_status') != 'approved':
+                    results.append({
+                        'status': 'skipped',
+                        'reason': 'Awaiting approval',
+                        'action': action,
+                        'action_source': 'borrower_immediate',
+                        'approval_status': action.get('approval_status', 'unknown'),
+                        'risk_level': action.get('risk_level', 'unknown')
+                    })
+                    continue
+                
                 # Use LLM to decide HOW to execute this action
                 execution_decision = self._llm_decide_execution(action, context, 'borrower')
                 
@@ -200,6 +212,18 @@ class SmartExecutor:
         # Schedule follow-up actions
         for followup in borrower_plan.get('follow_ups', []):
             try:
+                # Check individual action approval status
+                if followup.get('needs_approval') and followup.get('approval_status') != 'approved':
+                    results.append({
+                        'status': 'skipped',
+                        'reason': 'Awaiting approval',
+                        'action': followup,
+                        'action_source': 'borrower_followup',
+                        'approval_status': followup.get('approval_status', 'unknown'),
+                        'risk_level': followup.get('risk_level', 'unknown')
+                    })
+                    continue
+                
                 # Use LLM to decide on follow-up scheduling
                 execution_decision = self._llm_decide_execution(followup, context, 'borrower_followup')
                 
@@ -227,6 +251,18 @@ class SmartExecutor:
         # Create coaching notes
         for coaching_item in advisor_plan.get('coaching_items', []):
             try:
+                # Check individual action approval status
+                if coaching_item.get('needs_approval') and coaching_item.get('approval_status') != 'approved':
+                    results.append({
+                        'status': 'skipped',
+                        'reason': 'Awaiting approval',
+                        'action': coaching_item,
+                        'action_source': 'advisor_coaching',
+                        'approval_status': coaching_item.get('approval_status', 'unknown'),
+                        'risk_level': coaching_item.get('risk_level', 'unknown')
+                    })
+                    continue
+                
                 # Generate coaching document
                 result = self.tools.generate_document(
                     'coaching_note',
@@ -260,6 +296,18 @@ class SmartExecutor:
         # Handle escalation items
         for escalation in supervisor_plan.get('escalation_items', []):
             try:
+                # Check individual action approval status
+                if escalation.get('needs_approval') and escalation.get('approval_status') != 'approved':
+                    results.append({
+                        'status': 'skipped',
+                        'reason': 'Awaiting approval',
+                        'action': escalation,
+                        'action_source': 'supervisor_escalation',
+                        'approval_status': escalation.get('approval_status', 'unknown'),
+                        'risk_level': escalation.get('risk_level', 'unknown')
+                    })
+                    continue
+                
                 # Create escalation notification
                 result = self.tools.send_notification(
                     recipient='supervisor@demo.com',
@@ -290,6 +338,25 @@ class SmartExecutor:
         # Generate portfolio insights reports
         if leadership_plan.get('portfolio_insights'):
             try:
+                # For leadership actions, treat the entire plan as an action for approval checking
+                leadership_action = {
+                    'needs_approval': leadership_plan.get('needs_approval', False),
+                    'approval_status': leadership_plan.get('approval_status', 'auto_approved'),
+                    'risk_level': leadership_plan.get('risk_level', 'low')
+                }
+                
+                # Check individual action approval status
+                if leadership_action.get('needs_approval') and leadership_action.get('approval_status') != 'approved':
+                    results.append({
+                        'status': 'skipped',
+                        'reason': 'Awaiting approval',
+                        'action': 'portfolio_insights_generation',
+                        'action_source': 'leadership_insights',
+                        'approval_status': leadership_action.get('approval_status', 'unknown'),
+                        'risk_level': leadership_action.get('risk_level', 'unknown')
+                    })
+                    return results
+                
                 result = self.tools.generate_document(
                     'portfolio_insights',
                     'LEADERSHIP_TEAM',
@@ -384,51 +451,9 @@ class SmartExecutor:
             return response.output_parsed
             
         except Exception as e:
-            # Fallback to simple execution if LLM fails
-            return self._fallback_execution_decision(action, context)
+            # NO FALLBACK per requirements - fail fast
+            raise RuntimeError(f"LLM execution decision failed: {str(e)}. NO FALLBACK per requirements.")
     
-    def _fallback_execution_decision(self, action: Dict[str, Any], 
-                                   context: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback execution decision when LLM is unavailable"""
-        
-        action_text = action.get('action', '').lower()
-        
-        # Simple rule-based decisions
-        if 'email' in action_text or 'send' in action_text:
-            return {
-                'tool': 'email',
-                'content': f"Following up on your recent call regarding {context.get('primary_intent', 'your inquiry')}.",
-                'tone': 'friendly',
-                'timing': 'immediate',
-                'parameters': {
-                    'subject': 'Follow-up from Customer Service',
-                    'recipient': f"{context.get('customer_id', 'customer')}@demo.com"
-                },
-                'reasoning': 'Fallback rule-based decision'
-            }
-        elif 'call' in action_text or 'callback' in action_text:
-            return {
-                'tool': 'callback',
-                'content': f"Schedule follow-up call regarding {context.get('primary_intent', 'recent inquiry')}",
-                'tone': 'friendly',
-                'timing': 'scheduled',
-                'parameters': {
-                    'scheduled_time': (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d 14:00'),
-                    'notes': action.get('description', 'Follow-up call scheduled')
-                },
-                'reasoning': 'Fallback rule-based decision'
-            }
-        else:
-            return {
-                'tool': 'document',
-                'content': f"Generate documentation for: {action.get('action', 'Customer action')}",
-                'tone': 'formal',
-                'timing': 'immediate',
-                'parameters': {
-                    'doc_type': 'action_summary'
-                },
-                'reasoning': 'Fallback rule-based decision'
-            }
     
     def _execute_single_action(self, execution_decision: Dict[str, Any],
                               context: Dict[str, Any]) -> Dict[str, Any]:
@@ -499,4 +524,20 @@ class SmartExecutor:
     
     def get_execution_summary(self) -> Dict[str, Any]:
         """Get execution statistics summary"""
-        return self.tools.get_execution_summary()
+        summary = self.tools.get_execution_summary()
+        
+        # Add approval-aware metrics if available
+        recent_actions = self.tools.get_recent_actions(50)  # Get larger sample
+        
+        skipped_count = sum(1 for action in recent_actions if action.get('status') == 'skipped')
+        pending_approval_count = sum(1 for action in recent_actions 
+                                   if action.get('status') == 'skipped' and 
+                                   'approval' in action.get('reason', '').lower())
+        
+        summary.update({
+            'actions_skipped_for_approval': skipped_count,
+            'actions_awaiting_approval': pending_approval_count,
+            'approval_skip_rate': round((skipped_count / len(recent_actions)) * 100, 1) if recent_actions else 0
+        })
+        
+        return summary

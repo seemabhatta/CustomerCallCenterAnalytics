@@ -42,6 +42,8 @@ from src.storage.transcript_store import TranscriptStore
 from src.models.transcript import Transcript, Message
 from src.executors.smart_executor import SmartExecutor
 from src.storage.execution_store import ExecutionStore
+from src.agents.decision_agent import DecisionAgent
+from src.storage.approval_store import ApprovalStore
 
 print(f"✅ All imports loaded in {(datetime.now() - start_time).total_seconds():.2f}s")
 
@@ -150,6 +152,18 @@ class CLIHandler(BaseHTTPRequestHandler):
                 result = self.handle_view_artifacts(params)
             elif command == 'execution_metrics':
                 result = self.handle_execution_metrics(params)
+            elif command == 'get_approval_queue':
+                result = self.handle_get_approval_queue(params)
+            elif command == 'approve_action':
+                result = self.handle_approve_action(params)
+            elif command == 'reject_action':
+                result = self.handle_reject_action(params)
+            elif command == 'bulk_approve_actions':
+                result = self.handle_bulk_approve_actions(params)
+            elif command == 'approval_metrics':
+                result = self.handle_approval_metrics(params)
+            elif command == 'decision_agent_summary':
+                result = self.handle_decision_agent_summary(params)
             else:
                 result = {'success': False, 'error': f'Unknown command: {command}'}
             
@@ -751,6 +765,136 @@ class CLIHandler(BaseHTTPRequestHandler):
             return {
                 'success': True,
                 'stats': stats
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_get_approval_queue(self, params):
+        """Handle get-approval-queue command."""
+        try:
+            approval_store = ApprovalStore("data/call_center.db")
+            
+            route = params.get('route')  # advisor_approval, supervisor_approval, or None for all
+            queue = approval_store.get_approval_queue(route)
+            
+            return {
+                'success': True,
+                'queue': queue,
+                'total_pending': len(queue)
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_approve_action(self, params):
+        """Handle approve-action command."""
+        try:
+            action_id = params.get('action_id')
+            if not action_id:
+                return {'success': False, 'error': 'action_id is required'}
+            
+            approved_by = params.get('approved_by', 'CLI_USER')
+            notes = params.get('notes', '')
+            
+            approval_store = ApprovalStore("data/call_center.db")
+            success = approval_store.approve_action(action_id, approved_by, notes)
+            
+            if success:
+                return {
+                    'success': True,
+                    'message': f'Action {action_id} approved by {approved_by}'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Failed to approve action {action_id}. May already be processed.'
+                }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_reject_action(self, params):
+        """Handle reject-action command."""
+        try:
+            action_id = params.get('action_id')
+            if not action_id:
+                return {'success': False, 'error': 'action_id is required'}
+            
+            rejected_by = params.get('rejected_by', 'CLI_USER')
+            reason = params.get('reason', 'No reason provided')
+            
+            approval_store = ApprovalStore("data/call_center.db")
+            success = approval_store.reject_action(action_id, rejected_by, reason)
+            
+            if success:
+                return {
+                    'success': True,
+                    'message': f'Action {action_id} rejected by {rejected_by}',
+                    'reason': reason
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Failed to reject action {action_id}. May already be processed.'
+                }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_bulk_approve_actions(self, params):
+        """Handle bulk-approve-actions command."""
+        try:
+            action_ids = params.get('action_ids', [])
+            if not action_ids:
+                return {'success': False, 'error': 'action_ids list is required'}
+            
+            approved_by = params.get('approved_by', 'CLI_USER')
+            notes = params.get('notes', 'Bulk approval')
+            
+            approval_store = ApprovalStore("data/call_center.db")
+            approved_count = approval_store.bulk_approve(action_ids, approved_by, notes)
+            
+            return {
+                'success': True,
+                'approved_count': approved_count,
+                'total_requested': len(action_ids),
+                'message': f'Bulk approved {approved_count}/{len(action_ids)} actions'
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_approval_metrics(self, params):
+        """Handle approval-metrics command."""
+        try:
+            approval_store = ApprovalStore("data/call_center.db")
+            metrics = approval_store.get_approval_metrics()
+            
+            return {
+                'success': True,
+                'metrics': metrics
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_decision_agent_summary(self, params):
+        """Handle decision-agent-summary command."""
+        try:
+            # Note: In a real implementation, we'd maintain a global decision agent instance
+            # For now, we'll create a new one and return its configuration
+            decision_agent = DecisionAgent()
+            
+            summary = {
+                'agent_version': 'v1.0',
+                'config': decision_agent.config,
+                'summary': decision_agent.get_decision_summary()
+            }
+            
+            return {
+                'success': True,
+                'summary': summary
             }
             
         except Exception as e:
