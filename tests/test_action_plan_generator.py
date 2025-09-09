@@ -7,6 +7,15 @@ import json
 from src.generators.action_plan_generator import ActionPlanGenerator
 from src.models.transcript import Transcript, Message
 
+@pytest.fixture
+def temp_db():
+    """Create temporary database for testing."""
+    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
+        temp_path = tmp.name
+    yield temp_path
+    if os.path.exists(temp_path):
+        os.unlink(temp_path)
+
 
 class TestActionPlanGeneratorBugFix:
     """Test ActionPlanGenerator bug where 'str' object has no attribute 'get'"""
@@ -83,8 +92,8 @@ class TestActionPlanGeneratorBugFix:
             # Pass string instead of dict to reproduce the bug
             string_analysis = "This is a string, not a dict"
             
-            # This SHOULD raise AttributeError: 'str' object has no attribute 'get'
-            with pytest.raises(AttributeError, match="'str' object has no attribute 'get'"):
+            # This SHOULD raise TypeError due to type validation
+            with pytest.raises(TypeError, match="Expected analysis to be Dict"):
                 generator._extract_context(sample_transcript, string_analysis)
 
 
@@ -93,7 +102,9 @@ def mock_openai_client():
     """Mock OpenAI client for testing."""
     mock_client = Mock()
     mock_response = Mock()
-    mock_response.output_parsed = {
+    
+    # Create mock action plan data
+    action_plan_data = {
         "borrower_plan": {
             "immediate_actions": [
                 {
@@ -116,7 +127,12 @@ def mock_openai_client():
             "risk_mitigation": ["Monitor payment patterns"]
         },
         "advisor_plan": {
-            "coaching_items": ["Improve active listening"],
+            "coaching_items": [{
+                "action": "Improve active listening",
+                "coaching_point": "Focus on customer concerns",
+                "expected_improvement": "Better customer satisfaction",
+                "priority": "medium"
+            }],
             "performance_feedback": {
                 "strengths": ["Clear communication"],
                 "improvements": ["Better probing questions"],
@@ -147,6 +163,15 @@ def mock_openai_client():
             "resource_allocation": ["Add payment processing staff"]
         }
     }
+    
+    # Set up correct mock structure for response.output[0].content[0].text
+    mock_response.output = [Mock()]
+    mock_response.output[0].content = [Mock()]
+    mock_response.output[0].content[0].text = json.dumps(action_plan_data)
+    
+    # Keep output_parsed for backward compatibility
+    mock_response.output_parsed = action_plan_data
+    
     mock_client.responses.create.return_value = mock_response
     return mock_client
 
@@ -207,17 +232,17 @@ class TestActionPlanGenerator:
             generator = ActionPlanGenerator(api_key="test-key")
             mock_openai.assert_called_once_with(api_key="test-key")
     
-    def test_init_with_env_key(self):
+    def test_init_with_env_key(self, temp_db):
         """Test initialization with environment variable."""
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'env-key'}):
             with patch('openai.OpenAI') as mock_openai:
-                generator = ActionPlanGenerator()
+                generator = ActionPlanGenerator(db_path=temp_db)
                 mock_openai.assert_called_once_with(api_key="env-key")
     
-    def test_generate_action_plan(self, mock_openai_client, sample_transcript, sample_analysis):
+    def test_generate_action_plan(self, mock_openai_client, sample_transcript, sample_analysis, temp_db):
         """Test action plan generation."""
         with patch('openai.OpenAI', return_value=mock_openai_client):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             
             result = generator.generate(sample_analysis, sample_transcript)
             
@@ -242,20 +267,20 @@ class TestActionPlanGenerator:
             assert result['analysis_id'] == sample_analysis['analysis_id']
             assert result['transcript_id'] == sample_transcript.id
     
-    def test_extract_promises(self, sample_transcript):
+    def test_extract_promises(self, sample_transcript, temp_db):
         """Test promise extraction from transcript."""
         with patch('openai.OpenAI'):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             
             promises = generator._extract_promises(sample_transcript)
             
             assert len(promises) > 0
             assert any("send you a detailed breakdown" in promise.lower() for promise in promises)
     
-    def test_extract_timelines(self, sample_transcript):
+    def test_extract_timelines(self, sample_transcript, temp_db):
         """Test timeline extraction from transcript."""
         with patch('openai.OpenAI'):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             
             timelines = generator._extract_timelines(sample_transcript)
             
@@ -267,17 +292,17 @@ class TestActionPlanGenerator:
             all_text = " ".join(msg.text for msg in sample_transcript.messages)
             assert "days" in all_text.lower()  # Verify our test data has timeline info
     
-    def test_extract_concerns(self, sample_transcript):
+    def test_extract_concerns(self, sample_transcript, temp_db):
         """Test concern extraction from transcript."""
         with patch('openai.OpenAI'):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             
             concerns = generator._extract_concerns(sample_transcript)
             
             assert len(concerns) > 0
             assert any("worried about my escrow" in concern for concern in concerns)
     
-    def test_low_risk_routing(self, mock_openai_client, sample_transcript):
+    def test_low_risk_routing(self, mock_openai_client, sample_transcript, temp_db):
         """Test low risk approval routing."""
         low_risk_analysis = {
             'analysis_id': 'ANALYSIS_001',
@@ -287,7 +312,7 @@ class TestActionPlanGenerator:
         }
         
         with patch('openai.OpenAI', return_value=mock_openai_client):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             result = generator.generate(low_risk_analysis, sample_transcript)
             
             assert result['risk_level'] == 'low'
@@ -295,7 +320,7 @@ class TestActionPlanGenerator:
             assert result['queue_status'] == 'approved'
             assert result['auto_executable'] == True
     
-    def test_medium_risk_routing(self, mock_openai_client, sample_transcript):
+    def test_medium_risk_routing(self, mock_openai_client, sample_transcript, temp_db):
         """Test medium risk approval routing."""
         medium_risk_analysis = {
             'analysis_id': 'ANALYSIS_001',
@@ -305,7 +330,7 @@ class TestActionPlanGenerator:
         }
         
         with patch('openai.OpenAI', return_value=mock_openai_client):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             result = generator.generate(medium_risk_analysis, sample_transcript)
             
             assert result['risk_level'] == 'medium'
@@ -313,7 +338,7 @@ class TestActionPlanGenerator:
             assert result['queue_status'] == 'pending_advisor'
             assert result['auto_executable'] == False
     
-    def test_high_risk_routing(self, mock_openai_client, sample_transcript):
+    def test_high_risk_routing(self, mock_openai_client, sample_transcript, temp_db):
         """Test high risk approval routing."""
         high_risk_analysis = {
             'analysis_id': 'ANALYSIS_001',
@@ -323,7 +348,7 @@ class TestActionPlanGenerator:
         }
         
         with patch('openai.OpenAI', return_value=mock_openai_client):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             result = generator.generate(high_risk_analysis, sample_transcript)
             
             assert result['risk_level'] == 'high'
@@ -331,7 +356,7 @@ class TestActionPlanGenerator:
             assert result['queue_status'] == 'pending_supervisor'
             assert result['auto_executable'] == False
     
-    def test_routing_reason_generation(self, mock_openai_client, sample_transcript):
+    def test_routing_reason_generation(self, mock_openai_client, sample_transcript, temp_db):
         """Test routing reason explanations."""
         high_risk_analysis = {
             'analysis_id': 'ANALYSIS_001',
@@ -341,7 +366,7 @@ class TestActionPlanGenerator:
         }
         
         with patch('openai.OpenAI', return_value=mock_openai_client):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             result = generator.generate(high_risk_analysis, sample_transcript)
             
             routing_reason = result['routing_reason']
@@ -350,10 +375,10 @@ class TestActionPlanGenerator:
             assert 'incomplete_info' in routing_reason
             assert 'low confidence score' in routing_reason.lower()
     
-    def test_context_extraction(self, sample_transcript, sample_analysis):
+    def test_context_extraction(self, sample_transcript, sample_analysis, temp_db):
         """Test context extraction from transcript and analysis."""
         with patch('openai.OpenAI'):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             
             context = generator._extract_context(sample_transcript, sample_analysis)
             
@@ -370,10 +395,10 @@ class TestActionPlanGenerator:
             assert 'confidence_score' in context
             assert 'customer_id' in context
     
-    def test_prompt_building(self, sample_transcript, sample_analysis):
+    def test_prompt_building(self, sample_transcript, sample_analysis, temp_db):
         """Test prompt building for OpenAI API."""
         with patch('openai.OpenAI'):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             context = generator._extract_context(sample_transcript, sample_analysis)
             
             prompt = generator._build_prompt(context)
@@ -387,10 +412,10 @@ class TestActionPlanGenerator:
             assert 'supervisor plan' in prompt.lower()
             assert 'leadership plan' in prompt.lower()
     
-    def test_action_plan_schema(self):
+    def test_action_plan_schema(self, temp_db):
         """Test action plan JSON schema structure."""
         with patch('openai.OpenAI'):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             
             schema = generator._get_action_plan_schema()
             
@@ -413,14 +438,14 @@ class TestActionPlanGenerator:
             assert 'personalized_offers' in borrower_plan['properties']
             assert 'risk_mitigation' in borrower_plan['properties']
     
-    def test_api_error_handling(self, sample_transcript, sample_analysis):
+    def test_api_error_handling(self, sample_transcript, sample_analysis, temp_db):
         """Test API error handling."""
         with patch('openai.OpenAI') as mock_openai:
             mock_client = Mock()
             mock_client.responses.create.side_effect = Exception("API Error")
             mock_openai.return_value = mock_client
             
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             
             with pytest.raises(Exception) as exc_info:
                 generator.generate(sample_analysis, sample_transcript)
@@ -532,12 +557,12 @@ class TestActionPlanGeneratorDecisionAgentIntegration:
     
     def test_generate_with_decision_agent_integration(self, sample_transcript, sample_analysis, 
                                                      mock_openai_client, mock_decision_agent, 
-                                                     mock_approval_store):
+                                                     mock_approval_store, temp_db):
         """Test action plan generation integrates with DecisionAgent for risk evaluation."""
         with patch('openai.OpenAI') as mock_openai:
             mock_openai.return_value = mock_openai_client
             
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             generator.decision_agent = mock_decision_agent
             generator.approval_store = mock_approval_store
             
@@ -562,12 +587,12 @@ class TestActionPlanGeneratorDecisionAgentIntegration:
             
     def test_approval_records_stored_for_pending_actions(self, sample_transcript, sample_analysis,
                                                         mock_openai_client, mock_decision_agent,
-                                                        mock_approval_store):
+                                                        mock_approval_store, temp_db):
         """Test that approval records are stored for actions needing approval."""
         with patch('openai.OpenAI') as mock_openai:
             mock_openai.return_value = mock_openai_client
             
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             generator.decision_agent = mock_decision_agent
             generator.approval_store = mock_approval_store
             
@@ -589,13 +614,14 @@ class TestActionPlanGeneratorDecisionAgentIntegration:
                 assert 'approval_status' in approval_record
     
     def test_generate_without_decision_agent_fails_gracefully(self, sample_transcript, sample_analysis,
-                                                              mock_openai_client):
+                                                              mock_openai_client, temp_db):
         """Test that generator fails gracefully when DecisionAgent is not configured."""
         with patch('openai.OpenAI') as mock_openai:
             mock_openai.return_value = mock_openai_client
             
+            # Create generator WITHOUT db_path so DecisionAgent is not initialized
             generator = ActionPlanGenerator()
-            # Don't set decision_agent - should fail gracefully
+            # decision_agent should be None
             
             with pytest.raises(Exception) as exc_info:
                 generator.generate(sample_analysis, sample_transcript)
@@ -603,12 +629,12 @@ class TestActionPlanGeneratorDecisionAgentIntegration:
             assert "DecisionAgent not configured" in str(exc_info.value)
     
     def test_routing_summary_accuracy(self, sample_transcript, sample_analysis,
-                                     mock_openai_client, mock_decision_agent, mock_approval_store):
+                                     mock_openai_client, mock_decision_agent, mock_approval_store, temp_db):
         """Test that routing summary accurately reflects action distribution."""
         with patch('openai.OpenAI') as mock_openai:
             mock_openai.return_value = mock_openai_client
             
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             generator.decision_agent = mock_decision_agent
             generator.approval_store = mock_approval_store
             
@@ -621,12 +647,12 @@ class TestActionPlanGeneratorDecisionAgentIntegration:
             assert result['routing_decision'] == 'supervisor_approval'  # Highest level needed
     
     def test_decision_agent_context_creation(self, sample_transcript, sample_analysis,
-                                           mock_openai_client, mock_decision_agent, mock_approval_store):
+                                           mock_openai_client, mock_decision_agent, mock_approval_store, temp_db):
         """Test that proper context is passed to DecisionAgent."""
         with patch('openai.OpenAI') as mock_openai:
             mock_openai.return_value = mock_openai_client
             
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             generator.decision_agent = mock_decision_agent
             generator.approval_store = mock_approval_store
             
@@ -644,12 +670,12 @@ class TestActionPlanGeneratorDecisionAgentIntegration:
             assert context['transcript_id'] == sample_transcript.id
     
     def test_end_to_end_integration_flow(self, sample_transcript, sample_analysis,
-                                        mock_openai_client, mock_decision_agent, mock_approval_store):
+                                        mock_openai_client, mock_decision_agent, mock_approval_store, temp_db):
         """Test complete end-to-end flow: Generate → DecisionAgent → ApprovalStore."""
         with patch('openai.OpenAI') as mock_openai:
             mock_openai.return_value = mock_openai_client
             
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             generator.decision_agent = mock_decision_agent
             generator.approval_store = mock_approval_store
             
@@ -683,14 +709,14 @@ class TestActionPlanGeneratorDecisionAgentIntegration:
                 assert 'routing_decision' in action
     
     def test_empty_transcript_handling(self, mock_openai_client, sample_analysis, 
-                                      mock_decision_agent, mock_approval_store):
+                                      mock_decision_agent, mock_approval_store, temp_db):
         """Test handling of transcript with no messages."""
         empty_transcript = Transcript("EMPTY_001")
         empty_transcript.messages = []
         empty_transcript.customer_id = "CUST_001"
         
         with patch('openai.OpenAI', return_value=mock_openai_client):
-            generator = ActionPlanGenerator()
+            generator = ActionPlanGenerator(db_path=temp_db)
             generator.decision_agent = mock_decision_agent
             generator.approval_store = mock_approval_store
             
