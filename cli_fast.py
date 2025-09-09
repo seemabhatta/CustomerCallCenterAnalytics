@@ -11,6 +11,10 @@ import typer
 from rich.console import Console
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 CLI_SERVER_URL = "http://localhost:9999"
@@ -897,7 +901,15 @@ def execute_plan(
                 if actions:
                     console.print(f"\n📋 [bold cyan]{action_type.replace('_', ' ').title()}:[/bold cyan]")
                     for action in actions:
-                        status_icon = "✅" if action.get('status') == 'success' or 'sent' in str(action.get('status', '')) else "❌"
+                        # Fixed: Show ✅ for successful completion, ❌ only for actual errors
+                        status = action.get('status', 'unknown').lower()
+                        if status in ['success', 'completed', 'generated', 'delivered', 'sent', 'approved']:
+                            status_icon = "✅"
+                        elif status in ['error', 'failed', 'rejected']:
+                            status_icon = "❌"
+                        else:
+                            # For unknown statuses, show neutral indicator
+                            status_icon = "⚠️"
                         console.print(f"  {status_icon} {action.get('action_source', 'Action')}: {action.get('status', 'Unknown')}")
             
             # Show artifacts created

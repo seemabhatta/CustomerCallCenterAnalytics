@@ -3,10 +3,15 @@ Smart Executor - LLM-powered intelligent execution of action plans
 Uses OpenAI Responses API to make smart decisions about HOW to execute actions.
 """
 import json
+import os
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import openai
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from src.tools.mock_tools import MockTools
 from src.storage.action_plan_store import ActionPlanStore
@@ -17,6 +22,18 @@ from src.storage.approval_store import ApprovalStore
 
 class SmartExecutor:
     """Intelligent executor that uses LLM to make execution decisions"""
+    
+    def _rx_parsed(self, resp):
+        """Return parsed JSON when using text.format json_schema (or None)."""
+        try:
+            for b in getattr(resp, "output", []) or []:
+                for c in getattr(b, "content", []) or []:
+                    p = getattr(c, "parsed", None)
+                    if p is not None:
+                        return p
+        except Exception:
+            pass
+        return None
     
     def __init__(self, api_key: Optional[str] = None, db_path: str = "data/call_center.db"):
         """Initialize smart executor with tools and LLM"""
@@ -492,7 +509,7 @@ class SmartExecutor:
                 }
             )
             
-            return response.output_parsed
+            return self._rx_parsed(response)
             
         except Exception as e:
             # NO FALLBACK per requirements - fail fast
@@ -660,7 +677,7 @@ class SmartExecutor:
                 }
             )
             
-            return response.output_parsed
+            return self._rx_parsed(response)
             
         except Exception as e:
             # NO FALLBACK per requirements - fail fast
