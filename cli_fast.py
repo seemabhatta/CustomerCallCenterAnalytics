@@ -414,5 +414,199 @@ def demo(
         client.print_error(f"Demo failed: {result['error']}")
 
 
+@app.command()
+def analyze(
+    transcript_id: Optional[str] = typer.Option(None, "--transcript-id", "-t", help="Specific transcript ID to analyze"),
+    all_transcripts: bool = typer.Option(False, "--all", "-a", help="Analyze all transcripts")
+):
+    """Analyze transcript(s) for mortgage servicing insights."""
+    client = CLIClient()
+    
+    if not transcript_id and not all_transcripts:
+        client.print_error("Specify either --transcript-id or --all")
+        raise typer.Exit(1)
+    
+    params = {
+        'transcript_id': transcript_id,
+        'all_transcripts': all_transcripts
+    }
+    
+    console.print("🔍 [bold magenta]Analyzing transcript(s)...[/bold magenta]")
+    result = client.send_command('analyze', params)
+    
+    if result['success']:
+        analyses = result.get('analyses', [])
+        client.print_success(f"Analyzed {len(analyses)} transcript(s)")
+        
+        # Show summary of analyses
+        for analysis in analyses:
+            console.print(f"\n📄 Transcript: {analysis['transcript_id']}")
+            console.print(f"   Intent: {analysis.get('primary_intent', 'N/A')}")
+            console.print(f"   Urgency: {analysis.get('urgency_level', 'N/A')}")
+            console.print(f"   Sentiment: {analysis.get('borrower_sentiment', {}).get('overall', 'N/A')}")
+            console.print(f"   Confidence: {analysis.get('confidence_score', 0):.2f}")
+            if analysis.get('escalation_needed'):
+                console.print("   🚨 [bold red]Escalation needed[/bold red]")
+    else:
+        client.print_error(f"Analysis failed: {result['error']}")
+
+
+@app.command("analysis-report")
+def analysis_report(
+    transcript_id: Optional[str] = typer.Option(None, "--transcript-id", "-t", help="Specific transcript analysis to view"),
+    analysis_id: Optional[str] = typer.Option(None, "--analysis-id", "-a", help="Specific analysis ID to view")
+):
+    """View detailed analysis report."""
+    client = CLIClient()
+    
+    if not transcript_id and not analysis_id:
+        client.print_error("Specify either --transcript-id or --analysis-id")
+        raise typer.Exit(1)
+    
+    params = {
+        'transcript_id': transcript_id,
+        'analysis_id': analysis_id
+    }
+    
+    console.print("📊 [bold magenta]Getting analysis report...[/bold magenta]")
+    result = client.send_command('analysis_report', params)
+    
+    if result['success']:
+        analysis = result['analysis']
+        
+        # Display detailed analysis
+        console.print(f"\n📄 [bold cyan]Analysis Report[/bold cyan]")
+        console.print(f"Analysis ID: {analysis['analysis_id']}")
+        console.print(f"Transcript ID: {analysis['transcript_id']}")
+        console.print(f"Confidence Score: {analysis['confidence_score']:.2f}")
+        
+        console.print(f"\n[bold cyan]Call Summary:[/bold cyan]")
+        console.print(analysis['call_summary'])
+        
+        console.print(f"\n[bold cyan]Key Insights:[/bold cyan]")
+        console.print(f"  Primary Intent: {analysis['primary_intent']}")
+        console.print(f"  Urgency Level: {analysis['urgency_level']}")
+        
+        # Borrower insights
+        borrower_sentiment = analysis['borrower_sentiment']
+        console.print(f"\n[bold cyan]Borrower Profile:[/bold cyan]")
+        console.print(f"  Sentiment: {borrower_sentiment['overall']} ({borrower_sentiment['start']} → {borrower_sentiment['end']})")
+        
+        risks = analysis['borrower_risks']
+        console.print(f"\n[bold cyan]Risk Assessment:[/bold cyan]")
+        console.print(f"  Delinquency Risk: {risks['delinquency_risk']:.2f}")
+        console.print(f"  Churn Risk: {risks['churn_risk']:.2f}")
+        console.print(f"  Complaint Risk: {risks['complaint_risk']:.2f}")
+        console.print(f"  Refinance Likelihood: {risks['refinance_likelihood']:.2f}")
+        
+        # Advisor performance
+        advisor = analysis['advisor_metrics']
+        console.print(f"\n[bold cyan]Advisor Performance:[/bold cyan]")
+        console.print(f"  Empathy Score: {advisor['empathy_score']:.1f}/10")
+        console.print(f"  Compliance Adherence: {advisor['compliance_adherence']:.1f}/10")
+        console.print(f"  Solution Effectiveness: {advisor['solution_effectiveness']:.1f}/10")
+        
+        if advisor['coaching_opportunities']:
+            console.print(f"\n[bold cyan]Coaching Opportunities:[/bold cyan]")
+            for opportunity in advisor['coaching_opportunities']:
+                console.print(f"  • {opportunity}")
+        
+        # Compliance and resolution
+        console.print(f"\n[bold cyan]Resolution Status:[/bold cyan]")
+        console.print(f"  Issue Resolved: {'✅' if analysis['issue_resolved'] else '❌'}")
+        console.print(f"  First Call Resolution: {'✅' if analysis['first_call_resolution'] else '❌'}")
+        console.print(f"  Escalation Needed: {'🚨 Yes' if analysis['escalation_needed'] else '✅ No'}")
+        
+        if analysis['compliance_flags']:
+            console.print(f"\n[bold yellow]Compliance Flags:[/bold yellow]")
+            for flag in analysis['compliance_flags']:
+                console.print(f"  ⚠️  {flag}")
+        
+    else:
+        client.print_error(f"Report failed: {result['error']}")
+
+
+@app.command("analysis-metrics")
+def analysis_metrics():
+    """Show aggregate analysis metrics dashboard."""
+    client = CLIClient()
+    
+    console.print("📊 [bold magenta]Getting analysis metrics...[/bold magenta]")
+    result = client.send_command('analysis_metrics')
+    
+    if result['success']:
+        metrics = result['metrics']
+        
+        console.print(f"\n📈 [bold cyan]Analysis Dashboard[/bold cyan]")
+        console.print(f"Total Analyses: [green]{metrics['total_analyses']}[/green]")
+        console.print(f"Average Confidence: [green]{metrics['avg_confidence_score']:.2f}[/green]")
+        
+        console.print(f"\n[bold cyan]Performance Metrics:[/bold cyan]")
+        console.print(f"  First Call Resolution Rate: [green]{metrics['first_call_resolution_rate']:.1f}%[/green]")
+        console.print(f"  Escalation Rate: [yellow]{metrics['escalation_rate']:.1f}%[/yellow]")
+        console.print(f"  Average Empathy Score: [green]{metrics['avg_empathy_score']:.1f}/10[/green]")
+        
+        console.print(f"\n[bold cyan]Risk Indicators:[/bold cyan]")
+        console.print(f"  Average Delinquency Risk: [yellow]{metrics['avg_delinquency_risk']:.2f}[/yellow]")
+        console.print(f"  Average Churn Risk: [yellow]{metrics['avg_churn_risk']:.2f}[/yellow]")
+        
+        if metrics['top_intents']:
+            console.print(f"\n[bold cyan]Top Call Intents:[/bold cyan]")
+            for intent, count in list(metrics['top_intents'].items())[:5]:
+                console.print(f"  {intent}: [green]{count}[/green]")
+        
+        if metrics['urgency_distribution']:
+            console.print(f"\n[bold cyan]Urgency Distribution:[/bold cyan]")
+            for urgency, count in metrics['urgency_distribution'].items():
+                console.print(f"  {urgency}: [green]{count}[/green]")
+                
+    else:
+        client.print_error(f"Metrics failed: {result['error']}")
+
+
+@app.command("risk-report")
+def risk_report(
+    threshold: float = typer.Option(0.7, "--threshold", "-t", help="Minimum risk threshold (0.0-1.0)")
+):
+    """Show high-risk borrower report."""
+    client = CLIClient()
+    
+    params = {'threshold': threshold}
+    
+    console.print(f"🚨 [bold magenta]Getting high-risk report (threshold: {threshold})...[/bold magenta]")
+    result = client.send_command('risk_report', params)
+    
+    if result['success']:
+        risk_data = result['risk_data']
+        
+        # High delinquency risk
+        high_delinquency = risk_data['high_delinquency_risk']
+        if high_delinquency:
+            console.print(f"\n🚨 [bold red]High Delinquency Risk ({len(high_delinquency)} cases)[/bold red]")
+            for case in high_delinquency[:10]:  # Show top 10
+                console.print(f"  Transcript: {case['transcript_id']}")
+                console.print(f"  Risk Score: {case['delinquency_risk']:.2f}")
+                console.print(f"  Intent: {case['primary_intent']}")
+                console.print(f"  Summary: {case['summary']}")
+                console.print()
+        
+        # High churn risk
+        high_churn = risk_data['high_churn_risk']
+        if high_churn:
+            console.print(f"\n⚠️  [bold yellow]High Churn Risk ({len(high_churn)} cases)[/bold yellow]")
+            for case in high_churn[:10]:  # Show top 10
+                console.print(f"  Transcript: {case['transcript_id']}")
+                console.print(f"  Risk Score: {case['churn_risk']:.2f}")
+                console.print(f"  Intent: {case['primary_intent']}")
+                console.print(f"  Summary: {case['summary']}")
+                console.print()
+                
+        if not high_delinquency and not high_churn:
+            console.print(f"✅ No high-risk cases found above threshold {threshold}")
+            
+    else:
+        client.print_error(f"Risk report failed: {result['error']}")
+
+
 if __name__ == "__main__":
     app()
