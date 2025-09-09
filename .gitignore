@@ -28,6 +28,8 @@ wheels/
 
 # Database files
 data/documents
+data/callbacks
+data/emails
 
 # IDE
 .vscode/

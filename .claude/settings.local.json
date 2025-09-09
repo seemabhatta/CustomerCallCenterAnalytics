@@ -12,7 +12,9 @@
       "Bash(git config:*)",
       "Bash(git commit:*)",
       "Bash(find:*)",
-      "Bash(./start_services.sh)"
+      "Bash(./start_services.sh)",
+      "Bash(gh issue view:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

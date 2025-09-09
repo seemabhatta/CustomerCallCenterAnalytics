@@ -146,6 +146,8 @@ class CLIHandler(BaseHTTPRequestHandler):
                 result = self.handle_action_plan_summary(params)
             elif command == 'execute_plan':
                 result = self.handle_execute_plan(params)
+            elif command == 'execute_plan_dry_run':
+                result = self.handle_execute_plan_dry_run(params)
             elif command == 'execution_history':
                 result = self.handle_execution_history(params)
             elif command == 'view_artifacts':
@@ -712,6 +714,81 @@ class CLIHandler(BaseHTTPRequestHandler):
             return {
                 'success': True,
                 'execution_result': execution_result
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_execute_plan_dry_run(self, params):
+        """Handle execute-plan dry-run command - shows what would be executed without actual execution."""
+        try:
+            from src.storage.action_plan_store import ActionPlanStore
+            
+            plan_id = params.get('plan_id')
+            
+            if not plan_id:
+                return {'success': False, 'error': 'plan_id is required'}
+            
+            # Get the action plan to show what would be executed
+            plan_store = ActionPlanStore('data/call_center.db')
+            plan = plan_store.get_by_id(plan_id)
+            
+            if not plan:
+                return {'success': False, 'error': f'Action plan {plan_id} not found'}
+            
+            # Count actions that would be executed (simplified approach)
+            total_actions = 0
+            actions_by_layer = {}
+            
+            # Count borrower actions (these are usually strings or simple objects)
+            borrower_count = 0
+            if 'borrower_plan' in plan:
+                immediate = plan['borrower_plan'].get('immediate_actions', [])
+                followup = plan['borrower_plan'].get('follow_up_actions', [])
+                borrower_count = len(immediate) + len(followup)
+                
+            # Count other layer actions
+            advisor_count = 0
+            if 'advisor_plan' in plan:
+                coaching = plan['advisor_plan'].get('coaching_items', [])
+                advisor_count = len(coaching)
+                
+            supervisor_count = 0
+            if 'supervisor_plan' in plan:
+                escalation = plan['supervisor_plan'].get('escalation_items', [])
+                supervisor_count = len(escalation)
+                
+            leadership_count = 0
+            if 'leadership_plan' in plan:
+                strategic = plan['leadership_plan'].get('strategic_opportunities', [])
+                leadership_count = len(strategic)
+            
+            # Set action counts
+            actions_by_layer = {
+                'borrower': borrower_count,
+                'advisor': advisor_count,
+                'supervisor': supervisor_count,
+                'leadership': leadership_count
+            }
+            total_actions = sum(actions_by_layer.values())
+            
+            # Simulate what artifacts would be created
+            estimated_artifacts = {
+                'emails': total_actions * 0.6,  # ~60% of actions generate emails
+                'documents': total_actions * 0.2,  # ~20% generate documents 
+                'callbacks': total_actions * 0.3  # ~30% generate callbacks
+            }
+            
+            return {
+                'success': True,
+                'dry_run_result': {
+                    'plan_id': plan_id,
+                    'mode': 'dry_run',
+                    'total_actions_would_execute': total_actions,
+                    'actions_by_layer': actions_by_layer,
+                    'estimated_artifacts': estimated_artifacts,
+                    'note': 'This is a simulation - no actual execution or artifacts created'
+                }
             }
             
         except Exception as e:

@@ -880,6 +880,28 @@ def execute_plan(
         })
     
     if result['success']:
+        # Handle dry-run response
+        if 'dry_run_result' in result:
+            dry_run_result = result['dry_run_result']
+            console.print(f"\n🔍 [bold cyan]Dry Run Preview for Plan {dry_run_result['plan_id']}[/bold cyan]")
+            console.print(f"📊 Total actions would execute: {dry_run_result['total_actions_would_execute']}")
+            
+            # Show actions by layer
+            console.print("\n📋 Actions by Layer:")
+            for layer, count in dry_run_result['actions_by_layer'].items():
+                if count > 0:
+                    console.print(f"  • {layer.title()}: {count} actions")
+            
+            # Show estimated artifacts
+            console.print("\n📄 Estimated Artifacts:")
+            artifacts = dry_run_result['estimated_artifacts']
+            console.print(f"  • Emails: ~{int(artifacts['emails'])} files")
+            console.print(f"  • Documents: ~{int(artifacts['documents'])} files")  
+            console.print(f"  • Callbacks: ~{int(artifacts['callbacks'])} files")
+            
+            console.print(f"\n💡 {dry_run_result['note']}")
+            return
+        
         execution_result = result['execution_result']
         
         if execution_result['status'] == 'pending_approval':
