@@ -841,5 +841,165 @@ def _display_plan_layer(layer_data: Dict[str, Any], layer_type: str):
                 console.print(f"  • {opp}")
 
 
+@app.command("execute-plan")
+def execute_plan(
+    plan_id: str = typer.Argument(..., help="Action plan ID to execute"),
+    mode: str = typer.Option("auto", "--mode", "-m", help="Execution mode: auto (respects approval) or manual (override for testing)"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be executed without actually executing")
+):
+    """Execute an action plan using intelligent LLM-powered execution."""
+    client = CLIClient()
+    
+    if dry_run:
+        console.print(f"🔍 [bold yellow]Dry run - showing what would be executed for plan {plan_id}[/bold yellow]")
+        result = client.send_command('execute_plan_dry_run', {
+            'plan_id': plan_id,
+            'mode': mode
+        })
+    else:
+        console.print(f"⚡ [bold green]Executing action plan {plan_id}...[/bold green]")
+        result = client.send_command('execute_plan', {
+            'plan_id': plan_id,
+            'mode': mode
+        })
+    
+    if result['success']:
+        execution_result = result['execution_result']
+        
+        if execution_result['status'] == 'pending_approval':
+            console.print(f"⏳ [bold yellow]Plan requires approval[/bold yellow]")
+            console.print(f"Status: {execution_result['message']}")
+            console.print(f"Risk Level: {execution_result['risk_level']}")
+            return
+        
+        if execution_result['status'] == 'success':
+            console.print(f"✅ [bold green]Execution completed successfully![/bold green]")
+            console.print(f"Execution ID: {execution_result['execution_id']}")
+            
+            # Show what was executed
+            results = execution_result['results']
+            total_actions = sum(len(actions) for actions in results.values())
+            console.print(f"Total Actions Executed: {total_actions}")
+            
+            for action_type, actions in results.items():
+                if actions:
+                    console.print(f"\n📋 [bold cyan]{action_type.replace('_', ' ').title()}:[/bold cyan]")
+                    for action in actions:
+                        status_icon = "✅" if action.get('status') == 'success' or 'sent' in str(action.get('status', '')) else "❌"
+                        console.print(f"  {status_icon} {action.get('action_source', 'Action')}: {action.get('status', 'Unknown')}")
+            
+            # Show artifacts created
+            artifacts = execution_result.get('artifacts_created', [])
+            if artifacts:
+                console.print(f"\n📄 [bold magenta]Artifacts Created ({len(artifacts)}):[/bold magenta]")
+                for artifact in artifacts:
+                    if artifact:
+                        console.print(f"  📁 {artifact}")
+                        
+        else:
+            console.print(f"❌ [bold red]Execution failed[/bold red]")
+            console.print(f"Error: {execution_result.get('message', 'Unknown error')}")
+            
+    else:
+        client.print_error(f"Failed to execute plan: {result['error']}")
+
+
+@app.command("execution-history")
+def execution_history(
+    limit: int = typer.Option(10, "--limit", "-l", help="Number of recent executions to show")
+):
+    """Show recent execution history."""
+    client = CLIClient()
+    
+    console.print(f"📚 [bold blue]Getting execution history (last {limit})...[/bold blue]")
+    result = client.send_command('execution_history', {'limit': limit})
+    
+    if result['success']:
+        executions = result['executions']
+        
+        if not executions:
+            console.print("No executions found.")
+            return
+        
+        console.print(f"\n📋 [bold green]Recent Executions[/bold green]")
+        console.print("-" * 80)
+        
+        for execution in executions:
+            status_icon = "✅" if execution['status'] == 'success' else "❌"
+            console.print(f"{status_icon} {execution['execution_id']} | Plan: {execution['plan_id']}")
+            console.print(f"   📅 {execution['executed_at']} | Artifacts: {execution['artifacts_created']} | Errors: {execution['errors_count']}")
+            console.print()
+            
+    else:
+        client.print_error(f"Failed to get execution history: {result['error']}")
+
+
+@app.command("view-artifacts")
+def view_artifacts(
+    artifact_type: str = typer.Option("all", "--type", "-t", help="Type of artifacts to view: emails, callbacks, documents, all"),
+    limit: int = typer.Option(10, "--limit", "-l", help="Number of recent artifacts to show")
+):
+    """View execution artifacts (emails, documents, callbacks)."""
+    client = CLIClient()
+    
+    console.print(f"📁 [bold blue]Getting {artifact_type} artifacts (last {limit})...[/bold blue]")
+    result = client.send_command('view_artifacts', {
+        'type': artifact_type,
+        'limit': limit
+    })
+    
+    if result['success']:
+        artifacts = result['artifacts']
+        
+        if not artifacts:
+            console.print(f"No {artifact_type} artifacts found.")
+            return
+        
+        console.print(f"\n📄 [bold green]{artifact_type.title()} Artifacts[/bold green]")
+        console.print("-" * 80)
+        
+        for artifact in artifacts:
+            console.print(f"📁 {artifact['filename']}")
+            console.print(f"   📅 {artifact['created']} | Size: {artifact['size']} bytes")
+            if artifact.get('preview'):
+                console.print(f"   👀 {artifact['preview'][:100]}...")
+            console.print()
+            
+    else:
+        client.print_error(f"Failed to get artifacts: {result['error']}")
+
+
+@app.command("execution-metrics")  
+def execution_metrics():
+    """Show execution metrics and statistics."""
+    client = CLIClient()
+    
+    console.print("📊 [bold blue]Getting execution metrics...[/bold blue]")
+    result = client.send_command('execution_metrics', {})
+    
+    if result['success']:
+        stats = result['stats']
+        
+        console.print(f"\n📈 [bold green]Execution Dashboard (Last 7 Days)[/bold green]")
+        console.print(f"Total Executions: {stats['total_executions']}")
+        console.print(f"Success Rate: {stats['success_rate']}%")
+        console.print(f"Artifacts Created: {stats['total_artifacts_created']}")
+        
+        console.print(f"\n📊 Status Breakdown:")
+        for status, count in stats['status_breakdown'].items():
+            console.print(f"  {status}: {count}")
+        
+        console.print(f"\n🎯 Actions by Source:")
+        for source, count in stats['actions_by_source'].items():
+            console.print(f"  {source}: {count}")
+        
+        console.print(f"\n🛠️  Tools Usage:")
+        for tool, count in stats['tools_usage'].items():
+            console.print(f"  {tool}: {count}")
+            
+    else:
+        client.print_error(f"Failed to get execution metrics: {result['error']}")
+
+
 if __name__ == "__main__":
     app()

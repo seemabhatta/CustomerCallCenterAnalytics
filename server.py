@@ -40,6 +40,8 @@ import uvicorn
 from src.generators.transcript_generator import TranscriptGenerator
 from src.storage.transcript_store import TranscriptStore
 from src.models.transcript import Transcript, Message
+from src.executors.smart_executor import SmartExecutor
+from src.storage.execution_store import ExecutionStore
 
 print(f"✅ All imports loaded in {(datetime.now() - start_time).total_seconds():.2f}s")
 
@@ -140,6 +142,14 @@ class CLIHandler(BaseHTTPRequestHandler):
                 result = self.handle_approve_action_plan(params)
             elif command == 'action_plan_summary':
                 result = self.handle_action_plan_summary(params)
+            elif command == 'execute_plan':
+                result = self.handle_execute_plan(params)
+            elif command == 'execution_history':
+                result = self.handle_execution_history(params)
+            elif command == 'view_artifacts':
+                result = self.handle_view_artifacts(params)
+            elif command == 'execution_metrics':
+                result = self.handle_execution_metrics(params)
             else:
                 result = {'success': False, 'error': f'Unknown command: {command}'}
             
@@ -624,6 +634,125 @@ class CLIHandler(BaseHTTPRequestHandler):
                 'success': True,
                 'summary': metrics
             }
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_execute_plan(self, params):
+        """Handle execute-plan command."""
+        try:
+            from src.executors.smart_executor import SmartExecutor
+            from src.storage.execution_store import ExecutionStore
+            
+            plan_id = params.get('plan_id')
+            mode = params.get('mode', 'auto')
+            
+            if not plan_id:
+                return {'success': False, 'error': 'plan_id is required'}
+            
+            # Execute the plan
+            executor = SmartExecutor(db_path='data/call_center.db')
+            execution_result = executor.execute_action_plan(plan_id, mode)
+            
+            # Store execution history if successful
+            if execution_result.get('status') == 'success':
+                execution_store = ExecutionStore()
+                execution_store.store_execution(execution_result)
+            
+            return {
+                'success': True,
+                'execution_result': execution_result
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_execution_history(self, params):
+        """Handle execution-history command."""
+        try:
+            from src.storage.execution_store import ExecutionStore
+            
+            limit = params.get('limit', 10)
+            execution_store = ExecutionStore()
+            executions = execution_store.get_recent_executions(limit)
+            
+            return {
+                'success': True,
+                'executions': executions
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_view_artifacts(self, params):
+        """Handle view-artifacts command."""
+        try:
+            import os
+            from pathlib import Path
+            
+            artifact_type = params.get('type', 'all')
+            limit = params.get('limit', 10)
+            
+            artifacts = []
+            base_path = Path("data")
+            
+            # Determine which directories to scan
+            if artifact_type == 'all':
+                dirs_to_scan = ['emails', 'callbacks', 'documents']
+            elif artifact_type in ['emails', 'callbacks', 'documents']:
+                dirs_to_scan = [artifact_type]
+            else:
+                return {'success': False, 'error': f'Invalid artifact type: {artifact_type}'}
+            
+            # Scan directories for files
+            for dir_name in dirs_to_scan:
+                dir_path = base_path / dir_name
+                if dir_path.exists():
+                    for file_path in dir_path.iterdir():
+                        if file_path.is_file():
+                            try:
+                                stat = file_path.stat()
+                                # Read first 200 chars for preview
+                                preview = ""
+                                if file_path.suffix == '.txt':
+                                    with open(file_path, 'r', encoding='utf-8') as f:
+                                        preview = f.read(200)
+                                
+                                artifacts.append({
+                                    'filename': file_path.name,
+                                    'type': dir_name,
+                                    'path': str(file_path),
+                                    'size': stat.st_size,
+                                    'created': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                                    'preview': preview
+                                })
+                            except Exception:
+                                continue  # Skip files we can't read
+            
+            # Sort by creation time (newest first) and limit
+            artifacts.sort(key=lambda x: x['created'], reverse=True)
+            artifacts = artifacts[:limit]
+            
+            return {
+                'success': True,
+                'artifacts': artifacts
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def handle_execution_metrics(self, params):
+        """Handle execution-metrics command."""
+        try:
+            from src.storage.execution_store import ExecutionStore
+            
+            execution_store = ExecutionStore()
+            stats = execution_store.get_execution_stats(days=7)
+            
+            return {
+                'success': True,
+                'stats': stats
+            }
+            
         except Exception as e:
             return {'success': False, 'error': str(e)}
 
