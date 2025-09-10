@@ -54,17 +54,9 @@ export default function SidebarNav() {
         <p className="text-sm text-muted-foreground" data-testid="app-subtitle">Mortgage Intelligence</p>
       </div>
       
-      <div className="space-y-6">
+      <div className="space-y-2">
         {navGroups.map((group, groupIndex) => (
-          <div key={group.title} className="space-y-2">
-            {/* Group Header */}
-            <div className="flex items-center gap-2 px-2 py-1">
-              <span className="text-sm">{group.icon}</span>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {group.title}
-              </h3>
-            </div>
-            
+          <div key={group.title}>
             {/* Group Items */}
             <div className="space-y-1">
               {group.items.map((item) => (
@@ -85,7 +77,7 @@ export default function SidebarNav() {
             
             {/* Separator after each group except the last */}
             {groupIndex < navGroups.length - 1 && (
-              <div className="border-t border-border mt-4"></div>
+              <div className="border-t border-border my-4"></div>
             )}
           </div>
         ))}
