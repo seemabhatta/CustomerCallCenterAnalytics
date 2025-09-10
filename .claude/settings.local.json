@@ -15,7 +15,12 @@
       "Bash(./start_services.sh)",
       "Bash(gh issue view:*)",
       "Bash(pkill:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(gh issue create:*)",
+      "Bash(ss:*)",
+      "Bash(./stop_services.sh:*)",
+      "Bash(fuser:*)",
+      "Bash(gh issue list:*)"
     ],
     "deny": [],
     "ask": []

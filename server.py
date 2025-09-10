@@ -45,6 +45,14 @@ from src.storage.execution_store import ExecutionStore
 from src.agents.decision_agent import DecisionAgent
 from src.storage.approval_store import ApprovalStore
 
+# Governance components (Epic 2)
+from src.governance.governance_engine import GovernanceEngine
+from src.governance.audit_logger import AuditLogger
+from src.governance.approval_workflow import ApprovalWorkflow
+from src.governance.compliance_validator import ComplianceValidator
+from src.governance.override_manager import OverrideManager
+from src.storage.governance_store import GovernanceStore
+
 print(f"✅ All imports loaded in {(datetime.now() - start_time).total_seconds():.2f}s")
 
 # Configure logging
@@ -95,7 +103,15 @@ def init_business_logic():
         execution_store = ExecutionStore("data/call_center.db")
         approval_store = ApprovalStore("data/call_center.db")
         
-        print("✅ Business logic initialized")
+        # Initialize governance services (Epic 2)
+        governance_engine = GovernanceEngine(api_key=api_key)
+        audit_logger = AuditLogger("data/call_center.db")
+        approval_workflow = ApprovalWorkflow("data/call_center.db")
+        compliance_validator = ComplianceValidator(api_key=api_key)
+        override_manager = OverrideManager("data/call_center.db")
+        governance_store = GovernanceStore("data/call_center.db")
+        
+        print("✅ Business logic initialized (including governance framework)")
         
     except Exception as e:
         logger.error(f"Failed to initialize business logic: {e}")
@@ -1951,6 +1967,338 @@ def create_fastapi_app():
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to get approval metrics: {str(e)}")
+
+    # ========== Governance API Endpoints (Epic 2) ==========
+    
+    @app.post("/api/v1/governance/submit")
+    async def submit_for_governance_api(request: dict):
+        """Submit action for governance review with LLM-based routing."""
+        try:
+            # Use GovernanceEngine for intelligent routing
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+            
+            governance_engine = GovernanceEngine(api_key=api_key)
+            audit_logger = AuditLogger("data/call_center.db")
+            approval_workflow = ApprovalWorkflow("data/call_center.db")
+            
+            # Evaluate action for governance routing
+            action_data = {
+                "action_id": request.get("action_id"),
+                "description": request.get("description"),
+                "financial_impact": request.get("financial_impact", False),
+                "risk_score": request.get("risk_score", 0.5),
+                "compliance_flags": request.get("compliance_flags", []),
+                "amount": request.get("amount", 0)
+            }
+            
+            # LLM-based governance evaluation
+            governance_result = governance_engine.evaluate_action(action_data)
+            
+            # Log governance decision in audit trail
+            audit_id = audit_logger.log_event({
+                "event_type": "governance_submission",
+                "action_id": action_data["action_id"],
+                "user_id": request.get("submitted_by"),
+                "timestamp": datetime.now(),
+                "details": {
+                    "governance_decision": governance_result,
+                    "original_request": request
+                }
+            })
+            
+            # Submit to approval workflow if needed
+            if governance_result["routing_decision"] != "auto_approved":
+                approval_request = {
+                    "action_id": action_data["action_id"],
+                    "submitted_by": request.get("submitted_by"),
+                    "urgency": request.get("urgency", "medium"),
+                    "governance_routing": governance_result["routing_decision"]
+                }
+                approval_id = approval_workflow.submit_for_approval(approval_request)
+                
+                return {
+                    "governance_id": audit_id,
+                    "approval_id": approval_id,
+                    "routing_decision": governance_result["routing_decision"],
+                    "risk_assessment": governance_result["risk_assessment"],
+                    "reasoning": governance_result["routing_reason"],
+                    "status": "pending_approval",
+                    "confidence": governance_result["confidence_score"]
+                }
+            else:
+                return {
+                    "governance_id": audit_id,
+                    "routing_decision": "auto_approved",
+                    "risk_assessment": governance_result["risk_assessment"], 
+                    "reasoning": governance_result["routing_reason"],
+                    "status": "approved",
+                    "confidence": governance_result["confidence_score"]
+                }
+                
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Governance submission failed: {str(e)}")
+    
+    @app.get("/api/v1/governance/status/{governance_id}")
+    async def get_governance_status_api(governance_id: str):
+        """Get status of governance submission."""
+        try:
+            audit_logger = AuditLogger("data/call_center.db")
+            approval_workflow = ApprovalWorkflow("data/call_center.db")
+            
+            # Get governance audit event
+            governance_event = audit_logger.get_event(governance_id)
+            if not governance_event:
+                raise HTTPException(status_code=404, detail="Governance submission not found")
+            
+            # Check if there's an associated approval
+            action_id = governance_event.get("action_id")
+            approval_status = None
+            
+            # This is simplified - in production would need better tracking
+            return {
+                "governance_id": governance_id,
+                "action_id": action_id,
+                "status": "submitted",
+                "submitted_at": governance_event.get("timestamp"),
+                "routing_decision": governance_event["details"]["governance_decision"]["routing_decision"],
+                "risk_assessment": governance_event["details"]["governance_decision"]["risk_assessment"]
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get governance status: {str(e)}")
+    
+    @app.post("/api/v1/governance/approve")
+    async def approve_governance_api(request: dict):
+        """Approve governance submission with conditions."""
+        try:
+            approval_workflow = ApprovalWorkflow("data/call_center.db")
+            audit_logger = AuditLogger("data/call_center.db")
+            
+            approval_id = request.get("approval_id")
+            approved_by = request.get("approved_by")
+            conditions = request.get("conditions", [])
+            notes = request.get("notes", "")
+            
+            # Approve via workflow
+            approval_result = approval_workflow.approve(
+                approval_id=approval_id,
+                approved_by=approved_by,
+                conditions=conditions,
+                notes=notes
+            )
+            
+            # Log approval in audit trail
+            audit_logger.log_event({
+                "event_type": "governance_approved",
+                "action_id": request.get("action_id"),
+                "user_id": approved_by,
+                "timestamp": datetime.now(),
+                "details": {
+                    "approval_id": approval_id,
+                    "conditions": conditions,
+                    "notes": notes
+                }
+            })
+            
+            return approval_result
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to approve: {str(e)}")
+    
+    @app.post("/api/v1/governance/reject")
+    async def reject_governance_api(request: dict):
+        """Reject governance submission with reason."""
+        try:
+            approval_workflow = ApprovalWorkflow("data/call_center.db")
+            audit_logger = AuditLogger("data/call_center.db")
+            
+            approval_id = request.get("approval_id")
+            rejected_by = request.get("rejected_by")
+            reason = request.get("reason", "")
+            
+            # Reject via workflow
+            rejection_result = approval_workflow.reject(
+                approval_id=approval_id,
+                rejected_by=rejected_by,
+                reason=reason
+            )
+            
+            # Log rejection in audit trail
+            audit_logger.log_event({
+                "event_type": "governance_rejected",
+                "action_id": request.get("action_id"),
+                "user_id": rejected_by,
+                "timestamp": datetime.now(),
+                "details": {
+                    "approval_id": approval_id,
+                    "reason": reason
+                }
+            })
+            
+            return rejection_result
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to reject: {str(e)}")
+    
+    @app.post("/api/v1/governance/bulk-approve")
+    async def bulk_approve_governance_api(request: dict):
+        """Bulk approve multiple governance submissions."""
+        try:
+            approval_workflow = ApprovalWorkflow("data/call_center.db")
+            audit_logger = AuditLogger("data/call_center.db")
+            
+            approval_ids = request.get("approval_ids", [])
+            approved_by = request.get("approved_by")
+            
+            # Bulk approve via workflow
+            bulk_result = approval_workflow.bulk_approve(
+                approval_ids=approval_ids,
+                approved_by=approved_by
+            )
+            
+            # Log bulk approval
+            audit_logger.log_event({
+                "event_type": "governance_bulk_approved",
+                "user_id": approved_by,
+                "timestamp": datetime.now(),
+                "details": {
+                    "approval_ids": approval_ids,
+                    "bulk_result": bulk_result
+                }
+            })
+            
+            return bulk_result
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to bulk approve: {str(e)}")
+    
+    @app.get("/api/v1/governance/queue")
+    async def get_governance_queue_api(status: str = "pending"):
+        """Get governance approval queue."""
+        try:
+            approval_workflow = ApprovalWorkflow("data/call_center.db")
+            
+            # Get approvals by status
+            if status == "pending":
+                approvals = approval_workflow.get_pending_approvals()
+            else:
+                # Would implement other status filters
+                approvals = approval_workflow.get_pending_approvals()
+            
+            return {
+                "status": status,
+                "count": len(approvals),
+                "approvals": approvals
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get queue: {str(e)}")
+    
+    @app.get("/api/v1/governance/audit")
+    async def get_governance_audit_api(
+        user_id: str = None,
+        event_type: str = None,
+        start_date: str = None,
+        end_date: str = None,
+        limit: int = 100
+    ):
+        """Query governance audit trail."""
+        try:
+            audit_logger = AuditLogger("data/call_center.db")
+            
+            # Convert date strings if provided
+            start_date_obj = None
+            end_date_obj = None
+            if start_date:
+                start_date_obj = datetime.fromisoformat(start_date).date()
+            if end_date:
+                end_date_obj = datetime.fromisoformat(end_date).date()
+            
+            # Query audit trail
+            events = audit_logger.query_events(
+                user_id=user_id,
+                event_type=event_type,
+                start_date=start_date_obj,
+                end_date=end_date_obj,
+                limit=limit
+            )
+            
+            return {
+                "count": len(events),
+                "events": events,
+                "integrity_verified": audit_logger.verify_chain_integrity()
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to query audit trail: {str(e)}")
+    
+    @app.get("/api/v1/governance/metrics")
+    async def get_governance_metrics_api():
+        """Get governance system metrics."""
+        try:
+            audit_logger = AuditLogger("data/call_center.db")
+            approval_workflow = ApprovalWorkflow("data/call_center.db")
+            governance_store = GovernanceStore("data/call_center.db")
+            
+            # Get basic metrics
+            performance_stats = governance_store.get_performance_stats()
+            
+            # Get recent events for analysis
+            recent_events = audit_logger.query_events(limit=100)
+            
+            # Calculate governance metrics
+            governance_events = [e for e in recent_events if e["event_type"].startswith("governance")]
+            approval_events = [e for e in recent_events if "approved" in e["event_type"]]
+            
+            return {
+                "audit_events_count": performance_stats["audit_events_count"],
+                "governance_rules_count": performance_stats["governance_rules_count"],
+                "recent_governance_events": len(governance_events),
+                "recent_approvals": len(approval_events),
+                "chain_integrity_verified": audit_logger.verify_chain_integrity(),
+                "database_performance": {
+                    "query_time": performance_stats["recent_query_time_seconds"],
+                    "performance_target_met": performance_stats["performance_target_met"]
+                }
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+    
+    @app.post("/api/v1/governance/override")
+    async def emergency_override_api(request: dict):
+        """Execute emergency override with enhanced logging."""
+        try:
+            override_manager = OverrideManager("data/call_center.db")
+            
+            override_request = {
+                "action_id": request.get("action_id"),
+                "override_by": request.get("override_by"),
+                "emergency_type": request.get("emergency_type"),
+                "justification": request.get("justification"),
+                "approval_level_bypassed": request.get("approval_level_bypassed")
+            }
+            
+            # Execute override with permission validation
+            override_id = override_manager.execute_override(override_request)
+            
+            # Get the override log for response
+            override_log = override_manager.get_override_log(override_id)
+            
+            return {
+                "override_id": override_id,
+                "status": "executed",
+                "emergency_type": override_request["emergency_type"],
+                "justification": override_request["justification"],
+                "executed_by": override_request["override_by"],
+                "impact_assessment": override_log.get("impact_assessment"),
+                "followup_required": True
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Emergency override failed: {str(e)}")
     
     return app
 
