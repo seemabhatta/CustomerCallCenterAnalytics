@@ -9,7 +9,7 @@ export default function SidebarNav() {
       icon: "🏢",
       items: [
         { path: "/dashboard", label: "Dashboard", id: "dashboard" },
-        { path: "/approval-queue", label: "Pipeline & Approvals", id: "approval-queue" },
+        { path: "/approval-queue", label: "Queue", id: "approval-queue" },
         { path: "/ai-assistant", label: "AI Assistant", id: "ai-assistant" },
       ]
     },
@@ -18,7 +18,7 @@ export default function SidebarNav() {
       icon: "📋",
       items: [
         { path: "/transcripts", label: "Transcripts", id: "transcripts" },
-        { path: "/ai-analysis", label: "AI Analysis", id: "ai-analysis" },
+        { path: "/ai-analysis", label: "Analysis", id: "ai-analysis" },
         { path: "/action-plans", label: "Action Plans", id: "action-plans" },
         { path: "/execution", label: "Execution", id: "execution" },
       ]
@@ -28,7 +28,7 @@ export default function SidebarNav() {
       icon: "⚖️", 
       items: [
         { path: "/governance", label: "Governance", id: "governance" },
-        { path: "/observer", label: "Observer & Learning", id: "observer" },
+        { path: "/observer", label: "Analytics", id: "observer" },
       ]
     },
     {
@@ -36,7 +36,13 @@ export default function SidebarNav() {
       icon: "🔧",
       items: [
         { path: "/live-processing", label: "Live Processing", id: "live-processing" },
-        { path: "/generate", label: "Generate", id: "generate" },
+      ]
+    },
+    {
+      title: "Utilities",
+      icon: "🔧",
+      items: [
+        { path: "/generate", label: "Data Generator", id: "generate" },
       ]
     }
   ];
