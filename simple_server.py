@@ -159,12 +159,14 @@ async def generate_transcript(request: dict):
         urgency = request.get("urgency", "medium")
         financial_impact = request.get("financial_impact", False)
         customer_sentiment = request.get("customer_sentiment", "neutral")
+        customer_id = request.get("customer_id", "CUST_001")
         
         transcript = generator.generate(
             scenario=scenario,
             urgency=urgency,
             financial_impact=financial_impact,
-            customer_sentiment=customer_sentiment
+            customer_sentiment=customer_sentiment,
+            customer_id=customer_id
         )
         
         # Store if requested
