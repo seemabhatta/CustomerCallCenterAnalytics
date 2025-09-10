@@ -162,6 +162,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         store: true // Always store transcripts
       };
 
+      console.log("Proxying generate request:", backendPayload);
+
       const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
@@ -172,10 +174,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`Backend error: ${response.status} - ${errorText}`);
         throw new Error(`Backend API error: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log("Generate result:", result);
       res.json(result);
     } catch (error) {
       console.error("Generate proxy error:", error);
@@ -183,6 +187,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to generate transcript", 
         details: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // Proxy transcripts requests to FastAPI backend for Case Details
+  app.get("/api/transcripts", async (req, res) => {
+    try {
+      const response = await fetch("http://localhost:8000/transcripts");
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`);
+      }
+      const transcripts = await response.json();
+      res.json(transcripts);
+    } catch (error) {
+      console.error("Transcripts proxy error:", error);
+      res.status(500).json({ error: "Failed to fetch transcripts" });
+    }
+  });
+
+  // Proxy individual transcript requests to FastAPI backend
+  app.get("/api/transcript/:id", async (req, res) => {
+    try {
+      const response = await fetch(`http://localhost:8000/transcript/${req.params.id}`);
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`);
+      }
+      const transcript = await response.json();
+      res.json(transcript);
+    } catch (error) {
+      console.error("Transcript detail proxy error:", error);
+      res.status(500).json({ error: "Failed to fetch transcript" });
     }
   });
 
