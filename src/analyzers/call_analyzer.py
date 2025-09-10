@@ -35,8 +35,17 @@ class CallAnalyzer:
         Returns:
             Analysis results with mortgage-specific insights
         """
-        # Build transcript text for analysis
-        transcript_text = self._build_transcript_text(transcript)
+        try:
+            print(f"DEBUG: Starting analysis for transcript {transcript.id}")
+            print(f"DEBUG: Transcript has {len(transcript.messages)} messages")
+            
+            # Build transcript text for analysis
+            print("DEBUG: Building transcript text...")
+            transcript_text = self._build_transcript_text(transcript)
+            print(f"DEBUG: Built transcript text, length: {len(transcript_text)}")
+        except Exception as e:
+            print(f"DEBUG: Error in transcript text building: {e}")
+            raise e
         
         # Define the structured output schema aligned with mortgage servicing vision
         # Note: For the Responses API, structured outputs are configured via
