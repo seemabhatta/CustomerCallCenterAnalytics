@@ -9,8 +9,9 @@ export default function SidebarNav() {
     { path: "/ai-analysis", label: "🧠 AI Analysis", id: "ai-analysis" },
     { path: "/action-plans", label: "📋 Action Plans", id: "action-plans" },
     { path: "/governance", label: "🛡️ Governance", id: "governance" },
+    { path: "/approval-queue", label: "✅ Approval", id: "approval-queue" },
     { path: "/execution", label: "⚡ Execution", id: "execution" },
-    { path: "/artifacts", label: "📄 Artifacts", id: "artifacts" },
+    { path: "/generate", label: "⚡ Generate", id: "generate" },
     { path: "/observer", label: "🔬 Observer & Learning", id: "observer" },
     { path: "/live-processing", label: "🔴 Live Processing", id: "live-processing" },
   ];

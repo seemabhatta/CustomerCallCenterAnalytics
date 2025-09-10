@@ -6,9 +6,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import SidebarNav from "@/components/ui/sidebar-nav";
 import DashboardPage from "@/pages/dashboard";
+import TranscriptsPage from "@/pages/transcripts";
+import AIAnalysisPage from "@/pages/ai-analysis";
+import ActionPlansPage from "@/pages/action-plans";
+import GovernancePage from "@/pages/governance";
 import ApprovalQueuePage from "@/pages/approval-queue";
-import CaseDetailPage from "@/pages/case-detail";
+import ExecutionPage from "@/pages/execution";
 import GeneratePage from "@/pages/generate";
+import ObserverPage from "@/pages/observer";
+import LiveProcessingPage from "@/pages/live-processing";
+import CaseDetailPage from "@/pages/case-detail";
 
 function Router() {
   return (
@@ -18,9 +25,16 @@ function Router() {
         <Switch>
           <Route path="/" component={DashboardPage} />
           <Route path="/dashboard" component={DashboardPage} />
+          <Route path="/transcripts" component={TranscriptsPage} />
+          <Route path="/ai-analysis" component={AIAnalysisPage} />
+          <Route path="/action-plans" component={ActionPlansPage} />
+          <Route path="/governance" component={GovernancePage} />
           <Route path="/approval-queue" component={ApprovalQueuePage} />
-          <Route path="/case/:caseId" component={CaseDetailPage} />
+          <Route path="/execution" component={ExecutionPage} />
           <Route path="/generate" component={GeneratePage} />
+          <Route path="/observer" component={ObserverPage} />
+          <Route path="/live-processing" component={LiveProcessingPage} />
+          <Route path="/case/:caseId" component={CaseDetailPage} />
           <Route component={NotFound} />
         </Switch>
       </main>
