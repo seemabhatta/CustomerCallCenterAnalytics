@@ -85,8 +85,8 @@ export default function ApprovalQueuePage() {
   }, [cases, seg, query, sort]);
 
   const Row = ({ r }: { r: Case }) => (
-    <tr className={`dashboard-table-row-striped hover:bg-accent transition-colors ${dense ? "text-sm" : "text-base"}`}>
-      <td className="dashboard-table-cell">
+    <tr className={`border-t border-border hover:bg-accent transition-colors ${dense ? "text-sm" : "text-base"}`}>
+      <td className="table-dense td">
         <Link href={`/case/${r.id}`}>
           <a className="text-primary font-medium hover:underline" data-testid={`case-link-${r.id}`}>
             #{r.id.slice(-4)} ({r.customerId})
@@ -94,13 +94,13 @@ export default function ApprovalQueuePage() {
         </Link>
         <div className="text-muted-foreground text-xs">{r.callId}</div>
       </td>
-      <td className="dashboard-table-cell align-middle">
+      <td className="table-dense td align-middle">
         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeByPriority(r.priority)}`}>
           HIGH{r.priority}
         </span>
       </td>
-      <td className="dashboard-table-cell text-foreground">{r.scenario}</td>
-      <td className="dashboard-table-cell">
+      <td className="table-dense td text-foreground">{r.scenario}</td>
+      <td className="table-dense td">
         <div className="flex items-center gap-3">
           <MiniProgress auto={2} done={1} pending={2} />
           <div className="text-xs text-muted-foreground whitespace-nowrap">
@@ -110,11 +110,11 @@ export default function ApprovalQueuePage() {
           </div>
         </div>
       </td>
-      <td className="dashboard-table-cell text-muted-foreground whitespace-nowrap">
+      <td className="table-dense td text-muted-foreground whitespace-nowrap">
         {fmtTime(r.createdAt!)}
       </td>
-      <td className="dashboard-table-cell font-medium text-foreground">{r.status}</td>
-      <td className="dashboard-table-cell text-right">
+      <td className="table-dense td font-medium text-foreground">{r.status}</td>
+      <td className="table-dense td text-right">
         <Link href={`/case/${r.id}`}>
           <button className="text-xs rounded-full border border-border px-3 py-1 hover:bg-accent mr-2 transition-colors" data-testid={`button-details-${r.id}`}>
             Details
@@ -129,7 +129,7 @@ export default function ApprovalQueuePage() {
 
   const Th = ({ children, k }: { children: React.ReactNode; k: string }) => (
     <th 
-      className="dashboard-table-header cursor-pointer select-none text-left hover:text-foreground" 
+      className="table-dense th cursor-pointer select-none text-left hover:text-foreground" 
       onClick={() => setSort(({ key, dir }) => ({ key: k, dir: key === k && dir === "desc" ? "asc" : "desc" }))}
     >
       <span className="inline-flex items-center gap-1">
@@ -151,12 +151,12 @@ export default function ApprovalQueuePage() {
   }
 
   return (
-    <div className="dashboard-container" data-testid="approval-queue-page">
+    <div className="container-pad max-w-screen-app mx-auto grid-gap" data-testid="approval-queue-page">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="dashboard-title" data-testid="page-title">Pipeline & Approvals</h1>
-          <p className="dashboard-subtitle" data-testid="queue-count">
+          <h1 className="h1" data-testid="page-title">Pipeline & Approvals</h1>
+          <p className="text-sm text-muted-foreground" data-testid="queue-count">
             Complete workflow management • {counts.all} items pending review
           </p>
         </div>
@@ -174,39 +174,39 @@ export default function ApprovalQueuePage() {
       </div>
 
       {/* Pipeline Overview */}
-      <div className="dashboard-grid-5">
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Transcripts</div>
-          <div className="dashboard-stat-number dashboard-status-processing">{Math.floor(counts.all * 0.8)}</div>
-          <div className="dashboard-stat-sublabel">Ready</div>
+      <div className="grid grid-cols-1 sm:grid-cols-5 grid-gap mb-4">
+        <div className="card text-center">
+          <div className="text-xs text-muted-foreground mb-1">Transcripts</div>
+          <div className="stat text-blue-600">{Math.floor(counts.all * 0.8)}</div>
+          <div className="text-xs text-foreground">Ready</div>
         </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Analysis</div>
-          <div className="dashboard-stat-number dashboard-status-medium">{Math.floor(counts.all * 0.6)}</div>
-          <div className="dashboard-stat-sublabel">Processing</div>
+        <div className="card text-center">
+          <div className="text-xs text-muted-foreground mb-1">Analysis</div>
+          <div className="stat text-orange-600">{Math.floor(counts.all * 0.6)}</div>
+          <div className="text-xs text-foreground">Processing</div>
         </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Plans</div>
-          <div className="dashboard-stat-number dashboard-status-medium">{Math.floor(counts.all * 0.4)}</div>
-          <div className="dashboard-stat-sublabel">Generated</div>
+        <div className="card text-center">
+          <div className="text-xs text-muted-foreground mb-1">Plans</div>
+          <div className="stat text-amber-600">{Math.floor(counts.all * 0.4)}</div>
+          <div className="text-xs text-foreground">Generated</div>
         </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Approval</div>
-          <div className="dashboard-stat-number dashboard-status-high">{counts.all}</div>
-          <div className="dashboard-stat-sublabel">Pending</div>
+        <div className="card text-center">
+          <div className="text-xs text-muted-foreground mb-1">Approval</div>
+          <div className="stat text-red-600">{counts.all}</div>
+          <div className="text-xs text-foreground">Pending</div>
         </div>
-        <div className="dashboard-stat-card">
-          <div className="dashboard-stat-label">Execution</div>
-          <div className="dashboard-stat-number dashboard-status-completed">{Math.floor(counts.all * 0.15)}</div>
-          <div className="dashboard-stat-sublabel">Running</div>
+        <div className="card text-center">
+          <div className="text-xs text-muted-foreground mb-1">Execution</div>
+          <div className="stat text-emerald-600">{Math.floor(counts.all * 0.15)}</div>
+          <div className="text-xs text-foreground">Running</div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="dashboard-filters">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
           <input
-            className="dashboard-search"
+            className="h-9 rounded-xl border border-border px-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background"
             placeholder="Search case, customer, or call…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -217,7 +217,7 @@ export default function ApprovalQueuePage() {
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Sort</span>
           <select
-            className="dashboard-select"
+            className="h-9 rounded-xl border border-border px-2 text-sm bg-background"
             value={`${sort.key}:${sort.dir}`}
             onChange={(e) => {
               const [key, dir] = e.target.value.split(":");
@@ -243,24 +243,24 @@ export default function ApprovalQueuePage() {
       </div>
 
       {/* Table */}
-      <div className="dashboard-table-container">
+      <div className="rounded-xl border border-border overflow-hidden shadow-card">
         <div className="bg-muted sticky top-0 z-10">
-          <table className="dashboard-table">
+          <table className="w-full table-dense">
             <thead>
-              <tr className="dashboard-border">
+              <tr>
                 <Th k="id">Case ID</Th>
                 <Th k="priority">Priority</Th>
-                <th className="dashboard-table-header">Reason</th>
-                <th className="dashboard-table-header">Progress</th>
+                <th className="table-dense th">Reason</th>
+                <th className="table-dense th">Progress</th>
                 <Th k="time">Time</Th>
-                <th className="dashboard-table-header">Status</th>
-                <th className="dashboard-table-header text-right">Actions</th>
+                <th className="table-dense th">Status</th>
+                <th className="table-dense th text-right">Actions</th>
               </tr>
             </thead>
           </table>
         </div>
         <div className="max-h-[560px] overflow-auto">
-          <table className="dashboard-table">
+          <table className="w-full table-dense">
             <tbody>
               {filtered.map((r) => (
                 <Row key={r.id} r={r} />
