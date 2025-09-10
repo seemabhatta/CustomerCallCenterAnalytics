@@ -113,16 +113,16 @@ export default function AIAssistantPage() {
         <h3 className="text-sm font-medium mb-3">Quick Actions</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Button variant="outline" size="sm" className="text-xs">
-            📞 Analyze Call
+            Analyze Call
           </Button>
           <Button variant="outline" size="sm" className="text-xs">
-            📋 Generate Plan
+            Generate Plan
           </Button>
           <Button variant="outline" size="sm" className="text-xs">
-            🛡️ Check Compliance
+            Check Compliance
           </Button>
           <Button variant="outline" size="sm" className="text-xs">
-            📊 View Metrics
+            View Metrics
           </Button>
         </div>
       </div>
