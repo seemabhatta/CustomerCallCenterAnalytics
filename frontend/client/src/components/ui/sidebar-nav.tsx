@@ -4,6 +4,7 @@ export default function SidebarNav() {
   const [location] = useLocation();
 
   const navItems = [
+    { path: "/ai-assistant", label: "🤖 AI Assistant", id: "ai-assistant" },
     { path: "/dashboard", label: "🏠 Dashboard", id: "dashboard" },
     { path: "/transcripts", label: "📞 Transcripts", id: "transcripts" },
     { path: "/ai-analysis", label: "🧠 AI Analysis", id: "ai-analysis" },

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import SidebarNav from "@/components/ui/sidebar-nav";
+import AIAssistantPage from "@/pages/ai-assistant";
 import DashboardPage from "@/pages/dashboard";
 import TranscriptsPage from "@/pages/transcripts";
 import AIAnalysisPage from "@/pages/ai-analysis";
@@ -24,6 +25,7 @@ function Router() {
       <main className="flex-1 overflow-auto">
         <Switch>
           <Route path="/" component={DashboardPage} />
+          <Route path="/ai-assistant" component={AIAssistantPage} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/transcripts" component={TranscriptsPage} />
           <Route path="/ai-analysis" component={AIAnalysisPage} />
