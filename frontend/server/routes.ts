@@ -91,12 +91,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/cases/:id", async (req, res) => {
     try {
-      const case_ = await storage.getCase(req.params.id);
-      if (!case_) {
-        return res.status(404).json({ error: "Case not found" });
+      // Fetch specific transcript from backend
+      const response = await fetch(`http://localhost:8000/transcript/${req.params.id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.status(404).json({ error: "Case not found" });
+        }
+        throw new Error(`Backend error: ${response.status}`);
       }
-      res.json(case_);
+      
+      const transcript = await response.json();
+      console.log(`Fetched case details for ${req.params.id}`);
+      
+      // Transform transcript to case detail format
+      const urgencyToPriority = (urgency: string) => {
+        switch(urgency) {
+          case 'critical': return 95;
+          case 'high': return 80;
+          case 'medium': return 50;
+          case 'low': return 25;
+          default: return 50;
+        }
+      };
+
+      const urgencyToRisk = (urgency: string) => {
+        switch(urgency) {
+          case 'critical': return 'High';
+          case 'high': return 'Medium'; 
+          case 'medium': return 'Low';
+          case 'low': return 'Low';
+          default: return 'Medium';
+        }
+      };
+
+      const caseDetail = {
+        id: transcript.transcript_id,
+        customerId: transcript.customer_id || 'CUST_001',
+        callId: transcript.transcript_id,
+        scenario: transcript.scenario === 'Unknown scenario' ? 'Service Request' : transcript.scenario,
+        priority: urgencyToPriority(transcript.urgency),
+        status: "Needs Review",
+        risk: urgencyToRisk(transcript.urgency),
+        financialImpact: transcript.financial_impact ? "$5,000 potential impact" : "No financial impact",
+        exchanges: transcript.message_count,
+        createdAt: transcript.created_at,
+        updatedAt: transcript.created_at,
+        // Add transcript content if available
+        transcript: transcript.messages || transcript.content || []
+      };
+      
+      res.json(caseDetail);
     } catch (error) {
+      console.error(`Failed to fetch case ${req.params.id}:`, error);
       res.status(500).json({ error: "Failed to fetch case" });
     }
   });
