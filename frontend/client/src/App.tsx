@@ -8,6 +8,7 @@ import SidebarNav from "@/components/ui/sidebar-nav";
 import DashboardPage from "@/pages/dashboard";
 import ApprovalQueuePage from "@/pages/approval-queue";
 import CaseDetailPage from "@/pages/case-detail";
+import GeneratePage from "@/pages/generate";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/approval-queue" component={ApprovalQueuePage} />
           <Route path="/case/:caseId" component={CaseDetailPage} />
+          <Route path="/generate" component={GeneratePage} />
           <Route component={NotFound} />
         </Switch>
       </main>
