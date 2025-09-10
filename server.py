@@ -2300,6 +2300,39 @@ def create_fastapi_app():
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Emergency override failed: {str(e)}")
     
+    @app.get("/api/v1/workflow/status")
+    async def get_workflow_status():
+        """Get aggregated workflow status for all transcripts - used by UI pipeline visualizer."""
+        # Import all required modules and backend logic
+        from src.workflow.status_backend import WorkflowStatusBackend
+        from src.storage.transcript_store import TranscriptStore
+        from src.storage.analysis_store import AnalysisStore
+        from src.storage.action_plan_store import ActionPlanStore
+        from src.storage.approval_store import ApprovalStore
+        from src.storage.execution_store import ExecutionStore
+        
+        # Initialize all stores - NO FALLBACK LOGIC
+        transcript_store = store if store else TranscriptStore("data/call_center.db")
+        analysis_store = AnalysisStore("data/call_center.db")
+        action_plan_store = ActionPlanStore("data/call_center.db")
+        approval_store = ApprovalStore("data/call_center.db")
+        execution_store = ExecutionStore("data/call_center.db")
+        
+        # Initialize backend with all required stores - NO FALLBACK LOGIC
+        backend = WorkflowStatusBackend(
+            transcript_store,         # transcript_store
+            analysis_store,           # analysis_store
+            action_plan_store,        # plan_store
+            approval_store,           # approval_store
+            execution_store           # execution_store
+        )
+        
+        # Get workflow status using pure business logic - NO FALLBACK
+        workflow_statuses = backend.get_all_workflows_status()
+        
+        # Return the results directly - NO FALLBACK LOGIC
+        return workflow_statuses
+    
     return app
 
 
