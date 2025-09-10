@@ -10,12 +10,13 @@ This project is an AI-powered Customer Call Center Analytics system that generat
 - ✅ OpenAI API key configured via Replit Secrets
 - ✅ Database set up with existing data (28 transcripts)
 - ✅ Backend API running on port 8000
-- ✅ Frontend dashboard running on port 5000
+- ✅ NEW: Approval Flow UI replaced original frontend dashboard
+- ✅ Frontend running on port 5000 with Express + React + Radix UI
 - ✅ Deployment configured for autoscale with frontend build
 
 ## Project Architecture
 - **Backend**: FastAPI server with OpenAI integration (port 8000)
-- **Frontend**: React + TypeScript dashboard with Vite dev server (port 5000)
+- **Frontend**: Approval Flow React + TypeScript + Radix UI dashboard with Express server (port 5000)
 - **Database**: SQLite for development (data/call_center.db)
 - **AI Engine**: OpenAI GPT models for transcript generation and analysis
 - **Server**: Universal server architecture with CLI and API interfaces
@@ -54,6 +55,9 @@ The application is configured to run automatically via Replit workflows:
 - 2025-09-10: Configured OpenAI API key via Replit Secrets
 - 2025-09-10: Set up dual workflows for backend API and frontend dashboard
 - 2025-09-10: Configured deployment for autoscale with frontend build process
+- 2025-09-10: **MAJOR UPDATE**: Replaced frontend with new Approval Flow UI from zip file
+- 2025-09-10: New frontend uses Express server + React + Radix UI components + shadcn/ui
+- 2025-09-10: Configured new frontend for Replit environment with proxy to backend
 
 ## User Preferences
 - Prefers working backend API servers over complex CLI interfaces
