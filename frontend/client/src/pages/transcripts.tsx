@@ -103,176 +103,179 @@ export default function TranscriptsPage() {
     );
   }
 
+  // Helper functions for chips
+  const getPriorityChip = (priority: number) => {
+    if (priority >= 80) return "px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700 border border-red-200";
+    if (priority >= 50) return "px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700 border border-orange-200";
+    return "px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700 border border-green-200";
+  };
+
+  const getStatusChip = (status: string) => {
+    if (status === "completed") return "px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200";
+    if (status === "in_progress") return "px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700 border border-blue-200";
+    return "px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200";
+  };
+
+  const getPriorityText = (priority: number) => {
+    if (priority >= 80) return "High";
+    if (priority >= 50) return "Medium";
+    return "Low";
+  };
+
   return (
-    <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
+    <div className="p-4 max-w-screen-2xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Call Transcripts</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-medium text-gray-900">Call Transcripts</h1>
+          <p className="text-sm text-gray-500">
             All customer service call recordings and transcripts
           </p>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-border p-4 text-center shadow-sm bg-card">
-          <div className="text-2xl font-bold text-primary">{filteredAndSortedCases?.length || 0}</div>
-          <div className="text-sm text-muted-foreground">Total Transcripts</div>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-lg font-semibold text-gray-900">{filteredAndSortedCases?.length || 0}</div>
+          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Transcripts</div>
         </div>
-        <div className="rounded-2xl border border-border p-4 text-center shadow-sm bg-card">
-          <div className="text-2xl font-bold text-emerald-600">
+        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-lg font-semibold text-emerald-600">
             {filteredAndSortedCases?.filter(c => c.status === "completed").length || 0}
           </div>
-          <div className="text-sm text-muted-foreground">Analyzed</div>
+          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Analyzed</div>
         </div>
-        <div className="rounded-2xl border border-border p-4 text-center shadow-sm bg-card">
-          <div className="text-2xl font-bold text-amber-600">
+        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-lg font-semibold text-amber-600">
             {filteredAndSortedCases?.filter(c => c.status === "in_progress").length || 0}
           </div>
-          <div className="text-sm text-muted-foreground">Processing</div>
+          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Processing</div>
         </div>
-        <div className="rounded-2xl border border-border p-4 text-center shadow-sm bg-card">
-          <div className="text-2xl font-bold text-blue-600">
+        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+          <div className="text-lg font-semibold text-red-600">
             {filteredAndSortedCases?.filter(c => c.priority >= 80).length || 0}
           </div>
-          <div className="text-sm text-muted-foreground">High Priority</div>
+          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">High Priority</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div>
-          <input
-            type="text"
-            placeholder="Search Call ID, Customer, or Type..."
-            value={filters.search}
-            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-            className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm"
-          />
-        </div>
-        <div>
-          <select
-            value={filters.priority}
-            onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
-            className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm"
-          >
-            <option value="">All Priorities</option>
-            <option value="high">High Priority</option>
-            <option value="medium">Medium Priority</option>
-            <option value="low">Low Priority</option>
-          </select>
-        </div>
-        <div>
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-            className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm"
-          >
-            <option value="">All Statuses</option>
-            <option value="Needs Review">Needs Review</option>
-            <option value="completed">Completed</option>
-            <option value="in_progress">In Progress</option>
-          </select>
-        </div>
-        <div>
-          <button
-            onClick={() => setFilters({ search: '', priority: '', status: '' })}
-            className="px-4 py-2 rounded-lg border border-border bg-card text-sm hover:bg-muted/30 transition-colors"
-          >
-            Clear Filters
-          </button>
-        </div>
+      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <input
+          type="text"
+          placeholder="Search Call ID, Customer, or Type..."
+          value={filters.search}
+          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <select
+          value={filters.priority}
+          onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+          className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Priorities</option>
+          <option value="high">High Priority</option>
+          <option value="medium">Medium Priority</option>
+          <option value="low">Low Priority</option>
+        </select>
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+          className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Statuses</option>
+          <option value="Needs Review">Needs Review</option>
+          <option value="completed">Completed</option>
+          <option value="in_progress">In Progress</option>
+        </select>
+        <button
+          onClick={() => setFilters({ search: '', priority: '', status: '' })}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 transition-colors"
+        >
+          Clear
+        </button>
       </div>
 
       {/* Transcript List */}
-      <div className="rounded-2xl border border-border shadow-sm bg-card overflow-hidden">
+      <div className="rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm">
         <table className="w-full">
-          <thead className="bg-card">
-            <tr className="border-b border-border">
+          <thead>
+            <tr className="border-b border-gray-200">
               <th 
-                className="text-left p-6 font-semibold text-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('id')}
               >
                 Call ID{getSortIndicator('id')}
               </th>
               <th 
-                className="text-left p-6 font-semibold text-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('priority')}
               >
                 Priority{getSortIndicator('priority')}
               </th>
               <th 
-                className="text-left p-6 font-semibold text-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('status')}
               >
                 Status{getSortIndicator('status')}
               </th>
               <th 
-                className="text-left p-6 font-semibold text-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('customerId')}
               >
                 Customer{getSortIndicator('customerId')}
               </th>
               <th 
-                className="text-left p-6 font-semibold text-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('scenario')}
               >
                 Type{getSortIndicator('scenario')}
               </th>
               <th 
-                className="text-left p-6 font-semibold text-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('createdAt')}
               >
                 Created{getSortIndicator('createdAt')}
               </th>
               <th 
-                className="text-left p-6 font-semibold text-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('updatedAt')}
               >
                 Updated{getSortIndicator('updatedAt')}
               </th>
-              <th className="text-left p-6 font-semibold text-lg">Action</th>
+              <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">Action</th>
             </tr>
           </thead>
           <tbody>
-            {filteredAndSortedCases?.map((caseItem) => (
-              <tr key={caseItem.id} className="border-b border-border hover:shadow-md transition-shadow cursor-pointer">
-                <td className="p-6">
-                  <span className="font-semibold text-lg">{caseItem.id}</span>
+            {filteredAndSortedCases?.map((caseItem, index) => (
+              <tr key={caseItem.id} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                <td className="px-4 py-2 text-sm">
+                  <span className="font-medium text-gray-900">{caseItem.id}</span>
                 </td>
-                <td className="p-6">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    caseItem.priority === 3 ? "bg-red-100 text-red-800" :
-                    caseItem.priority === 2 ? "bg-yellow-100 text-yellow-800" :
-                    "bg-green-100 text-green-800"
-                  }`}>
-                    {caseItem.priority === 3 ? "high" : caseItem.priority === 2 ? "medium" : "low"} priority
+                <td className="px-4 py-2 text-sm">
+                  <span className={getPriorityChip(caseItem.priority)}>
+                    {getPriorityText(caseItem.priority)}
                   </span>
                 </td>
-                <td className="p-6">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    caseItem.status === "completed" ? "bg-emerald-100 text-emerald-800" :
-                    caseItem.status === "in_progress" ? "bg-blue-100 text-blue-800" :
-                    "bg-gray-100 text-gray-800"
-                  }`}>
+                <td className="px-4 py-2 text-sm">
+                  <span className={getStatusChip(caseItem.status)}>
                     {caseItem.status}
                   </span>
                 </td>
-                <td className="p-6 text-sm text-muted-foreground">{caseItem.customerId}</td>
-                <td className="p-6 text-sm text-muted-foreground">{caseItem.scenario}</td>
-                <td className="p-6 text-xs text-muted-foreground">
+                <td className="px-4 py-2 text-sm text-gray-600">{caseItem.customerId}</td>
+                <td className="px-4 py-2 text-sm text-gray-600">{caseItem.scenario}</td>
+                <td className="px-4 py-2 text-xs text-gray-500">
                   {caseItem.createdAt ? new Date(caseItem.createdAt).toLocaleDateString() : "N/A"}
                 </td>
-                <td className="p-6 text-xs text-muted-foreground">
+                <td className="px-4 py-2 text-xs text-gray-500">
                   {caseItem.updatedAt ? new Date(caseItem.updatedAt).toLocaleDateString() : "N/A"}
                 </td>
-                <td className="p-6">
+                <td className="px-4 py-2 text-sm">
                   <Link href={`/case/${caseItem.id}`}>
-                    <div className="text-sm font-medium text-primary">
+                    <span className="text-blue-600 hover:text-blue-800 font-medium">
                       View Details →
-                    </div>
+                    </span>
                   </Link>
                 </td>
               </tr>
