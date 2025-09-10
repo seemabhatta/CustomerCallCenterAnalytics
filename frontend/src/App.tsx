@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { PipelineDashboard } from './components/PipelineDashboard';
+import { ApprovalQueue } from './components/ApprovalQueue';
 import { TranscriptManager } from './components/TranscriptManager';
 import { usePipelineStats } from './hooks/usePipelineStats';
 import type { Transcript } from './types/workflow';
 
 function App() {
   const [showTestingPanel, setShowTestingPanel] = useState(false);
-  const [drillDownStage, setDrillDownStage] = useState<string | null>(null);
-  const [_, setSelectedStage] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'approvals'>('dashboard');
   const { stats, loading, error } = usePipelineStats();
 
   const handleStageClick = (stage: string, count: number) => {
     console.log('Drilling down into stage:', stage, 'with count:', count);
-    setDrillDownStage(stage);
-    setSelectedStage(stage);
-    // TODO: Show drill-down view for this stage
+    if (stage === 'approval') {
+      setCurrentView('approvals');
+    }
+    // TODO: Handle other stage drill-downs
   };
 
   const handleTranscriptSelected = (transcript: Transcript) => {
@@ -67,26 +68,37 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
-          {/* Pipeline Dashboard */}
-          {stats && (
-            <PipelineDashboard
-              stats={stats}
-              onStageClick={handleStageClick}
-            />
+          {/* Conditional View Rendering */}
+          {currentView === 'dashboard' && stats && (
+            <>
+              {/* Pipeline Dashboard */}
+              <PipelineDashboard
+                stats={stats}
+                onStageClick={handleStageClick}
+              />
+
+              {/* Testing Panel (Collapsible) */}
+              {showTestingPanel && (
+                <div className="card">
+                  <h3 className="text-lg font-semibold mb-4">🧪 Testing & Validation Tools</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Generate individual transcripts for testing purposes
+                  </p>
+                  <TranscriptManager
+                    onTranscriptSelected={handleTranscriptSelected}
+                    selectedTranscriptId={undefined}
+                  />
+                </div>
+              )}
+            </>
           )}
 
-          {/* Testing Panel (Collapsible) */}
-          {showTestingPanel && (
-            <div className="card">
-              <h3 className="text-lg font-semibold mb-4">🧪 Testing & Validation Tools</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Generate individual transcripts for testing purposes
-              </p>
-              <TranscriptManager
-                onTranscriptSelected={handleTranscriptSelected}
-                selectedTranscriptId={undefined}
-              />
-            </div>
+          {/* Approval Queue View */}
+          {currentView === 'approvals' && (
+            <ApprovalQueue
+              onBack={() => setCurrentView('dashboard')}
+              totalPendingCount={stats?.stage_counts.approval.pending || 0}
+            />
           )}
         </div>
       </main>
