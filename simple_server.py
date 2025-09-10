@@ -172,6 +172,16 @@ async def generate_transcript(request: dict):
         if should_store:
             store.store(transcript)
         
+        # Convert transcript messages to JSON-serializable format
+        messages_data = []
+        for msg in transcript.messages:
+            messages_data.append({
+                "speaker": msg.speaker,
+                "text": msg.text,
+                "timestamp": getattr(msg, 'timestamp', ''),
+                "sentiment": getattr(msg, 'sentiment', None)
+            })
+
         return {
             "success": True,
             "transcript_id": transcript.id,
@@ -181,7 +191,15 @@ async def generate_transcript(request: dict):
             "urgency": urgency,
             "financial_impact": financial_impact,
             "stored": should_store,
-            "created_at": getattr(transcript, 'timestamp', None)
+            "created_at": getattr(transcript, 'timestamp', None),
+            "messages": messages_data,
+            "transcript": {
+                "id": transcript.id,
+                "customer_id": getattr(transcript, 'customer_id', 'CUST_001'),
+                "scenario": scenario,
+                "timestamp": getattr(transcript, 'timestamp', None),
+                "messages": messages_data
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
