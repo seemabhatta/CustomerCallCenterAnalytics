@@ -13,11 +13,13 @@ import uvicorn
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-# Import analysis and action plan components
+# Real analysis and action plan components
 from src.analyzers.call_analyzer import CallAnalyzer
 from src.storage.analysis_store import AnalysisStore  
 from src.generators.action_plan_generator import ActionPlanGenerator
 from src.storage.action_plan_store import ActionPlanStore
+import uuid
+from datetime import datetime
 
 # Load environment variables from Replit secrets
 api_key = os.environ.get("OPENAI_API_KEY")
@@ -25,7 +27,7 @@ if not api_key:
     print("❌ OPENAI_API_KEY not found in environment")
     sys.exit(1)
 
-# Initialize analysis and action plan services
+# Initialize real analysis and action plan services
 print("🔧 Initializing analysis and action plan services...")
 analyzer = None
 analysis_store = None
@@ -41,10 +43,10 @@ try:
     analysis_store = AnalysisStore("data/call_center.db")
     action_plan_generator = ActionPlanGenerator(db_path="data/call_center.db")
     action_plan_store = ActionPlanStore("data/call_center.db")
-    print("✅ Analysis and action plan services initialized")
+    print("✅ Analysis and action plan services initialized successfully")
 except Exception as e:
-    print(f"⚠️ Analysis services failed to initialize: {e}")
-    # Continue without analysis services
+    print(f"❌ Failed to initialize analysis services: {e}")
+    raise e
 
 app = FastAPI(
     title="Customer Call Center Analytics API",
@@ -229,7 +231,7 @@ async def analyze_transcript_api(request: dict):
         if not transcript:
             raise HTTPException(status_code=404, detail=f"Transcript {transcript_id} not found")
         
-        # Generate analysis
+        # Generate real AI analysis
         analysis = analyzer.analyze(transcript)
         stored_analysis = analysis_store.store(analysis)
         
@@ -297,7 +299,7 @@ async def generate_action_plan_api(request: dict):
         if not transcript:
             raise HTTPException(status_code=404, detail=f"Transcript {transcript_id} not found")
         
-        # Generate the action plan
+        # Generate real action plan using AI
         plan = action_plan_generator.generate_comprehensive_plan(transcript)
         stored_plan = action_plan_store.store(plan)
         
