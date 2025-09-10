@@ -44,7 +44,7 @@ export function useApprovalData() {
         setLoading(true);
         
         // Get all transcripts from the backend
-        const response = await fetch('/transcripts');
+        const response = await fetch('http://localhost:8000/transcripts');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -129,9 +129,15 @@ export function useApprovalData() {
 }
 
 export async function getTranscriptDetail(transcriptId: string): Promise<TranscriptDetail> {
-  const response = await fetch(`/transcript/${transcriptId}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch transcript details: ${response.status}`);
+  try {
+    const response = await fetch(`http://localhost:8000/transcript/${transcriptId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch transcript details: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching transcript:', error);
+    throw new Error('Failed to load transcript details');
   }
-  return response.json();
 }
