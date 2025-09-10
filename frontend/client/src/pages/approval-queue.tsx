@@ -86,7 +86,7 @@ export default function ApprovalQueuePage() {
 
   const Row = ({ r }: { r: Case }) => (
     <tr className={`border-t border-border hover:bg-accent transition-colors ${dense ? "text-sm" : "text-base"}`}>
-      <td className="px-4 py-2.5">
+      <td className="table-dense td">
         <Link href={`/case/${r.id}`}>
           <a className="text-primary font-medium hover:underline" data-testid={`case-link-${r.id}`}>
             #{r.id.slice(-4)} ({r.customerId})
@@ -94,13 +94,13 @@ export default function ApprovalQueuePage() {
         </Link>
         <div className="text-muted-foreground text-xs">{r.callId}</div>
       </td>
-      <td className="px-4 py-2.5 align-middle">
+      <td className="table-dense td align-middle">
         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeByPriority(r.priority)}`}>
           HIGH{r.priority}
         </span>
       </td>
-      <td className="px-4 py-2.5 text-foreground">{r.scenario}</td>
-      <td className="px-4 py-2.5">
+      <td className="table-dense td text-foreground">{r.scenario}</td>
+      <td className="table-dense td">
         <div className="flex items-center gap-3">
           <MiniProgress auto={2} done={1} pending={2} />
           <div className="text-xs text-muted-foreground whitespace-nowrap">
@@ -110,11 +110,11 @@ export default function ApprovalQueuePage() {
           </div>
         </div>
       </td>
-      <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
+      <td className="table-dense td text-muted-foreground whitespace-nowrap">
         {fmtTime(r.createdAt!)}
       </td>
-      <td className="px-4 py-2.5 font-medium text-foreground">{r.status}</td>
-      <td className="px-4 py-2.5 text-right">
+      <td className="table-dense td font-medium text-foreground">{r.status}</td>
+      <td className="table-dense td text-right">
         <Link href={`/case/${r.id}`}>
           <button className="text-xs rounded-full border border-border px-3 py-1 hover:bg-accent mr-2 transition-colors" data-testid={`button-details-${r.id}`}>
             Details
@@ -129,7 +129,7 @@ export default function ApprovalQueuePage() {
 
   const Th = ({ children, k }: { children: React.ReactNode; k: string }) => (
     <th 
-      className="font-semibold px-4 py-2.5 cursor-pointer select-none text-left text-muted-foreground hover:text-foreground" 
+      className="table-dense th cursor-pointer select-none text-left hover:text-foreground" 
       onClick={() => setSort(({ key, dir }) => ({ key: k, dir: key === k && dir === "desc" ? "asc" : "desc" }))}
     >
       <span className="inline-flex items-center gap-1">
@@ -151,11 +151,11 @@ export default function ApprovalQueuePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-screen-2xl mx-auto space-y-4" data-testid="approval-queue-page">
+    <div className="container-pad max-w-screen-app mx-auto grid-gap" data-testid="approval-queue-page">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold" data-testid="page-title">Pipeline & Approvals</h1>
+          <h1 className="h1" data-testid="page-title">Pipeline & Approvals</h1>
           <p className="text-sm text-muted-foreground" data-testid="queue-count">
             Complete workflow management • {counts.all} items pending review
           </p>
@@ -174,30 +174,30 @@ export default function ApprovalQueuePage() {
       </div>
 
       {/* Pipeline Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-4">
-        <div className="rounded-xl border border-border p-3 text-center bg-card">
+      <div className="grid grid-cols-1 sm:grid-cols-5 grid-gap mb-4">
+        <div className="card text-center">
           <div className="text-xs text-muted-foreground mb-1">Transcripts</div>
-          <div className="text-lg font-bold text-blue-600">{Math.floor(counts.all * 0.8)}</div>
+          <div className="stat text-blue-600">{Math.floor(counts.all * 0.8)}</div>
           <div className="text-xs text-foreground">Ready</div>
         </div>
-        <div className="rounded-xl border border-border p-3 text-center bg-card">
+        <div className="card text-center">
           <div className="text-xs text-muted-foreground mb-1">Analysis</div>
-          <div className="text-lg font-bold text-orange-600">{Math.floor(counts.all * 0.6)}</div>
+          <div className="stat text-orange-600">{Math.floor(counts.all * 0.6)}</div>
           <div className="text-xs text-foreground">Processing</div>
         </div>
-        <div className="rounded-xl border border-border p-3 text-center bg-card">
+        <div className="card text-center">
           <div className="text-xs text-muted-foreground mb-1">Plans</div>
-          <div className="text-lg font-bold text-amber-600">{Math.floor(counts.all * 0.4)}</div>
+          <div className="stat text-amber-600">{Math.floor(counts.all * 0.4)}</div>
           <div className="text-xs text-foreground">Generated</div>
         </div>
-        <div className="rounded-xl border border-border p-3 text-center bg-card">
+        <div className="card text-center">
           <div className="text-xs text-muted-foreground mb-1">Approval</div>
-          <div className="text-lg font-bold text-red-600">{counts.all}</div>
+          <div className="stat text-red-600">{counts.all}</div>
           <div className="text-xs text-foreground">Pending</div>
         </div>
-        <div className="rounded-xl border border-border p-3 text-center bg-card">
+        <div className="card text-center">
           <div className="text-xs text-muted-foreground mb-1">Execution</div>
-          <div className="text-lg font-bold text-emerald-600">{Math.floor(counts.all * 0.15)}</div>
+          <div className="stat text-emerald-600">{Math.floor(counts.all * 0.15)}</div>
           <div className="text-xs text-foreground">Running</div>
         </div>
       </div>
@@ -243,24 +243,24 @@ export default function ApprovalQueuePage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-border overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-border overflow-hidden shadow-card">
         <div className="bg-muted sticky top-0 z-10">
-          <table className="w-full text-sm">
+          <table className="w-full table-dense">
             <thead>
               <tr>
                 <Th k="id">Case ID</Th>
                 <Th k="priority">Priority</Th>
-                <th className="font-semibold px-4 py-2.5 text-left text-muted-foreground">Reason</th>
-                <th className="font-semibold px-4 py-2.5 text-left text-muted-foreground">Progress</th>
+                <th className="table-dense th">Reason</th>
+                <th className="table-dense th">Progress</th>
                 <Th k="time">Time</Th>
-                <th className="font-semibold px-4 py-2.5 text-left text-muted-foreground">Status</th>
-                <th className="px-4 py-2.5 text-right text-muted-foreground">Actions</th>
+                <th className="table-dense th">Status</th>
+                <th className="table-dense th text-right">Actions</th>
               </tr>
             </thead>
           </table>
         </div>
         <div className="max-h-[560px] overflow-auto">
-          <table className="w-full text-sm">
+          <table className="w-full table-dense">
             <tbody>
               {filtered.map((r) => (
                 <Row key={r.id} r={r} />

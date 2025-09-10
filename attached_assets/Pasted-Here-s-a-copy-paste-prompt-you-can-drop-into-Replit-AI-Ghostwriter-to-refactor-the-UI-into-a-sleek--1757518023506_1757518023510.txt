@@ -1,0 +1,104 @@
+Here’s a copy-paste prompt you can drop into Replit AI/Ghostwriter to refactor the UI into a sleek, compact Tailwind design.
+
+---
+
+**Prompt for Replit (Tailwind-first, sleek + compact)**
+
+You are refactoring my React + Tailwind dashboard to a **sleek, professional, compact** layout (no “cartoonish” spacing). Apply these changes across the app.
+
+### Goals
+
+* Denser layout, readable on desktop and laptop.
+* Subtle visual style: light borders, soft shadows, rounded-xl.
+* Consistent typography + spacing tokens, variable-driven.
+
+### Global Tailwind Setup
+
+1. **tailwind.config.js** – extend theme:
+
+```js
+module.exports = {
+  theme: {
+    extend: {
+      borderRadius: { xl: '12px', '2xl': '16px' },
+      spacing: { card: '1rem', gap: '.75rem' },
+      fontSize: {
+        h1: ['1.5rem', { fontWeight: '700' }],
+        h2: ['1.25rem', { fontWeight: '600' }],
+        stat: ['1.375rem', { fontWeight: '700' }],
+      },
+      screens: { '2xl': '1320px' }
+    }
+  }
+}
+```
+
+2. **globals.css** – density tokens + clamps:
+
+```css
+:root { --pad: 0.75rem; --gap: 0.75rem; --card-pad: 1rem; --radius: 12px; }
+:root[data-density="compact"] { --pad: .5rem; --gap: .5rem; --card-pad: .75rem; }
+
+html { font-size: 15px; }
+.h1 { font-size: clamp(1.25rem, 1.2rem + 1vw, 1.6rem); font-weight: 700; }
+.h2 { font-size: clamp(1.1rem, 1rem + .6vw, 1.25rem); font-weight: 600; }
+.stat { font-size: clamp(1.1rem, 1rem + .9vw, 1.8rem); font-weight: 700; }
+
+.container-pad { padding: var(--pad); }
+.grid-gap { gap: var(--gap); }
+.card { padding: var(--card-pad); border-radius: var(--radius); }
+```
+
+3. **App shell**
+
+* Constrain width: wrap main content in `mx-auto max-w-[1200px] px-4`.
+* Sidebar: `w-56 text-sm leading-5`.
+* Replace `gap-6/8` with `gap-[var(--gap)]`. Replace `p-6/8` with `p-[var(--card-pad)]`.
+
+### Components (apply everywhere)
+
+* Cards: `rounded-xl border border-neutral-200/60 shadow-sm bg-white`.
+* Buttons: default `h-9 px-3 text-sm rounded-xl`; small `h-8 px-3`.
+* Badges/Chips: `h-6 px-2.5 text-xs`.
+* Progress bars: height `h-1.5`.
+* KPI tiles: number uses `.stat`; label `text-xs md:text-sm text-neutral-600`.
+* Tables: header `text-xs uppercase tracking-wide`, cells `py-1.5 px-2.5 text-sm`.
+
+### Utility replacements (search & replace)
+
+* `text-4xl|5xl` → `h1` class.
+* `text-3xl` → `h2` class.
+* `gap-[6|7|8]` → `gap-[var(--gap)]`.
+* `p-6|p-8` → `p-[var(--card-pad)]`.
+* Heavy shadows → `shadow-sm`.
+* `rounded-2xl+` → `rounded-xl` unless hero element.
+
+### Density Toggle (add component)
+
+Create `DensityToggle.tsx`:
+
+```tsx
+export function DensityToggle() {
+  const set = (m:'compact'|'cozy') =>
+    document.documentElement.setAttribute('data-density', m);
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <button className="h-8 px-3 rounded-xl border" onClick={()=>set('compact')}>Compact</button>
+      <button className="h-8 px-3 rounded-xl border" onClick={()=>set('cozy')}>Cozy</button>
+    </div>
+  );
+}
+```
+
+Mount it in the top-right of the dashboard header.
+
+### Acceptance Criteria
+
+* No element looks oversized on a 13–15" laptop.
+* Main content never exceeds 1200px wide.
+* KPI cards, pipeline stage cards, and tables use compact spacings.
+* Sidebar fits comfortably; no text wrapping.
+* Visual hierarchy preserved via typography, not huge spacing.
+* Lighthouse/CLS unaffected; responsive at 1280px–1920px.
+
+Make the changes and show me the **diffs** (files + key snippets) and a quick before/after screenshot plan. If something is missing, propose minimal edits consistent with this spec.

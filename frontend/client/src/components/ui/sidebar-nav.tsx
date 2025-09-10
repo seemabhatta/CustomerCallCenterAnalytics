@@ -54,21 +54,21 @@ export default function SidebarNav() {
   };
 
   return (
-    <nav className="w-64 bg-card border-r border-border p-6" data-testid="sidebar-nav">
-      <div className="mb-8">
-        <h1 className="text-xl font-semibold text-foreground" data-testid="app-title">AI Decision Support</h1>
-        <p className="text-sm text-muted-foreground" data-testid="app-subtitle">Mortgage Intelligence</p>
+    <nav className="w-56 bg-card border-r border-border container-pad text-sm leading-5" data-testid="sidebar-nav">
+      <div className="mb-6">
+        <h1 className="h1 text-foreground" data-testid="app-title">AI Decision Support</h1>
+        <p className="text-xs text-muted-foreground mt-1" data-testid="app-subtitle">Mortgage Intelligence</p>
       </div>
       
-      <div className="space-y-2">
+      <div className="grid-gap">
         {navGroups.map((group, groupIndex) => (
           <div key={group.title}>
             {/* Group Items */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {group.items.map((item) => (
                 <Link key={item.id} href={item.path}>
                   <button
-                    className={`w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
+                    className={`w-full text-left h-8 px-3 rounded-xl text-sm hover:bg-accent transition-colors ${
                       isActive(item.path, item.id)
                         ? "bg-primary text-primary-foreground"
                         : "text-foreground"
@@ -83,7 +83,7 @@ export default function SidebarNav() {
             
             {/* Separator after each group except the last */}
             {groupIndex < navGroups.length - 1 && (
-              <div className="border-t border-border my-4"></div>
+              <div className="border-t border-border/60 my-3"></div>
             )}
           </div>
         ))}

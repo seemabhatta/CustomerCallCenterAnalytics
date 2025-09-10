@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import type { Metrics } from "@shared/schema";
+import { DensityToggle } from "../components/ui/density-toggle";
 
 function delta(curr: number, prev: number) {
   const d = curr - prev;
@@ -52,22 +53,25 @@ export default function DashboardPage() {
   const pDelta = delta(Number(metrics.avgProcessingTime || 0), Number(metrics.avgProcessingTimePrev || 0));
 
   return (
-    <div className="p-6 max-w-screen-2xl mx-auto space-y-6" data-testid="dashboard-page">
+    <div className="container-pad max-w-screen-app mx-auto grid-gap" data-testid="dashboard-page">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold" data-testid="page-title">AI Decision Support Platform</h1>
+          <h1 className="h1" data-testid="page-title">AI Decision Support Platform</h1>
           <p className="text-sm text-muted-foreground">Mortgage Servicing Intelligence • 11-Step Workflow</p>
         </div>
-        <div className="text-xs text-muted-foreground" data-testid="last-updated">
-          Last updated: {new Date(metrics.lastUpdated!).toLocaleTimeString()}
+        <div className="flex items-center gap-4">
+          <DensityToggle />
+          <div className="text-xs text-muted-foreground" data-testid="last-updated">
+            Last updated: {new Date(metrics.lastUpdated!).toLocaleTimeString()}
+          </div>
         </div>
       </div>
 
       {/* Top metrics with trends */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="rounded-2xl border border-border p-4 text-center shadow-sm bg-card" title="Total transcripts ingested vs. yesterday">
-          <div className="text-3xl font-bold text-primary tabular-nums" data-testid="metric-transcripts">
+      <div className="grid grid-cols-1 sm:grid-cols-3 grid-gap">
+        <div className="card text-center" title="Total transcripts ingested vs. yesterday">
+          <div className="stat text-primary tabular-nums" data-testid="metric-transcripts">
             {(metrics.totalTranscripts || 0).toLocaleString()}
           </div>
           <div className="text-sm text-muted-foreground">
@@ -75,8 +79,8 @@ export default function DashboardPage() {
             <Trend pct={tDelta.pct} positiveIsGood={true} />
           </div>
         </div>
-        <div className="rounded-2xl border border-border p-4 text-center shadow-sm bg-card" title="Percent of items fully completed vs. yesterday">
-          <div className="text-3xl font-bold text-primary tabular-nums" data-testid="metric-complete">
+        <div className="card text-center" title="Percent of items fully completed vs. yesterday">
+          <div className="stat text-primary tabular-nums" data-testid="metric-complete">
             {Math.round(Number(metrics.completeRate) * 100)}%
           </div>
           <div className="text-sm text-muted-foreground">
@@ -84,8 +88,8 @@ export default function DashboardPage() {
             <Trend pct={cDelta.pct} positiveIsGood={true} />
           </div>
         </div>
-        <div className="rounded-2xl border border-border p-4 text-center shadow-sm bg-card" title="Average end‑to‑end processing time vs. yesterday">
-          <div className="text-3xl font-bold text-primary tabular-nums" data-testid="metric-processing">
+        <div className="card text-center" title="Average end‑to‑end processing time vs. yesterday">
+          <div className="stat text-primary tabular-nums" data-testid="metric-processing">
             {Number(metrics.avgProcessingTime)}m
           </div>
           <div className="text-sm text-muted-foreground">
@@ -112,7 +116,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottleneck alert with actions */}
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 card flex items-start gap-3">
         <div className="text-amber-600 text-xl">⚠</div>
         <div className="flex-1">
           <div className="font-semibold text-amber-800">Bottleneck Detected</div>
@@ -132,11 +136,11 @@ export default function DashboardPage() {
 
       {/* Key Pipeline Stages */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Pipeline Stages</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-          <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 1 – Transcript ingestion">
+        <h2 className="h2 mb-4">Pipeline Stages</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-5 grid-gap">
+          <div className="card text-center" title="Step 1 – Transcript ingestion">
             <div className="text-sm text-muted-foreground mb-1">Transcripts</div>
-            <div className="text-2xl font-bold text-emerald-600" data-testid="stage-transcript-ready">
+            <div className="stat text-emerald-600" data-testid="stage-transcript-ready">
               {metrics.stageData!.transcript.ready}
             </div>
             <div className="text-sm text-foreground">Ready</div>
@@ -144,9 +148,9 @@ export default function DashboardPage() {
               {metrics.stageData!.transcript.processing} Processing
             </div>
           </div>
-          <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 2 – AI analysis">
+          <div className="card text-center" title="Step 2 – AI analysis">
             <div className="text-sm text-muted-foreground mb-1">Analysis</div>
-            <div className="text-2xl font-bold text-orange-600" data-testid="stage-analysis-queue">
+            <div className="stat text-orange-600" data-testid="stage-analysis-queue">
               {metrics.stageData!.analysis.queue}
             </div>
             <div className="text-sm text-foreground">In Queue</div>
@@ -154,9 +158,9 @@ export default function DashboardPage() {
               {metrics.stageData!.analysis.processing} Processing
             </div>
           </div>
-          <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 3 – Plan generation">
+          <div className="card text-center" title="Step 3 – Plan generation">
             <div className="text-sm text-muted-foreground mb-1">Plans</div>
-            <div className="text-2xl font-bold text-orange-600" data-testid="stage-plan-queue">
+            <div className="stat text-orange-600" data-testid="stage-plan-queue">
               {metrics.stageData!.plan.queue}
             </div>
             <div className="text-sm text-foreground">Queue</div>
@@ -164,9 +168,9 @@ export default function DashboardPage() {
               {metrics.stageData!.plan.generating} Generating
             </div>
           </div>
-          <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 4 – Human approval">
+          <div className="card text-center" title="Step 4 – Human approval">
             <div className="text-sm text-muted-foreground mb-1">Approval</div>
-            <div className="text-2xl font-bold text-destructive" data-testid="stage-approval-pending">
+            <div className="stat text-destructive" data-testid="stage-approval-pending">
               {metrics.stageData!.approval.pending}
             </div>
             <div className="text-sm text-foreground">Pending</div>
@@ -174,9 +178,9 @@ export default function DashboardPage() {
               {metrics.stageData!.approval.approved} Approved
             </div>
           </div>
-          <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 5 – Action execution">
+          <div className="card text-center" title="Step 5 – Action execution">
             <div className="text-sm text-muted-foreground mb-1">Execution</div>
-            <div className="text-2xl font-bold text-primary" data-testid="stage-execution-running">
+            <div className="stat text-primary" data-testid="stage-execution-running">
               {metrics.stageData!.execution.running}
             </div>
             <div className="text-sm text-foreground">Running</div>

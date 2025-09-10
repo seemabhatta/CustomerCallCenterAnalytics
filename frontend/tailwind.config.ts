@@ -9,6 +9,24 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "12px",
+        "2xl": "16px",
+      },
+      spacing: {
+        card: "var(--card-pad)",
+        gap: "var(--gap)",
+        pad: "var(--pad)",
+      },
+      fontSize: {
+        h1: ["1.5rem", { fontWeight: "700" }],
+        h2: ["1.25rem", { fontWeight: "600" }],
+        stat: ["1.375rem", { fontWeight: "700" }],
+      },
+      screens: {
+        "2xl": "1320px",
+      },
+      maxWidth: {
+        "screen-app": "1200px",
       },
       colors: {
         background: "var(--background)",
