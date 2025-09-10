@@ -4,10 +4,15 @@ export default function SidebarNav() {
   const [location] = useLocation();
 
   const navItems = [
-    { path: "/dashboard", label: "📊 Dashboard", id: "dashboard" },
-    { path: "/approval-queue", label: "✅ Approval Queue", id: "approval-queue" },
-    { path: "/case/1", label: "🔍 Case Details", id: "case-detail" },
-    { path: "/generate", label: "⚡ Generate", id: "generate" },
+    { path: "/dashboard", label: "🏠 Dashboard", id: "dashboard" },
+    { path: "/transcripts", label: "📞 Transcripts", id: "transcripts" },
+    { path: "/ai-analysis", label: "🧠 AI Analysis", id: "ai-analysis" },
+    { path: "/action-plans", label: "📋 Action Plans", id: "action-plans" },
+    { path: "/governance", label: "🛡️ Governance", id: "governance" },
+    { path: "/execution", label: "⚡ Execution", id: "execution" },
+    { path: "/artifacts", label: "📄 Artifacts", id: "artifacts" },
+    { path: "/observer", label: "🔬 Observer & Learning", id: "observer" },
+    { path: "/live-processing", label: "🔴 Live Processing", id: "live-processing" },
   ];
 
   const isActive = (path: string, id: string) => {
@@ -19,8 +24,8 @@ export default function SidebarNav() {
   return (
     <nav className="w-64 bg-card border-r border-border p-6" data-testid="sidebar-nav">
       <div className="mb-8">
-        <h1 className="text-xl font-semibold text-foreground" data-testid="app-title">AI Pipeline</h1>
-        <p className="text-sm text-muted-foreground" data-testid="app-subtitle">Enterprise Dashboard</p>
+        <h1 className="text-xl font-semibold text-foreground" data-testid="app-title">AI Decision Support</h1>
+        <p className="text-sm text-muted-foreground" data-testid="app-subtitle">Mortgage Intelligence</p>
       </div>
       
       <div className="space-y-2">
