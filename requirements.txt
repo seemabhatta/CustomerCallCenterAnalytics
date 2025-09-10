@@ -33,3 +33,4 @@ rich
 shellingham
 typer
 uvicorn
+openai
