@@ -39,3 +39,7 @@ externalPort = 8000
 [[ports]]
 localPort = 8080
 externalPort = 8080
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["python", "simple_server.py"]
