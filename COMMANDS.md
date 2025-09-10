@@ -748,6 +748,69 @@ python3 cli_fast.py decision-agent-summary
 
 ---
 
+## 🌐 API ENDPOINTS
+
+### FastAPI Web Interface
+The system provides RESTful API endpoints accessible at `http://localhost:8000` when the server is running.
+
+**API Documentation:**
+- Interactive Swagger UI: `http://localhost:8000/docs`
+- OpenAPI JSON Schema: `http://localhost:8000/openapi.json`
+
+### Analysis APIs (5 endpoints)
+```
+POST /api/v1/analysis/analyze          # Analyze transcript
+GET  /api/v1/analysis/{analysis_id}    # Get analysis results
+GET  /api/v1/analysis/summary          # Get analysis summary
+GET  /api/v1/analysis/metrics          # Get analysis metrics
+GET  /api/v1/analysis/trends           # Get analysis trends
+```
+
+### Action Plan APIs (5 endpoints)
+```
+POST /api/v1/plans/generate            # Generate action plan
+GET  /api/v1/plans/{plan_id}           # Get action plan
+GET  /api/v1/plans                     # List action plans
+PUT  /api/v1/plans/{plan_id}           # Update action plan
+DELETE /api/v1/plans/{plan_id}         # Delete action plan
+```
+
+### Execution APIs (5 endpoints)
+```
+POST /api/v1/execution/execute         # Execute action plan
+GET  /api/v1/execution/{exec_id}       # Get execution status
+GET  /api/v1/execution                 # List executions
+POST /api/v1/execution/{exec_id}/cancel # Cancel execution
+POST /api/v1/execution/{exec_id}/retry  # Retry execution
+```
+
+### Approval APIs (5 endpoints)
+```
+POST /api/v1/approvals/submit          # Submit for approval
+GET  /api/v1/approvals/{approval_id}   # Get approval status
+GET  /api/v1/approvals                 # List approvals
+POST /api/v1/approvals/{approval_id}/approve # Approve
+POST /api/v1/approvals/{approval_id}/reject  # Reject
+```
+
+**Example API Usage:**
+```bash
+# Analyze a transcript via API
+curl -X POST "http://localhost:8000/api/v1/analysis/analyze" \
+     -H "Content-Type: application/json" \
+     -d '{"transcript_id": "transcript_20241201_001"}'
+
+# Get analysis results
+curl "http://localhost:8000/api/v1/analysis/analysis_20241201_001"
+
+# Generate action plan
+curl -X POST "http://localhost:8000/api/v1/plans/generate" \
+     -H "Content-Type: application/json" \
+     -d '{"analysis_id": "analysis_20241201_001"}'
+```
+
+---
+
 ## 👁️ OBSERVER AGENT & CONTINUOUS LEARNING (PLANNED FEATURES)
 
 > **⚠️ NOTE**: The Observer Agent features documented below are **PLANNED FUNCTIONALITY** and are not yet fully implemented. The commands with `--include-observer-feedback` and similar flags may not exist in the current CLI.

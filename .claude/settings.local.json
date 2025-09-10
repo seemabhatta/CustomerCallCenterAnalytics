@@ -14,7 +14,8 @@
       "Bash(find:*)",
       "Bash(./start_services.sh)",
       "Bash(gh issue view:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
