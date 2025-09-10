@@ -147,6 +147,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Proxy generate requests to the FastAPI backend
+  app.post("/generate", async (req, res) => {
+    try {
+      const backendUrl = "http://localhost:8000/generate";
+      
+      // Map frontend parameters to backend expected format
+      const backendPayload = {
+        scenario: req.body.scenario,
+        customer_id: req.body.customer_id,
+        urgency: req.body.urgency,
+        customer_sentiment: req.body.sentiment, // Map sentiment to customer_sentiment
+        financial_impact: req.body.financial_impact || false,
+        store: true // Always store transcripts
+      };
+
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backendPayload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend API error: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      res.json(result);
+    } catch (error) {
+      console.error("Generate proxy error:", error);
+      res.status(500).json({ 
+        error: "Failed to generate transcript", 
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
