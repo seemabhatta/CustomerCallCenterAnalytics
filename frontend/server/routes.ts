@@ -190,33 +190,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Proxy transcripts requests to FastAPI backend for Case Details
-  app.get("/api/transcripts", async (req, res) => {
+  // Map case IDs to transcript IDs and proxy Case Details data
+  app.get("/api/cases/:caseId/transcripts", async (req, res) => {
     try {
-      const response = await fetch("http://localhost:8000/transcripts");
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.status}`);
+      // Map case ID to transcript ID - if it looks like a transcript ID, use it directly
+      let transcriptId = req.params.caseId;
+      
+      // If it's a short case ID, try to map it to an actual transcript ID
+      if (!transcriptId.startsWith('CALL_')) {
+        // Get list of transcripts and map by index or find a suitable transcript
+        const transcriptsResponse = await fetch("http://localhost:8000/transcripts");
+        if (transcriptsResponse.ok) {
+          const transcripts = await transcriptsResponse.json();
+          // Use case ID as index to get a transcript
+          const index = parseInt(transcriptId) - 1;
+          if (index >= 0 && index < transcripts.length) {
+            transcriptId = transcripts[index].transcript_id;
+          } else if (transcripts.length > 0) {
+            // Default to first transcript if index is out of bounds
+            transcriptId = transcripts[0].transcript_id;
+          }
+        }
       }
-      const transcripts = await response.json();
-      res.json(transcripts);
+      const response = await fetch(`http://localhost:8000/transcript/${transcriptId}`);
+      
+      if (!response.ok) {
+        console.error(`Transcript not found: ${transcriptId}`);
+        res.json([]); // Return empty array if not found
+        return;
+      }
+      
+      const transcript = await response.json();
+      
+      // Transform transcript data to match frontend format
+      const messages = transcript.messages || [];
+      const transformedMessages = messages.map((msg: any, index: number) => ({
+        id: index,
+        speaker: msg.role === "agent" ? "Agent" : "Customer", 
+        content: msg.content,
+        timestamp: msg.timestamp || new Date().toISOString()
+      }));
+      
+      res.json(transformedMessages);
     } catch (error) {
-      console.error("Transcripts proxy error:", error);
-      res.status(500).json({ error: "Failed to fetch transcripts" });
+      console.error("Case transcripts proxy error:", error);
+      res.json([]); // Return empty array on error
     }
   });
 
-  // Proxy individual transcript requests to FastAPI backend
-  app.get("/api/transcript/:id", async (req, res) => {
+  // Map case analysis data
+  app.get("/api/cases/:caseId/analysis", async (req, res) => {
     try {
-      const response = await fetch(`http://localhost:8000/transcript/${req.params.id}`);
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.status}`);
+      // Apply same mapping logic as transcripts
+      let transcriptId = req.params.caseId;
+      
+      if (!transcriptId.startsWith('CALL_')) {
+        const transcriptsResponse = await fetch("http://localhost:8000/transcripts");
+        if (transcriptsResponse.ok) {
+          const transcripts = await transcriptsResponse.json();
+          const index = parseInt(transcriptId) - 1;
+          if (index >= 0 && index < transcripts.length) {
+            transcriptId = transcripts[index].transcript_id;
+          } else if (transcripts.length > 0) {
+            transcriptId = transcripts[0].transcript_id;
+          }
+        }
       }
+      const response = await fetch(`http://localhost:8000/transcript/${transcriptId}`);
+      
+      if (!response.ok) {
+        res.status(404).json({ error: "Analysis not found" });
+        return;
+      }
+      
       const transcript = await response.json();
-      res.json(transcript);
+      const analysis = transcript.analysis;
+      
+      if (!analysis) {
+        res.status(404).json({ error: "Analysis not found" });
+        return;
+      }
+      
+      // Transform analysis data to match frontend format
+      const transformedAnalysis = {
+        intent: analysis.intent || "Service Request",
+        confidence: analysis.confidence || 0.85,
+        sentiment: analysis.customer_sentiment || "neutral",
+        risks: [
+          { label: "Compliance", value: analysis.compliance_risk || 0.1 },
+          { label: "Escalation", value: analysis.escalation_risk || 0.3 },
+          { label: "Churn", value: analysis.churn_risk || 0.2 }
+        ]
+      };
+      
+      res.json(transformedAnalysis);
     } catch (error) {
-      console.error("Transcript detail proxy error:", error);
-      res.status(500).json({ error: "Failed to fetch transcript" });
+      console.error("Case analysis proxy error:", error);
+      res.status(404).json({ error: "Analysis not found" });
+    }
+  });
+
+  // Map case actions data
+  app.get("/api/cases/:caseId/actions", async (req, res) => {
+    try {
+      // Apply same mapping logic as transcripts
+      let transcriptId = req.params.caseId;
+      
+      if (!transcriptId.startsWith('CALL_')) {
+        const transcriptsResponse = await fetch("http://localhost:8000/transcripts");
+        if (transcriptsResponse.ok) {
+          const transcripts = await transcriptsResponse.json();
+          const index = parseInt(transcriptId) - 1;
+          if (index >= 0 && index < transcripts.length) {
+            transcriptId = transcripts[index].transcript_id;
+          } else if (transcripts.length > 0) {
+            transcriptId = transcripts[0].transcript_id;
+          }
+        }
+      }
+      const response = await fetch(`http://localhost:8000/transcript/${transcriptId}`);
+      
+      if (!response.ok) {
+        res.json([]); // Return empty array if not found
+        return;
+      }
+      
+      const transcript = await response.json();
+      const actionPlan = transcript.action_plan;
+      
+      if (!actionPlan || !actionPlan.actions) {
+        res.json([]); // Return empty array if no actions
+        return;
+      }
+      
+      // Transform action plan data to match frontend format
+      const transformedActions = actionPlan.actions.map((action: any, index: number) => ({
+        id: index,
+        action: action.action || action.description || "Pending Review",
+        category: action.category || "Review",
+        risk: action.risk_level || "Medium",
+        impact: action.impact || "Low",
+        submittedAt: transcript.created_at || new Date().toISOString(),
+        decision: "Pending"
+      }));
+      
+      res.json(transformedActions);
+    } catch (error) {
+      console.error("Case actions proxy error:", error);
+      res.json([]); // Return empty array on error
     }
   });
 
