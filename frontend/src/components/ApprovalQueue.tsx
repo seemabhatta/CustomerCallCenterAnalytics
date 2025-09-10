@@ -24,6 +24,26 @@ interface SimulatedActionPlan {
   manually_approved: number;
   pending_approval: number;
   approval_reason: string;
+  detailed_actions: {
+    auto_approved_actions: Array<{
+      id: string;
+      description: string;
+      type: string;
+    }>;
+    manually_approved_actions: Array<{
+      id: string;
+      description: string;
+      type: string;
+      approved_by: string;
+    }>;
+    pending_actions: Array<{
+      id: string;
+      description: string;
+      type: string;
+      risk_level: string;
+      estimated_impact: string;
+    }>;
+  };
 }
 
 export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps) {
@@ -74,12 +94,89 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
       approval_reason = "High urgency requires expedited approval";
     }
     
+    // Generate detailed actions based on scenario and risk level
+    const generateDetailedActions = () => {
+      const auto_approved_actions = [];
+      const manually_approved_actions = [];
+      const pending_actions = [];
+
+      // Auto-approved actions (low risk, routine)
+      for (let i = 0; i < item.auto_approved; i++) {
+        auto_approved_actions.push({
+          id: `AUTO_${item.transcript_id}_${i + 1}`,
+          description: [
+            "Send automated payment reminder email",
+            "Update customer contact preferences",
+            "Log interaction in customer history",
+            "Schedule follow-up call in 7 days"
+          ][i % 4],
+          type: "Routine Communication"
+        });
+      }
+
+      // Manually approved actions
+      for (let i = 0; i < item.manually_approved; i++) {
+        manually_approved_actions.push({
+          id: `MANUAL_${item.transcript_id}_${i + 1}`,
+          description: [
+            "Apply late fee waiver to account",
+            "Extend payment deadline by 30 days"
+          ][i % 2],
+          type: "Account Adjustment",
+          approved_by: "Supervisor Johnson"
+        });
+      }
+
+      // Pending actions (require approval)
+      for (let i = 0; i < item.pending_actions; i++) {
+        const actionTemplates = [
+          {
+            description: "Initiate loan modification process",
+            type: "Loan Restructuring",
+            risk_level: "High",
+            estimated_impact: "$2,500 potential loss"
+          },
+          {
+            description: "Approve 90-day payment deferral",
+            type: "Payment Plan",
+            risk_level: "Medium",
+            estimated_impact: "$450 interest impact"
+          },
+          {
+            description: "Remove PMI requirement early",
+            type: "Policy Exception",
+            risk_level: "Medium",
+            estimated_impact: "$1,200 annual savings to customer"
+          },
+          {
+            description: "Escalate to legal department",
+            type: "Collection Action",
+            risk_level: "High",
+            estimated_impact: "$5,000+ collection costs"
+          }
+        ];
+        
+        const template = actionTemplates[i % actionTemplates.length];
+        pending_actions.push({
+          id: `PENDING_${item.transcript_id}_${i + 1}`,
+          ...template
+        });
+      }
+
+      return {
+        auto_approved_actions,
+        manually_approved_actions,
+        pending_actions
+      };
+    };
+
     const actionPlan: SimulatedActionPlan = {
       total_actions: item.auto_approved + item.manually_approved + item.pending_actions,
       auto_approved: item.auto_approved,
       manually_approved: item.manually_approved,
       pending_approval: item.pending_actions,
-      approval_reason
+      approval_reason,
+      detailed_actions: generateDetailedActions()
     };
     
     return { analysis, actionPlan };
@@ -305,42 +402,111 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
           {/* Action Plan */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center">
-              📋 Action Plan
+              📋 Action Plan Details
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="text-sm text-gray-600 text-center p-2 bg-gray-50 rounded">
                 <span className="font-semibold text-gray-900">{simulatedActionPlan.total_actions}</span> total actions planned
               </div>
 
-              <div className="space-y-3">
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <div className="font-medium text-green-800">✅ Auto-Approved</div>
-                    <div className="font-bold text-green-800">{simulatedActionPlan.auto_approved}</div>
+              {/* Auto-Approved Actions */}
+              {simulatedActionPlan.detailed_actions.auto_approved_actions.length > 0 && (
+                <div className="border border-green-200 rounded-lg overflow-hidden">
+                  <div className="bg-green-50 px-4 py-3 border-b border-green-200">
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium text-green-800">✅ Auto-Approved Actions</div>
+                      <div className="font-bold text-green-800">{simulatedActionPlan.auto_approved}</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-green-600 mt-1">System executed automatically</div>
+                  <div className="p-4 space-y-3">
+                    {simulatedActionPlan.detailed_actions.auto_approved_actions.map((action, idx) => (
+                      <div key={action.id} className="flex items-start space-x-3 text-sm">
+                        <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{action.description}</div>
+                          <div className="text-gray-500 text-xs mt-1">{action.type} • Executed automatically</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              )}
 
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <div className="font-medium text-blue-800">👤 Manually Approved</div>
-                    <div className="font-bold text-blue-800">{simulatedActionPlan.manually_approved}</div>
+              {/* Manually Approved Actions */}
+              {simulatedActionPlan.detailed_actions.manually_approved_actions.length > 0 && (
+                <div className="border border-blue-200 rounded-lg overflow-hidden">
+                  <div className="bg-blue-50 px-4 py-3 border-b border-blue-200">
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium text-blue-800">👤 Manually Approved Actions</div>
+                      <div className="font-bold text-blue-800">{simulatedActionPlan.manually_approved}</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-blue-600 mt-1">Previously approved by supervisors</div>
+                  <div className="p-4 space-y-3">
+                    {simulatedActionPlan.detailed_actions.manually_approved_actions.map((action, idx) => (
+                      <div key={action.id} className="flex items-start space-x-3 text-sm">
+                        <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{action.description}</div>
+                          <div className="text-gray-500 text-xs mt-1">{action.type} • Approved by {action.approved_by}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+              )}
 
-                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <div className="font-medium text-orange-800">⏳ Pending Approval</div>
-                    <div className="font-bold text-orange-800">{simulatedActionPlan.pending_approval}</div>
+              {/* Pending Actions - DETAILED */}
+              {simulatedActionPlan.detailed_actions.pending_actions.length > 0 && (
+                <div className="border border-orange-200 rounded-lg overflow-hidden">
+                  <div className="bg-orange-50 px-4 py-3 border-b border-orange-200">
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium text-orange-800">⏳ Pending Your Approval</div>
+                      <div className="font-bold text-orange-800">{simulatedActionPlan.pending_approval}</div>
+                    </div>
                   </div>
-                  <div className="text-sm text-orange-600 mt-1">Requires your approval to proceed</div>
+                  <div className="p-4 space-y-4">
+                    {simulatedActionPlan.detailed_actions.pending_actions.map((action, idx) => (
+                      <div key={action.id} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900">{action.description}</div>
+                            <div className="text-sm text-gray-600 mt-1">{action.type}</div>
+                            <div className="flex items-center space-x-4 mt-2">
+                              <div className="flex items-center space-x-1">
+                                <span className={`w-2 h-2 rounded-full ${
+                                  action.risk_level === 'High' ? 'bg-red-500' : 
+                                  action.risk_level === 'Medium' ? 'bg-orange-500' : 'bg-green-500'
+                                }`}></span>
+                                <span className="text-xs text-gray-500">{action.risk_level} Risk</span>
+                              </div>
+                              <div className="text-xs text-gray-600 font-medium">{action.estimated_impact}</div>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200">
+                              Reject
+                            </button>
+                            <button className="px-3 py-1 bg-green-100 text-green-700 rounded text-xs font-medium hover:bg-green-200">
+                              Approve
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div className="font-medium text-red-800 flex items-center">
-                  ⚠️ Approval Required
+                  ⚠️ Supervisor Approval Required
                 </div>
                 <div className="text-sm text-red-600 mt-2">
                   {simulatedActionPlan.approval_reason}
