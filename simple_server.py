@@ -62,6 +62,37 @@ async def get_stats():
     except Exception as e:
         return {"error": str(e), "total_transcripts": 0}
 
+@app.get("/transcripts")
+async def get_transcripts():
+    """Get all stored transcripts."""
+    try:
+        from src.storage.transcript_store import TranscriptStore
+        
+        # Create data directory if needed
+        data_dir = Path("data")
+        data_dir.mkdir(exist_ok=True)
+        
+        store = TranscriptStore("data/call_center.db")
+        transcripts = store.get_all()
+        
+        # Convert to API format
+        result = []
+        for transcript in transcripts:
+            result.append({
+                "transcript_id": transcript.id,
+                "customer_id": getattr(transcript, 'customer_id', 'Unknown'),
+                "scenario": getattr(transcript, 'scenario', 'Unknown scenario'),
+                "message_count": len(transcript.messages),
+                "urgency": getattr(transcript, 'urgency', 'medium'),
+                "financial_impact": getattr(transcript, 'financial_impact', False),
+                "stored": True,
+                "created_at": getattr(transcript, 'timestamp', None)
+            })
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get transcripts: {str(e)}")
+
 @app.post("/generate")
 async def generate_transcript(request: dict):
     """Generate a new transcript."""
@@ -78,7 +109,16 @@ async def generate_transcript(request: dict):
         
         # Generate transcript
         scenario = request.get("scenario", "payment_inquiry")
-        transcript = generator.generate(scenario=scenario)
+        urgency = request.get("urgency", "medium")
+        financial_impact = request.get("financial_impact", False)
+        customer_sentiment = request.get("customer_sentiment", "neutral")
+        
+        transcript = generator.generate(
+            scenario=scenario,
+            urgency=urgency,
+            financial_impact=financial_impact,
+            customer_sentiment=customer_sentiment
+        )
         
         # Store if requested
         should_store = request.get("store", True)
@@ -88,9 +128,13 @@ async def generate_transcript(request: dict):
         return {
             "success": True,
             "transcript_id": transcript.id,
+            "customer_id": getattr(transcript, 'customer_id', 'CUST_001'),
             "scenario": scenario,
+            "message_count": len(transcript.messages),
+            "urgency": urgency,
+            "financial_impact": financial_impact,
             "stored": should_store,
-            "message_count": len(transcript.messages)
+            "created_at": getattr(transcript, 'timestamp', None)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
