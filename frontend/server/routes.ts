@@ -221,21 +221,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const transcript = await response.json();
-      console.log("Raw transcript data:", JSON.stringify(transcript, null, 2));
+      console.log("=== DEBUG TRANSCRIPT CALL_CA3CA389 ===");
+      console.log("SUCCESS: Backend call returned");
+      console.log("Messages exist:", !!transcript.messages);
+      console.log("Messages length:", transcript.messages?.length);
       
       // Transform transcript data to match frontend format
       const messages = transcript.messages || [];
       console.log("Messages array:", messages.length, "messages");
       
-      const transformedMessages = messages.map((msg: any, index: number) => {
-        console.log("Transforming message:", index, msg);
-        return {
-          id: index,
-          speaker: msg.role?.includes("agent") || msg.role?.toLowerCase().includes("advisor") || msg.role?.toLowerCase().includes("representative") ? "Agent" : "Customer", 
-          content: msg.content,
-          timestamp: msg.timestamp || new Date().toISOString()
-        };
-      });
+      const transformedMessages = messages
+        .filter((msg: any) => 
+          // Filter out metadata messages like "**Scenario" and "**Participants"
+          !msg.role?.includes("Scenario") && 
+          !msg.role?.includes("Participants") &&
+          msg.content && 
+          msg.content.trim() !== "" &&
+          msg.content.trim() !== "**"  // Filter out empty ** markers
+        )
+        .map((msg: any, index: number) => {
+          console.log("=== TRANSFORMING MESSAGE ===", index);
+          console.log("Role:", msg.role);
+          console.log("Raw content:", msg.content);
+          
+          // Clean up content by removing "**" prefix markers
+          let cleanContent = msg.content;
+          if (cleanContent.startsWith("**")) {
+            cleanContent = cleanContent.substring(2).trim();
+          }
+          
+          // Determine speaker based on role patterns
+          // Jamie is typically the agent/representative, Alex is customer
+          const isAgent = msg.role?.toLowerCase().includes("jamie") || 
+                         msg.role?.toLowerCase().includes("agent") || 
+                         msg.role?.toLowerCase().includes("advisor") || 
+                         msg.role?.toLowerCase().includes("representative");
+          
+          const transformed = {
+            id: index,
+            speaker: isAgent ? "Agent" : "Customer", 
+            content: cleanContent,
+            timestamp: msg.timestamp || new Date().toISOString()
+          };
+          
+          console.log("Final transformed:", transformed);
+          return transformed;
+        });
       
       console.log("Transformed messages:", transformedMessages.length);
       res.json(transformedMessages);
@@ -294,6 +325,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Case analysis proxy error:", error);
       res.status(404).json({ error: "Analysis not found" });
+    }
+  });
+
+  // Debug route to test transformation
+  app.get("/api/debug/transcript/:id", async (req, res) => {
+    try {
+      const response = await fetch(`http://localhost:8000/transcript/${req.params.id}`);
+      const transcript = await response.json();
+      
+      const testMessages = [
+        { role: "**Alex", content: "Test customer message" },
+        { role: "**Jamie", content: "Test agent message" },
+        { role: "**Scenario", content: "Should be filtered out" }
+      ];
+      
+      const filtered = testMessages.filter(msg => 
+        !msg.role?.includes("Scenario") && 
+        !msg.role?.includes("Participants") &&
+        msg.content && 
+        msg.content.trim() !== ""
+      );
+      
+      const transformed = filtered.map((msg, index) => ({
+        id: index,
+        speaker: msg.role?.toLowerCase().includes("jamie") ? "Agent" : "Customer",
+        content: msg.content,
+        timestamp: new Date().toISOString()
+      }));
+      
+      res.json({
+        original_count: transcript.messages?.length || 0,
+        test_filtered: filtered.length,
+        test_transformed: transformed,
+        first_real_message: transcript.messages?.[2]
+      });
+    } catch (error) {
+      res.json({ error: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
