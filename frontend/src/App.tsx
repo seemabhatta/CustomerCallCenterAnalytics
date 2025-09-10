@@ -40,17 +40,17 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-3xl modern-heading">
                 Customer Call Center Analytics
               </h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="modern-subheading mt-2">
                 AI-Powered Pipeline Monitoring Dashboard
               </p>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setShowTestingPanel(!showTestingPanel)}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="modern-button text-sm"
               >
                 {showTestingPanel ? 'Hide' : 'Show'} Testing Tools
               </button>

@@ -44,43 +44,48 @@ export function PipelineDashboard({ stats, onStageClick }: PipelineDashboardProp
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+            <div className="metric-number text-blue-600">
               {stats.total_transcripts.toLocaleString()}
             </div>
-            <div className="text-sm text-gray-600">Total Transcripts</div>
+            <div className="text-sm font-medium text-blue-700 mt-2">Total Transcripts</div>
           </div>
           
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600">{progress}%</div>
-            <div className="text-sm text-gray-600">Complete</div>
+          <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100">
+            <div className="metric-number text-green-600">{progress}%</div>
+            <div className="text-sm font-medium text-green-700 mt-2">Complete</div>
           </div>
           
-          <div className="text-center">
-            <div className="text-3xl font-bold text-orange-600">
+          <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100">
+            <div className="metric-number text-orange-600">
               {stats.processing_time_avg}m
             </div>
-            <div className="text-sm text-gray-600">Avg Processing Time</div>
+            <div className="text-sm font-medium text-orange-700 mt-2">Avg Processing Time</div>
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+        {/* Modern Progress Bar */}
+        <div className="modern-progress h-3 mb-6">
           <div 
-            className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+            className="modern-progress-fill"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
 
         {/* Bottleneck Alert */}
         {bottleneck && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div className="modern-alert">
             <div className="flex items-center">
-              <span className="text-orange-600 mr-2">⚠️</span>
-              <span className="font-medium text-orange-800">
-                Bottleneck Alert: High volume in {bottleneck} stage
-              </span>
+              <span className="text-2xl mr-3">⚠️</span>
+              <div>
+                <span className="font-semibold text-orange-800 block">
+                  Bottleneck Detected
+                </span>
+                <span className="text-orange-700 text-sm">
+                  High volume in {bottleneck} stage - consider scaling resources
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -90,7 +95,7 @@ export function PipelineDashboard({ stats, onStageClick }: PipelineDashboardProp
       <div className="card">
         <h3 className="text-lg font-semibold mb-4">Stage Breakdown</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="modern-grid">
           {/* Transcript Stage */}
           <div className="stage-card">
             <div className="flex items-center justify-between mb-2">
@@ -99,13 +104,13 @@ export function PipelineDashboard({ stats, onStageClick }: PipelineDashboardProp
             </div>
             <div className="space-y-2">
               <div 
-                className="stage-count cursor-pointer hover:bg-gray-50 p-2 rounded"
+                className="stage-count cursor-pointer hover:bg-green-50 p-3 rounded-xl transition-all"
                 onClick={() => onStageClick('transcript', stats.stage_counts.transcript.ready)}
               >
-                <div className="text-2xl font-bold text-green-600">
+                <div className="stage-number text-green-600">
                   {stats.stage_counts.transcript.ready}
                 </div>
-                <div className="text-xs text-gray-600">Ready</div>
+                <div className="text-xs font-medium text-green-700 mt-1">Ready</div>
               </div>
               {stats.stage_counts.transcript.processing > 0 && (
                 <div className="stage-count">
