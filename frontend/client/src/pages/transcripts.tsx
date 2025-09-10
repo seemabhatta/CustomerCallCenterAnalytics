@@ -68,49 +68,63 @@ export default function TranscriptsPage() {
       </div>
 
       {/* Transcript List */}
-      <div className="space-y-4">
-        {cases?.map((caseItem) => (
-          <Link key={caseItem.id} href={`/case/${caseItem.id}`}>
-            <div className="rounded-2xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-card">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-semibold text-lg">{caseItem.id}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      caseItem.priority === 3 ? "bg-red-100 text-red-800" :
-                      caseItem.priority === 2 ? "bg-yellow-100 text-yellow-800" :
-                      "bg-green-100 text-green-800"
-                    }`}>
-                      {caseItem.priority === 3 ? "high" : caseItem.priority === 2 ? "medium" : "low"} priority
-                    </span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      caseItem.status === "completed" ? "bg-emerald-100 text-emerald-800" :
-                      caseItem.status === "in_progress" ? "bg-blue-100 text-blue-800" :
-                      "bg-gray-100 text-gray-800"
-                    }`}>
-                      {caseItem.status}
-                    </span>
-                  </div>
-                  
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Customer: {caseItem.customerId} • {caseItem.scenario}
-                  </p>
-                  
-                  <div className="text-xs text-muted-foreground">
-                    Created: {caseItem.createdAt ? new Date(caseItem.createdAt).toLocaleDateString() : "N/A"} • 
-                    Updated: {caseItem.updatedAt ? new Date(caseItem.updatedAt).toLocaleDateString() : "N/A"}
-                  </div>
-                </div>
-                
-                <div className="text-right">
-                  <div className="text-sm font-medium text-primary">
-                    View Details →
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
+      <div className="rounded-2xl border border-border shadow-sm bg-card overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-card">
+            <tr className="border-b border-border">
+              <th className="text-left p-6 font-semibold text-lg">Call ID</th>
+              <th className="text-left p-6 font-semibold text-lg">Priority</th>
+              <th className="text-left p-6 font-semibold text-lg">Status</th>
+              <th className="text-left p-6 font-semibold text-lg">Customer</th>
+              <th className="text-left p-6 font-semibold text-lg">Type</th>
+              <th className="text-left p-6 font-semibold text-lg">Created</th>
+              <th className="text-left p-6 font-semibold text-lg">Updated</th>
+              <th className="text-left p-6 font-semibold text-lg">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cases?.map((caseItem) => (
+              <tr key={caseItem.id} className="border-b border-border hover:shadow-md transition-shadow cursor-pointer">
+                <td className="p-6">
+                  <span className="font-semibold text-lg">{caseItem.id}</span>
+                </td>
+                <td className="p-6">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    caseItem.priority === 3 ? "bg-red-100 text-red-800" :
+                    caseItem.priority === 2 ? "bg-yellow-100 text-yellow-800" :
+                    "bg-green-100 text-green-800"
+                  }`}>
+                    {caseItem.priority === 3 ? "high" : caseItem.priority === 2 ? "medium" : "low"} priority
+                  </span>
+                </td>
+                <td className="p-6">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    caseItem.status === "completed" ? "bg-emerald-100 text-emerald-800" :
+                    caseItem.status === "in_progress" ? "bg-blue-100 text-blue-800" :
+                    "bg-gray-100 text-gray-800"
+                  }`}>
+                    {caseItem.status}
+                  </span>
+                </td>
+                <td className="p-6 text-sm text-muted-foreground">{caseItem.customerId}</td>
+                <td className="p-6 text-sm text-muted-foreground">{caseItem.scenario}</td>
+                <td className="p-6 text-xs text-muted-foreground">
+                  {caseItem.createdAt ? new Date(caseItem.createdAt).toLocaleDateString() : "N/A"}
+                </td>
+                <td className="p-6 text-xs text-muted-foreground">
+                  {caseItem.updatedAt ? new Date(caseItem.updatedAt).toLocaleDateString() : "N/A"}
+                </td>
+                <td className="p-6">
+                  <Link href={`/case/${caseItem.id}`}>
+                    <div className="text-sm font-medium text-primary">
+                      View Details →
+                    </div>
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
