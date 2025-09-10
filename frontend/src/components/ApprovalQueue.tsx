@@ -156,22 +156,39 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
   }
 
   if (selectedItem && selectedTranscript && simulatedAnalysis && simulatedActionPlan) {
+    const scenarioName = selectedItem.scenario === 'Unknown scenario' 
+      ? `Customer Service Case #${approvalItems.findIndex(item => item.transcript_id === selectedItem.transcript_id) + 1}`
+      : selectedItem.scenario;
+      
     return (
       <div className="space-y-6">
+        {/* Breadcrumbs */}
+        <div className="flex items-center space-x-2 text-sm text-gray-500">
+          <button
+            onClick={onBack}
+            className="hover:text-blue-600 transition-colors"
+          >
+            Dashboard
+          </button>
+          <span>›</span>
+          <button
+            onClick={() => {
+              setSelectedItem(null);
+              setSelectedTranscript(null);
+              setSimulatedAnalysis(null);
+              setSimulatedActionPlan(null);
+            }}
+            className="hover:text-blue-600 transition-colors"
+          >
+            Approval Queue
+          </button>
+          <span>›</span>
+          <span className="text-gray-900 font-medium">{scenarioName}</span>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => {
-                setSelectedItem(null);
-                setSelectedTranscript(null);
-                setSimulatedAnalysis(null);
-                setSimulatedActionPlan(null);
-              }}
-              className="text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              ← Back to Queue
-            </button>
             <h2 className="text-xl font-semibold">Approval Details</h2>
           </div>
           <div className="flex space-x-3">
@@ -326,15 +343,21 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      <div className="flex items-center space-x-2 text-sm text-gray-500">
+        <button
+          onClick={onBack}
+          className="hover:text-blue-600 transition-colors"
+        >
+          Dashboard
+        </button>
+        <span>›</span>
+        <span className="text-gray-900 font-medium">Approval Queue</span>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <button 
-            onClick={onBack}
-            className="text-blue-600 hover:text-blue-800 flex items-center"
-          >
-            ← Back to Dashboard
-          </button>
           <div>
             <h2 className="text-xl font-semibold">Approval Queue</h2>
             <p className="text-sm text-gray-600">{approvalItems.length} items pending review</p>
