@@ -364,73 +364,112 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
         </div>
       </div>
 
-      {/* Approval Items List */}
-      <div className="space-y-4">
-        {filteredItems.map((item) => (
-          <div 
-            key={item.transcript_id}
-            className={`card hover:shadow-lg cursor-pointer transition-all ${loadingDetail ? 'opacity-50' : ''}`}
-            onClick={() => !loadingDetail && handleItemClick(item)}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-3">
-                  <span className="text-xl">{getBusinessImpactIcon(item.business_impact)}</span>
-                  <div>
-                    <h3 className="font-semibold">{item.scenario}</h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <span>Customer: {item.customer_id}</span>
-                      <span>•</span>
-                      <span>ID: {item.transcript_id}</span>
+      {/* Approval Items List - Compact Table View */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Case Details
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Risk & Priority
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Approval Required
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredItems.map((item) => (
+                <tr 
+                  key={item.transcript_id}
+                  className={`hover:bg-gray-50 cursor-pointer transition-colors ${loadingDetail ? 'opacity-50' : ''}`}
+                  onClick={() => !loadingDetail && handleItemClick(item)}
+                >
+                  {/* Case Details */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="text-2xl mr-3">{getBusinessImpactIcon(item.business_impact)}</div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{item.scenario}</div>
+                        <div className="text-sm text-gray-500">
+                          {item.customer_id} • {item.transcript_id}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </td>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">Business Impact:</span>
-                    <div className="font-medium capitalize">{item.business_impact}</div>
-                    <div className="text-gray-500">Priority Score: {item.priority_score}</div>
-                  </div>
-                  
-                  <div>
-                    <span className="text-gray-500">Action Status:</span>
-                    <div className="font-medium">
-                      <span className="text-green-600">{item.auto_approved} auto</span>, 
-                      <span className="text-blue-600 ml-1">{item.manually_approved} approved</span>
+                  {/* Risk & Priority */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-3">
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getUrgencyColor(item.urgency)}`}>
+                        {item.urgency.toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 capitalize">{item.risk_level}</div>
+                        <div className="text-xs text-gray-500">Score: {item.priority_score}</div>
+                      </div>
                     </div>
-                    <div className="text-orange-600 font-medium">{item.pending_actions} pending approval</div>
-                  </div>
+                  </td>
 
-                  <div>
-                    <span className="text-gray-500">Risk Level:</span>
-                    <div className="font-medium capitalize">{item.risk_level}</div>
-                    <div className="text-gray-500">Financial: {item.financial_impact ? 'Yes' : 'No'}</div>
-                  </div>
-                </div>
+                  {/* Actions Status */}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span className="text-xs text-gray-600">{item.auto_approved} auto</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                        <span className="text-xs text-gray-600">{item.manually_approved} done</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                        <span className="text-xs font-medium text-orange-600">{item.pending_actions} pending</span>
+                      </div>
+                    </div>
+                  </td>
 
-                <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded text-sm">
-                  <span className="font-medium text-orange-800">⚠️ Requires Approval: </span>
-                  <span className="text-orange-700">
-                    {item.risk_level === 'critical' ? 'Critical risk level detected' : 
-                     item.risk_level === 'high' ? 'High risk requires supervisor review' :
-                     item.financial_impact ? 'Financial impact needs approval' :
-                     'Standard approval workflow'}
-                  </span>
-                </div>
-              </div>
+                  {/* Approval Required */}
+                  <td className="px-4 py-4">
+                    <div className="max-w-xs">
+                      <div className="text-xs text-gray-900">
+                        {item.risk_level === 'critical' ? 'Critical risk detected' : 
+                         item.risk_level === 'high' ? 'High risk review' :
+                         item.financial_impact ? 'Financial impact' :
+                         'Standard workflow'}
+                      </div>
+                      {item.financial_impact && (
+                        <div className="flex items-center mt-1">
+                          <div className="w-1 h-1 bg-red-400 rounded-full mr-1"></div>
+                          <span className="text-xs text-red-600">Financial Impact</span>
+                        </div>
+                      )}
+                    </div>
+                  </td>
 
-              <div className="flex flex-col items-end space-y-2 ml-6">
-                <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getUrgencyColor(item.urgency)}`}>
-                  {item.urgency.toUpperCase()}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {new Date(item.created_at).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
+                  {/* Status */}
+                  <td className="px-4 py-4 whitespace-nowrap text-right">
+                    <div className="text-xs text-gray-500">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs text-orange-600 font-medium mt-1">
+                      Needs Review
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {filteredItems.length === 0 && (
