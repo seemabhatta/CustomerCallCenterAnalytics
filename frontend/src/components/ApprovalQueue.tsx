@@ -565,96 +565,93 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
         </div>
       </div>
 
-      {/* Clean Approval List */}
-      <div className="space-y-2">
-        {filteredItems.map((item, index) => {
-          const scenarioName = item.scenario === 'Unknown scenario' 
-            ? `Customer Service Case #${index + 1}`
-            : item.scenario;
-            
-          return (
-            <div 
-              key={item.transcript_id}
-              className={`bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200 ${loadingDetail ? 'opacity-50' : ''}`}
-              onClick={() => !loadingDetail && handleItemClick(item)}
-            >
-              <div className="flex items-center justify-between">
-                {/* Left: Case Info */}
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm">{getBusinessImpactIcon(item.business_impact)}</span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-gray-900 truncate">{scenarioName}</div>
-                    <div className="text-xs text-gray-500">{item.customer_id} • {item.transcript_id}</div>
-                  </div>
-                </div>
+      {/* Simplified Table View */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Case ID</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Priority</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Reason</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Progress</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Time</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filteredItems.map((item, index) => {
+              const scenarioName = item.scenario === 'Unknown scenario' 
+                ? `#${index + 1}`
+                : `#${index + 1}`;
+                
+              return (
+                <tr 
+                  key={item.transcript_id}
+                  className={`hover:bg-gray-50 cursor-pointer transition-colors ${loadingDetail ? 'opacity-50' : ''}`}
+                  onClick={() => !loadingDetail && handleItemClick(item)}
+                >
+                  {/* Case ID */}
+                  <td className="px-6 py-4">
+                    <div className="text-sm">
+                      <div className="font-medium text-gray-900">{scenarioName} ({item.customer_id} •</div>
+                      <div className="text-gray-500">{item.transcript_id})</div>
+                    </div>
+                  </td>
 
-                {/* Center: Priority */}
-                <div className="flex items-center space-x-3 px-4">
-                  <div className={`px-2 py-1 rounded text-xs font-medium ${
-                    item.risk_level === 'high' ? 'bg-red-100 text-red-700' : 
-                    item.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' : 
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    {item.risk_level.toUpperCase()}
-                  </div>
-                  <div className="text-sm font-medium text-gray-900">{item.priority_score}</div>
-                </div>
+                  {/* Priority */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {item.risk_level.toUpperCase()}{item.priority_score}
+                      </span>
+                      <div className={`w-2 h-2 rounded-full ${
+                        item.risk_level === 'high' ? 'bg-red-500' : 
+                        item.risk_level === 'medium' ? 'bg-orange-500' : 
+                        'bg-green-500'
+                      }`}></div>
+                    </div>
+                  </td>
 
-                {/* Center: Actions */}
-                <div className="flex items-center space-x-4 px-4">
-                  <div className="text-xs">
-                    <span className="text-green-600 font-medium">{item.auto_approved}</span>
-                    <span className="text-gray-500"> auto</span>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-blue-600 font-medium">{item.manually_approved}</span>
-                    <span className="text-gray-500"> done</span>
-                  </div>
-                  <div className="text-xs">
-                    <span className="text-orange-600 font-bold">{item.pending_actions}</span>
-                    <span className="text-orange-600"> pending</span>
-                  </div>
-                </div>
+                  {/* Reason */}
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">
+                      {item.risk_level === 'high' ? 'High Risk Review' :
+                       item.financial_impact ? 'Financial Impact' :
+                       'Standard Review'}
+                    </div>
+                  </td>
 
-                {/* Right: Status */}
-                <div className="text-right">
-                  <div className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">
-                    Needs Review
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {new Date(item.created_at).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric' 
-                    })}
-                  </div>
-                </div>
-              </div>
+                  {/* Progress */}
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">{item.auto_approved}</span> auto • <span className="font-medium">{item.manually_approved}</span> done • <span className="font-medium text-orange-600">{item.pending_actions}</span> pending
+                    </div>
+                  </td>
 
-              {/* Bottom: Approval Reason */}
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-700">
-                    <span className="font-medium">Reason:</span> {
-                      item.risk_level === 'high' ? 'High Risk Review Required' :
-                      item.financial_impact ? 'Financial Impact Review' :
-                      'Standard Workflow Approval'
-                    }
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {item.financial_impact && (
-                      <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Financial Impact</span>
-                    )}
-                    {item.urgency === 'high' && (
-                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">High Urgency</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                  {/* Time */}
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-500">
+                      {new Date(item.created_at).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </div>
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-700">
+                      Needs Review
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {filteredItems.length === 0 && (
