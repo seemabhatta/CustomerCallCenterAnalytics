@@ -93,6 +93,46 @@ async def get_transcripts():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get transcripts: {str(e)}")
 
+@app.get("/transcript/{transcript_id}")
+async def get_transcript_detail(transcript_id: str):
+    """Get detailed transcript with full conversation."""
+    try:
+        from src.storage.transcript_store import TranscriptStore
+        
+        # Create data directory if needed
+        data_dir = Path("data")
+        data_dir.mkdir(exist_ok=True)
+        
+        store = TranscriptStore("data/call_center.db")
+        transcript = store.get_by_id(transcript_id)
+        
+        if not transcript:
+            raise HTTPException(status_code=404, detail=f"Transcript {transcript_id} not found")
+        
+        # Return detailed transcript data
+        return {
+            "transcript_id": transcript.id,
+            "customer_id": getattr(transcript, 'customer_id', 'Unknown'),
+            "scenario": getattr(transcript, 'scenario', 'Unknown scenario'),
+            "messages": [
+                {
+                    "role": getattr(msg, 'role', getattr(msg, 'speaker', 'unknown')),
+                    "content": getattr(msg, 'content', getattr(msg, 'text', '')),
+                    "timestamp": getattr(msg, 'timestamp', None)
+                } for msg in transcript.messages
+            ],
+            "message_count": len(transcript.messages),
+            "urgency": getattr(transcript, 'urgency', 'medium'),
+            "financial_impact": getattr(transcript, 'financial_impact', False),
+            "stored": True,
+            "created_at": getattr(transcript, 'timestamp', None),
+            "metadata": getattr(transcript, 'metadata', {})
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get transcript: {str(e)}")
+
 @app.post("/generate")
 async def generate_transcript(request: dict):
     """Generate a new transcript."""
