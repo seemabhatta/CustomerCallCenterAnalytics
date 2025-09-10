@@ -169,13 +169,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Transcripts endpoints
+  // Transcripts endpoints - Extract from real backend data
   app.get("/api/cases/:caseId/transcripts", async (req, res) => {
     try {
-      const transcripts = await storage.getTranscriptsByCase(req.params.caseId);
-      res.json(transcripts);
+      // Fetch transcript from backend
+      const response = await fetch(`http://localhost:8000/transcript/${req.params.caseId}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          return res.json([]); // Return empty array if transcript not found
+        }
+        throw new Error(`Backend error: ${response.status}`);
+      }
+      
+      const transcript = await response.json();
+      console.log(`Fetched transcript messages for ${req.params.caseId}: ${transcript.messages?.length || 0} messages`);
+      
+      // Transform messages from backend format to frontend format
+      const messages = transcript.messages || [];
+      const transformedTranscripts = messages
+        .filter(msg => msg.role && !msg.role.startsWith('**Scenario') && !msg.role.startsWith('**Participants'))
+        .map((msg: any, index: number) => ({
+          id: `${req.params.caseId}-${index}`,
+          caseId: req.params.caseId,
+          speaker: msg.role.replace(/^\*\*/, ''), // Remove ** prefix from role
+          content: msg.content.replace(/^\*\* /, ''), // Remove ** prefix from content
+          timestamp: msg.timestamp || new Date().toISOString(),
+          createdAt: transcript.created_at,
+          updatedAt: transcript.created_at
+        }));
+      
+      res.json(transformedTranscripts);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch transcripts" });
+      console.error(`Failed to fetch transcripts for ${req.params.caseId}:`, error);
+      res.json([]); // Return empty array on error
     }
   });
 
@@ -192,16 +218,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Analysis endpoints
+  // Analysis endpoints - Proxy to existing backend API
   app.get("/api/cases/:caseId/analysis", async (req, res) => {
     try {
-      const analysis = await storage.getAnalysisByCase(req.params.caseId);
-      if (!analysis) {
+      // Try to analyze transcript using existing backend API
+      const analyzeResponse = await fetch("http://localhost:8000/api/v1/analysis/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript_id: req.params.caseId })
+      });
+      
+      if (!analyzeResponse.ok) {
         return res.status(404).json({ error: "Analysis not found" });
       }
-      res.json(analysis);
+      
+      const analysisResult = await analyzeResponse.json();
+      console.log(`Generated analysis for ${req.params.caseId}: ${analysisResult.analysis_id}`);
+      
+      // Return in expected format
+      res.json({
+        id: analysisResult.analysis_id,
+        caseId: req.params.caseId,
+        intent: analysisResult.intent,
+        urgency: analysisResult.urgency,
+        sentiment: analysisResult.sentiment,
+        confidence: analysisResult.confidence,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch analysis" });
+      console.error(`Failed to analyze ${req.params.caseId}:`, error);
+      res.status(404).json({ error: "Analysis not found" });
     }
   });
 
@@ -218,13 +265,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Actions endpoints
+  // Actions endpoints - Proxy to existing backend API  
   app.get("/api/cases/:caseId/actions", async (req, res) => {
     try {
-      const actions = await storage.getActionsByCase(req.params.caseId);
+      // Try to generate action plan using existing backend API
+      const planResponse = await fetch("http://localhost:8000/api/v1/plans/generate", {
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript_id: req.params.caseId })
+      });
+      
+      if (!planResponse.ok) {
+        return res.json([]); // Return empty array if no actions available
+      }
+      
+      const planResult = await planResponse.json();
+      console.log(`Generated action plan for ${req.params.caseId}: ${planResult.plan_id}`);
+      
+      // Transform to expected format
+      const actions = [];
+      if (planResult.borrower_plan?.immediate_actions) {
+        planResult.borrower_plan.immediate_actions.forEach((action: string, index: number) => {
+          actions.push({
+            id: `${req.params.caseId}-borrower-${index}`,
+            caseId: req.params.caseId,
+            type: "borrower",
+            description: action,
+            priority: "high",
+            status: "pending",
+            createdAt: new Date().toISOString()
+          });
+        });
+      }
+      
       res.json(actions);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch actions" });
+      console.error(`Failed to generate actions for ${req.params.caseId}:`, error);
+      res.json([]); // Return empty array on error
     }
   });
 
