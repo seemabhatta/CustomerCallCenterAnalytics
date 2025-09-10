@@ -56,7 +56,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold" data-testid="page-title">🧠 AI Decision Support Platform</h1>
+          <h1 className="text-2xl font-semibold" data-testid="page-title">AI Decision Support Platform</h1>
           <p className="text-sm text-muted-foreground">Mortgage Servicing Intelligence • 11-Step Workflow</p>
         </div>
         <div className="text-xs text-muted-foreground" data-testid="last-updated">
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         <h2 className="text-xl font-semibold mb-4">Pipeline Stages</h2>
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
           <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 1 – Transcript ingestion">
-            <div className="text-sm text-muted-foreground mb-1">📝 Transcripts</div>
+            <div className="text-sm text-muted-foreground mb-1">Transcripts</div>
             <div className="text-2xl font-bold text-emerald-600" data-testid="stage-transcript-ready">
               {metrics.stageData!.transcript.ready}
             </div>
@@ -145,7 +145,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 2 – AI analysis">
-            <div className="text-sm text-muted-foreground mb-1">🔬 Analysis</div>
+            <div className="text-sm text-muted-foreground mb-1">Analysis</div>
             <div className="text-2xl font-bold text-orange-600" data-testid="stage-analysis-queue">
               {metrics.stageData!.analysis.queue}
             </div>
@@ -155,7 +155,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 3 – Plan generation">
-            <div className="text-sm text-muted-foreground mb-1">📋 Plans</div>
+            <div className="text-sm text-muted-foreground mb-1">Plans</div>
             <div className="text-2xl font-bold text-orange-600" data-testid="stage-plan-queue">
               {metrics.stageData!.plan.queue}
             </div>
@@ -165,7 +165,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 4 – Human approval">
-            <div className="text-sm text-muted-foreground mb-1">👍 Approval</div>
+            <div className="text-sm text-muted-foreground mb-1">Approval</div>
             <div className="text-2xl font-bold text-destructive" data-testid="stage-approval-pending">
               {metrics.stageData!.approval.pending}
             </div>
@@ -175,7 +175,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="rounded-2xl border border-border p-4 text-center bg-card" title="Step 5 – Action execution">
-            <div className="text-sm text-muted-foreground mb-1">🎯 Execution</div>
+            <div className="text-sm text-muted-foreground mb-1">Execution</div>
             <div className="text-2xl font-bold text-primary" data-testid="stage-execution-running">
               {metrics.stageData!.execution.running}
             </div>

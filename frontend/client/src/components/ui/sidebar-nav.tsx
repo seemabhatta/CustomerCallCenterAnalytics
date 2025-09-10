@@ -4,17 +4,18 @@ export default function SidebarNav() {
   const [location] = useLocation();
 
   const navItems = [
-    { path: "/ai-assistant", label: "💡 AI Assistant", id: "ai-assistant" },
-    { path: "/dashboard", label: "🎛️ Dashboard", id: "dashboard" },
-    { path: "/transcripts", label: "📝 Transcripts", id: "transcripts" },
-    { path: "/ai-analysis", label: "🔬 AI Analysis", id: "ai-analysis" },
-    { path: "/action-plans", label: "📋 Action Plans", id: "action-plans" },
-    { path: "/governance", label: "🔐 Governance", id: "governance" },
-    { path: "/approval-queue", label: "👍 Approval", id: "approval-queue" },
-    { path: "/execution", label: "🎯 Execution", id: "execution" },
-    { path: "/generate", label: "✨ Generate", id: "generate" },
-    { path: "/observer", label: "📊 Observer & Learning", id: "observer" },
-    { path: "/live-processing", label: "🟡 Live Processing", id: "live-processing" },
+    { path: "/ai-assistant", label: "AI Assistant", id: "ai-assistant" },
+    { path: "/dashboard", label: "Dashboard", id: "dashboard" },
+    { path: "/transcripts", label: "Transcripts", id: "transcripts" },
+    { path: "/ai-analysis", label: "AI Analysis", id: "ai-analysis" },
+    { path: "/action-plans", label: "Action Plans", id: "action-plans" },
+    { path: "/governance", label: "Governance", id: "governance" },
+    { path: "/approval-queue", label: "Pipeline & Approvals", id: "approval-queue" },
+    { path: "/execution", label: "Execution", id: "execution" },
+    { path: "/observer", label: "Observer & Learning", id: "observer" },
+    { path: "/live-processing", label: "Live Processing", id: "live-processing" },
+    { path: "separator", label: "separator", id: "separator" },
+    { path: "/generate", label: "Generate", id: "generate" },
   ];
 
   const isActive = (path: string, id: string) => {
@@ -31,20 +32,24 @@ export default function SidebarNav() {
       </div>
       
       <div className="space-y-2">
-        {navItems.map((item) => (
-          <Link key={item.id} href={item.path}>
-            <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
-                isActive(item.path, item.id)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground"
-              }`}
-              data-testid={`nav-${item.id}`}
-            >
-              {item.label}
-            </button>
-          </Link>
-        ))}
+        {navItems.map((item) => 
+          item.id === "separator" ? (
+            <div key={item.id} className="border-t border-border my-4"></div>
+          ) : (
+            <Link key={item.id} href={item.path}>
+              <button
+                className={`w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
+                  isActive(item.path, item.id)
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground"
+                }`}
+                data-testid={`nav-${item.id}`}
+              >
+                {item.label}
+              </button>
+            </Link>
+          )
+        )}
       </div>
     </nav>
   );

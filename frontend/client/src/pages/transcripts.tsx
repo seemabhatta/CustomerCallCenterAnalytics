@@ -27,7 +27,7 @@ export default function TranscriptsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">📞 Call Transcripts</h1>
+          <h1 className="text-2xl font-semibold">Call Transcripts</h1>
           <p className="text-sm text-muted-foreground">
             All customer service call recordings and transcripts
           </p>

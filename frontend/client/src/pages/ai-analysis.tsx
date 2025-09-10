@@ -3,7 +3,7 @@ export default function AIAnalysisPage() {
     <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">🧠 AI Analysis Engine</h1>
+          <h1 className="text-2xl font-semibold">AI Analysis Engine</h1>
           <p className="text-sm text-muted-foreground">
             Step 2: Intelligent analysis of customer service calls
           </p>
@@ -11,7 +11,7 @@ export default function AIAnalysisPage() {
       </div>
 
       <div className="rounded-2xl border border-border p-8 text-center bg-card">
-        <div className="text-6xl mb-4">🧠</div>
+        <div className="text-6xl mb-4">⚪</div>
         <h2 className="text-xl font-semibold mb-2">AI Analysis Engine</h2>
         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
           This page will show AI-powered analysis of customer calls including intent detection, 

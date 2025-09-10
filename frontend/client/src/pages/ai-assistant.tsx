@@ -57,7 +57,7 @@ export default function AIAssistantPage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">🤖 AI Assistant</h1>
+          <h1 className="text-2xl font-semibold">AI Assistant</h1>
           <p className="text-sm text-muted-foreground">
             Your intelligent guide for mortgage servicing workflows
           </p>

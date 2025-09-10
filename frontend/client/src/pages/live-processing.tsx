@@ -3,7 +3,7 @@ export default function LiveProcessingPage() {
     <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">🔴 Live Processing</h1>
+          <h1 className="text-2xl font-semibold">Live Processing</h1>
           <p className="text-sm text-muted-foreground">
             Real-time call analysis and decision support (Coming Soon)
           </p>
@@ -11,7 +11,7 @@ export default function LiveProcessingPage() {
       </div>
 
       <div className="rounded-2xl border border-border p-8 text-center bg-card">
-        <div className="text-6xl mb-4">🔴</div>
+        <div className="text-6xl mb-4">⚪</div>
         <h2 className="text-xl font-semibold mb-2">Live Call Analysis</h2>
         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
           This feature will provide real-time analysis of ongoing customer service calls
