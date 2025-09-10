@@ -67,7 +67,7 @@ export function TranscriptManager({ onTranscriptSelected, selectedTranscriptId }
           <select
             value={selectedTranscriptId || ''}
             onChange={(e) => handleTranscriptSelect(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            className="form-select"
             disabled={loadingTranscripts}
           >
             <option value="">Choose a transcript...</option>
@@ -119,7 +119,7 @@ export function TranscriptManager({ onTranscriptSelected, selectedTranscriptId }
               <select
                 value={generateForm.scenario}
                 onChange={(e) => setGenerateForm(prev => ({ ...prev, scenario: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-md"
+                className="form-select"
               >
                 <option value="Mortgage Servicing - PMI Removal Dispute">PMI Removal Dispute</option>
                 <option value="Mortgage Servicing - Payment Dispute">Payment Dispute</option>
@@ -135,7 +135,7 @@ export function TranscriptManager({ onTranscriptSelected, selectedTranscriptId }
               <select
                 value={generateForm.urgency}
                 onChange={(e) => setGenerateForm(prev => ({ ...prev, urgency: e.target.value as 'low' | 'medium' | 'high' }))}
-                className="w-full p-2 border border-gray-300 rounded-md"
+                className="form-select"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -150,7 +150,7 @@ export function TranscriptManager({ onTranscriptSelected, selectedTranscriptId }
               <select
                 value={generateForm.customer_sentiment}
                 onChange={(e) => setGenerateForm(prev => ({ ...prev, customer_sentiment: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-md"
+                className="form-select"
               >
                 <option value="frustrated">Frustrated</option>
                 <option value="concerned">Concerned</option>

@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { TranscriptManager } from './components/TranscriptManager';
 import { PipelineVisualizer } from './components/PipelineVisualizer';
-import type { Transcript, WorkflowState } from './types/workflow';
+import { useWorkflowPolling } from './hooks/useWorkflowPolling';
+import type { Transcript } from './types/workflow';
 
 function App() {
-  const [workflowState, setWorkflowState] = useState<WorkflowState>({
-    currentStage: 'transcript'
-  });
+  const [selectedTranscript, setSelectedTranscript] = useState<Transcript | undefined>();
+  const { workflowState, triggerCompleteWorkflow } = useWorkflowPolling(selectedTranscript);
 
   const handleTranscriptSelected = (transcript: Transcript) => {
-    setWorkflowState(prev => ({
-      ...prev,
-      transcript,
-      currentStage: 'analysis'
-    }));
+    setSelectedTranscript(transcript);
+    // Auto-trigger the workflow
+    triggerCompleteWorkflow(transcript.transcript_id);
   };
 
   const handleStageClick = (stageId: string) => {
@@ -50,7 +48,7 @@ function App() {
           {/* Transcript Management */}
           <TranscriptManager
             onTranscriptSelected={handleTranscriptSelected}
-            selectedTranscriptId={workflowState.transcript?.transcript_id}
+            selectedTranscriptId={selectedTranscript?.transcript_id}
           />
 
           {/* Pipeline Visualization */}
@@ -60,17 +58,17 @@ function App() {
           />
 
           {/* Current Workflow Summary */}
-          {workflowState.transcript && (
+          {selectedTranscript && (
             <div className="card">
               <h2 className="text-xl font-semibold mb-4">Current Workflow</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <h3 className="font-medium text-gray-700 mb-2">Transcript</h3>
                   <p className="text-sm text-gray-600">
-                    {workflowState.transcript.transcript_id}
+                    {selectedTranscript.transcript_id}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {workflowState.transcript.scenario}
+                    {selectedTranscript.scenario}
                   </p>
                 </div>
                 
