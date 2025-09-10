@@ -1,42 +1,64 @@
 import { useState } from 'react';
+import { PipelineDashboard } from './components/PipelineDashboard';
 import { TranscriptManager } from './components/TranscriptManager';
-import { PipelineVisualizer } from './components/PipelineVisualizer';
-import { useWorkflowPolling } from './hooks/useWorkflowPolling';
+import { usePipelineStats } from './hooks/usePipelineStats';
 import type { Transcript } from './types/workflow';
 
 function App() {
-  const [selectedTranscript, setSelectedTranscript] = useState<Transcript | undefined>();
-  const { workflowState, triggerCompleteWorkflow } = useWorkflowPolling(selectedTranscript);
+  const [showTestingPanel, setShowTestingPanel] = useState(false);
+  const [drillDownStage, setDrillDownStage] = useState<string | null>(null);
+  const [_, setSelectedStage] = useState<string | null>(null);
+  const { stats, loading, error } = usePipelineStats();
+
+  const handleStageClick = (stage: string, count: number) => {
+    console.log('Drilling down into stage:', stage, 'with count:', count);
+    setDrillDownStage(stage);
+    setSelectedStage(stage);
+    // TODO: Show drill-down view for this stage
+  };
 
   const handleTranscriptSelected = (transcript: Transcript) => {
-    setSelectedTranscript(transcript);
-    // Auto-trigger the workflow
-    triggerCompleteWorkflow(transcript.transcript_id);
+    console.log('Test transcript selected:', transcript.transcript_id);
+    // For testing purposes only
   };
 
-  const handleStageClick = (stageId: string) => {
-    console.log('Stage clicked:', stageId);
-    // TODO: Handle stage-specific drill-down
-  };
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-red-600">Error Loading Pipeline</h1>
+          <p className="text-gray-600 mt-2">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 Customer Call Center Analytics
               </h1>
-              <p className="text-sm text-gray-600">
-                AI-Powered Workflow Visualizer
+              <p className="text-sm text-gray-600 mt-1">
+                AI-Powered Pipeline Monitoring Dashboard
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">
-                Current Stage: <span className="font-semibold capitalize">{workflowState.currentStage}</span>
-              </div>
+              <button
+                onClick={() => setShowTestingPanel(!showTestingPanel)}
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                {showTestingPanel ? 'Hide' : 'Show'} Testing Tools
+              </button>
+              {loading && (
+                <div className="text-sm text-gray-500">
+                  ⟳ Updating...
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -45,57 +67,25 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
-          {/* Transcript Management */}
-          <TranscriptManager
-            onTranscriptSelected={handleTranscriptSelected}
-            selectedTranscriptId={selectedTranscript?.transcript_id}
-          />
+          {/* Pipeline Dashboard */}
+          {stats && (
+            <PipelineDashboard
+              stats={stats}
+              onStageClick={handleStageClick}
+            />
+          )}
 
-          {/* Pipeline Visualization */}
-          <PipelineVisualizer
-            workflowState={workflowState}
-            onStageClick={handleStageClick}
-          />
-
-          {/* Current Workflow Summary */}
-          {selectedTranscript && (
+          {/* Testing Panel (Collapsible) */}
+          {showTestingPanel && (
             <div className="card">
-              <h2 className="text-xl font-semibold mb-4">Current Workflow</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <h3 className="font-medium text-gray-700 mb-2">Transcript</h3>
-                  <p className="text-sm text-gray-600">
-                    {selectedTranscript.transcript_id}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {selectedTranscript.scenario}
-                  </p>
-                </div>
-                
-                {workflowState.analysis && (
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-2">Analysis</h3>
-                    <p className="text-sm text-gray-600">
-                      Intent: {workflowState.analysis.intent}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Sentiment: {workflowState.analysis.sentiment}
-                    </p>
-                  </div>
-                )}
-                
-                {workflowState.plan && (
-                  <div>
-                    <h3 className="font-medium text-gray-700 mb-2">Action Plan</h3>
-                    <p className="text-sm text-gray-600">
-                      {workflowState.plan.total_actions} actions
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Risk: {workflowState.plan.risk_level}
-                    </p>
-                  </div>
-                )}
-              </div>
+              <h3 className="text-lg font-semibold mb-4">🧪 Testing & Validation Tools</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Generate individual transcripts for testing purposes
+              </p>
+              <TranscriptManager
+                onTranscriptSelected={handleTranscriptSelected}
+                selectedTranscriptId={undefined}
+              />
             </div>
           )}
         </div>

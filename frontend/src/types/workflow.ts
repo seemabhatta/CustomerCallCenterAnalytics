@@ -105,3 +105,35 @@ export interface WorkflowState {
 }
 
 export type StageStatus = 'pending' | 'running' | 'complete' | 'failed';
+
+export interface PipelineStats {
+  total_transcripts: number;
+  last_updated: string;
+  processing_time_avg: number;
+  stage_counts: {
+    transcript: {
+      ready: number;
+      processing: number;
+    };
+    analysis: {
+      pending: number;
+      processing: number;
+      completed: number;
+    };
+    planning: {
+      pending: number;
+      processing: number;
+      completed: number;
+    };
+    approval: {
+      pending: number;
+      approved: number;
+      rejected: number;
+    };
+    execution: {
+      running: number;
+      completed: number;
+      failed: number;
+    };
+  };
+}
