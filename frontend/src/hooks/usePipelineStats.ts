@@ -9,7 +9,7 @@ export function usePipelineStats() {
   const fetchStats = async () => {
     try {
       // Use existing /transcripts API to get real data
-      const response = await fetch('/api/transcripts');
+      const response = await fetch('/transcripts');
       const transcripts = await response.json();
       
       // Build pipeline stats from existing transcript data
