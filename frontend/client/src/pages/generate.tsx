@@ -103,107 +103,107 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Generate Transcript</h1>
-        <p className="text-muted-foreground">
+    <div className="p-4 max-w-screen-2xl mx-auto space-y-4">
+      <div className="mb-4">
+        <h1 className="text-xl font-medium text-gray-900">Generate Transcript</h1>
+        <p className="text-sm text-gray-500">
           Create new call center transcripts using AI
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Generation Form */}
         <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Transcript Generation</CardTitle>
-              <CardDescription>
+          <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 shadow-sm">
+            <div className="mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Transcript Generation</h3>
+              <p className="text-sm text-gray-500">
                 Generate realistic customer call transcripts with customizable parameters
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="scenario">Scenario</Label>
-                    <Select value={scenario} onValueChange={setScenario} required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select scenario" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PMI Removal">PMI Removal</SelectItem>
-                        <SelectItem value="Payment Dispute">Payment Dispute</SelectItem>
-                        <SelectItem value="Refinance">Refinance</SelectItem>
-                        <SelectItem value="Escrow Shortage">Escrow Shortage</SelectItem>
-                        <SelectItem value="Late Payment">Late Payment</SelectItem>
-                        <SelectItem value="Loan Modification">Loan Modification</SelectItem>
-                      </SelectContent>
-                    </Select>
+              </p>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Scenario</label>
+                    <select 
+                      value={scenario} 
+                      onChange={(e) => setScenario(e.target.value)}
+                      required
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select scenario</option>
+                      <option value="PMI Removal">PMI Removal</option>
+                      <option value="Payment Dispute">Payment Dispute</option>
+                      <option value="Refinance">Refinance</option>
+                      <option value="Escrow Shortage">Escrow Shortage</option>
+                      <option value="Late Payment">Late Payment</option>
+                      <option value="Loan Modification">Loan Modification</option>
+                    </select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="customerId">Customer ID</Label>
-                    <Input
-                      id="customerId"
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Customer ID</label>
+                    <input
+                      type="text"
                       value={customerId}
                       onChange={(e) => setCustomerId(e.target.value)}
                       placeholder="CUST_001"
                       required
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="sentiment">Sentiment</Label>
-                    <Select value={sentiment} onValueChange={setSentiment}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sentiment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="frustrated">Frustrated</SelectItem>
-                        <SelectItem value="neutral">Neutral</SelectItem>
-                        <SelectItem value="hopeful">Hopeful</SelectItem>
-                        <SelectItem value="anxious">Anxious</SelectItem>
-                        <SelectItem value="satisfied">Satisfied</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Sentiment</label>
+                    <select 
+                      value={sentiment} 
+                      onChange={(e) => setSentiment(e.target.value)}
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select sentiment</option>
+                      <option value="frustrated">Frustrated</option>
+                      <option value="neutral">Neutral</option>
+                      <option value="hopeful">Hopeful</option>
+                      <option value="anxious">Anxious</option>
+                      <option value="satisfied">Satisfied</option>
+                    </select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="urgency">Urgency</Label>
-                    <Select value={urgency} onValueChange={setUrgency}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select urgency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Urgency</label>
+                    <select 
+                      value={urgency} 
+                      onChange={(e) => setUrgency(e.target.value)}
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select urgency</option>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Additional Notes</Label>
-                  <Textarea
-                    id="notes"
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Additional Notes</label>
+                  <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Any specific requirements or context for the transcript..."
                     rows={3}
+                    className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                   />
                 </div>
 
-                <Button type="submit" disabled={isLoading || generatedTranscript} className="w-full">
+                <button type="submit" disabled={isLoading || generatedTranscript} className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                   {isLoading ? "Generating..." : "Generate Transcript"}
-                </Button>
+                </button>
               </form>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
         {/* Preview Section */}
         {generatedTranscript && (
