@@ -123,56 +123,56 @@ export default function TranscriptsPage() {
   };
 
   return (
-    <div className="p-4 max-w-screen-2xl mx-auto space-y-4">
+    <div className="dashboard-container">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-medium text-gray-900">Call Transcripts</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="dashboard-title">Call Transcripts</h1>
+          <p className="dashboard-subtitle">
             All customer service call recordings and transcripts
           </p>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-lg font-semibold text-gray-900">{filteredAndSortedCases?.length || 0}</div>
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Transcripts</div>
+      <div className="dashboard-grid-4">
+        <div className="dashboard-stat-card">
+          <div className="dashboard-stat-number">{filteredAndSortedCases?.length || 0}</div>
+          <div className="dashboard-stat-label">Total Transcripts</div>
         </div>
-        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-lg font-semibold text-emerald-600">
+        <div className="dashboard-stat-card">
+          <div className="dashboard-stat-number dashboard-status-completed">
             {filteredAndSortedCases?.filter(c => c.status === "completed").length || 0}
           </div>
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Analyzed</div>
+          <div className="dashboard-stat-label">Analyzed</div>
         </div>
-        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-lg font-semibold text-amber-600">
+        <div className="dashboard-stat-card">
+          <div className="dashboard-stat-number dashboard-status-processing">
             {filteredAndSortedCases?.filter(c => c.status === "in_progress").length || 0}
           </div>
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Processing</div>
+          <div className="dashboard-stat-label">Processing</div>
         </div>
-        <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
-          <div className="text-lg font-semibold text-red-600">
+        <div className="dashboard-stat-card">
+          <div className="dashboard-stat-number dashboard-status-high">
             {filteredAndSortedCases?.filter(c => c.priority >= 80).length || 0}
           </div>
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">High Priority</div>
+          <div className="dashboard-stat-label">High Priority</div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="dashboard-filters">
         <input
           type="text"
           placeholder="Search Call ID, Customer, or Type..."
           value={filters.search}
           onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="dashboard-search"
         />
         <select
           value={filters.priority}
           onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
-          className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="dashboard-select"
         >
           <option value="">All Priorities</option>
           <option value="high">High Priority</option>
@@ -182,7 +182,7 @@ export default function TranscriptsPage() {
         <select
           value={filters.status}
           onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-          className="px-2 py-1.5 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="dashboard-select"
         >
           <option value="">All Statuses</option>
           <option value="Needs Review">Needs Review</option>
@@ -191,19 +191,19 @@ export default function TranscriptsPage() {
         </select>
         <button
           onClick={() => setFilters({ search: '', priority: '', status: '' })}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md bg-white hover:bg-gray-50 transition-colors"
+          className="dashboard-button-secondary"
         >
           Clear
         </button>
       </div>
 
       {/* Transcript List */}
-      <div className="rounded-lg border border-gray-300 overflow-hidden bg-white shadow-sm">
-        <table className="w-full">
+      <div className="dashboard-table-container">
+        <table className="dashboard-table">
           <thead>
-            <tr className="border-b border-gray-200">
+            <tr className="dashboard-border">
               <th 
-                className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 cursor-pointer hover:bg-gray-100"
+                className="dashboard-table-header"
                 onClick={() => handleSort('id')}
               >
                 Call ID{getSortIndicator('id')}
