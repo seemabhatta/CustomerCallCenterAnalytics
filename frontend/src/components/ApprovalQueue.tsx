@@ -506,12 +506,12 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
                         })}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex space-x-1">
-                          <button className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200">
-                            [Reject]
+                        <div className="flex space-x-2">
+                          <button className="px-3 py-1 bg-red-500 text-white rounded text-xs font-medium hover:bg-red-600 transition-colors">
+                            Reject
                           </button>
-                          <button className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium hover:bg-green-200">
-                            [Approve]
+                          <button className="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium hover:bg-green-600 transition-colors">
+                            Approve
                           </button>
                         </div>
                       </td>
