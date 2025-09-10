@@ -16,19 +16,20 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Server"
+args = "Backend API"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Frontend"
 
 [[workflows.workflow]]
-name = "Server"
+name = "Backend API"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python simple_server.py"
+waitForPort = 8000
 
 [workflows.workflow.metadata]
 outputType = "console"
@@ -52,10 +53,6 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
 
 [deployment]
 deploymentTarget = "autoscale"
