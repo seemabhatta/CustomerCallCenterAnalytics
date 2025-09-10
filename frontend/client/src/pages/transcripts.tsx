@@ -68,56 +68,49 @@ export default function TranscriptsPage() {
       </div>
 
       {/* Transcript List */}
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted/50">
-            <tr className="border-b">
-              <th className="text-left p-4 font-medium">Call ID</th>
-              <th className="text-left p-4 font-medium">Priority</th>
-              <th className="text-left p-4 font-medium">Status</th>
-              <th className="text-left p-4 font-medium">Customer</th>
-              <th className="text-left p-4 font-medium">Type</th>
-              <th className="text-left p-4 font-medium">Created</th>
-              <th className="text-left p-4 font-medium">Updated</th>
-              <th className="text-left p-4 font-medium">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cases?.map((caseItem) => (
-              <tr key={caseItem.id} className="border-b hover:bg-muted/30">
-                <td className="p-4 font-mono text-sm">{caseItem.id}</td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    caseItem.priority >= 80 ? "bg-red-100 text-red-800" :
-                    caseItem.priority >= 50 ? "bg-yellow-100 text-yellow-800" :
-                    "bg-green-100 text-green-800"
-                  }`}>
-                    {caseItem.priority >= 80 ? "High Priority" :
-                     caseItem.priority >= 50 ? "Medium Priority" : "Low Priority"}
-                  </span>
-                </td>
-                <td className="p-4">
-                  <span className="text-sm">{caseItem.status}</span>
-                </td>
-                <td className="p-4 text-sm">{caseItem.customerId}</td>
-                <td className="p-4 text-sm">{caseItem.scenario}</td>
-                <td className="p-4 text-sm">
-                  {caseItem.createdAt ? new Date(caseItem.createdAt).toLocaleDateString() : "N/A"}
-                </td>
-                <td className="p-4 text-sm">
-                  {caseItem.updatedAt ? new Date(caseItem.updatedAt).toLocaleDateString() : "N/A"}
-                </td>
-                <td className="p-4">
-                  <Link href={`/case/${caseItem.id}`}>
-                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                      View Details →
-                    </button>
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-4">
+        {cases?.map((caseItem) => (
+          <Link key={caseItem.id} href={`/case/${caseItem.id}`}>
+            <div className="rounded-2xl border border-border p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-card">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-semibold text-lg">{caseItem.id}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      caseItem.priority === 3 ? "bg-red-100 text-red-800" :
+                      caseItem.priority === 2 ? "bg-yellow-100 text-yellow-800" :
+                      "bg-green-100 text-green-800"
+                    }`}>
+                      {caseItem.priority === 3 ? "high" : caseItem.priority === 2 ? "medium" : "low"} priority
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      caseItem.status === "completed" ? "bg-emerald-100 text-emerald-800" :
+                      caseItem.status === "in_progress" ? "bg-blue-100 text-blue-800" :
+                      "bg-gray-100 text-gray-800"
+                    }`}>
+                      {caseItem.status}
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Customer: {caseItem.customerId} • {caseItem.scenario}
+                  </p>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    Created: {caseItem.createdAt ? new Date(caseItem.createdAt).toLocaleDateString() : "N/A"} • 
+                    Updated: {caseItem.updatedAt ? new Date(caseItem.updatedAt).toLocaleDateString() : "N/A"}
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  <div className="text-sm font-medium text-primary">
+                    View Details →
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
   );
