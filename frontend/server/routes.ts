@@ -226,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messages = transcript.messages || [];
       const transformedMessages = messages.map((msg: any, index: number) => ({
         id: index,
-        speaker: msg.role === "agent" ? "Agent" : "Customer", 
+        speaker: msg.role?.includes("agent") || msg.role?.toLowerCase().includes("advisor") || msg.role?.toLowerCase().includes("representative") ? "Agent" : "Customer", 
         content: msg.content,
         timestamp: msg.timestamp || new Date().toISOString()
       }));
