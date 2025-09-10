@@ -14,17 +14,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cases endpoints
+  // Cases endpoints - Proxy to real transcript data
   app.get("/api/cases", async (req, res) => {
     try {
-      const { priority, status, search } = req.query;
-      const cases = await storage.getCases({
-        priority: priority as string,
-        status: status as string,
-        search: search as string,
+      // Fetch real transcripts from backend
+      const response = await fetch("http://localhost:8000/transcripts");
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`);
+      }
+      
+      const transcripts = await response.json();
+      console.log(`Fetched ${transcripts.length} real transcripts for Approval Queue`);
+      
+      // Transform transcripts to case format for Approval Queue
+      const cases = transcripts.map((transcript: any, index: number) => {
+        // Convert urgency to priority number
+        const urgencyToPriority = (urgency: string) => {
+          switch(urgency) {
+            case 'critical': return 95;
+            case 'high': return 80;
+            case 'medium': return 50;
+            case 'low': return 25;
+            default: return 50;
+          }
+        };
+
+        // Convert urgency to risk level
+        const urgencyToRisk = (urgency: string) => {
+          switch(urgency) {
+            case 'critical': return 'High';
+            case 'high': return 'Medium'; 
+            case 'medium': return 'Low';
+            case 'low': return 'Low';
+            default: return 'Medium';
+          }
+        };
+
+        return {
+          id: transcript.transcript_id,                    // CALL_CA3CA389
+          customerId: transcript.customer_id || 'CUST_001',// Customer ID
+          callId: transcript.transcript_id,                // Same as ID
+          scenario: transcript.scenario === 'Unknown scenario' ? 'Service Request' : transcript.scenario,
+          priority: urgencyToPriority(transcript.urgency),
+          status: "Needs Review",                          // Default status for approval queue
+          risk: urgencyToRisk(transcript.urgency),
+          financialImpact: transcript.financial_impact ? "$5,000 potential impact" : "No financial impact",
+          exchanges: transcript.message_count,
+          createdAt: transcript.created_at,
+          updatedAt: transcript.created_at
+        };
       });
-      res.json(cases);
+
+      // Apply filtering if requested
+      const { priority, status, search } = req.query;
+      let filteredCases = cases;
+      
+      if (priority) {
+        filteredCases = filteredCases.filter(c => c.priority >= parseInt(priority as string));
+      }
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        filteredCases = filteredCases.filter(c => 
+          c.id.toLowerCase().includes(searchLower) ||
+          c.scenario.toLowerCase().includes(searchLower) ||
+          c.customerId.toLowerCase().includes(searchLower)
+        );
+      }
+
+      console.log(`Returning ${filteredCases.length} cases to Approval Queue`);
+      res.json(filteredCases);
     } catch (error) {
+      console.error("Failed to fetch real transcript data:", error);
       res.status(500).json({ error: "Failed to fetch cases" });
     }
   });
