@@ -221,16 +221,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const transcript = await response.json();
+      console.log("Raw transcript data:", JSON.stringify(transcript, null, 2));
       
       // Transform transcript data to match frontend format
       const messages = transcript.messages || [];
-      const transformedMessages = messages.map((msg: any, index: number) => ({
-        id: index,
-        speaker: msg.role?.includes("agent") || msg.role?.toLowerCase().includes("advisor") || msg.role?.toLowerCase().includes("representative") ? "Agent" : "Customer", 
-        content: msg.content,
-        timestamp: msg.timestamp || new Date().toISOString()
-      }));
+      console.log("Messages array:", messages.length, "messages");
       
+      const transformedMessages = messages.map((msg: any, index: number) => {
+        console.log("Transforming message:", index, msg);
+        return {
+          id: index,
+          speaker: msg.role?.includes("agent") || msg.role?.toLowerCase().includes("advisor") || msg.role?.toLowerCase().includes("representative") ? "Agent" : "Customer", 
+          content: msg.content,
+          timestamp: msg.timestamp || new Date().toISOString()
+        };
+      });
+      
+      console.log("Transformed messages:", transformedMessages.length);
       res.json(transformedMessages);
     } catch (error) {
       console.error("Case transcripts proxy error:", error);
