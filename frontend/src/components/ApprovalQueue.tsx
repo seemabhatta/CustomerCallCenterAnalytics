@@ -593,8 +593,12 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
                   {/* Case ID */}
                   <td className="px-6 py-4">
                     <div className="text-sm">
-                      <div className="font-medium text-gray-900">{scenarioName} ({item.customer_id} •</div>
-                      <div className="text-gray-500">{item.transcript_id})</div>
+                      <div className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer">
+                        {scenarioName} ({item.customer_id} •
+                      </div>
+                      <div className="text-blue-500 hover:text-blue-700 hover:underline cursor-pointer">
+                        {item.transcript_id})
+                      </div>
                     </div>
                   </td>
 
