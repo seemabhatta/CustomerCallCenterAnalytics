@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { WorkflowState, Transcript, Analysis, ActionPlan, GovernanceStatus, ApprovalItem, ExecutionStatus } from '../types/workflow';
-import { useApiCall } from './useApi';
+import type { WorkflowState, Transcript, Analysis, ActionPlan } from '../types/workflow';
 
 export function useWorkflowPolling(transcript?: Transcript) {
   const [workflowState, setWorkflowState] = useState<WorkflowState>({
     currentStage: 'transcript'
   });
-  const { makeApiCall } = useApiCall();
 
   useEffect(() => {
     if (!transcript) return;
@@ -20,26 +18,8 @@ export function useWorkflowPolling(transcript?: Transcript) {
     // Start polling for workflow updates
     const interval = setInterval(async () => {
       try {
-        // Check for analysis
-        if (!workflowState.analysis) {
-          // For now, we'll simulate the workflow since the full API isn't implemented
-          // In real implementation, this would call the actual analysis API
-        }
-        
-        // Check for action plan
-        if (workflowState.analysis && !workflowState.plan) {
-          // Simulate plan generation
-        }
-        
-        // Check for governance status
-        if (workflowState.plan && !workflowState.governance) {
-          // Simulate governance review
-        }
-        
-        // Check for execution status
-        if (workflowState.governance && !workflowState.execution) {
-          // Simulate execution
-        }
+        // Real-time workflow polling logic will be implemented here
+        // when full API endpoints are available
       } catch (error) {
         console.error('Workflow polling error:', error);
       }
