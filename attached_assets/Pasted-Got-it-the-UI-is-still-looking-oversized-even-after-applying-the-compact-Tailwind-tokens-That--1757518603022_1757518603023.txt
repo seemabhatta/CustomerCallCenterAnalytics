@@ -1,0 +1,56 @@
+Got it 👍 — the UI is still looking oversized even after applying the compact Tailwind tokens. That’s usually because Tailwind defaults (`text-4xl`, `p-6`, `gap-8`, etc.) are still scattered in components.
+
+Here’s a **sharper Replit prompt** you can use to force the UI into a sleek, laptop-friendly scale:
+
+---
+
+**Prompt for Replit AI / Ghostwriter**
+
+Refactor the entire React + Tailwind UI to be **sleek, compact, and professional**.
+Apply these global rules across all components:
+
+1. **Typography scale**
+
+   * Replace `text-4xl`, `text-5xl`, etc. → use `text-xl` for headers, `text-lg` for subheaders, `text-base` for body.
+   * KPI/stat numbers → `text-2xl font-semibold`.
+   * Labels → `text-xs md:text-sm text-neutral-600`.
+
+2. **Spacing scale**
+
+   * Replace `p-6`, `p-8` → `p-3 md:p-4`.
+   * Replace `gap-6`, `gap-8` → `gap-2 md:gap-3`.
+   * Cards → `rounded-lg border shadow-sm p-4`.
+
+3. **Layout**
+
+   * Constrain main content width: wrap in `max-w-screen-xl mx-auto px-4`.
+   * Sidebar: `w-56 text-sm leading-5`.
+   * Tables: headers `text-xs uppercase tracking-wide`, cells `py-1.5 px-2.5 text-sm`.
+
+4. **Components**
+
+   * Buttons → default `h-9 px-3 text-sm`, compact `h-8 px-2.5`.
+   * Badges/Chips → `h-6 px-2 text-xs`.
+   * Progress bars → `h-1.5`.
+   * KPI tiles → compact padding, numbers `text-2xl`, labels `text-xs`.
+
+5. **Visual style**
+
+   * Use `shadow-sm`, avoid heavy shadows.
+   * Rounded corners → `rounded-lg` or `rounded-xl`, not `2xl+`.
+   * Colors: subtle neutral borders (`border-neutral-200/60`).
+
+6. **Density toggle (optional)**
+
+   * Support a root attribute `data-density="compact|cozy"`.
+   * In `compact` mode, scale font-size down 0.9× and reduce gaps/padding by 25%.
+
+⚡ Acceptance Criteria:
+
+* No element looks cartoonishly big on a 13–15" laptop.
+* All headers, cards, and KPIs fit neatly without excessive whitespace.
+* Tables and dashboards look like enterprise SaaS, not a demo template.
+
+---
+
+Want me to give you a **search-and-replace regex set** (so you can batch-shrink `p-6 → p-3`, `gap-8 → gap-2`, etc.) to apply across your repo in one go? That usually solves the “still looks big” problem very quickly.
