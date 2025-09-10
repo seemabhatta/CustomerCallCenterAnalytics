@@ -2337,19 +2337,19 @@ def create_fastapi_app():
 
 
 def start_fastapi_server():
-    """Start FastAPI server on port 8000 (with fallback ports)."""
+    """Start FastAPI server on port 5000 (with fallback ports)."""
     global fastapi_app
     
-    # Try multiple ports for FastAPI
-    ports_to_try = [8000, 8001, 8002, 8003]
+    # Try multiple ports for FastAPI (Replit needs 5000 for frontend)
+    ports_to_try = [5000, 5001, 5002, 5003]
     
     for port in ports_to_try:
         try:
             fastapi_app = create_fastapi_app()
             print(f"🌐 FastAPI ready on http://localhost:{port}")
             print(f"📚 API Documentation: http://localhost:{port}/docs")
-            if port != 8000:
-                print(f"⚠️  Note: Using alternate port {port} (8000 was busy)")
+            if port != 5000:
+                print(f"⚠️  Note: Using alternate port {port} (5000 was busy)")
             
             # Run with explicit signal handling
             config = uvicorn.Config(
@@ -2431,7 +2431,7 @@ def main():
     # Start CLI server in main thread
     print("🎯 Both servers ready!")
     print("   • CLI Backend: http://localhost:9999 (for cli_fast.py)")
-    print("   • Web API: http://localhost:8000 (browser/curl)")
+    print("   • Web API: http://localhost:5000 (browser/curl)")
     print("   • Press Ctrl+C to stop")
     print()
     
