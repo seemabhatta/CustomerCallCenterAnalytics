@@ -7,6 +7,7 @@ export default function SidebarNav() {
     { path: "/dashboard", label: "📊 Dashboard", id: "dashboard" },
     { path: "/approval-queue", label: "✅ Approval Queue", id: "approval-queue" },
     { path: "/case/1", label: "🔍 Case Details", id: "case-detail" },
+    { path: "/generate", label: "⚡ Generate", id: "generate" },
   ];
 
   const isActive = (path: string, id: string) => {
