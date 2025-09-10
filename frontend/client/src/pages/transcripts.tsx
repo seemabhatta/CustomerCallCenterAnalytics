@@ -5,6 +5,13 @@ import type { Case } from "@shared/schema";
 export default function TranscriptsPage() {
   const { data: cases, isLoading } = useQuery<Case[]>({
     queryKey: ["/api/cases"],
+    queryFn: async () => {
+      const response = await fetch("/api/cases");
+      if (!response.ok) {
+        throw new Error("Failed to fetch transcripts");
+      }
+      return response.json();
+    },
   });
 
   if (isLoading) {
