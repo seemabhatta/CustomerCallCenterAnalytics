@@ -364,109 +364,155 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
         </div>
       </div>
 
-      {/* Approval Items List - Compact Table View */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Professional Approval Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Case Details
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Risk & Priority
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Priority
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions Status
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Actions
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Approval Required
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Approval Reason
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Status
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredItems.map((item) => (
-                <tr 
-                  key={item.transcript_id}
-                  className={`hover:bg-gray-50 cursor-pointer transition-colors ${loadingDetail ? 'opacity-50' : ''}`}
-                  onClick={() => !loadingDetail && handleItemClick(item)}
-                >
-                  {/* Case Details */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="text-2xl mr-3">{getBusinessImpactIcon(item.business_impact)}</div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{item.scenario}</div>
-                        <div className="text-sm text-gray-500">
-                          {item.customer_id} • {item.transcript_id}
+            <tbody className="divide-y divide-gray-100">
+              {filteredItems.map((item, index) => {
+                const scenarioName = item.scenario === 'Unknown scenario' 
+                  ? `Customer Service Case #${index + 1}`
+                  : item.scenario;
+                
+                const getRiskColor = (level: string) => {
+                  switch (level) {
+                    case 'critical': return 'bg-red-100 text-red-800 border-red-200';
+                    case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+                    case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                    case 'low': return 'bg-green-100 text-green-800 border-green-200';
+                    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+                  }
+                };
+
+                return (
+                  <tr 
+                    key={item.transcript_id}
+                    className={`hover:bg-blue-50 cursor-pointer transition-all duration-200 ${loadingDetail ? 'opacity-50' : ''} ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
+                    onClick={() => !loadingDetail && handleItemClick(item)}
+                  >
+                    {/* Case Details */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                            <span className="text-white text-lg">{getBusinessImpactIcon(item.business_impact)}</span>
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-gray-900 truncate">
+                            {scenarioName}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center space-x-2">
+                            <span className="font-medium">{item.customer_id}</span>
+                            <span className="text-gray-300">•</span>
+                            <span className="font-mono text-xs">{item.transcript_id}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Risk & Priority */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-3">
-                      <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getUrgencyColor(item.urgency)}`}>
-                        {item.urgency.toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 capitalize">{item.risk_level}</div>
-                        <div className="text-xs text-gray-500">Score: {item.priority_score}</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Actions Status */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="text-xs text-gray-600">{item.auto_approved} auto</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span className="text-xs text-gray-600">{item.manually_approved} done</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                        <span className="text-xs font-medium text-orange-600">{item.pending_actions} pending</span>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Approval Required */}
-                  <td className="px-4 py-4">
-                    <div className="max-w-xs">
-                      <div className="text-xs text-gray-900">
-                        {item.risk_level === 'critical' ? 'Critical risk detected' : 
-                         item.risk_level === 'high' ? 'High risk review' :
-                         item.financial_impact ? 'Financial impact' :
-                         'Standard workflow'}
-                      </div>
-                      {item.financial_impact && (
-                        <div className="flex items-center mt-1">
-                          <div className="w-1 h-1 bg-red-400 rounded-full mr-1"></div>
-                          <span className="text-xs text-red-600">Financial Impact</span>
+                    {/* Priority */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRiskColor(item.risk_level)}`}>
+                          {item.risk_level.charAt(0).toUpperCase() + item.risk_level.slice(1)}
+                        </span>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-gray-900">{item.priority_score}</div>
+                          <div className="text-xs text-gray-500">Score</div>
                         </div>
-                      )}
-                    </div>
-                  </td>
+                      </div>
+                    </td>
 
-                  {/* Status */}
-                  <td className="px-4 py-4 whitespace-nowrap text-right">
-                    <div className="text-xs text-gray-500">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </div>
-                    <div className="text-xs text-orange-600 font-medium mt-1">
-                      Needs Review
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    {/* Actions */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{item.auto_approved}</span>
+                          <span className="text-xs text-gray-500">auto</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{item.manually_approved}</span>
+                          <span className="text-xs text-gray-500">done</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                          </div>
+                          <span className="text-sm font-bold text-orange-600">{item.pending_actions}</span>
+                          <span className="text-xs text-orange-600 font-medium">pending</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Approval Reason */}
+                    <td className="px-6 py-4">
+                      <div className="max-w-xs">
+                        <div className="text-sm text-gray-900 font-medium">
+                          {item.risk_level === 'critical' ? 'Critical Risk Assessment' : 
+                           item.risk_level === 'high' ? 'High Risk Review Required' :
+                           item.financial_impact ? 'Financial Impact Review' :
+                           'Standard Workflow Approval'}
+                        </div>
+                        <div className="flex items-center mt-1 space-x-2">
+                          {item.financial_impact && (
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs text-red-600 font-medium">Financial Impact</span>
+                            </div>
+                          )}
+                          {item.urgency === 'high' && (
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-xs text-orange-600 font-medium">High Urgency</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex flex-col items-end space-y-1">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                          Needs Review
+                        </span>
+                        <div className="text-xs text-gray-500">
+                          {new Date(item.created_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
