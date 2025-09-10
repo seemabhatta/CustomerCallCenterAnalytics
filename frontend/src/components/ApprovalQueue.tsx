@@ -210,18 +210,18 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
         {/* Detailed View */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Transcript Summary */}
-          <div className="card">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center">
               📄 Transcript Details
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Customer:</span>
-                <span className="font-medium">{selectedTranscript.customer_id}</span>
+                <span className="font-medium">{selectedTranscript.customer_id || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Scenario:</span>
-                <span className="font-medium">{selectedTranscript.scenario}</span>
+                <span className="font-medium">{selectedTranscript.scenario === 'Unknown scenario' ? scenarioName : selectedTranscript.scenario}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Messages:</span>
@@ -242,57 +242,58 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
             </div>
             
             {/* Show conversation preview */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg max-h-48 overflow-y-auto">
-              <div className="text-sm font-medium text-gray-700 mb-2">Conversation Preview:</div>
-              {selectedTranscript.messages.slice(0, 3).map((msg, idx) => (
-                <div key={idx} className="mb-2 text-sm">
-                  <span className="font-medium text-blue-600">{msg.role}:</span>
-                  <span className="text-gray-700 ml-2">{msg.content.substring(0, 100)}...</span>
-                </div>
-              ))}
-              {selectedTranscript.messages.length > 3 && (
-                <div className="text-xs text-gray-500">...and {selectedTranscript.messages.length - 3} more messages</div>
-              )}
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg max-h-64 overflow-y-auto">
+              <div className="text-sm font-medium text-gray-700 mb-3">Full Conversation:</div>
+              {selectedTranscript.messages.map((msg, idx) => {
+                // Clean up role names by removing asterisks
+                const cleanRole = msg.role.replace(/\*\*/g, '').trim();
+                return (
+                  <div key={idx} className="mb-3 text-sm">
+                    <div className="font-medium text-blue-600">{cleanRole}:</div>
+                    <div className="text-gray-700 ml-2 mt-1">{msg.content}</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* AI Analysis */}
-          <div className="card">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center">
               🔍 AI Analysis
             </h3>
             <div className="space-y-4">
-              <div>
-                <span className="text-gray-600 text-sm">Intent Detection</span>
-                <div className="font-medium">{simulatedAnalysis.intent}</div>
-                <div className="text-sm text-gray-500">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <span className="text-blue-600 text-sm font-medium">Intent Detection</span>
+                <div className="font-semibold text-gray-900 mt-1">{simulatedAnalysis.intent}</div>
+                <div className="text-sm text-blue-600 mt-1">
                   {Math.round(simulatedAnalysis.confidence * 100)}% confidence
                 </div>
               </div>
               
-              <div>
-                <span className="text-gray-600 text-sm">Sentiment Journey</span>
-                <div className="font-medium">{simulatedAnalysis.sentiment}</div>
+              <div className="p-3 bg-green-50 rounded-lg">
+                <span className="text-green-600 text-sm font-medium">Sentiment Journey</span>
+                <div className="font-semibold text-gray-900 mt-1">{simulatedAnalysis.sentiment}</div>
               </div>
 
-              <div>
-                <span className="text-gray-600 text-sm">Risk Scores</span>
+              <div className="p-3 bg-orange-50 rounded-lg">
+                <span className="text-orange-600 text-sm font-medium">Risk Assessment</span>
                 <div className="space-y-2 mt-2">
                   <div className="flex justify-between">
-                    <span>Churn Risk</span>
-                    <span className="font-medium text-red-600">
+                    <span className="text-sm">Churn Risk</span>
+                    <span className="font-semibold text-red-600">
                       {Math.round(simulatedAnalysis.risk_scores.churn * 100)}%
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Complaint Risk</span>
-                    <span className="font-medium text-orange-600">
+                    <span className="text-sm">Complaint Risk</span>
+                    <span className="font-semibold text-orange-600">
                       {Math.round(simulatedAnalysis.risk_scores.complaint * 100)}%
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Delinquency Risk</span>
-                    <span className="font-medium text-yellow-600">
+                    <span className="text-sm">Delinquency Risk</span>
+                    <span className="font-semibold text-yellow-600">
                       {Math.round(simulatedAnalysis.risk_scores.delinquency * 100)}%
                     </span>
                   </div>
@@ -302,35 +303,46 @@ export function ApprovalQueue({ onBack, totalPendingCount }: ApprovalQueueProps)
           </div>
 
           {/* Action Plan */}
-          <div className="card">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center">
               📋 Action Plan
             </h3>
             <div className="space-y-4">
-              <div className="text-sm text-gray-600">
-                {simulatedActionPlan.total_actions} total actions planned
+              <div className="text-sm text-gray-600 text-center p-2 bg-gray-50 rounded">
+                <span className="font-semibold text-gray-900">{simulatedActionPlan.total_actions}</span> total actions planned
               </div>
 
               <div className="space-y-3">
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="font-medium text-green-800">Auto-Approved ({simulatedActionPlan.auto_approved})</div>
-                  <div className="text-sm text-green-600">System executed automatically</div>
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium text-green-800">✅ Auto-Approved</div>
+                    <div className="font-bold text-green-800">{simulatedActionPlan.auto_approved}</div>
+                  </div>
+                  <div className="text-sm text-green-600 mt-1">System executed automatically</div>
                 </div>
 
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="font-medium text-blue-800">Manually Approved ({simulatedActionPlan.manually_approved})</div>
-                  <div className="text-sm text-blue-600">Previously approved by supervisors</div>
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium text-blue-800">👤 Manually Approved</div>
+                    <div className="font-bold text-blue-800">{simulatedActionPlan.manually_approved}</div>
+                  </div>
+                  <div className="text-sm text-blue-600 mt-1">Previously approved by supervisors</div>
                 </div>
 
                 <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="font-medium text-orange-800">Pending Approval ({simulatedActionPlan.pending_approval})</div>
-                  <div className="text-sm text-orange-600">Requires your approval to proceed</div>
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium text-orange-800">⏳ Pending Approval</div>
+                    <div className="font-bold text-orange-800">{simulatedActionPlan.pending_approval}</div>
+                  </div>
+                  <div className="text-sm text-orange-600 mt-1">Requires your approval to proceed</div>
                 </div>
               </div>
 
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <div className="font-medium text-red-800">⚠️ Approval Required</div>
-                <div className="text-sm text-red-600 mt-1">
+                <div className="font-medium text-red-800 flex items-center">
+                  ⚠️ Approval Required
+                </div>
+                <div className="text-sm text-red-600 mt-2">
                   {simulatedActionPlan.approval_reason}
                 </div>
               </div>
