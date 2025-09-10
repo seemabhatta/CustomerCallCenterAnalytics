@@ -84,8 +84,8 @@ export default function TranscriptsPage() {
 
   // Get sort indicator
   const getSortIndicator = (column: keyof Case) => {
-    if (sortColumn !== column) return ' ↕️';
-    return sortDirection === 'asc' ? ' ↑' : ' ↓';
+    if (sortColumn !== column) return ' ↕';
+    return sortDirection === 'asc' ? ' ↗' : ' ↘';
   };
 
   if (isLoading) {
