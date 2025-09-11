@@ -796,6 +796,162 @@ class GraphStore:
             logger.error(f"Failed to clear graph: {str(e)}")
             raise GraphStoreError(f"Clear graph failed: {str(e)}")
     
+    def get_graph_for_visualization(self) -> Dict[str, Any]:
+        """Extract all nodes and edges for graph visualization.
+        
+        Returns:
+            Dict with 'nodes' and 'edges' lists for NetworkX/Plotly visualization
+            
+        Raises:
+            GraphStoreError: If graph is empty (NO FALLBACK) or query fails
+        """
+        try:
+            # Get nodes by type to handle different schemas
+            all_nodes = []
+            
+            # Get Transcript nodes
+            transcript_query = """
+            MATCH (n:Transcript)
+            RETURN 
+                CAST(ID(n), "STRING") as id,
+                'Transcript' as type,
+                n.transcript_id as label,
+                n.topic as description,
+                0.0 as risk_score,
+                0.0 as severity_score
+            """
+            
+            # Get Analysis nodes
+            analysis_query = """
+            MATCH (n:Analysis)
+            RETURN 
+                CAST(ID(n), "STRING") as id,
+                'Analysis' as type,
+                n.analysis_id as label,
+                n.summary as description,
+                n.risk_score as risk_score,
+                0.0 as severity_score
+            """
+            
+            # Get RiskPattern nodes
+            risk_query = """
+            MATCH (n:RiskPattern)
+            RETURN 
+                CAST(ID(n), "STRING") as id,
+                'RiskPattern' as type,
+                n.pattern_id as label,
+                n.description as description,
+                n.risk_score as risk_score,
+                0.0 as severity_score
+            """
+            
+            # Get ComplianceFlag nodes
+            flag_query = """
+            MATCH (n:ComplianceFlag)
+            RETURN 
+                CAST(ID(n), "STRING") as id,
+                'ComplianceFlag' as type,
+                n.flag_id as label,
+                n.description as description,
+                0.0 as risk_score,
+                n.severity_score as severity_score
+            """
+            
+            # Execute queries and combine results
+            for query in [transcript_query, analysis_query, risk_query, flag_query]:
+                try:
+                    result = self.execute_query(query)
+                    all_nodes.extend(result)
+                except Exception:
+                    # Skip if no nodes of this type exist
+                    continue
+            
+            # Get all relationships by type
+            all_edges = []
+            
+            # Get GENERATED_FROM relationships
+            edges_queries = [
+                """
+                MATCH (a:Analysis)-[:GENERATED_FROM]->(t:Transcript)
+                RETURN 
+                    CAST(ID(a), "STRING") as source,
+                    CAST(ID(t), "STRING") as target,
+                    'GENERATED_FROM' as relationship
+                """,
+                """
+                MATCH (a:Analysis)-[:HAS_RISK_PATTERN]->(r:RiskPattern)
+                RETURN 
+                    CAST(ID(a), "STRING") as source,
+                    CAST(ID(r), "STRING") as target,
+                    'HAS_RISK_PATTERN' as relationship
+                """,
+                """
+                MATCH (a:Analysis)-[:HAS_COMPLIANCE_FLAG]->(f:ComplianceFlag)
+                RETURN 
+                    CAST(ID(a), "STRING") as source,
+                    CAST(ID(f), "STRING") as target,
+                    'HAS_COMPLIANCE_FLAG' as relationship
+                """
+            ]
+            
+            # Execute edge queries and combine results
+            for query in edges_queries:
+                try:
+                    result = self.execute_query(query)
+                    all_edges.extend(result)
+                except Exception:
+                    # Skip if no edges of this type exist
+                    continue
+            
+            # Use combined edge results
+            edges_result = all_edges
+            
+            # Use combined node results
+            nodes_result = all_nodes
+            
+            # Check if graph is empty - NO FALLBACK
+            if not nodes_result:
+                raise GraphStoreError("No data in graph - cannot visualize empty graph")
+            
+            # Format nodes for visualization
+            nodes = []
+            for node in nodes_result:
+                node_data = {
+                    "id": str(node["id"]),
+                    "label": str(node["label"]),
+                    "type": str(node["type"]),
+                    "description": str(node.get("description", "")),
+                }
+                
+                # Add scores if present
+                if node["risk_score"] > 0:
+                    node_data["risk_score"] = float(node["risk_score"])
+                if node["severity_score"] > 0:
+                    node_data["severity_score"] = float(node["severity_score"])
+                    
+                nodes.append(node_data)
+            
+            # Format edges for visualization
+            edges = []
+            for edge in edges_result:
+                edge_data = {
+                    "source": str(edge["source"]),
+                    "target": str(edge["target"]), 
+                    "relationship": str(edge["relationship"])
+                }
+                edges.append(edge_data)
+            
+            logger.info(f"Extracted {len(nodes)} nodes and {len(edges)} edges for visualization")
+            
+            return {
+                "nodes": nodes,
+                "edges": edges
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get graph data for visualization: {str(e)}")
+            raise GraphStoreError(f"Graph visualization data extraction failed: {str(e)}")
+
     def close(self):
         """Close database connection."""
         try:

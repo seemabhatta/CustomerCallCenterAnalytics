@@ -214,6 +214,14 @@ class CLIRestClient:
         """Clear insights graph via DELETE /api/v1/insights/clear."""
         return self._make_request('DELETE', '/api/v1/insights/clear')
     
+    def get_visualization_data(self) -> Dict[str, Any]:
+        """Get visualization data via GET /api/v1/insights/visualization/data."""
+        return self._make_request('GET', '/api/v1/insights/visualization/data')
+    
+    def get_visualization_statistics(self) -> Dict[str, Any]:
+        """Get visualization statistics via GET /api/v1/insights/visualization/stats."""
+        return self._make_request('GET', '/api/v1/insights/visualization/stats')
+    
     # Plan operations
     def create_plan(self, **kwargs) -> Dict[str, Any]:
         """Create action plan via POST /api/v1/plans."""
@@ -1117,6 +1125,80 @@ def analysis_clear_graph(
         
     except CLIError as e:
         print_error(f"Clear failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@insights_app.command("visualize")
+def analysis_visualize(
+    output: str = typer.Option("knowledge_graph.html", "--output", "-o", help="Output HTML file path"),
+    open_browser: bool = typer.Option(False, "--open", help="Open visualization in browser")
+):
+    """Create interactive network visualization of the knowledge graph."""
+    try:
+        from src.visualization.graph_visualizer import GraphVisualizer
+        
+        console.print("📊 [bold magenta]Creating knowledge graph visualization...[/bold magenta]")
+        
+        client = get_client()
+        
+        # Get visualization data via API
+        console.print("📈 [bold blue]Fetching graph data from API...[/bold blue]")
+        try:
+            graph_data = client.get_visualization_data()
+        except Exception as e:
+            raise CLIError(f"Failed to fetch graph data: {str(e)}")
+        
+        # Get graph statistics via API
+        try:
+            stats = client.get_visualization_statistics()
+        except Exception as e:
+            raise CLIError(f"Failed to fetch graph statistics: {str(e)}")
+        
+        if stats.get('error'):
+            raise CLIError(f"Graph data error: {stats['error']}")
+        
+        console.print(f"   📊 Nodes: {stats['total_nodes']}")
+        console.print(f"   🔗 Edges: {stats['total_edges']}")
+        
+        # Show node type breakdown
+        node_types = stats.get('node_types', {})
+        for node_type, count in node_types.items():
+            console.print(f"   📋 {node_type}: {count}")
+        
+        # Create visualization
+        console.print("🎨 [bold green]Creating interactive visualization...[/bold green]")
+        try:
+            visualizer = GraphVisualizer()
+            figure = visualizer.create_network_graph(graph_data)
+        except Exception as e:
+            raise CLIError(f"Visualization creation failed: {str(e)}")
+        
+        # Save to HTML
+        console.print(f"💾 [bold yellow]Saving to {output}...[/bold yellow]")
+        try:
+            visualizer.save_to_html(figure, output, auto_open=open_browser)
+        except Exception as e:
+            raise CLIError(f"Failed to save visualization: {str(e)}")
+        
+        print_success(f"Interactive visualization created: {output}")
+        
+        # Show high-level insights
+        if stats.get('high_risk_nodes', 0) > 0:
+            print_warning(f"Found {stats['high_risk_nodes']} high-risk nodes")
+        if stats.get('high_severity_nodes', 0) > 0:
+            print_warning(f"Found {stats['high_severity_nodes']} high-severity nodes")
+        
+        if open_browser:
+            console.print("🌐 Opening visualization in browser...")
+        else:
+            console.print(f"💡 Use --open to automatically open {output} in your browser")
+            
+    except CLIError as e:
+        print_error(f"Visualization failed: {str(e)}")
+        raise typer.Exit(1)
+    except ImportError as e:
+        print_error(f"Missing dependencies: {str(e)}")
+        print_error("Install with: pip install networkx plotly")
         raise typer.Exit(1)
 
 

@@ -780,6 +780,55 @@ class InsightsService:
             logger.error(f"Unexpected clear error: {str(e)}")
             raise InsightsServiceError(f"Clear failed: {str(e)}")
     
+    async def get_visualization_data(self) -> Dict[str, Any]:
+        """
+        Get graph data formatted for visualization.
+        
+        Returns:
+            Dict with nodes and edges for visualization
+            
+        Raises:
+            InsightsServiceError: If visualization data extraction fails
+        """
+        try:
+            graph_data = self.graph_store.get_graph_for_visualization()
+            
+            logger.info(f"Extracted visualization data: {len(graph_data.get('nodes', []))} nodes, {len(graph_data.get('edges', []))} edges")
+            return graph_data
+            
+        except GraphStoreError as e:
+            logger.error(f"Visualization data extraction failed: {str(e)}")
+            raise InsightsServiceError(f"Failed to get visualization data: {str(e)}")
+        except Exception as e:
+            logger.error(f"Unexpected visualization error: {str(e)}")
+            raise InsightsServiceError(f"Visualization failed: {str(e)}")
+    
+    async def get_visualization_statistics(self) -> Dict[str, Any]:
+        """
+        Get statistics about the knowledge graph for visualization.
+        
+        Returns:
+            Dict with graph statistics
+            
+        Raises:
+            InsightsServiceError: If statistics extraction fails
+        """
+        try:
+            from ..visualization.graph_visualizer import GraphVisualizer
+            
+            graph_data = await self.get_visualization_data()
+            visualizer = GraphVisualizer()
+            stats = visualizer.get_graph_statistics(graph_data)
+            
+            logger.info(f"Generated visualization statistics: {stats.get('total_nodes', 0)} nodes")
+            return stats
+            
+        except InsightsServiceError:
+            raise  # Re-raise our own exceptions
+        except Exception as e:
+            logger.error(f"Statistics generation failed: {str(e)}")
+            raise InsightsServiceError(f"Failed to generate statistics: {str(e)}")
+    
     def close(self):
         """Close service and underlying connections."""
         if self.graph_store:

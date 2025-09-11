@@ -469,6 +469,23 @@ async def clear_insights_graph():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear graph: {str(e)}")
 
+# Visualization endpoints
+@app.get("/api/v1/insights/visualization/data")
+async def get_visualization_data():
+    """Get knowledge graph data formatted for visualization - proxies to insights service."""
+    try:
+        return await insights_service.get_visualization_data()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get visualization data: {str(e)}")
+
+@app.get("/api/v1/insights/visualization/stats")
+async def get_visualization_statistics():
+    """Get knowledge graph statistics for visualization - proxies to insights service."""
+    try:
+        return await insights_service.get_visualization_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get visualization statistics: {str(e)}")
+
 # ===============================================
 # ACTION PLAN ENDPOINTS - 8 endpoints
 # ===============================================
