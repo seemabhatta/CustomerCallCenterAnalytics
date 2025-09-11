@@ -5,11 +5,77 @@
 ### Prerequisites
 ```bash
 # Start the backend server first
-python3 server.py
+python3 server.py          # New unified API server with 43 standardized endpoints
 
 # Then use CLI commands
 python3 cli_fast.py [command] [options]
 ```
+
+## 🆕 NEW: Standardized API Endpoints
+
+The system now provides 43 standardized RESTful endpoints at `/api/v1/*`:
+
+### System Endpoints
+```
+GET  /api/v1/health                    # Health check
+GET  /api/v1/metrics                   # Dashboard metrics  
+GET  /api/v1/workflow/status           # Pipeline status
+```
+
+### Transcript Endpoints  
+```
+GET    /api/v1/transcripts             # List transcripts
+POST   /api/v1/transcripts             # Create transcript
+GET    /api/v1/transcripts/{id}        # Get transcript
+DELETE /api/v1/transcripts/{id}        # Delete transcript
+GET    /api/v1/transcripts/search      # Search transcripts
+GET    /api/v1/transcripts/metrics     # Statistics
+POST   /api/v1/transcripts/bulk        # Bulk creation
+GET    /api/v1/transcripts/{id}/messages # Messages
+```
+
+### Analysis Endpoints
+```
+GET    /api/v1/analyses                # List analyses
+POST   /api/v1/analyses                # Create analysis
+GET    /api/v1/analyses/{id}           # Get analysis
+DELETE /api/v1/analyses/{id}           # Delete analysis
+GET    /api/v1/analyses/search/transcript/{id} # Search by transcript
+```
+
+### Action Plan Endpoints
+```
+GET    /api/v1/plans                   # List plans
+POST   /api/v1/plans                   # Create plan
+GET    /api/v1/plans/{id}              # Get plan
+PUT    /api/v1/plans/{id}              # Update plan
+DELETE /api/v1/plans/{id}              # Delete plan
+GET    /api/v1/plans/search/analysis/{id} # Search by analysis
+POST   /api/v1/plans/{id}/approve      # Approve plan
+POST   /api/v1/plans/{id}/execute      # Execute plan
+```
+
+### Case Management Endpoints
+```
+GET    /api/v1/cases                   # List cases
+GET    /api/v1/cases/{id}              # Case details
+GET    /api/v1/cases/{id}/transcripts  # Case transcripts
+GET    /api/v1/cases/{id}/analyses     # Case analyses
+GET    /api/v1/cases/{id}/plans        # Case plans
+```
+
+### Governance Endpoints
+```
+POST   /api/v1/governance/submissions     # Submit for review
+GET    /api/v1/governance/submissions/{id} # Submission status
+GET    /api/v1/governance/queue           # Approval queue
+POST   /api/v1/governance/approvals       # Process approvals
+GET    /api/v1/governance/audit           # Audit trail
+GET    /api/v1/governance/metrics         # Governance metrics
+POST   /api/v1/governance/emergency-override # Emergency override
+```
+
+**📚 API Documentation:** Visit http://localhost:8000/docs for interactive API docs
 
 ### Most Common Commands
 ```bash
