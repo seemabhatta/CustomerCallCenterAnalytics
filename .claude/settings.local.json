@@ -22,7 +22,10 @@
       "Bash(fuser:*)",
       "Bash(gh issue list:*)",
       "Bash(chmod:*)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Read(///**)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []

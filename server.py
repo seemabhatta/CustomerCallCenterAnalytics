@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'src'))
 # Import service abstractions - NO business logic in routes
 from src.services.transcript_service import TranscriptService
 from src.services.analysis_service import AnalysisService
+from src.services.insights_service import InsightsService
 from src.services.plan_service import PlanService
 from src.services.case_service import CaseService
 from src.services.governance_service import GovernanceService
@@ -37,6 +38,7 @@ if not api_key:
 # Initialize all services at startup (fail-fast)
 transcript_service = TranscriptService(api_key=api_key)
 analysis_service = AnalysisService(api_key=api_key)
+insights_service = InsightsService()
 plan_service = PlanService(api_key=api_key)
 case_service = CaseService(api_key=api_key)
 governance_service = GovernanceService(api_key=api_key)
@@ -133,6 +135,7 @@ async def root():
         "endpoints": {
             "transcripts": "/api/v1/transcripts",
             "analyses": "/api/v1/analyses",
+            "insights": "/api/v1/insights",
             "plans": "/api/v1/plans",
             "cases": "/api/v1/cases",
             "governance": "/api/v1/governance",
@@ -338,6 +341,133 @@ async def search_analyses_by_transcript(transcript_id: str):
         return await analysis_service.search_by_transcript(transcript_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to search analyses: {str(e)}")
+
+# ===============================================
+# INSIGHTS ENDPOINTS - 5 endpoints
+# ===============================================
+
+@app.get("/api/v1/insights/patterns")
+async def discover_risk_patterns(risk_threshold: float = Query(0.7)):
+    """Discover high-risk patterns across all analyses - proxies to insights service."""
+    try:
+        return await insights_service.discover_risk_patterns(risk_threshold)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to discover risk patterns: {str(e)}")
+
+@app.get("/api/v1/insights/risks")
+async def get_high_risks(risk_threshold: float = Query(0.8)):
+    """Get high-risk patterns (convenience endpoint) - proxies to insights service."""
+    try:
+        return await insights_service.discover_risk_patterns(risk_threshold)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get high risks: {str(e)}")
+
+@app.get("/api/v1/insights/recommendations/{customer_id}")
+async def get_customer_recommendations(customer_id: str):
+    """Get AI recommendations for a customer - proxies to insights service."""
+    try:
+        return await insights_service.get_customer_recommendations(customer_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get recommendations: {str(e)}")
+
+@app.get("/api/v1/insights/similar/{analysis_id}")
+async def find_similar_cases(analysis_id: str, limit: int = Query(5)):
+    """Find analyses with similar risk patterns - proxies to insights service."""
+    try:
+        return await insights_service.find_similar_cases(analysis_id, limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to find similar cases: {str(e)}")
+
+@app.get("/api/v1/insights/dashboard")
+async def get_insights_dashboard():
+    """Get comprehensive insights dashboard - proxies to insights service."""
+    try:
+        return await insights_service.get_insights_dashboard()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get insights dashboard: {str(e)}")
+
+# New insights management endpoints
+@app.post("/api/v1/insights/populate")
+async def populate_insights_graph(request: dict):
+    """Populate knowledge graph from analysis data - proxies to insights service."""
+    try:
+        analysis_id = request.get("analysis_id")
+        analysis_ids = request.get("analysis_ids")
+        from_date = request.get("from_date")
+        populate_all = request.get("all", False)
+        
+        if analysis_id:
+            return await insights_service.populate_from_analysis(analysis_id)
+        elif analysis_ids:
+            return await insights_service.populate_batch(analysis_ids)
+        elif populate_all or from_date:
+            return await insights_service.populate_all(from_date)
+        else:
+            raise HTTPException(status_code=400, detail="Must provide analysis_id, analysis_ids, or all=true")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to populate insights: {str(e)}")
+
+@app.post("/api/v1/insights/query")
+async def query_insights_graph(request: dict):
+    """Execute raw Cypher query on knowledge graph - proxies to insights service."""
+    try:
+        cypher_query = request.get("cypher")
+        parameters = request.get("parameters", {})
+        
+        if not cypher_query:
+            raise HTTPException(status_code=400, detail="cypher parameter is required")
+            
+        return await insights_service.execute_query(cypher_query, parameters)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute query: {str(e)}")
+
+@app.get("/api/v1/insights/status")
+async def get_insights_status():
+    """Get knowledge graph status and statistics - proxies to insights service."""
+    try:
+        return await insights_service.get_graph_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get insights status: {str(e)}")
+
+@app.delete("/api/v1/insights/analyses/{analysis_id}")
+async def delete_insights_analysis(analysis_id: str):
+    """Delete analysis from knowledge graph - proxies to insights service."""
+    try:
+        return await insights_service.delete_analysis(analysis_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")
+
+@app.delete("/api/v1/insights/customers/{customer_id}")
+async def delete_insights_customer(customer_id: str, cascade: bool = Query(False)):
+    """Delete customer from knowledge graph - proxies to insights service."""
+    try:
+        return await insights_service.delete_customer(customer_id, cascade)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete customer: {str(e)}")
+
+@app.post("/api/v1/insights/prune")
+async def prune_insights_data(request: dict):
+    """Prune old data from knowledge graph - proxies to insights service."""
+    try:
+        older_than_days = request.get("older_than_days")
+        
+        if not older_than_days or not isinstance(older_than_days, int):
+            raise HTTPException(status_code=400, detail="older_than_days (integer) is required")
+            
+        return await insights_service.prune_old_data(older_than_days)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to prune data: {str(e)}")
+
+@app.delete("/api/v1/insights/clear")
+async def clear_insights_graph():
+    """Clear entire knowledge graph - proxies to insights service."""
+    try:
+        return await insights_service.clear_graph()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear graph: {str(e)}")
 
 # ===============================================
 # ACTION PLAN ENDPOINTS - 8 endpoints

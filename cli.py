@@ -157,6 +157,63 @@ class CLIRestClient:
         """Delete all analyses via DELETE /api/v1/analyses."""
         return self._make_request('DELETE', '/api/v1/analyses')
     
+    # Insights operations
+    def discover_risk_patterns(self, risk_threshold: float = 0.7) -> List[Dict[str, Any]]:
+        """Discover risk patterns via GET /api/v1/insights/patterns."""
+        params = {'risk_threshold': risk_threshold}
+        return self._make_request('GET', '/api/v1/insights/patterns', params=params)
+    
+    def get_high_risks(self, risk_threshold: float = 0.8) -> List[Dict[str, Any]]:
+        """Get high-risk patterns via GET /api/v1/insights/risks."""
+        params = {'risk_threshold': risk_threshold}
+        return self._make_request('GET', '/api/v1/insights/risks', params=params)
+    
+    def get_customer_recommendations(self, customer_id: str) -> List[Dict[str, Any]]:
+        """Get customer recommendations via GET /api/v1/insights/recommendations/{customer_id}."""
+        return self._make_request('GET', f'/api/v1/insights/recommendations/{customer_id}')
+    
+    def find_similar_cases(self, analysis_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Find similar cases via GET /api/v1/insights/similar/{analysis_id}."""
+        params = {'limit': limit}
+        return self._make_request('GET', f'/api/v1/insights/similar/{analysis_id}', params=params)
+    
+    def get_insights_dashboard(self) -> Dict[str, Any]:
+        """Get insights dashboard via GET /api/v1/insights/dashboard."""
+        return self._make_request('GET', '/api/v1/insights/dashboard')
+    
+    # Insights management operations
+    def populate_insights(self, **kwargs) -> Dict[str, Any]:
+        """Populate insights graph via POST /api/v1/insights/populate."""
+        return self._make_request('POST', '/api/v1/insights/populate', json_data=kwargs)
+    
+    def query_insights(self, cypher_query: str, parameters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """Query insights graph via POST /api/v1/insights/query."""
+        payload = {'cypher': cypher_query}
+        if parameters:
+            payload['parameters'] = parameters
+        return self._make_request('POST', '/api/v1/insights/query', json_data=payload)
+    
+    def get_insights_status(self) -> Dict[str, Any]:
+        """Get insights status via GET /api/v1/insights/status."""
+        return self._make_request('GET', '/api/v1/insights/status')
+    
+    def delete_insights_analysis(self, analysis_id: str) -> Dict[str, Any]:
+        """Delete insights analysis via DELETE /api/v1/insights/analyses/{id}."""
+        return self._make_request('DELETE', f'/api/v1/insights/analyses/{analysis_id}')
+    
+    def delete_insights_customer(self, customer_id: str, cascade: bool = False) -> Dict[str, Any]:
+        """Delete insights customer via DELETE /api/v1/insights/customers/{id}."""
+        params = {'cascade': cascade} if cascade else {}
+        return self._make_request('DELETE', f'/api/v1/insights/customers/{customer_id}', params=params)
+    
+    def prune_insights(self, older_than_days: int) -> Dict[str, Any]:
+        """Prune insights data via POST /api/v1/insights/prune."""
+        return self._make_request('POST', '/api/v1/insights/prune', json_data={'older_than_days': older_than_days})
+    
+    def clear_insights(self) -> Dict[str, Any]:
+        """Clear insights graph via DELETE /api/v1/insights/clear."""
+        return self._make_request('DELETE', '/api/v1/insights/clear')
+    
     # Plan operations
     def create_plan(self, **kwargs) -> Dict[str, Any]:
         """Create action plan via POST /api/v1/plans."""
@@ -206,57 +263,6 @@ class CLIRestClient:
         """Get system metrics via GET /api/v1/metrics."""
         return self._make_request('GET', '/api/v1/metrics')
     
-    # Additional missing methods for analysis, plans, and governance metrics
-    def get_analysis_metrics(self) -> Dict[str, Any]:
-        """Get analysis metrics (mapped to existing analysis service)."""
-        # For now, use the analysis service metrics endpoint or mock
-        try:
-            return self._make_request('GET', '/api/v1/analyses/metrics')
-        except CLIError:
-            # Fallback to mock data if endpoint doesn't exist
-            return {
-                "total_analyses": 0,
-                "completed_analyses": 0,
-                "avg_confidence_score": 0.0,
-                "analysis_types": {},
-                "sentiments": {},
-                "urgency_levels": {}
-            }
-    
-    def get_plan_metrics(self) -> Dict[str, Any]:
-        """Get plan metrics."""
-        try:
-            return self._make_request('GET', '/api/v1/plans/metrics')
-        except CLIError:
-            # Fallback to mock data if endpoint doesn't exist
-            return {
-                "total_plans": 0,
-                "pending_approvals": 0,
-                "approval_rate": 0.0,
-                "status_distribution": {}
-            }
-    
-    def get_governance_metrics(self) -> Dict[str, Any]:
-        """Get governance metrics."""
-        try:
-            return self._make_request('GET', '/api/v1/governance/metrics')
-        except CLIError:
-            # Fallback to mock data if endpoint doesn't exist
-            return {
-                "total_actions": 0,
-                "pending_approvals": 0,
-                "approval_rate": 0.0,
-                "avg_approval_time": 0.0
-            }
-    
-    def get_risk_report(self, threshold: float = 0.7) -> List[Dict[str, Any]]:
-        """Get risk report for high-risk borrowers."""
-        try:
-            params = {'threshold': threshold}
-            return self._make_request('GET', '/api/v1/analyses/risk-report', params=params)
-        except CLIError:
-            # Fallback to empty data if endpoint doesn't exist
-            return []
 
 
 def get_client() -> CLIRestClient:
@@ -640,56 +646,6 @@ def analysis_get(analysis_id: str):
         raise typer.Exit(1)
 
 
-@analysis_app.command("metrics")
-def analysis_metrics():
-    """Get analysis metrics and statistics."""
-    try:
-        client = get_client()
-        
-        console.print("📊 [bold magenta]Getting analysis metrics...[/bold magenta]")
-        metrics = client.get_analysis_metrics()
-        
-        console.print(f"\n📈 [bold cyan]Analysis Metrics:[/bold cyan]")
-        console.print(f"   Total Analyses: {metrics.get('total_analyses', 0)}")
-        console.print(f"   Completed: {metrics.get('completed_analyses', 0)}")
-        console.print(f"   Avg Confidence Score: {metrics.get('avg_confidence_score', 0.0):.2f}")
-        console.print(f"   Analysis Types: {metrics.get('analysis_types', {})}")
-        console.print(f"   Sentiments: {metrics.get('sentiments', {})}")
-        console.print(f"   Urgency Levels: {metrics.get('urgency_levels', {})}")
-            
-    except CLIError as e:
-        print_error(f"Get analysis metrics failed: {str(e)}")
-        raise typer.Exit(1)
-
-
-@analysis_app.command("risk-report")
-def analysis_risk_report(
-    threshold: float = typer.Option(0.7, "--threshold", "-t", help="Risk threshold (0.0-1.0)")
-):
-    """Generate risk report for high-risk borrowers."""
-    try:
-        client = get_client()
-        
-        console.print(f"⚠️ [bold magenta]Generating risk report (threshold: {threshold})...[/bold magenta]")
-        risk_data = client.get_risk_report(threshold=threshold)
-        
-        if not risk_data:
-            console.print("✅ No high-risk cases found")
-            return
-        
-        console.print(f"\n🚨 [bold red]High-Risk Cases Found: {len(risk_data)}[/bold red]")
-        for case in risk_data:
-            console.print(f"   Transcript: {case.get('transcript_id', 'N/A')}")
-            console.print(f"   Risk Score: {case.get('risk_score', 0.0):.2f}")
-            console.print(f"   Type: {case.get('risk_type', 'N/A')}")
-            console.print(f"   Summary: {case.get('summary', 'N/A')}")
-            console.print("   " + "─" * 50)
-            
-    except CLIError as e:
-        print_error(f"Risk report failed: {str(e)}")
-        raise typer.Exit(1)
-
-
 @analysis_app.command("delete")
 def analysis_delete(
     analysis_id: str,
@@ -737,6 +693,428 @@ def analysis_delete_all(
         
     except CLIError as e:
         print_error(f"Delete all failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("patterns")
+def analysis_patterns(
+    risk_threshold: float = typer.Option(0.7, "--threshold", "-t", help="Risk threshold (0.0-1.0)")
+):
+    """Discover risk patterns across all analyses using knowledge graph."""
+    try:
+        if not (0.0 <= risk_threshold <= 1.0):
+            print_error("Risk threshold must be between 0.0 and 1.0")
+            raise typer.Exit(1)
+        
+        client = get_client()
+        console.print(f"🔍 [bold blue]Discovering risk patterns (threshold: {risk_threshold})...[/bold blue]")
+        
+        patterns = client.discover_risk_patterns(risk_threshold)
+        
+        if not patterns:
+            console.print("📊 No risk patterns found above threshold")
+            return
+        
+        # Display patterns in a table
+        table = Table(title=f"Risk Patterns (≥{risk_threshold})")
+        table.add_column("Risk Type", style="red")
+        table.add_column("Severity", style="yellow") 
+        table.add_column("Risk Score", style="cyan")
+        table.add_column("Affected", style="green")
+        table.add_column("Recommendation", style="white")
+        
+        for pattern in patterns:
+            table.add_row(
+                pattern.get('risk_type', 'Unknown'),
+                pattern.get('severity', 'Unknown'),
+                f"{pattern.get('risk_score', 0):.2f}",
+                str(pattern.get('affected_count', 0)),
+                pattern.get('recommendation', 'None')[:50] + "..." if len(pattern.get('recommendation', '')) > 50 else pattern.get('recommendation', '')
+            )
+        
+        console.print(table)
+        print_success(f"Found {len(patterns)} risk patterns")
+        
+    except CLIError as e:
+        print_error(f"Pattern discovery failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("risks")
+def analysis_risks(
+    risk_threshold: float = typer.Option(0.8, "--threshold", "-t", help="High-risk threshold (0.0-1.0)")
+):
+    """Get high-risk patterns using knowledge graph analytics."""
+    try:
+        if not (0.0 <= risk_threshold <= 1.0):
+            print_error("Risk threshold must be between 0.0 and 1.0")
+            raise typer.Exit(1)
+        
+        client = get_client()
+        console.print(f"⚠️ [bold red]Getting high-risk patterns (threshold: {risk_threshold})...[/bold red]")
+        
+        risks = client.get_high_risks(risk_threshold)
+        
+        if not risks:
+            console.print("✅ No high-risk patterns found above threshold")
+            return
+        
+        # Display high-risk patterns
+        for i, risk in enumerate(risks, 1):
+            severity = risk.get('severity', 'UNKNOWN')
+            color = {"CRITICAL": "bold red", "HIGH": "red", "MEDIUM": "yellow", "LOW": "green"}.get(severity, "white")
+            
+            console.print(f"\n🚨 [bold]Risk Pattern #{i}[/bold]")
+            console.print(f"   Type: [{color}]{risk.get('risk_type', 'Unknown')}[/{color}]")
+            console.print(f"   Score: [{color}]{risk.get('risk_score', 0):.2f}[/{color}]")
+            console.print(f"   Severity: [{color}]{severity}[/{color}]")
+            console.print(f"   Affected: {risk.get('affected_count', 0)} analyses")
+            console.print(f"   Recommendation: {risk.get('recommendation', 'None')}")
+        
+        print_success(f"Found {len(risks)} high-risk patterns requiring attention")
+        
+    except CLIError as e:
+        print_error(f"High-risk analysis failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("recommend")
+def analysis_recommend(
+    customer_id: str = typer.Argument(..., help="Customer ID for personalized recommendations")
+):
+    """Get AI-powered recommendations for a customer using knowledge graph."""
+    try:
+        client = get_client()
+        console.print(f"🤖 [bold green]Getting recommendations for customer {customer_id}...[/bold green]")
+        
+        recommendations = client.get_customer_recommendations(customer_id)
+        
+        if not recommendations:
+            console.print(f"📭 No recommendations found for customer {customer_id}")
+            return
+        
+        # Display recommendations
+        for i, rec in enumerate(recommendations, 1):
+            rec_type = rec.get('recommendation_type', 'UNKNOWN')
+            confidence = rec.get('confidence', 0)
+            priority = rec.get('priority', 'UNKNOWN')
+            
+            priority_color = {"HIGH": "red", "MEDIUM": "yellow", "LOW": "green"}.get(priority, "white")
+            
+            console.print(f"\n💡 [bold]Recommendation #{i}[/bold]")
+            console.print(f"   Type: {rec_type}")
+            console.print(f"   Action: {rec.get('recommended_action', 'None')}")
+            console.print(f"   Confidence: {confidence:.2f}")
+            console.print(f"   Priority: [{priority_color}]{priority}[/{priority_color}]")
+            console.print(f"   Success Rate: {rec.get('success_probability', 0):.2f}")
+            
+            if 'basis' in rec and rec['basis']:
+                basis = rec['basis']
+                console.print(f"   Basis: {basis.get('reasoning', 'Not specified')}")
+        
+        print_success(f"Generated {len(recommendations)} personalized recommendations")
+        
+    except CLIError as e:
+        print_error(f"Recommendation failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("similar")
+def analysis_similar(
+    analysis_id: str = typer.Argument(..., help="Analysis ID to find similar cases for"),
+    limit: int = typer.Option(5, "--limit", "-l", help="Maximum similar cases to return")
+):
+    """Find similar cases using knowledge graph pattern matching."""
+    try:
+        if limit <= 0 or limit > 50:
+            print_error("Limit must be between 1 and 50")
+            raise typer.Exit(1)
+        
+        client = get_client()
+        console.print(f"🔎 [bold cyan]Finding similar cases for {analysis_id} (limit: {limit})...[/bold cyan]")
+        
+        similar_cases = client.find_similar_cases(analysis_id, limit)
+        
+        if not similar_cases:
+            console.print(f"🔍 No similar cases found for analysis {analysis_id}")
+            return
+        
+        # Display similar cases
+        table = Table(title=f"Similar Cases for {analysis_id}")
+        table.add_column("Similar Analysis", style="blue")
+        table.add_column("Shared Pattern", style="yellow")
+        table.add_column("Risk Score", style="red")
+        table.add_column("Confidence", style="green") 
+        table.add_column("Learning Opportunity", style="white")
+        
+        for case in similar_cases:
+            similarity = case.get('similarity', {})
+            table.add_row(
+                case.get('similar_analysis_id', 'Unknown'),
+                similarity.get('shared_pattern', 'Unknown'),
+                f"{similarity.get('risk_score', 0):.2f}",
+                f"{similarity.get('confidence', 0):.2f}",
+                case.get('learning_opportunity', 'None')[:40] + "..." if len(case.get('learning_opportunity', '')) > 40 else case.get('learning_opportunity', '')
+            )
+        
+        console.print(table)
+        print_success(f"Found {len(similar_cases)} similar cases")
+        
+    except CLIError as e:
+        print_error(f"Similar case search failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("dashboard") 
+def analysis_dashboard():
+    """Get comprehensive insights dashboard from knowledge graph analytics."""
+    try:
+        client = get_client()
+        console.print("📊 [bold magenta]Loading insights dashboard...[/bold magenta]")
+        
+        dashboard = client.get_insights_dashboard()
+        
+        # Display dashboard summary
+        summary = dashboard.get('summary', {})
+        console.print(f"\n📈 [bold]Analytics Summary[/bold]")
+        console.print(f"   Risk Patterns: {summary.get('total_risk_patterns', 0)}")
+        console.print(f"   Compliance Flags: {summary.get('total_compliance_flags', 0)}")
+        console.print(f"   Analysis Coverage: {summary.get('analysis_coverage', 0):.1%}")
+        
+        # Display top risks
+        risk_analysis = dashboard.get('risk_analysis', {})
+        top_risks = risk_analysis.get('top_risks', [])[:3]  # Show top 3
+        if top_risks:
+            console.print(f"\n🚨 [bold red]Top Risk Patterns[/bold red]")
+            for i, risk in enumerate(top_risks, 1):
+                console.print(f"   {i}. {risk.get('risk_type', 'Unknown')} (score: {risk.get('avg_risk_score', 0):.2f})")
+        
+        # Display immediate actions
+        recommendations = dashboard.get('recommendations', {})
+        immediate_actions = recommendations.get('immediate_actions', [])
+        if immediate_actions:
+            console.print(f"\n⚡ [bold yellow]Immediate Actions Required[/bold yellow]")
+            for action in immediate_actions:
+                priority = action.get('priority', 'MEDIUM')
+                priority_color = {"CRITICAL": "bold red", "HIGH": "red", "MEDIUM": "yellow", "LOW": "green"}.get(priority, "white")
+                console.print(f"   • [{priority_color}][{priority}][/{priority_color}] {action.get('action', 'Unknown')} ({action.get('timeline', 'No timeline')})")
+        
+        print_success("Dashboard loaded successfully")
+        
+    except CLIError as e:
+        print_error(f"Dashboard failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("populate")
+def analysis_populate(
+    analysis_id: Optional[str] = typer.Option(None, "--analysis-id", "-a", help="Single analysis ID to populate"),
+    all: bool = typer.Option(False, "--all", help="Populate all analyses"),
+    from_date: Optional[str] = typer.Option(None, "--from-date", help="Populate from date (YYYY-MM-DD)")
+):
+    """Populate knowledge graph from analysis data."""
+    try:
+        if not any([analysis_id, all, from_date]):
+            print_error("Must specify --analysis-id, --all, or --from-date")
+            raise typer.Exit(1)
+        
+        client = get_client()
+        
+        if analysis_id:
+            console.print(f"📊 [bold blue]Populating graph from analysis {analysis_id}...[/bold blue]")
+            result = client.populate_insights(analysis_id=analysis_id)
+            print_success(result.get('message', 'Analysis populated'))
+            
+        elif all:
+            console.print("📊 [bold blue]Populating graph from all analyses...[/bold blue]")
+            result = client.populate_insights(all=True)
+            count = result.get('populated_count', 0)
+            errors = result.get('error_count', 0)
+            print_success(f"Populated {count} analyses" + (f" ({errors} errors)" if errors else ""))
+            
+        elif from_date:
+            console.print(f"📊 [bold blue]Populating graph from date {from_date}...[/bold blue]")
+            result = client.populate_insights(from_date=from_date)
+            count = result.get('populated_count', 0)
+            print_success(f"Populated {count} analyses from {from_date}")
+            
+    except CLIError as e:
+        print_error(f"Populate failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("query")
+def analysis_query(
+    cypher: str = typer.Argument(..., help="Cypher query to execute")
+):
+    """Execute raw Cypher query on knowledge graph."""
+    try:
+        client = get_client()
+        console.print(f"🔍 [bold cyan]Executing query...[/bold cyan]")
+        
+        results = client.query_insights(cypher)
+        
+        if not results:
+            console.print("📄 No results returned")
+            return
+        
+        # Display results in a table if structured
+        if results and isinstance(results[0], dict):
+            table = Table(title="Query Results")
+            
+            # Add columns from first result
+            for key in results[0].keys():
+                table.add_column(str(key), style="cyan")
+            
+            # Add rows
+            for result in results[:20]:  # Limit to first 20 results
+                table.add_row(*[str(result.get(key, '')) for key in results[0].keys()])
+            
+            console.print(table)
+            
+            if len(results) > 20:
+                console.print(f"... and {len(results) - 20} more results")
+        else:
+            # Simple output
+            for i, result in enumerate(results[:10], 1):
+                console.print(f"{i}. {result}")
+        
+        print_success(f"Query returned {len(results)} results")
+        
+    except CLIError as e:
+        print_error(f"Query failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("status")
+def analysis_status():
+    """Get knowledge graph status and statistics."""
+    try:
+        client = get_client()
+        console.print("📊 [bold magenta]Getting graph status...[/bold magenta]")
+        
+        status = client.get_insights_status()
+        
+        # Display status
+        console.print(f"\n📈 [bold]Knowledge Graph Status[/bold]")
+        console.print(f"   Populated: {'✅ Yes' if status.get('graph_populated') else '❌ No'}")
+        console.print(f"   Total Nodes: {status.get('total_nodes', 0)}")
+        console.print(f"   Relationships: {status.get('relationship_count', 0)}")
+        
+        # Node counts
+        console.print(f"\n📊 [bold]Node Counts[/bold]")
+        console.print(f"   Customers: {status.get('customer_count', 0)}")
+        console.print(f"   Transcripts: {status.get('transcript_count', 0)}")
+        console.print(f"   Analyses: {status.get('analysis_count', 0)}")
+        console.print(f"   Risk Patterns: {status.get('riskpattern_count', 0)}")
+        console.print(f"   Compliance Flags: {status.get('complianceflag_count', 0)}")
+        
+        print_success("Status retrieved successfully")
+        
+    except CLIError as e:
+        print_error(f"Status check failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("delete-analysis")
+def analysis_delete_analysis(
+    analysis_id: str = typer.Argument(..., help="Analysis ID to delete from graph")
+):
+    """Delete analysis from knowledge graph."""
+    try:
+        client = get_client()
+        console.print(f"🗑️ [bold red]Deleting analysis {analysis_id} from graph...[/bold red]")
+        
+        result = client.delete_insights_analysis(analysis_id)
+        print_success(result.get('message', f'Analysis {analysis_id} deleted'))
+        
+    except CLIError as e:
+        print_error(f"Delete failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("delete-customer")
+def analysis_delete_customer(
+    customer_id: str = typer.Argument(..., help="Customer ID to delete from graph"),
+    cascade: bool = typer.Option(False, "--cascade", help="Delete all related data")
+):
+    """Delete customer from knowledge graph."""
+    try:
+        client = get_client()
+        
+        if cascade:
+            confirm = typer.confirm(f"Delete customer {customer_id} AND ALL related data? This cannot be undone!")
+            if not confirm:
+                console.print("❌ Deletion cancelled")
+                return
+        
+        cascade_text = " (cascade)" if cascade else ""
+        console.print(f"🗑️ [bold red]Deleting customer {customer_id}{cascade_text}...[/bold red]")
+        
+        result = client.delete_insights_customer(customer_id, cascade)
+        print_success(result.get('message', f'Customer {customer_id} deleted'))
+        
+    except CLIError as e:
+        print_error(f"Delete customer failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("prune")
+def analysis_prune(
+    older_than_days: int = typer.Argument(..., help="Delete data older than N days"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deleted without deleting")
+):
+    """Prune old data from knowledge graph (GDPR compliance)."""
+    try:
+        if older_than_days <= 0:
+            print_error("Days must be positive")
+            raise typer.Exit(1)
+        
+        if not dry_run:
+            confirm = typer.confirm(f"Delete ALL data older than {older_than_days} days? This cannot be undone!")
+            if not confirm:
+                console.print("❌ Pruning cancelled")
+                return
+        
+        client = get_client()
+        
+        if dry_run:
+            console.print(f"🔍 [bold yellow]Dry run: Would delete data older than {older_than_days} days[/bold yellow]")
+            # For dry run, just show status
+            status = client.get_insights_status()
+            console.print(f"Current total nodes: {status.get('total_nodes', 0)}")
+            print_success("Dry run completed (no data deleted)")
+        else:
+            console.print(f"🗑️ [bold red]Pruning data older than {older_than_days} days...[/bold red]")
+            result = client.prune_insights(older_than_days)
+            deleted_count = result.get('deleted_count', 0)
+            print_success(f"Pruned {deleted_count} nodes")
+        
+    except CLIError as e:
+        print_error(f"Prune failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("clear-graph")
+def analysis_clear_graph(
+    force: bool = typer.Option(False, "--force", help="Skip confirmation")
+):
+    """Clear entire knowledge graph (use with extreme caution)."""
+    try:
+        if not force:
+            confirm = typer.confirm("⚠️  DANGER: Delete ENTIRE knowledge graph? This cannot be undone!")
+            if not confirm:
+                console.print("❌ Clear cancelled")
+                return
+        
+        client = get_client()
+        console.print("🗑️ [bold red]Clearing entire knowledge graph...[/bold red]")
+        
+        result = client.clear_insights()
+        print_success(result.get('message', 'Knowledge graph cleared'))
+        
+    except CLIError as e:
+        print_error(f"Clear failed: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -797,26 +1175,6 @@ def plan_list(
             
     except CLIError as e:
         print_error(f"List plans failed: {str(e)}")
-        raise typer.Exit(1)
-
-
-@plan_app.command("metrics")
-def plan_metrics():
-    """Get plan metrics and statistics."""
-    try:
-        client = get_client()
-        
-        console.print("📊 [bold magenta]Getting plan metrics...[/bold magenta]")
-        metrics = client.get_plan_metrics()
-        
-        console.print(f"\n📈 [bold cyan]Plan Metrics:[/bold cyan]")
-        console.print(f"   Total Plans: {metrics.get('total_plans', 0)}")
-        console.print(f"   Pending Approvals: {metrics.get('pending_approvals', 0)}")
-        console.print(f"   Approval Rate: {metrics.get('approval_rate', 0.0):.2f}%")
-        console.print(f"   Status Distribution: {metrics.get('status_distribution', {})}")
-            
-    except CLIError as e:
-        print_error(f"Get plan metrics failed: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -881,26 +1239,6 @@ def governance_queue():
             
     except CLIError as e:
         print_error(f"Get approval queue failed: {str(e)}")
-        raise typer.Exit(1)
-
-
-@governance_app.command("metrics")
-def governance_metrics():
-    """Get governance metrics and statistics."""
-    try:
-        client = get_client()
-        
-        console.print("📊 [bold magenta]Getting governance metrics...[/bold magenta]")
-        metrics = client.get_governance_metrics()
-        
-        console.print(f"\n📈 [bold cyan]Governance Metrics:[/bold cyan]")
-        console.print(f"   Total Actions: {metrics.get('total_actions', 0)}")
-        console.print(f"   Pending Approvals: {metrics.get('pending_approvals', 0)}")
-        console.print(f"   Approval Rate: {metrics.get('approval_rate', 0.0):.2f}%")
-        console.print(f"   Avg Approval Time: {metrics.get('avg_approval_time', 0.0):.1f} hours")
-            
-    except CLIError as e:
-        print_error(f"Get governance metrics failed: {str(e)}")
         raise typer.Exit(1)
 
 
