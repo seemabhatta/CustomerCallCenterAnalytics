@@ -21,7 +21,7 @@ class PlanService:
         plans = self.store.get_all()
         if limit:
             plans = plans[:limit]
-        return [p.to_dict() for p in plans]
+        return plans  # plans already contains dicts from store.get_all()
     
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new action plan from analysis."""
