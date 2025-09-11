@@ -310,7 +310,7 @@ def main(
 # Create subapps for each resource
 transcript_app = typer.Typer(name="transcript", help="Transcript operations")
 analysis_app = typer.Typer(name="analysis", help="Analysis operations") 
-insights_app = typer.Typer(name="insights", help="Knowledge graph insights operations")
+insights_app = typer.Typer(name="insights", help="Insights operations")
 plan_app = typer.Typer(name="plan", help="Plan operations")
 case_app = typer.Typer(name="case", help="Case operations")
 governance_app = typer.Typer(name="governance", help="Governance operations")
