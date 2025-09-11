@@ -61,7 +61,7 @@ app.add_middleware(
 
 # Pydantic models for request/response validation
 class TranscriptCreateRequest(BaseModel):
-    scenario: Optional[str] = "payment_inquiry"
+    topic: Optional[str] = "payment_inquiry"
     urgency: Optional[str] = "medium"
     financial_impact: Optional[bool] = False
     customer_sentiment: Optional[str] = "neutral"

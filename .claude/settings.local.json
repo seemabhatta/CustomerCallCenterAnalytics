@@ -21,7 +21,8 @@
       "Bash(./stop_services.sh:*)",
       "Bash(fuser:*)",
       "Bash(gh issue list:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []

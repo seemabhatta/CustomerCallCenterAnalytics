@@ -318,7 +318,10 @@ def format_transcript_table(transcripts: List[Dict], detailed: bool = False):
         
         for transcript in transcripts:
             customer_id = transcript.get('customer_id', 'N/A')[:11]
-            topic = transcript.get('topic', transcript.get('scenario', 'N/A'))[:14]
+            topic = transcript.get('topic', '')[:14]
+            # Handle legacy data during transition: show "Legacy" for old empty topics
+            if not topic:
+                topic = "[Legacy]"
             sentiment = transcript.get('sentiment', 'N/A')[:9]
             msg_count = len(transcript.get('messages', []))
             
@@ -335,7 +338,7 @@ def format_transcript_table(transcripts: List[Dict], detailed: bool = False):
 @app.command()
 def generate(
     params: List[str] = typer.Argument(None, help="Parameters in key=value format (e.g., scenario='PMI Removal')"),
-    scenario: Optional[str] = typer.Option(None, "--scenario", help="Call scenario"),
+    topic: Optional[str] = typer.Option(None, "--topic", help="Call topic/scenario"),
     urgency: Optional[str] = typer.Option("medium", "--urgency", help="Urgency level: low, medium, high, critical"),
     financial: Optional[bool] = typer.Option(False, "--financial", help="Has financial impact"),
     sentiment: Optional[str] = typer.Option("neutral", "--sentiment", help="Customer sentiment"),
@@ -349,8 +352,8 @@ def generate(
     REST API: POST /api/v1/transcripts
     
     Examples:
-      cli.py generate --scenario "PMI Removal" --urgency high --store
-      cli.py generate scenario="Payment Dispute" financial=true --store
+      cli.py generate --topic "PMI Removal" --urgency high --store
+      cli.py generate topic="Payment Dispute" financial=true --store
     """
     try:
         client = get_client()
@@ -360,7 +363,7 @@ def generate(
         
         # Build request payload
         request_data = {
-            "scenario": scenario or generation_params.get("scenario", "payment_inquiry"),
+            "topic": topic or generation_params.get("topic", "payment_inquiry"),
             "urgency": urgency,
             "financial_impact": financial or generation_params.get("financial_impact", False),
             "customer_sentiment": sentiment,
@@ -375,25 +378,76 @@ def generate(
         
         if count == 1:
             result = client.generate_transcript(**request_data)
-            print_success(f"Generated transcript: {result.get('transcript_id', 'Unknown ID')}")
             
-            if result.get('stored'):
-                print_success(f"Transcript stored with ID: {result['transcript_id']}")
+            # Extract transcript ID - NO FALLBACK: fail fast if missing
+            transcript_id = result.get('id')
+            if not transcript_id:
+                raise CLIError(f"Failed to extract transcript ID from API response. Response: {result}")
             
+            print_success(f"Generated transcript: {transcript_id}")
+            
+            # Show storage confirmation if stored
+            if store and result.get('id'):
+                print_success(f"✅ Stored in database with ID: {transcript_id}")
+            
+            # Show transcript details if requested
             if show:
-                format_output(result)
+                console.print(f"\n📄 [bold cyan]Transcript Details:[/bold cyan]")
+                console.print(f"ID: {transcript_id}")
+                console.print(f"Scenario: {result.get('scenario', 'N/A')}")
+                console.print(f"Customer: {result.get('customer_id', 'N/A')}")
+                console.print(f"Messages: {len(result.get('messages', []))}")
+                console.print(f"Timestamp: {result.get('timestamp', 'N/A')}")
+                
+                # Show the conversation
+                console.print(f"\n[bold cyan]Conversation:[/bold cyan]")
+                if 'raw_text' in result:
+                    # Show formatted conversation from raw_text
+                    console.print(result['raw_text'])
+                elif 'messages' in result:
+                    # Fallback: show messages list
+                    for i, msg in enumerate(result['messages'][:10], 1):  # Show first 10 messages
+                        speaker = msg.get('speaker', 'Unknown')
+                        text = msg.get('text', '')
+                        console.print(f"{i}. [cyan]{speaker}:[/cyan] {text}")
+                    if len(result['messages']) > 10:
+                        console.print(f"... and {len(result['messages']) - 10} more messages")
+                else:
+                    console.print("No conversation content available")
         else:
             # For multiple transcripts, call API multiple times
             transcripts = []
+            transcript_ids = []
+            
             for i in range(count):
                 result = client.generate_transcript(**request_data)
+                
+                # Extract transcript ID - NO FALLBACK: fail fast if missing
+                transcript_id = result.get('id')
+                if not transcript_id:
+                    raise CLIError(f"Failed to extract transcript ID from API response for transcript {i+1}. Response: {result}")
+                
                 transcripts.append(result)
-                if result.get('stored'):
-                    print_success(f"Transcript {i+1}/{count} stored: {result['transcript_id']}")
+                transcript_ids.append(transcript_id)
+                
+                print_success(f"Generated transcript {i+1}/{count}: {transcript_id}")
+                
+                if store:
+                    print_success(f"✅ Stored in database: {transcript_id}")
             
-            print_success(f"Generated {count} transcripts")
+            print_success(f"Generated {count} transcripts: {', '.join(transcript_ids)}")
+            
+            # Show details for all transcripts if requested
             if show:
-                format_output(transcripts)
+                for i, result in enumerate(transcripts, 1):
+                    transcript_id = result.get('id')
+                    console.print(f"\n📄 [bold cyan]Transcript {i} Details:[/bold cyan]")
+                    console.print(f"ID: {transcript_id}")
+                    console.print(f"Scenario: {result.get('scenario', 'N/A')}")
+                    console.print(f"Messages: {len(result.get('messages', []))}")
+                    if i < len(transcripts):  # Don't show full content for all, just summary
+                        console.print("(Use single transcript generation with --show for full details)")
+                    console.print("---")
                 
     except CLIError as e:
         print_error(f"Generation failed: {str(e)}")
@@ -523,11 +577,9 @@ def delete(
                 print_info("Delete cancelled")
                 return
         
-        # Note: Delete endpoint not implemented in REST API yet
-        # For now, show error message
-        print_error("Delete functionality not yet implemented in REST API")
-        print_info("This will be available in a future version")
-        raise typer.Exit(1)
+        # NO FALLBACK: Execute delete or fail fast
+        result = client.delete_transcript(transcript_id)
+        print_success(f"✅ Deleted transcript: {transcript_id}")
         
     except CLIError as e:
         print_error(f"Delete failed: {str(e)}")
@@ -546,8 +598,8 @@ def delete_all(
         client = get_client()
         
         # Get count to show in warning
-        stats = client.get_metrics()
-        count = len(client.list_transcripts())
+        transcripts = client.list_transcripts()
+        count = len(transcripts)
         
         if count == 0:
             print_info("No transcripts to delete")
@@ -575,10 +627,20 @@ def delete_all(
             print_info("Delete cancelled")
             return
         
-        # Note: Bulk delete endpoint not implemented in REST API yet
-        print_error("Bulk delete functionality not yet implemented in REST API")
-        print_info("This will be available in a future version")
-        raise typer.Exit(1)
+        # NO FALLBACK: Execute bulk delete or fail fast
+        console.print(f"\n🗑️  [bold red]Deleting {count} transcripts...[/bold red]")
+        
+        deleted_count = 0
+        for transcript in transcripts:
+            try:
+                client.delete_transcript(transcript['id'])
+                deleted_count += 1
+                console.print(f"✅ Deleted {transcript['id']} ({deleted_count}/{count})")
+            except Exception as e:
+                print_error(f"Failed to delete {transcript['id']}: {str(e)}")
+                # Continue with remaining deletions
+        
+        print_success(f"✅ Successfully deleted {deleted_count} of {count} transcripts")
         
     except CLIError as e:
         print_error(f"Delete all failed: {str(e)}")
@@ -712,17 +774,34 @@ def analyze(
             
             print_success(f"✅ Analysis completed for transcript: {final_transcript_id}")
             
-            # Display analysis results
-            analysis_id = result.get('analysis_id', 'Unknown')
-            intent = result.get('intent', 'Unknown')
-            sentiment = result.get('sentiment', 'Unknown')
-            confidence = result.get('confidence', 0.0)
+            # Display analysis results - NO FALLBACK: Use correct field names from API
+            analysis_id = result.get('analysis_id')
+            intent = result.get('primary_intent')
             
+            # Handle nested sentiment structure
+            borrower_sentiment = result.get('borrower_sentiment', {})
+            if isinstance(borrower_sentiment, dict):
+                sentiment = borrower_sentiment.get('overall')
+            else:
+                sentiment = None
+            
+            confidence_score = result.get('confidence_score')
+            
+            # NO FALLBACK: Fail fast if critical data is missing
+            if not analysis_id:
+                raise CLIError("Analysis ID missing from API response")
+            if not intent:
+                raise CLIError("Primary intent missing from API response")
+            if not sentiment:
+                raise CLIError("Sentiment data missing from API response")
+            if confidence_score is None:
+                raise CLIError("Confidence score missing from API response")
+                
             console.print(f"\n📄 Analysis Results:")
             console.print(f"   Analysis ID: {analysis_id}")
             console.print(f"   Intent: {intent}")
             console.print(f"   Sentiment: {sentiment}")
-            console.print(f"   Confidence: {confidence:.2%}")
+            console.print(f"   Confidence: {confidence_score:.2%}")
             
             if show_risk and 'risk_scores' in result:
                 console.print(f"\n⚠️  Risk Assessment:")

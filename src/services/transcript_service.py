@@ -25,8 +25,8 @@ class TranscriptService:
     
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new transcript."""
-        # Extract parameters
-        scenario = request_data.get("scenario", "payment_inquiry")
+        # Extract parameters - support both topic and legacy scenario
+        topic = request_data.get("topic") or request_data.get("scenario", "payment_inquiry")
         urgency = request_data.get("urgency", "medium")
         financial_impact = request_data.get("financial_impact", False)
         customer_sentiment = request_data.get("customer_sentiment", "neutral")
@@ -34,7 +34,7 @@ class TranscriptService:
         
         # Generate transcript
         transcript = self.generator.generate(
-            scenario=scenario,
+            topic=topic,
             urgency=urgency,
             financial_impact=financial_impact,
             customer_sentiment=customer_sentiment,

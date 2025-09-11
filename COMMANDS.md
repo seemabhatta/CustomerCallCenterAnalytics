@@ -120,7 +120,7 @@ python3 cli.py generate [OPTIONS] [PARAMS...]
 - `--show`: Display generated content
 
 **Dynamic Parameters:** `key=value` format
-- `scenario='PMI Removal'` - Call scenario/topic
+- `topic='PMI Removal'` - Call topic/scenario
 - `customer_id='C123'` - Specific customer ID
 - `sentiment='frustrated'` - Customer emotional state
 - `urgency='high'` - Call urgency level
@@ -133,11 +133,11 @@ python3 cli.py generate --store
 
 # Complex scenario with 3 transcripts
 python3 cli.py generate --count 3 --store --show \
-    scenario='Late Payment Hardship' sentiment='worried' urgency='medium'
+    topic='Late Payment Hardship' sentiment='worried' urgency='medium'
 
 # Specific customer interaction
 python3 cli.py generate --store customer_id='CUST_2024_001' \
-    scenario='Refinance Inquiry' duration='20'
+    topic='Refinance Inquiry' duration='20'
 ```
 
 **Output Format:**
@@ -1205,7 +1205,7 @@ python3 cli.py search --text "payment plan setup"
 
 ```bash
 # 1. Generate customer interaction
-python3 cli.py generate --store scenario='Payment Difficulty' sentiment='concerned'
+python3 cli.py generate --store topic='Payment Difficulty' sentiment='concerned'
 
 # 2. Analyze the interaction
 python3 cli.py analyze --transcript-id transcript_20241201_001

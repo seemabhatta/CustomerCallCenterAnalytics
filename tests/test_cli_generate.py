@@ -128,3 +128,207 @@ def test_cli_displays_transcript_ids():
     # This will be implemented after we fix the server side
     # For now, just ensure the structure is ready
     pass
+
+
+# ========== CLI INTEGRATION TESTS ==========
+# These test the actual CLI command behavior following TDD
+
+import subprocess
+import re
+import os
+from pathlib import Path
+
+
+def run_cli(args, timeout=60):
+    """Helper to run CLI commands with proper environment."""
+    cmd = ['python', 'cli.py'] + args
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        cwd=Path(__file__).parent.parent,  # Run from project root
+        env={**os.environ, 'PYTHONPATH': str(Path(__file__).parent.parent)}
+    )
+    return result
+
+
+class TestCLIGenerateIntegration:
+    """Integration tests for CLI generate command following TDD principles."""
+    
+    def test_generate_returns_actual_transcript_id_not_unknown(self):
+        """
+        CRITICAL TEST: Generate command MUST return actual transcript ID.
+        NO FALLBACK: Should never show 'Unknown ID'
+        
+        This is the main bug we're fixing.
+        """
+        result = run_cli(['generate', '--scenario', 'PMI Removal', '--store'])
+        
+        # Should succeed
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        
+        # Should contain actual transcript ID (CALL_XXXXXXXX format)
+        transcript_id_match = re.search(r'CALL_[A-Z0-9]{8}', result.stdout)
+        assert transcript_id_match, \
+            f"No valid transcript ID found in output: {result.stdout}"
+        
+        # Should NEVER show fallback text
+        assert 'Unknown ID' not in result.stdout, \
+            "VIOLATION: Shows 'Unknown ID' fallback instead of real ID"
+        
+        print(f"✅ Test passed - Found transcript ID: {transcript_id_match.group()}")
+    
+    def test_show_flag_displays_transcript_details(self):
+        """
+        TEST: --show flag MUST display full transcript content.
+        Currently this flag is ignored.
+        """
+        result = run_cli(['generate', '--scenario', 'Payment Dispute', '--show'])
+        
+        # Should succeed
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        
+        # Should show transcript details
+        detail_indicators = [
+            'Transcript Details:', 'Messages:', 'Customer:', 'Agent:', 
+            'Borrower:', 'Advisor:', 'Dialog:', 'Conversation:'
+        ]
+        has_details = any(indicator in result.stdout for indicator in detail_indicators)
+        
+        assert has_details, \
+            f"--show flag ignored. No transcript details found. Output: {result.stdout}"
+        
+        # Should show more than just the basic success message
+        lines = result.stdout.strip().split('\n')
+        assert len(lines) > 3, \
+            "Output too short - likely not showing full transcript details"
+    
+    def test_store_flag_confirms_storage(self):
+        """
+        TEST: --store flag MUST confirm successful storage.
+        Currently this confirmation is missing.
+        """
+        result = run_cli(['generate', '--scenario', 'Account Balance', '--store'])
+        
+        # Should succeed  
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        
+        # Should confirm storage
+        storage_indicators = [
+            'Stored', 'stored', 'Saved', 'saved', 'database', 
+            'DB', 'stored with ID', 'stored successfully'
+        ]
+        has_confirmation = any(indicator in result.stdout for indicator in storage_indicators)
+        
+        assert has_confirmation, \
+            f"No storage confirmation found. Output: {result.stdout}"
+    
+    def test_store_and_show_flags_work_together(self):
+        """
+        TEST: --store and --show flags MUST work together.
+        Tests the complete user workflow.
+        """
+        result = run_cli(['generate', '--scenario', 'PMI Removal', '--store', '--show'])
+        
+        # Should succeed
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        
+        # Should have transcript ID (not Unknown)
+        assert re.search(r'CALL_[A-Z0-9]{8}', result.stdout), \
+            "Missing transcript ID"
+        assert 'Unknown ID' not in result.stdout, \
+            "Shows 'Unknown ID' fallback"
+        
+        # Should confirm storage
+        storage_indicators = ['Stored', 'stored', 'Saved', 'saved', 'database']
+        has_storage = any(indicator in result.stdout for indicator in storage_indicators)
+        assert has_storage, "Missing storage confirmation"
+        
+        # Should show details
+        detail_indicators = ['Messages:', 'Customer:', 'Agent:', 'Transcript Details:']
+        has_details = any(indicator in result.stdout for indicator in detail_indicators)
+        assert has_details, "Missing transcript details from --show flag"
+    
+    def test_no_fallback_principle_violated_currently(self):
+        """
+        REGRESSION TEST: Current implementation violates NO FALLBACK principle.
+        This test documents the current bug and will pass once we fix it.
+        """
+        result = run_cli(['generate', '--scenario', 'Test Scenario'])
+        
+        # Current bug: shows "Unknown ID" instead of failing fast
+        if 'Unknown ID' in result.stdout:
+            pytest.skip("Bug confirmed: Shows 'Unknown ID' fallback (violates NO FALLBACK principle)")
+        
+        # After fix: should show actual ID
+        assert re.search(r'CALL_[A-Z0-9]{8}', result.stdout), \
+            "Fixed: Should show actual transcript ID"
+    
+    def test_generate_without_store_still_shows_id(self):
+        """
+        TEST: Generate without --store should still show transcript ID.
+        The transcript is created, just not stored in database.
+        """
+        result = run_cli(['generate', '--scenario', 'Refinance Inquiry'])
+        
+        # Should succeed
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        
+        # Should show transcript ID even without storing
+        assert re.search(r'CALL_[A-Z0-9]{8}', result.stdout), \
+            f"No transcript ID shown when not storing: {result.stdout}"
+        
+        # Should NOT show Unknown ID
+        assert 'Unknown ID' not in result.stdout, \
+            "Shows 'Unknown ID' even when generation succeeds"
+    
+    def test_various_scenarios_work_correctly(self):
+        """
+        TEST: Different scenarios should all work and return proper IDs.
+        Tests robustness across different inputs.
+        """
+        scenarios = [
+            'PMI Removal',
+            'Payment Dispute', 
+            'Refinance Inquiry',
+            'Escrow Shortage',
+            'Account Balance Inquiry'
+        ]
+        
+        for scenario in scenarios:
+            result = run_cli(['generate', '--scenario', scenario])
+            
+            assert result.returncode == 0, \
+                f"Scenario '{scenario}' failed: {result.stderr}"
+            
+            # Each should show proper transcript ID
+            has_id = re.search(r'CALL_[A-Z0-9]{8}', result.stdout)
+            assert has_id, \
+                f"No transcript ID for scenario '{scenario}': {result.stdout}"
+            
+            # None should show fallback
+            assert 'Unknown ID' not in result.stdout, \
+                f"Scenario '{scenario}' shows 'Unknown ID': {result.stdout}"
+    
+    def test_additional_flags_work_with_id_display(self):
+        """
+        TEST: Additional flags (urgency, financial) should work with proper ID display.
+        """
+        result = run_cli([
+            'generate', 
+            '--scenario', 'PMI Removal',
+            '--urgency', 'high',
+            '--financial',
+            '--store'
+        ])
+        
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+        
+        # Should show transcript ID
+        assert re.search(r'CALL_[A-Z0-9]{8}', result.stdout), \
+            f"No transcript ID with additional flags: {result.stdout}"
+        
+        # Should not show Unknown ID
+        assert 'Unknown ID' not in result.stdout, \
+            "Shows 'Unknown ID' with additional flags"

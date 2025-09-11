@@ -22,7 +22,7 @@ cp .env.example .env
 
 # Use instant CLI
 python cli_fast.py demo
-python cli_fast.py generate scenario="PMI Removal" --store
+python cli_fast.py generate topic="PMI Removal" --store
 python cli_fast.py stats
 ```
 
@@ -35,7 +35,7 @@ Instant execution via pre-loaded server:
 
 ```bash
 # Generate transcripts
-python cli_fast.py generate scenario="PMI Removal" customer_id="CUST_001" --store --show
+python cli_fast.py generate topic="PMI Removal" customer_id="CUST_001" --store --show
 python cli_fast.py generate --count 5 topic="Refinance" --store
 
 # Search & view
@@ -65,7 +65,7 @@ curl -X POST http://localhost:8000/generate   -H "Content-Type: application/json
 (Slower due to imports)
 
 ```bash
-python cli.py generate scenario="PMI Removal" --store
+python cli.py generate topic="PMI Removal" --store
 python cli.py list
 ```
 
@@ -129,8 +129,8 @@ python server.py        # Manual start
 
 ### Custom Parameters
 ```bash
-python cli_fast.py generate scenario="Escrow Shortage" sentiment="hopeful" urgency="medium"
-python cli_fast.py generate --count 10 scenario="Payment Dispute" --store
+python cli_fast.py generate topic="Escrow Shortage" sentiment="hopeful" urgency="medium"
+python cli_fast.py generate --count 10 topic="Payment Dispute" --store
 ```
 
 ### Action Plan Workflow
