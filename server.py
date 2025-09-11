@@ -545,6 +545,15 @@ async def delete_plan(plan_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete plan: {str(e)}")
 
+@app.delete("/api/v1/plans")
+async def delete_all_plans():
+    """Delete all action plans - bulk operation."""
+    try:
+        result = await plan_service.delete_all()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete all plans: {str(e)}")
+
 @app.get("/api/v1/plans/search/analysis/{analysis_id}")
 async def search_plans_by_analysis(analysis_id: str):
     """Search action plans by analysis ID - proxies to plan service."""

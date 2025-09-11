@@ -83,6 +83,14 @@ class PlanService:
         """Delete action plan by ID."""
         return self.store.delete(plan_id)
     
+    async def delete_all(self) -> Dict[str, Any]:
+        """Delete all action plans."""
+        count = self.store.delete_all()
+        return {
+            "message": "All plans deleted successfully",
+            "deleted_count": count
+        }
+    
     async def search_by_analysis(self, analysis_id: str) -> List[Dict[str, Any]]:
         """Search action plans by analysis ID."""
         results = self.store.search_by_analysis(analysis_id)
