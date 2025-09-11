@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import uvicorn
+from dotenv import load_dotenv
 
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
@@ -25,7 +26,9 @@ from src.services.case_service import CaseService
 from src.services.governance_service import GovernanceService
 from src.services.system_service import SystemService
 
-# Load environment variables
+# Load environment variables from .env file
+load_dotenv()
+
 api_key = os.environ.get("OPENAI_API_KEY")
 if not api_key:
     print("❌ OPENAI_API_KEY not found in environment")

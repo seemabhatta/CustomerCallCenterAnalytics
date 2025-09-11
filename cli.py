@@ -1,88 +1,262 @@
 #!/usr/bin/env python3
 """
-Fast CLI Client - Customer Call Center Analytics
-Thin client that communicates with server.py for instant execution.
-No heavy imports - just HTTP requests to pre-loaded server.
+Customer Call Center Analytics CLI
+Direct REST API client following industry best practices
+No fallback logic - fail fast with clear error messages
 """
 import json
 import requests
 import sys
 import typer
+import os
 from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from dotenv import load_dotenv
+from urllib.parse import urljoin, urlencode
 
 # Load environment variables from .env file
 load_dotenv()
 
+# Default API configuration
+DEFAULT_API_URL = os.getenv("CCANALYTICS_API_URL", "http://localhost:8000")
+DEFAULT_FORMAT = os.getenv("CCANALYTICS_FORMAT", "table")
+DEFAULT_VERBOSE = os.getenv("CCANALYTICS_VERBOSE", "false").lower() == "true"
 
-CLI_SERVER_URL = "http://localhost:9999"
+# Global configuration variables
+GLOBAL_API_URL = DEFAULT_API_URL
+GLOBAL_FORMAT = DEFAULT_FORMAT
+GLOBAL_VERBOSE = DEFAULT_VERBOSE
 
 # Create Typer app and Rich console  
 app = typer.Typer(
-    name="cli-fast",
-    help="Customer Call Center Analytics - Fast CLI (via server)",
+    name="cli",
+    help="Customer Call Center Analytics - REST API Client",
     add_completion=False
 )
 console = Console()
 
 
-class CLIClient:
-    """Thin CLI client that talks to server.py."""
+class CLIRestClient:
+    """REST API client for Customer Call Center Analytics."""
     
-    def __init__(self):
-        self.server_url = CLI_SERVER_URL
+    def __init__(self, api_url: str = DEFAULT_API_URL, verbose: bool = DEFAULT_VERBOSE):
+        self.api_url = api_url.rstrip('/')  # Remove trailing slash
+        self.verbose = verbose
+        self.session = requests.Session()
     
-    def send_command(self, command: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Send command to server and return response."""
+    def _make_request(self, method: str, endpoint: str, params: Optional[Dict] = None, 
+                     json_data: Optional[Dict] = None, timeout: int = 30) -> Dict[str, Any]:
+        """Make REST API request with proper error handling."""
+        url = urljoin(self.api_url, endpoint)
+        
+        if self.verbose:
+            console.print(f"🔄 API Call: {method.upper()} {endpoint}", style="cyan")
+            if json_data:
+                console.print(f"📤 Payload: {json_data}", style="dim")
+        
         try:
-            payload = {
-                'command': command,
-                'params': params or {}
-            }
+            start_time = datetime.now()
             
-            response = requests.post(
-                self.server_url,
-                json=payload,
-                timeout=300  # 5 minute timeout for long operations
-            )
+            if method.upper() == 'GET':
+                if params:
+                    url += '?' + urlencode(params)
+                response = self.session.get(url, timeout=timeout)
+            elif method.upper() == 'POST':
+                response = self.session.post(url, json=json_data, params=params, timeout=timeout)
+            elif method.upper() == 'PUT':
+                response = self.session.put(url, json=json_data, params=params, timeout=timeout)
+            elif method.upper() == 'DELETE':
+                response = self.session.delete(url, params=params, timeout=timeout)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
             
+            if self.verbose:
+                duration = (datetime.now() - start_time).total_seconds()
+                console.print(f"⏱️  Response time: {duration:.2f}s", style="dim")
+                console.print(f"📡 Status: {response.status_code}", style="dim")
+            
+            # Handle different response codes
             if response.status_code == 200:
                 return response.json()
+            elif response.status_code == 201:
+                return response.json()
+            elif response.status_code == 404:
+                raise CLIError(f"Not found: {endpoint}")
+            elif response.status_code == 503:
+                error_data = response.json() if response.content else {}
+                raise CLIError(f"Service unavailable: {error_data.get('detail', 'Unknown error')}")
             else:
-                return {
-                    'success': False,
-                    'error': f'Server error: {response.status_code} - {response.text}'
-                }
+                error_text = response.text[:200] if response.text else 'Unknown error'
+                raise CLIError(f"API error ({response.status_code}): {error_text}")
                 
         except requests.exceptions.ConnectionError:
-            return {
-                'success': False,
-                'error': f'Cannot connect to server at {self.server_url}. Is server.py running?'
-            }
+            raise CLIError(f"Cannot connect to API server at {self.api_url}. Is the server running?")
         except requests.exceptions.Timeout:
-            return {
-                'success': False,
-                'error': 'Request timed out. Operation may still be running on server.'
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'Client error: {str(e)}'
-            }
+            raise CLIError(f"Request timed out after {timeout}s. Operation may still be running.")
+        except requests.exceptions.RequestException as e:
+            raise CLIError(f"Request failed: {str(e)}")
     
-    def print_error(self, message: str):
-        """Print error message in red."""
-        console.print(f"❌ {message}", style="red")
+    # Transcript operations
+    def generate_transcript(self, **kwargs) -> Dict[str, Any]:
+        """Generate transcript via POST /api/v1/transcripts."""
+        return self._make_request('POST', '/api/v1/transcripts', json_data=kwargs, timeout=300)
     
-    def print_success(self, message: str):
-        """Print success message in green."""
-        console.print(f"✅ {message}", style="green")
+    def list_transcripts(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[Dict[str, Any]]:
+        """List transcripts via GET /api/v1/transcripts."""
+        params = {}
+        if limit is not None:
+            params['limit'] = limit
+        if offset is not None:
+            params['offset'] = offset
+        return self._make_request('GET', '/api/v1/transcripts', params=params)
     
-    def print_info(self, message: str):
-        """Print info message."""
-        console.print(f"💡 {message}", style="cyan")
+    def get_transcript(self, transcript_id: str) -> Dict[str, Any]:
+        """Get transcript by ID via GET /api/v1/transcripts/{id}."""
+        return self._make_request('GET', f'/api/v1/transcripts/{transcript_id}')
+    
+    def delete_transcript(self, transcript_id: str) -> Dict[str, Any]:
+        """Delete transcript via DELETE /api/v1/transcripts/{id}."""
+        return self._make_request('DELETE', f'/api/v1/transcripts/{transcript_id}')
+    
+    def search_transcripts(self, **kwargs) -> List[Dict[str, Any]]:
+        """Search transcripts via GET /api/v1/transcripts/search."""
+        return self._make_request('GET', '/api/v1/transcripts/search', params=kwargs)
+    
+    # Analysis operations  
+    def analyze_transcript(self, **kwargs) -> Dict[str, Any]:
+        """Analyze transcript via POST /api/v1/analyses."""
+        return self._make_request('POST', '/api/v1/analyses', json_data=kwargs, timeout=300)
+    
+    def get_analysis(self, analysis_id: str) -> Dict[str, Any]:
+        """Get analysis by ID via GET /api/v1/analyses/{id}."""
+        return self._make_request('GET', f'/api/v1/analyses/{analysis_id}')
+    
+    def list_analyses(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """List analyses via GET /api/v1/analyses."""
+        params = {'limit': limit} if limit else {}
+        return self._make_request('GET', '/api/v1/analyses', params=params)
+    
+    # Action plan operations
+    def create_plan(self, **kwargs) -> Dict[str, Any]:
+        """Create action plan via POST /api/v1/plans."""
+        return self._make_request('POST', '/api/v1/plans', json_data=kwargs, timeout=300)
+    
+    def get_plan(self, plan_id: str) -> Dict[str, Any]:
+        """Get action plan by ID via GET /api/v1/plans/{id}."""
+        return self._make_request('GET', f'/api/v1/plans/{plan_id}')
+    
+    def approve_plan(self, plan_id: str, **kwargs) -> Dict[str, Any]:
+        """Approve action plan via POST /api/v1/plans/{id}/approve."""
+        return self._make_request('POST', f'/api/v1/plans/{plan_id}/approve', json_data=kwargs)
+    
+    def execute_plan(self, plan_id: str, **kwargs) -> Dict[str, Any]:
+        """Execute action plan via POST /api/v1/plans/{id}/execute."""
+        return self._make_request('POST', f'/api/v1/plans/{plan_id}/execute', json_data=kwargs, timeout=300)
+    
+    def list_plans(self, limit: Optional[int] = None, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List action plans via GET /api/v1/plans."""
+        params = {}
+        if limit is not None:
+            params['limit'] = limit
+        if status is not None:
+            params['status'] = status
+        return self._make_request('GET', '/api/v1/plans', params=params)
+    
+    # System operations
+    def health_check(self) -> Dict[str, Any]:
+        """Check system health via GET /api/v1/health."""
+        return self._make_request('GET', '/api/v1/health')
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get dashboard metrics via GET /api/v1/metrics."""
+        return self._make_request('GET', '/api/v1/metrics')
+    
+    def get_workflow_status(self) -> List[Dict[str, Any]]:
+        """Get workflow status via GET /api/v1/workflow/status."""
+        return self._make_request('GET', '/api/v1/workflow/status')
+    
+    # Case operations
+    def list_cases(self, **kwargs) -> List[Dict[str, Any]]:
+        """List cases via GET /api/v1/cases."""
+        return self._make_request('GET', '/api/v1/cases', params=kwargs)
+    
+    def get_case(self, case_id: str) -> Dict[str, Any]:
+        """Get case by ID via GET /api/v1/cases/{id}."""
+        return self._make_request('GET', f'/api/v1/cases/{case_id}')
+
+
+class CLIError(Exception):
+    """Custom exception for CLI errors - no fallback logic."""
+    pass
+    
+# Global CLI options
+@app.callback()
+def main(
+    api_url: Optional[str] = typer.Option(DEFAULT_API_URL, "--api-url", help="API server URL"),
+    format: Optional[str] = typer.Option(DEFAULT_FORMAT, "--format", help="Output format: table, json, yaml"),
+    verbose: bool = typer.Option(DEFAULT_VERBOSE, "--verbose", help="Show detailed API calls"),
+    version: bool = typer.Option(False, "--version", help="Show version")
+):
+    """Customer Call Center Analytics CLI - Direct REST API Client
+    
+    Server: REST API on http://localhost:8000
+    
+    Examples:
+      cli.py generate --scenario "PMI Removal" --store
+      cli.py list --limit 10
+      cli.py analyze TRANSCRIPT_001
+      cli.py health --verbose
+    """
+    if version:
+        console.print("Customer Call Center Analytics CLI v1.0.0")
+        console.print(f"API Server: {api_url}")
+        raise typer.Exit()
+    
+    # Store global options as global variables for simplicity
+    global GLOBAL_API_URL, GLOBAL_FORMAT, GLOBAL_VERBOSE
+    GLOBAL_API_URL = api_url
+    GLOBAL_FORMAT = format
+    GLOBAL_VERBOSE = verbose
+
+
+def get_client() -> CLIRestClient:
+    """Get configured REST client."""
+    return CLIRestClient(api_url=GLOBAL_API_URL, verbose=GLOBAL_VERBOSE)
+
+
+def print_error(message: str):
+    """Print error message in red."""
+    console.print(f"❌ {message}", style="red")
+
+def print_success(message: str):
+    """Print success message in green."""
+    console.print(f"✅ {message}", style="green")
+
+def print_info(message: str):
+    """Print info message."""
+    console.print(f"💡 {message}", style="cyan")
+
+def print_json(data: Any):
+    """Print data as JSON."""
+    console.print_json(json.dumps(data, indent=2, default=str))
+
+def format_output(data: Any, output_format: str = "table"):
+    """Format output based on requested format."""
+    state = getattr(app, 'state', None)
+    if state and hasattr(state, 'format'):
+        output_format = state.format
+    
+    if output_format == "json":
+        print_json(data)
+    elif output_format == "yaml":
+        import yaml
+        console.print(yaml.dump(data, default_flow_style=False))
+    else:
+        # Default table format - will be implemented per command
+        return data
 
 
 def parse_dynamic_params(params: List[str]) -> Dict[str, Any]:
@@ -161,59 +335,101 @@ def format_transcript_table(transcripts: List[Dict], detailed: bool = False):
 @app.command()
 def generate(
     params: List[str] = typer.Argument(None, help="Parameters in key=value format (e.g., scenario='PMI Removal')"),
-    count: int = typer.Option(1, "--count", "-c", help="Number of transcripts to generate"),
+    scenario: Optional[str] = typer.Option(None, "--scenario", help="Call scenario"),
+    urgency: Optional[str] = typer.Option("medium", "--urgency", help="Urgency level: low, medium, high, critical"),
+    financial: Optional[bool] = typer.Option(False, "--financial", help="Has financial impact"),
+    sentiment: Optional[str] = typer.Option("neutral", "--sentiment", help="Customer sentiment"),
+    customer: Optional[str] = typer.Option("CUST_001", "--customer", help="Customer ID"),
     store: bool = typer.Option(False, "--store", "-s", help="Store in database"),
+    count: int = typer.Option(1, "--count", "-c", help="Number of transcripts to generate"),
     show: bool = typer.Option(False, "--show", help="Show generated transcript(s)")
 ):
-    """Generate new transcript(s) with dynamic parameters."""
-    client = CLIClient()
+    """Generate AI-powered call transcript using OpenAI.
     
-    # Parse dynamic parameters from remaining args
-    generation_params = parse_dynamic_params(params or [])
+    REST API: POST /api/v1/transcripts
     
-    request_params = {
-        'count': count,
-        'store': store,
-        'generation_params': generation_params
-    }
-    
-    console.print("🎤 [bold magenta]Generating transcript(s)...[/bold magenta]")
-    result = client.send_command('generate', request_params)
-    
-    if result['success']:
-        transcripts = result['transcripts']
-        client.print_success(f"Generated {len(transcripts)} transcript(s)")
+    Examples:
+      cli.py generate --scenario "PMI Removal" --urgency high --store
+      cli.py generate scenario="Payment Dispute" financial=true --store
+    """
+    try:
+        client = get_client()
         
-        if result.get('stored'):
-            client.print_success(f"Stored {len(transcripts)} transcript(s) in database")
+        # Parse dynamic parameters from remaining args
+        generation_params = parse_dynamic_params(params or [])
+        
+        # Build request payload
+        request_data = {
+            "scenario": scenario or generation_params.get("scenario", "payment_inquiry"),
+            "urgency": urgency,
+            "financial_impact": financial or generation_params.get("financial_impact", False),
+            "customer_sentiment": sentiment,
+            "customer_id": customer,
+            "store": store
+        }
+        
+        # Override with any dynamic params
+        request_data.update(generation_params)
+        
+        console.print("🎤 [bold magenta]Generating transcript...[/bold magenta]")
+        
+        if count == 1:
+            result = client.generate_transcript(**request_data)
+            print_success(f"Generated transcript: {result.get('transcript_id', 'Unknown ID')}")
             
-            # Display transcript IDs when stored (for LLM-executable demos)
-            if 'transcript_ids' in result:
-                for transcript_id in result['transcript_ids']:
-                    client.print_success(f"Stored transcript with ID: {transcript_id}")
-        
-        if show:
-            format_transcript_table(transcripts, detailed=True)
-    else:
-        client.print_error(f"Generation failed: {result['error']}")
+            if result.get('stored'):
+                print_success(f"Transcript stored with ID: {result['transcript_id']}")
+            
+            if show:
+                format_output(result)
+        else:
+            # For multiple transcripts, call API multiple times
+            transcripts = []
+            for i in range(count):
+                result = client.generate_transcript(**request_data)
+                transcripts.append(result)
+                if result.get('stored'):
+                    print_success(f"Transcript {i+1}/{count} stored: {result['transcript_id']}")
+            
+            print_success(f"Generated {count} transcripts")
+            if show:
+                format_output(transcripts)
+                
+    except CLIError as e:
+        print_error(f"Generation failed: {str(e)}")
+        raise typer.Exit(1)
 
 
 @app.command("list")
 def list_transcripts(
+    limit: int = typer.Option(None, "--limit", "-l", help="Maximum number to show"),
+    offset: int = typer.Option(None, "--offset", help="Skip first N transcripts"),
     detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed view")
 ):
-    """List all transcripts."""
-    client = CLIClient()
+    """List all transcripts from database.
     
-    console.print("📋 [bold magenta]Listing transcripts...[/bold magenta]")
-    result = client.send_command('list')
+    REST API: GET /api/v1/transcripts
     
-    if result['success']:
-        transcripts = result['transcripts']
-        console.print(f"Found [cyan]{len(transcripts)}[/cyan] transcript(s)")
+    Examples:
+      cli.py list --limit 10
+      cli.py list --detailed
+    """
+    try:
+        client = get_client()
+        
+        console.print("📋 [bold blue]Fetching transcripts...[/bold blue]")
+        transcripts = client.list_transcripts(limit=limit, offset=offset)
+        
+        if not transcripts:
+            print_info("No transcripts found in database")
+            return
+            
+        print_success(f"Found {len(transcripts)} transcript(s)")
         format_transcript_table(transcripts, detailed=detailed)
-    else:
-        client.print_error(f"List failed: {result['error']}")
+        
+    except CLIError as e:
+        print_error(f"Failed to list transcripts: {str(e)}")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -221,25 +437,27 @@ def get(
     transcript_id: str = typer.Argument(..., help="Transcript ID"),
     export: bool = typer.Option(False, "--export", "-e", help="Export to JSON file")
 ):
-    """Get a specific transcript by ID."""
-    client = CLIClient()
+    """Get a specific transcript by ID.
     
-    params = {'transcript_id': transcript_id}
-    
-    console.print(f"📄 [bold magenta]Getting transcript: {transcript_id}[/bold magenta]")
-    result = client.send_command('get', params)
-    
-    if result['success']:
-        transcript = result['transcript']
+    REST API: GET /transcript/{transcript_id}
+    """
+    try:
+        client = get_client()
+        
+        console.print(f"📄 [bold magenta]Getting transcript: {transcript_id}[/bold magenta]")
+        transcript = client.get_transcript(transcript_id)
+        
         format_transcript_table([transcript], detailed=True)
         
         if export:
             filename = f"{transcript_id}.json"
             with open(filename, 'w') as f:
                 json.dump(transcript, f, indent=2)
-            client.print_success(f"Exported to {filename}")
-    else:
-        client.print_error(f"Get failed: {result['error']}")
+            print_success(f"Exported to {filename}")
+            
+    except CLIError as e:
+        print_error(f"Get failed: {str(e)}")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -249,29 +467,43 @@ def search(
     text: Optional[str] = typer.Option(None, "--text", help="Search by text content"),
     detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed results")
 ):
-    """Search transcripts by customer, topic, or text."""
-    client = CLIClient()
+    """Search transcripts by customer, topic, or text.
     
-    params = {}
-    if customer:
-        params['customer'] = customer
-    elif topic:
-        params['topic'] = topic
-    elif text:
-        params['text'] = text
-    else:
-        client.print_error("Please specify --customer, --topic, or --text")
+    REST API: GET /transcripts (with filtering)
+    """
+    try:
+        client = get_client()
+        
+        if not any([customer, topic, text]):
+            print_error("Please specify --customer, --topic, or --text")
+            raise typer.Exit(1)
+        
+        console.print("🔍 [bold magenta]Searching...[/bold magenta]")
+        
+        # Get all transcripts and filter client-side for now
+        # TODO: Add search endpoint to REST API
+        all_transcripts = client.list_transcripts()
+        
+        filtered = []
+        for transcript in all_transcripts:
+            if customer and transcript.get('customer_id') == customer:
+                filtered.append(transcript)
+            elif topic and topic.lower() in transcript.get('topic', '').lower():
+                filtered.append(transcript)
+            elif text:
+                # Search in messages
+                messages = transcript.get('messages', [])
+                for msg in messages:
+                    if text.lower() in msg.get('text', '').lower():
+                        filtered.append(transcript)
+                        break
+        
+        console.print(f"Found [cyan]{len(filtered)}[/cyan] matching transcript(s)")
+        format_transcript_table(filtered, detailed=detailed)
+        
+    except CLIError as e:
+        print_error(f"Search failed: {str(e)}")
         raise typer.Exit(1)
-    
-    console.print("🔍 [bold magenta]Searching...[/bold magenta]")
-    result = client.send_command('search', params)
-    
-    if result['success']:
-        transcripts = result['transcripts']
-        console.print(f"Found [cyan]{len(transcripts)}[/cyan] matching transcript(s)")
-        format_transcript_table(transcripts, detailed=detailed)
-    else:
-        client.print_error(f"Search failed: {result['error']}")
 
 
 @app.command()
@@ -279,192 +511,364 @@ def delete(
     transcript_id: str = typer.Argument(..., help="Transcript ID to delete"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation")
 ):
-    """Delete a transcript."""
-    client = CLIClient()
+    """Delete a transcript.
     
-    if not force:
-        if not typer.confirm(f"Delete transcript {transcript_id}?"):
-            client.print_info("Delete cancelled")
-            return
-    
-    params = {'transcript_id': transcript_id}
-    result = client.send_command('delete', params)
-    
-    if result['success']:
-        client.print_success(result['message'])
-    else:
-        client.print_error(f"Delete failed: {result['error']}")
+    REST API: DELETE /transcript/{transcript_id}
+    """
+    try:
+        client = get_client()
+        
+        if not force:
+            if not typer.confirm(f"Delete transcript {transcript_id}?"):
+                print_info("Delete cancelled")
+                return
+        
+        # Note: Delete endpoint not implemented in REST API yet
+        # For now, show error message
+        print_error("Delete functionality not yet implemented in REST API")
+        print_info("This will be available in a future version")
+        raise typer.Exit(1)
+        
+    except CLIError as e:
+        print_error(f"Delete failed: {str(e)}")
+        raise typer.Exit(1)
 
 
 @app.command("delete-all")
 def delete_all(
     force: bool = typer.Option(False, "--force", "-f", help="Skip first confirmation")
 ):
-    """Delete ALL transcripts from the database."""
-    client = CLIClient()
+    """Delete ALL transcripts from the database.
     
-    # First get count to show in warning
-    stats_result = client.send_command('stats')
-    if not stats_result['success']:
-        client.print_error("Could not get transcript count")
-        return
-    
-    count = stats_result['stats']['total_transcripts']
-    if count == 0:
-        client.print_info("No transcripts to delete")
-        return
-    
-    # Safety warning
-    console.print(f"⚠️  [bold red]WARNING:[/bold red] This will delete [bold yellow]{count}[/bold yellow] transcripts from the database!")
-    console.print("This action cannot be undone.", style="red")
-    
-    # First confirmation (can be skipped with --force)
-    if not force:
-        if not typer.confirm("Are you sure you want to delete all transcripts?"):
-            client.print_info("Delete cancelled")
+    REST API: DELETE /transcripts (bulk delete)
+    """
+    try:
+        client = get_client()
+        
+        # Get count to show in warning
+        stats = client.get_metrics()
+        count = len(client.list_transcripts())
+        
+        if count == 0:
+            print_info("No transcripts to delete")
             return
-    
-    # Second confirmation - safety check (cannot be skipped)
-    console.print("\n[bold red]FINAL CONFIRMATION REQUIRED[/bold red]")
-    console.print(f"Type 'DELETE ALL {count}' to confirm deletion of {count} transcripts:")
-    
-    confirmation = typer.prompt("", show_default=False)
-    expected = f"DELETE ALL {count}"
-    
-    if confirmation.strip() != expected:
-        client.print_error(f"Confirmation failed. Expected '{expected}' but got '{confirmation.strip()}'")
-        client.print_info("Delete cancelled")
-        return
-    
-    # Perform deletion
-    console.print("🗑️  Deleting all transcripts...")
-    result = client.send_command('delete_all')
-    
-    if result['success']:
-        client.print_success(result['message'])
-    else:
-        client.print_error(f"Delete all failed: {result['error']}")
+        
+        # Safety warning
+        console.print(f"⚠️  [bold red]WARNING:[/bold red] This will delete [bold yellow]{count}[/bold yellow] transcripts from the database!")
+        console.print("This action cannot be undone.", style="red")
+        
+        # First confirmation (can be skipped with --force)
+        if not force:
+            if not typer.confirm("Are you sure you want to delete all transcripts?"):
+                print_info("Delete cancelled")
+                return
+        
+        # Second confirmation - safety check (cannot be skipped)
+        console.print("\n[bold red]FINAL CONFIRMATION REQUIRED[/bold red]")
+        console.print(f"Type 'DELETE ALL {count}' to confirm deletion of {count} transcripts:")
+        
+        confirmation = typer.prompt("", show_default=False)
+        expected = f"DELETE ALL {count}"
+        
+        if confirmation.strip() != expected:
+            print_error(f"Confirmation failed. Expected '{expected}' but got '{confirmation.strip()}'")
+            print_info("Delete cancelled")
+            return
+        
+        # Note: Bulk delete endpoint not implemented in REST API yet
+        print_error("Bulk delete functionality not yet implemented in REST API")
+        print_info("This will be available in a future version")
+        raise typer.Exit(1)
+        
+    except CLIError as e:
+        print_error(f"Delete all failed: {str(e)}")
+        raise typer.Exit(1)
 
-
-@app.command()
-def stats():
-    """Show statistics about stored transcripts."""
-    client = CLIClient()
-    
-    console.print("📊 [bold magenta]Getting statistics...[/bold magenta]")
-    result = client.send_command('stats')
-    
-    if result['success']:
-        stats = result['stats']
-        
-        console.print("\n[bold cyan]Database Statistics:[/bold cyan]")
-        console.print(f"  Total Transcripts: [green]{stats['total_transcripts']}[/green]")
-        console.print(f"  Total Messages: [green]{stats['total_messages']}[/green]")
-        console.print(f"  Unique Customers: [green]{stats['unique_customers']}[/green]")
-        console.print(f"  Avg Messages/Transcript: [green]{stats['avg_messages_per_transcript']:.1f}[/green]")
-        
-        if stats['top_topics']:
-            console.print("\n[bold cyan]Top Topics:[/bold cyan]")
-            for topic, count in list(stats['top_topics'].items())[:5]:
-                console.print(f"  {topic}: [green]{count}[/green]")
-        
-        if stats['sentiments']:
-            console.print("\n[bold cyan]Sentiments:[/bold cyan]")
-            for sentiment, count in stats['sentiments'].items():
-                console.print(f"  {sentiment}: [green]{count}[/green]")
-        
-        if stats.get('speakers'):
-            console.print("\n[bold cyan]Top Speakers:[/bold cyan]")
-            for speaker, count in list(stats['speakers'].items())[:5]:
-                console.print(f"  {speaker}: [green]{count}[/green] messages")
-    else:
-        client.print_error(f"Stats failed: {result['error']}")
 
 
 @app.command()
 def export(
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output filename")
 ):
-    """Export transcripts to JSON."""
-    client = CLIClient()
+    """Export transcripts to JSON.
     
-    params = {}
-    if output:
-        params['output'] = output
-    
-    console.print("📤 [bold magenta]Exporting transcripts...[/bold magenta]")
-    result = client.send_command('export', params)
-    
-    if result['success']:
-        client.print_success(result['message'])
-    else:
-        client.print_error(f"Export failed: {result['error']}")
+    REST API: GET /transcripts (then export to file)
+    """
+    try:
+        client = get_client()
+        
+        console.print("📤 [bold magenta]Exporting transcripts...[/bold magenta]")
+        transcripts = client.list_transcripts()
+        
+        filename = output or "transcripts_export.json"
+        
+        with open(filename, 'w') as f:
+            json.dump(transcripts, f, indent=2)
+        
+        print_success(f"Exported {len(transcripts)} transcripts to {filename}")
+        
+    except CLIError as e:
+        print_error(f"Export failed: {str(e)}")
+        raise typer.Exit(1)
 
 
 @app.command()
 def demo(
     no_store: bool = typer.Option(False, "--no-store", help="Don't store demo transcripts")
 ):
-    """Run a quick demo with sample transcripts."""
-    client = CLIClient()
+    """Run a quick demo with sample transcripts.
     
-    params = {'no_store': no_store}
-    
-    console.print("🎭 [bold magenta]Running demo...[/bold magenta]")
-    result = client.send_command('demo', params)
-    
-    if result['success']:
-        client.print_success(result['message'])
+    REST API: POST /api/v1/transcripts (multiple calls)
+    """
+    try:
+        client = get_client()
         
-        if not no_store:
-            client.print_info("Use 'python cli_fast.py list' to see all transcripts")
-            client.print_info("Use 'python cli_fast.py stats' to see statistics")
-    else:
-        client.print_error(f"Demo failed: {result['error']}")
+        store = not no_store
+        
+        console.print("🎭 [bold magenta]Running demo...[/bold magenta]")
+        
+        # Generate sample demo transcripts
+        demo_scenarios = [
+            {"scenario": "Payment Dispute", "urgency": "high", "financial_impact": True, "customer_sentiment": "frustrated", "store": store},
+            {"scenario": "PMI Removal", "urgency": "medium", "financial_impact": True, "customer_sentiment": "neutral", "store": store},
+            {"scenario": "Account Balance Inquiry", "urgency": "low", "financial_impact": False, "customer_sentiment": "neutral", "store": store}
+        ]
+        
+        generated_count = 0
+        for scenario_data in demo_scenarios:
+            try:
+                result = client.generate_transcript(**scenario_data)
+                generated_count += 1
+                console.print(f"  ✓ Generated: {scenario_data['scenario']}")
+            except Exception as e:
+                console.print(f"  ✗ Failed: {scenario_data['scenario']} - {str(e)}")
+        
+        print_success(f"Demo completed! Generated {generated_count} transcripts")
+        
+        if store:
+            print_info("Use 'python cli.py list' to see all transcripts")
+            print_info("Use 'python cli.py stats' to see statistics")
+        
+    except CLIError as e:
+        print_error(f"Demo failed: {str(e)}")
+        raise typer.Exit(1)
 
 
 @app.command()
 def analyze(
-    transcript_id: Optional[str] = typer.Option(None, "--transcript-id", "-t", help="Specific transcript ID to analyze"),
-    all_transcripts: bool = typer.Option(False, "--all", "-a", help="Analyze all transcripts")
+    transcript_id: Optional[str] = typer.Argument(None, help="Transcript ID to analyze"),
+    transcript_id_option: Optional[str] = typer.Option(None, "--transcript-id", "-t", help="Alternative way to specify transcript ID"),
+    all_transcripts: bool = typer.Option(False, "--all", "-a", help="Analyze all unanalyzed transcripts"),
+    analysis_type: str = typer.Option("comprehensive", "--type", help="Analysis type: comprehensive, quick, sentiment"),
+    store: bool = typer.Option(True, "--store", help="Store analysis results"),
+    show_risk: bool = typer.Option(False, "--show-risk", help="Display risk assessment")
 ):
-    """Analyze transcript(s) for mortgage servicing insights."""
-    client = CLIClient()
+    """Analyze transcript for customer intent, sentiment, and risks.
     
-    if not transcript_id and not all_transcripts:
-        client.print_error("Specify either --transcript-id or --all")
-        raise typer.Exit(1)
+    REST API: POST /api/v1/analyses
     
-    params = {
-        'transcript_id': transcript_id,
-        'all_transcripts': all_transcripts
-    }
-    
-    console.print("🔍 [bold magenta]Analyzing transcript(s)...[/bold magenta]")
-    result = client.send_command('analyze', params)
-    
-    if result['success']:
-        count = result.get('count', 0)
-        client.print_success(f"Analyzed {count} transcript(s)")
+    Examples:
+      cli.py analyze TRANSCRIPT_001
+      cli.py analyze --transcript-id TRANSCRIPT_001 --show-risk
+      cli.py analyze --all --store
+    """
+    try:
+        client = get_client()
         
-        # Show analysis preview if available
-        analysis_preview = result.get('analysis_preview')
-        if analysis_preview:
+        # Determine transcript ID from argument or option
+        final_transcript_id = transcript_id or transcript_id_option
+        
+        if not final_transcript_id and not all_transcripts:
+            print_error("Specify either transcript ID or --all")
+            raise typer.Exit(1)
+        
+        if all_transcripts:
+            # Get all transcripts and analyze unanalyzed ones
+            console.print("🔍 [bold magenta]Analyzing all unanalyzed transcripts...[/bold magenta]")
+            transcripts = client.list_transcripts()
+            analyzed_count = 0
+            
+            for transcript in transcripts:
+                try:
+                    result = client.analyze_transcript(
+                        transcript_id=transcript['transcript_id'],
+                        analysis_type=analysis_type,
+                        store=store
+                    )
+                    analyzed_count += 1
+                    print_success(f"Analyzed transcript: {transcript['transcript_id']}")
+                except CLIError as e:
+                    print_error(f"Failed to analyze {transcript['transcript_id']}: {str(e)}")
+            
+            print_success(f"Analyzed {analyzed_count} transcript(s)")
+        else:
+            # Analyze single transcript
+            console.print(f"🔍 [bold magenta]Analyzing transcript {final_transcript_id}...[/bold magenta]")
+            result = client.analyze_transcript(
+                transcript_id=final_transcript_id,
+                analysis_type=analysis_type,
+                store=store
+            )
+            
+            print_success(f"✅ Analysis completed for transcript: {final_transcript_id}")
+            
+            # Display analysis results
+            analysis_id = result.get('analysis_id', 'Unknown')
+            intent = result.get('intent', 'Unknown')
+            sentiment = result.get('sentiment', 'Unknown')
+            confidence = result.get('confidence', 0.0)
+            
             console.print(f"\n📄 Analysis Results:")
-            console.print(f"   Analysis ID: {analysis_preview.get('analysis_id', 'N/A')}")
-            console.print(f"   Intent: {analysis_preview.get('primary_intent', 'N/A')}")
-            console.print(f"   Urgency: {analysis_preview.get('urgency_level', 'N/A')}")
-            console.print(f"   Sentiment: {analysis_preview.get('sentiment', 'N/A')}")
-            console.print(f"   Confidence: {analysis_preview.get('confidence_score', 0):.2f}")
-            console.print("\n✅ Analysis stored successfully! Use 'analysis-report' command to view full details.")
+            console.print(f"   Analysis ID: {analysis_id}")
+            console.print(f"   Intent: {intent}")
+            console.print(f"   Sentiment: {sentiment}")
+            console.print(f"   Confidence: {confidence:.2%}")
+            
+            if show_risk and 'risk_scores' in result:
+                console.print(f"\n⚠️  Risk Assessment:")
+                risk_scores = result['risk_scores']
+                for risk_type, score in risk_scores.items():
+                    console.print(f"   {risk_type.title()}: {score:.2%}")
+                    
+    except CLIError as e:
+        print_error(f"Analysis failed: {str(e)}")
+        raise typer.Exit(1)
+# Essential system commands for DEMO.md workflow
+
+@app.command()
+def health():
+    """Check system health status.
+    
+    REST API: GET /api/v1/health
+    
+    Examples:
+      cli.py health
+      cli.py health --verbose
+    """
+    try:
+        client = get_client()
         
-        # Show any debugging information
-        if result.get('analysis_note'):
-            console.print(f"\n📝 Note: {result.get('analysis_note')}")
-        if result.get('analysis_error'):
-            console.print(f"\n⚠️ Error: {result.get('analysis_error')}")
-    else:
-        client.print_error(f"Analysis failed: {result['error']}")
+        console.print("🏥 [bold blue]Checking system health...[/bold blue]")
+        result = client.health_check()
+        
+        status = result.get('status', 'unknown')
+        if status == 'healthy':
+            print_success("System is healthy")
+        else:
+            print_error(f"System is {status}")
+            if 'error' in result:
+                console.print(f"Error: {result['error']}", style="red")
+        
+        # Show detailed health info
+        console.print(f"\n🔍 Health Details:")
+        console.print(f"   Database: {result.get('database', 'unknown')}")
+        console.print(f"   API Key: {result.get('api_key', 'unknown')}")
+        console.print(f"   Uptime: {result.get('uptime', 'unknown')}")
+        
+        if 'services' in result:
+            console.print(f"   Services:")
+            for service, status in result['services'].items():
+                status_icon = "✅" if status == "healthy" else "❌"
+                console.print(f"     {status_icon} {service}: {status}")
+        
+        # Exit with error code if unhealthy
+        if status != 'healthy':
+            raise typer.Exit(1)
+            
+    except CLIError as e:
+        print_error(f"Health check failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def stats():
+    """Display system statistics and metrics.
+    
+    REST API: GET /api/v1/metrics
+    
+    Examples:
+      cli.py stats
+    """
+    try:
+        client = get_client()
+        
+        console.print("📊 [bold blue]Fetching system statistics...[/bold blue]")
+        result = client.get_metrics()
+        
+        print_success("System Statistics")
+        
+        # Display key metrics
+        console.print(f"\n📈 Dashboard Metrics:")
+        console.print(f"   Total Transcripts: {result.get('totalTranscripts', 0)}")
+        console.print(f"   Completion Rate: {result.get('completeRate', 0.0):.2%}")
+        console.print(f"   Avg Processing Time: {result.get('avgProcessingTime', 0.0):.1f}s")
+        
+        # Stage data
+        if 'stageData' in result:
+            console.print(f"\n🔄 Pipeline Status:")
+            stage_data = result['stageData']
+            for stage, counts in stage_data.items():
+                if isinstance(counts, dict):
+                    total = sum(counts.values())
+                    console.print(f"   {stage.title()}: {total} items")
+                    for substage, count in counts.items():
+                        console.print(f"     {substage}: {count}")
+        
+        console.print(f"\n🕐 Last Updated: {result.get('lastUpdated', 'Unknown')}")
+        
+    except CLIError as e:
+        print_error(f"Failed to get statistics: {str(e)}")
+        raise typer.Exit(1)
+
+
+@app.command("create-plan")
+def create_plan(
+    transcript_id: Optional[str] = typer.Option(None, "--transcript-id", help="Transcript to plan from"),
+    analysis_id: Optional[str] = typer.Option(None, "--analysis-id", help="Use existing analysis"),
+    plan_type: str = typer.Option("standard", "--plan-type", help="Type: standard, expedited, minimal"),
+    store: bool = typer.Option(True, "--store", help="Store plan in database")
+):
+    """Generate comprehensive action plan from analysis.
+    
+    REST API: POST /api/v1/plans
+    
+    Examples:
+      cli.py create-plan --transcript-id TRANSCRIPT_001
+      cli.py create-plan --analysis-id ANALYSIS_001
+    """
+    try:
+        client = get_client()
+        
+        if not transcript_id and not analysis_id:
+            print_error("Specify either --transcript-id or --analysis-id")
+            raise typer.Exit(1)
+        
+        request_data = {
+            "plan_type": plan_type,
+            "store": store
+        }
+        
+        if transcript_id:
+            request_data["transcript_id"] = transcript_id
+        if analysis_id:
+            request_data["analysis_id"] = analysis_id
+        
+        console.print("📋 [bold magenta]Generating action plan...[/bold magenta]")
+        result = client.create_plan(**request_data)
+        
+        plan_id = result.get('plan_id', 'Unknown')
+        total_actions = result.get('total_actions', 0)
+        risk_level = result.get('risk_level', 'Unknown')
+        
+        print_success(f"✅ Action Plan {plan_id} created")
+        console.print(f"   Total Actions: {total_actions}")
+        console.print(f"   Risk Level: {risk_level}")
+        console.print(f"   Approval Route: {result.get('approval_route', 'Unknown')}")
+        console.print(f"   Queue Status: {result.get('queue_status', 'Unknown')}")
+        
+    except CLIError as e:
+        print_error(f"Failed to create action plan: {str(e)}")
+        raise typer.Exit(1)
 
 
 @app.command("analysis-report")
@@ -473,10 +877,10 @@ def analysis_report(
     analysis_id: Optional[str] = typer.Option(None, "--analysis-id", "-a", help="Specific analysis ID to view")
 ):
     """View detailed analysis report."""
-    client = CLIClient()
+    client = get_client()
     
     if not transcript_id and not analysis_id:
-        client.print_error("Specify either --transcript-id or --analysis-id")
+        print_error("Specify either --transcript-id or --analysis-id")
         raise typer.Exit(1)
     
     params = {
@@ -539,13 +943,13 @@ def analysis_report(
                 console.print(f"  ⚠️  {flag}")
         
     else:
-        client.print_error(f"Report failed: {result['error']}")
+        print_error(f"Report failed: {result['error']}")
 
 
 @app.command("analysis-metrics")
 def analysis_metrics():
     """Show aggregate analysis metrics dashboard."""
-    client = CLIClient()
+    client = get_client()
     
     console.print("📊 [bold magenta]Getting analysis metrics...[/bold magenta]")
     result = client.send_command('analysis_metrics')
@@ -577,7 +981,7 @@ def analysis_metrics():
                 console.print(f"  {urgency}: [green]{count}[/green]")
                 
     else:
-        client.print_error(f"Metrics failed: {result['error']}")
+        print_error(f"Metrics failed: {result['error']}")
 
 
 @app.command("risk-report")
@@ -585,7 +989,7 @@ def risk_report(
     threshold: float = typer.Option(0.7, "--threshold", "-t", help="Minimum risk threshold (0.0-1.0)")
 ):
     """Show high-risk borrower report."""
-    client = CLIClient()
+    client = get_client()
     
     params = {'threshold': threshold}
     
@@ -621,7 +1025,7 @@ def risk_report(
             console.print(f"✅ No high-risk cases found above threshold {threshold}")
             
     else:
-        client.print_error(f"Risk report failed: {result['error']}")
+        print_error(f"Risk report failed: {result['error']}")
 
 
 @app.command("generate-action-plan")
@@ -630,7 +1034,7 @@ def generate_action_plan(
     transcript_id: Optional[str] = typer.Option(None, "--transcript-id", "-t", help="Transcript ID to generate plan from")
 ):
     """Generate four-layer action plan from analysis."""
-    client = CLIClient()
+    client = get_client()
     
     if not analysis_id and not transcript_id:
         console.print("❌ Must specify either --analysis-id or --transcript-id")
@@ -653,7 +1057,7 @@ def generate_action_plan(
         console.print(f"Message: {result['message']}")
             
     else:
-        client.print_error(f"Action plan generation failed: {result['error']}")
+        print_error(f"Action plan generation failed: {result['error']}")
 
 
 @app.command("view-action-plan")
@@ -662,7 +1066,7 @@ def view_action_plan(
     layer: Optional[str] = typer.Option(None, "--layer", "-l", help="Specific layer to view (borrower, advisor, supervisor, leadership)")
 ):
     """View action plan details."""
-    client = CLIClient()
+    client = get_client()
     
     params = {'plan_id': plan_id}
     if layer:
@@ -695,7 +1099,7 @@ def view_action_plan(
                     _display_plan_layer(plan[layer_name], layer_name)
                     
     else:
-        client.print_error(f"Failed to get action plan: {result['error']}")
+        print_error(f"Failed to get action plan: {result['error']}")
 
 
 @app.command("action-plan-queue")
@@ -703,7 +1107,7 @@ def action_plan_queue(
     status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by queue status")
 ):
     """View action plan approval queue."""
-    client = CLIClient()
+    client = get_client()
     
     params = {}
     if status:
@@ -732,7 +1136,7 @@ def action_plan_queue(
             console.print(f"  Created: {plan.get('created_at', 'N/A')}")
             
     else:
-        client.print_error(f"Failed to get queue: {result['error']}")
+        print_error(f"Failed to get queue: {result['error']}")
 
 
 @app.command("approve-action-plan")
@@ -741,7 +1145,7 @@ def approve_action_plan(
     approver: str = typer.Option("CLI_USER", "--approver", "-by", help="Approver identifier")
 ):
     """Approve an action plan."""
-    client = CLIClient()
+    client = get_client()
     
     params = {
         'plan_id': plan_id,
@@ -755,13 +1159,13 @@ def approve_action_plan(
     if result['success']:
         console.print("✅ Action plan approved successfully")
     else:
-        client.print_error(f"Approval failed: {result['error']}")
+        print_error(f"Approval failed: {result['error']}")
 
 
 @app.command("action-plan-summary")
 def action_plan_summary():
     """Show action plan summary metrics."""
-    client = CLIClient()
+    client = get_client()
     
     console.print("📊 [bold blue]Getting action plan metrics...[/bold blue]")
     result = client.send_command('action_plan_summary', {})
@@ -787,7 +1191,7 @@ def action_plan_summary():
             console.print(f"  {route}: {count}")
             
     else:
-        client.print_error(f"Failed to get metrics: {result['error']}")
+        print_error(f"Failed to get metrics: {result['error']}")
 
 
 def _display_plan_layer(layer_data: Dict[str, Any], layer_type: str):
@@ -864,7 +1268,7 @@ def execute_plan(
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be executed without actually executing")
 ):
     """Execute an action plan using intelligent LLM-powered execution."""
-    client = CLIClient()
+    client = get_client()
     
     if dry_run:
         console.print(f"🔍 [bold yellow]Dry run - showing what would be executed for plan {plan_id}[/bold yellow]")
@@ -947,7 +1351,7 @@ def execute_plan(
             console.print(f"Error: {execution_result.get('message', 'Unknown error')}")
             
     else:
-        client.print_error(f"Failed to execute plan: {result['error']}")
+        print_error(f"Failed to execute plan: {result['error']}")
 
 
 @app.command("execution-history")
@@ -955,7 +1359,7 @@ def execution_history(
     limit: int = typer.Option(10, "--limit", "-l", help="Number of recent executions to show")
 ):
     """Show recent execution history."""
-    client = CLIClient()
+    client = get_client()
     
     console.print(f"📚 [bold blue]Getting execution history (last {limit})...[/bold blue]")
     result = client.send_command('execution_history', {'limit': limit})
@@ -977,7 +1381,7 @@ def execution_history(
             console.print()
             
     else:
-        client.print_error(f"Failed to get execution history: {result['error']}")
+        print_error(f"Failed to get execution history: {result['error']}")
 
 
 @app.command("view-artifacts")
@@ -986,7 +1390,7 @@ def view_artifacts(
     limit: int = typer.Option(10, "--limit", "-l", help="Number of recent artifacts to show")
 ):
     """View execution artifacts (emails, documents, callbacks)."""
-    client = CLIClient()
+    client = get_client()
     
     console.print(f"📁 [bold blue]Getting {artifact_type} artifacts (last {limit})...[/bold blue]")
     result = client.send_command('view_artifacts', {
@@ -1012,13 +1416,13 @@ def view_artifacts(
             console.print()
             
     else:
-        client.print_error(f"Failed to get artifacts: {result['error']}")
+        print_error(f"Failed to get artifacts: {result['error']}")
 
 
 @app.command("execution-metrics")  
 def execution_metrics():
     """Show execution metrics and statistics."""
-    client = CLIClient()
+    client = get_client()
     
     console.print("📊 [bold blue]Getting execution metrics...[/bold blue]")
     result = client.send_command('execution_metrics', {})
@@ -1044,7 +1448,7 @@ def execution_metrics():
             console.print(f"  {tool}: {count}")
             
     else:
-        client.print_error(f"Failed to get execution metrics: {result['error']}")
+        print_error(f"Failed to get execution metrics: {result['error']}")
 
 
 # ========== Decision Agent Commands ==========
@@ -1054,14 +1458,14 @@ def get_approval_queue(
     route: Optional[str] = typer.Option(None, help="Filter by approval route: advisor_approval, supervisor_approval")
 ):
     """Get actions pending approval in the Decision Agent queue."""
-    client = CLIClient()
+    client = get_client()
     result = client.send_command('get_approval_queue', {'route': route})
     
     if result['success']:
         queue = result['queue']
         
         if not queue:
-            client.print_info("No actions pending approval")
+            print_info("No actions pending approval")
             return
         
         console.print(f"\n📋 Approval Queue ({result['total_pending']} items)")
@@ -1087,7 +1491,7 @@ def get_approval_queue(
                 console.print()
     
     else:
-        client.print_error(f"Failed to get approval queue: {result['error']}")
+        print_error(f"Failed to get approval queue: {result['error']}")
 
 
 @app.command("approve-action")
@@ -1097,7 +1501,7 @@ def approve_action(
     notes: str = typer.Option("", help="Approval notes")
 ):
     """Approve a specific action in the queue."""
-    client = CLIClient()
+    client = get_client()
     result = client.send_command('approve_action', {
         'action_id': action_id,
         'approved_by': approved_by,
@@ -1105,9 +1509,9 @@ def approve_action(
     })
     
     if result['success']:
-        client.print_success(result['message'])
+        print_success(result['message'])
     else:
-        client.print_error(f"Failed to approve action: {result['error']}")
+        print_error(f"Failed to approve action: {result['error']}")
 
 
 @app.command("reject-action")  
@@ -1117,7 +1521,7 @@ def reject_action(
     reason: str = typer.Option("No reason provided", help="Rejection reason")
 ):
     """Reject a specific action in the queue."""
-    client = CLIClient()
+    client = get_client()
     result = client.send_command('reject_action', {
         'action_id': action_id,
         'rejected_by': rejected_by,
@@ -1125,9 +1529,9 @@ def reject_action(
     })
     
     if result['success']:
-        client.print_success(f"{result['message']} - Reason: {result['reason']}")
+        print_success(f"{result['message']} - Reason: {result['reason']}")
     else:
-        client.print_error(f"Failed to reject action: {result['error']}")
+        print_error(f"Failed to reject action: {result['error']}")
 
 
 @app.command("bulk-approve")
@@ -1137,7 +1541,7 @@ def bulk_approve_actions(
     notes: str = typer.Option("Bulk approval", help="Approval notes")
 ):
     """Bulk approve multiple actions."""
-    client = CLIClient()
+    client = get_client()
     
     # Parse comma-separated action IDs
     ids_list = [aid.strip() for aid in action_ids.split(',')]
@@ -1149,16 +1553,16 @@ def bulk_approve_actions(
     })
     
     if result['success']:
-        client.print_success(result['message'])
+        print_success(result['message'])
         console.print(f"Approved: {result['approved_count']}/{result['total_requested']} actions")
     else:
-        client.print_error(f"Failed to bulk approve: {result['error']}")
+        print_error(f"Failed to bulk approve: {result['error']}")
 
 
 @app.command("approval-metrics")
 def approval_metrics():
     """Get approval queue metrics and statistics."""
-    client = CLIClient()
+    client = get_client()
     result = client.send_command('approval_metrics')
     
     if result['success']:
@@ -1183,13 +1587,13 @@ def approval_metrics():
             console.print(f"  [{risk_color}]{risk_level}[/]: {count}")
     
     else:
-        client.print_error(f"Failed to get approval metrics: {result['error']}")
+        print_error(f"Failed to get approval metrics: {result['error']}")
 
 
 @app.command("decision-agent-summary")
 def decision_agent_summary():
     """Get Decision Agent configuration and processing summary."""
-    client = CLIClient()
+    client = get_client()
     result = client.send_command('decision_agent_summary')
     
     if result['success']:
@@ -1219,7 +1623,7 @@ def decision_agent_summary():
                 console.print(f"  {route.replace('_', ' ').title()}: {count}")
     
     else:
-        client.print_error(f"Failed to get decision agent summary: {result['error']}")
+        print_error(f"Failed to get decision agent summary: {result['error']}")
 
 
 if __name__ == "__main__":

@@ -75,10 +75,10 @@ Upon successful completion of this demo, you should have achieved the following 
 ### Final Validation Commands
 After completion, these commands should return meaningful data:
 ```bash
-python3 cli_fast.py stats                                      # Shows 2+ transcripts
-python3 cli_fast.py execution-history --limit 2               # Shows 2 executions  
-python3 cli_fast.py approval-metrics                          # Shows approval statistics
-python3 cli_fast.py execution-metrics --include-observer-feedback  # Observer evaluation
+python3 cli.py stats                                      # Shows 2+ transcripts
+python3 cli.py execution-history --limit 2               # Shows 2 executions  
+python3 cli.py approval-metrics                          # Shows approval statistics
+python3 cli.py execution-metrics --include-observer-feedback  # Observer evaluation
 ```
 
 ### Success Criteria Summary
@@ -96,7 +96,7 @@ python3 cli_fast.py execution-metrics --include-observer-feedback  # Observer ev
 
 **Command:**
 ```bash
-python3 cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal - dispute with property valuation and compliance requirements" urgency=high financial_impact=true
+python3 cli.py generate --store scenario="Mortgage Servicing - PMI Removal - dispute with property valuation and compliance requirements" urgency=high financial_impact=true
 ```
 
 **Success Indicator:**
@@ -109,7 +109,7 @@ python3 cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal 
 
 **Validation:**
 ```bash
-python3 cli_fast.py list  # Should show the new transcript in the table
+python3 cli.py list  # Should show the new transcript in the table
 ```
 
 **Expected Content:**
@@ -131,8 +131,8 @@ python3 cli_fast.py list  # Should show the new transcript in the table
 
 **Command:** *(Replace TRANSCRIPT_ID with actual ID from Step 1)*
 ```bash
-python3 cli_fast.py analyze -t TRANSCRIPT_ID
-# Alternative: python3 cli_fast.py analyze --transcript-id TRANSCRIPT_ID
+python3 cli.py analyze -t TRANSCRIPT_ID
+# Alternative: python3 cli.py analyze --transcript-id TRANSCRIPT_ID
 ```
 
 **Success Indicator:**
@@ -146,7 +146,7 @@ python3 cli_fast.py analyze -t TRANSCRIPT_ID
 
 **Validation:**
 ```bash
-python3 cli_fast.py analysis-metrics  # Should show 1+ completed analysis
+python3 cli.py analysis-metrics  # Should show 1+ completed analysis
 ```
 
 **Expected Results:**
@@ -172,7 +172,7 @@ python3 cli_fast.py analysis-metrics  # Should show 1+ completed analysis
 
 **Command:** *(Use TRANSCRIPT_ID from Step 1)*
 ```bash
-python3 cli_fast.py generate-action-plan --transcript-id TRANSCRIPT_ID
+python3 cli.py generate-action-plan --transcript-id TRANSCRIPT_ID
 ```
 *Alternative: Use analysis ID if you have it from Step 2*
 
@@ -189,7 +189,7 @@ python3 cli_fast.py generate-action-plan --transcript-id TRANSCRIPT_ID
 
 **Validation:**
 ```bash
-python3 cli_fast.py action-plan-summary  # Should show 1+ plan created
+python3 cli.py action-plan-summary  # Should show 1+ plan created
 ```
 
 **Expected Output:**
@@ -226,9 +226,9 @@ python3 cli_fast.py action-plan-summary  # Should show 1+ plan created
 
 **Command:** *(Use PLAN_ID from Step 3)*
 ```bash
-python3 cli_fast.py view-action-plan PLAN_ID
+python3 cli.py view-action-plan PLAN_ID
 # Optional layer-specific view:
-python3 cli_fast.py view-action-plan --layer supervisor PLAN_ID
+python3 cli.py view-action-plan --layer supervisor PLAN_ID
 ```
 
 **Success Indicator:**
@@ -263,14 +263,14 @@ python3 cli_fast.py view-action-plan --layer supervisor PLAN_ID
 **Commands:**
 ```bash
 # Check governance validation queue
-python3 cli_fast.py governance-queue --status pending
+python3 cli.py governance-queue --status pending
 
 # Check traditional approval queues
-python3 cli_fast.py get-approval-queue --route supervisor_approval
-python3 cli_fast.py get-approval-queue --route advisor_approval
+python3 cli.py get-approval-queue --route supervisor_approval
+python3 cli.py get-approval-queue --route advisor_approval
 
 # View audit trail (optional)
-python3 cli_fast.py audit-trail --limit 10
+python3 cli.py audit-trail --limit 10
 ```
 
 **Success Indicator:**
@@ -294,7 +294,7 @@ python3 cli_fast.py audit-trail --limit 10
 
 **Alternative:** For plan-level approvals:
 ```bash
-python3 cli_fast.py action-plan-queue --status pending_approval
+python3 cli.py action-plan-queue --status pending_approval
 ```
 
 **LLM Execution Instructions:**
@@ -317,22 +317,22 @@ python3 cli_fast.py action-plan-queue --status pending_approval
 ### Step 6a: Governance Approval (Compliance Validation)
 ```bash
 # Approve governance validation with compliance conditions
-python3 cli_fast.py governance-approve GOVERNANCE_ID --approved-by "supervisor_jane" --conditions "CFPB PMI disclosure required,Documentation review completed"
+python3 cli.py governance-approve GOVERNANCE_ID --approved-by "supervisor_jane" --conditions "CFPB PMI disclosure required,Documentation review completed"
 
 # Alternative: Reject for compliance issues
-python3 cli_fast.py governance-reject GOVERNANCE_ID --rejected-by "supervisor_jane" --reason "Missing CFPB disclosures"
+python3 cli.py governance-reject GOVERNANCE_ID --rejected-by "supervisor_jane" --reason "Missing CFPB disclosures"
 ```
 
 ### Step 6b: Traditional Action Approval (Existing System)
 ```bash
 # Approve supervisor-gated financial action (after governance approval)
-python3 cli_fast.py approve-action ACTION_ID_HIGH_RISK --approved-by "supervisor_jane" --notes "Governance validated - approved with documentation"
+python3 cli.py approve-action ACTION_ID_HIGH_RISK --approved-by "supervisor_jane" --notes "Governance validated - approved with documentation"
 
 # Reject expedited processing (optional)
-python3 cli_fast.py reject-action ACTION_ID_EXPEDITE --rejected-by "supervisor_jane" --reason "Requires supporting docs"
+python3 cli.py reject-action ACTION_ID_EXPEDITE --rejected-by "supervisor_jane" --reason "Requires supporting docs"
 
 # Bulk approve advisor items
-python3 cli_fast.py bulk-approve "ACTION_ID_1,ACTION_ID_2" --approved-by "advisor_mike" --notes "Routine coaching items"
+python3 cli.py bulk-approve "ACTION_ID_1,ACTION_ID_2" --approved-by "advisor_mike" --notes "Routine coaching items"
 ```
 
 **Success Indicator:**
@@ -344,9 +344,9 @@ python3 cli_fast.py bulk-approve "ACTION_ID_1,ACTION_ID_2" --approved-by "adviso
 
 **Validation:**
 ```bash
-python3 cli_fast.py approval-metrics  # Should show updated approval counts
-python3 cli_fast.py governance-metrics  # Should show governance approval statistics
-python3 cli_fast.py audit-trail --limit 5  # Should show recent approval audit events
+python3 cli.py approval-metrics  # Should show updated approval counts
+python3 cli.py governance-metrics  # Should show governance approval statistics
+python3 cli.py audit-trail --limit 5  # Should show recent approval audit events
 ```
 
 **Expected Results:**
@@ -373,7 +373,7 @@ python3 cli_fast.py audit-trail --limit 5  # Should show recent approval audit e
 
 **Command:** *(Use PLAN_ID from Step 3)*
 ```bash
-python3 cli_fast.py approve-action-plan PLAN_ID --approver "supervisor_jane"
+python3 cli.py approve-action-plan PLAN_ID --approver "supervisor_jane"
 ```
 
 **Success Indicator:**
@@ -383,7 +383,7 @@ python3 cli_fast.py approve-action-plan PLAN_ID --approver "supervisor_jane"
 
 **Validation:**
 ```bash
-python3 cli_fast.py action-plan-queue --status approved  # Should show approved plan
+python3 cli.py action-plan-queue --status approved  # Should show approved plan
 ```
 
 **LLM Execution Instructions:**
@@ -403,7 +403,7 @@ python3 cli_fast.py action-plan-queue --status approved  # Should show approved 
 **Command:** *(Use PLAN_ID from Step 3)*
 ```bash
 # Execute governance-validated and approved actions
-python3 cli_fast.py execute-plan PLAN_ID --compliance-monitoring
+python3 cli.py execute-plan PLAN_ID --compliance-monitoring
 ```
 
 **Success Indicator:**
@@ -450,11 +450,11 @@ CFPB Disclosures Generated: 2 disclosures attached to artifacts
 
 **Commands:**
 ```bash
-python3 cli_fast.py execution-history --limit 5
-python3 cli_fast.py execution-metrics
-python3 cli_fast.py approval-metrics
-python3 cli_fast.py governance-metrics  # New: Governance performance metrics
-python3 cli_fast.py audit-trail --limit 10  # New: Recent audit events
+python3 cli.py execution-history --limit 5
+python3 cli.py execution-metrics
+python3 cli.py approval-metrics
+python3 cli.py governance-metrics  # New: Governance performance metrics
+python3 cli.py audit-trail --limit 10  # New: Recent audit events
 ```
 
 **Success Indicator:**
@@ -492,10 +492,10 @@ python3 cli_fast.py audit-trail --limit 10  # New: Recent audit events
 
 **Commands:**
 ```bash
-python3 cli_fast.py view-artifacts --type emails --limit 20
-python3 cli_fast.py view-artifacts --type documents
-python3 cli_fast.py view-artifacts --type callbacks
-python3 cli_fast.py view-artifacts --type cfpb-disclosures  # New: CFPB compliance documents
+python3 cli.py view-artifacts --type emails --limit 20
+python3 cli.py view-artifacts --type documents
+python3 cli.py view-artifacts --type callbacks
+python3 cli.py view-artifacts --type cfpb-disclosures  # New: CFPB compliance documents
 ```
 
 **Success Indicator:**
@@ -530,13 +530,13 @@ python3 cli_fast.py view-artifacts --type cfpb-disclosures  # New: CFPB complian
 **Commands:**
 ```bash
 # View execution results with Observer Agent evaluation (enhanced with governance)
-python3 cli_fast.py execution-metrics --include-observer-feedback --include-governance-insights
+python3 cli.py execution-metrics --include-observer-feedback --include-governance-insights
 
 # Check continuous learning insights including governance patterns
-python3 cli_fast.py analysis-metrics --include-learning-patterns --include-compliance-patterns
+python3 cli.py analysis-metrics --include-learning-patterns --include-compliance-patterns
 
 # View Observer Agent lessons learned with governance feedback
-python3 cli_fast.py decision-agent-summary --include-feedback-loop --include-governance-learning
+python3 cli.py decision-agent-summary --include-feedback-loop --include-governance-learning
 ```
 
 **Success Indicator:**
@@ -593,22 +593,22 @@ Decision Agent Feedback: Enhanced routing with governance validation integration
 **Commands:**
 ```bash
 # Generate another similar scenario to test learning (including governance learning context)
-python3 cli_fast.py generate --store scenario="Mortgage Servicing - PMI Removal - similar compliance dispute with governance context" urgency=high financial_impact=true
+python3 cli.py generate --store scenario="Mortgage Servicing - PMI Removal - similar compliance dispute with governance context" urgency=high financial_impact=true
 
 # Analyze and generate action plan (should show Observer + Governance improvements)
-python3 cli_fast.py analyze --transcript-id NEW_TRANSCRIPT_ID
-python3 cli_fast.py generate-action-plan --transcript-id NEW_TRANSCRIPT_ID
+python3 cli.py analyze --transcript-id NEW_TRANSCRIPT_ID
+python3 cli.py generate-action-plan --transcript-id NEW_TRANSCRIPT_ID
 
 # Governance validation (should show improved confidence and faster processing)
-python3 cli_fast.py governance-approve NEW_GOVERNANCE_ID --approved-by "supervisor_jane"
+python3 cli.py governance-approve NEW_GOVERNANCE_ID --approved-by "supervisor_jane"
 
 # Approve and execute the new plan with compliance monitoring
-python3 cli_fast.py approve-action-plan NEW_PLAN_ID --approver "supervisor_jane"
-python3 cli_fast.py execute-plan NEW_PLAN_ID --compliance-monitoring
+python3 cli.py approve-action-plan NEW_PLAN_ID --approver "supervisor_jane"
+python3 cli.py execute-plan NEW_PLAN_ID --compliance-monitoring
 
 # Compare learning velocity and governance improvements
-python3 cli_fast.py execution-metrics --compare-previous --include-learning-velocity --include-governance-velocity
-python3 cli_fast.py governance-metrics --compare-previous --show-learning-improvements
+python3 cli.py execution-metrics --compare-previous --include-learning-velocity --include-governance-velocity
+python3 cli.py governance-metrics --compare-previous --show-learning-improvements
 ```
 
 **Success Indicator:**
@@ -686,12 +686,12 @@ Upon successful execution of all 11 steps, verify these outcomes:
 ### ✅ **System Metrics Available (Enhanced with Governance)**
 Run these final validation commands:
 ```bash
-python3 cli_fast.py stats                                         # Shows 2+ transcripts
-python3 cli_fast.py execution-history --limit 2                  # Shows both executions with compliance monitoring
-python3 cli_fast.py approval-metrics                             # Shows dual approval workflow stats  
-python3 cli_fast.py governance-metrics                           # Shows governance validation performance
-python3 cli_fast.py audit-trail --limit 20                       # Shows comprehensive audit trail with integrity verification
-python3 cli_fast.py execution-metrics --include-observer-feedback --include-governance-insights # Enhanced evaluation summary
+python3 cli.py stats                                         # Shows 2+ transcripts
+python3 cli.py execution-history --limit 2                  # Shows both executions with compliance monitoring
+python3 cli.py approval-metrics                             # Shows dual approval workflow stats  
+python3 cli.py governance-metrics                           # Shows governance validation performance
+python3 cli.py audit-trail --limit 20                       # Shows comprehensive audit trail with integrity verification
+python3 cli.py execution-metrics --include-observer-feedback --include-governance-insights # Enhanced evaluation summary
 ```
 
 ## 🏆 **Demo Success Criteria**

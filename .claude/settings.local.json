@@ -20,7 +20,8 @@
       "Bash(ss:*)",
       "Bash(./stop_services.sh:*)",
       "Bash(fuser:*)",
-      "Bash(gh issue list:*)"
+      "Bash(gh issue list:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
