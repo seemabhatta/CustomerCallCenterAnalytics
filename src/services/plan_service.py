@@ -63,7 +63,7 @@ class PlanService:
         plan = self.store.get_by_id(plan_id)
         if not plan:
             return None
-        return plan.to_dict()
+        return plan  # plan is already a dict from store.get_by_id()
     
     async def update(self, plan_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update action plan."""
@@ -71,14 +71,13 @@ class PlanService:
         if not plan:
             return None
         
-        # Apply updates
+        # Apply updates directly to dict
         for key, value in updates.items():
-            if hasattr(plan, key):
-                setattr(plan, key, value)
+            plan[key] = value
         
         # Store updated plan
         self.store.update(plan_id, plan)
-        return plan.to_dict()
+        return plan  # plan is already a dict
     
     async def delete(self, plan_id: str) -> bool:
         """Delete action plan by ID."""
@@ -87,7 +86,7 @@ class PlanService:
     async def search_by_analysis(self, analysis_id: str) -> List[Dict[str, Any]]:
         """Search action plans by analysis ID."""
         results = self.store.search_by_analysis(analysis_id)
-        return [p.to_dict() for p in results]
+        return results  # results are already dicts from store
     
     async def approve(self, plan_id: str, approval_data: Dict[str, Any]) -> Dict[str, Any]:
         """Approve action plan for execution."""

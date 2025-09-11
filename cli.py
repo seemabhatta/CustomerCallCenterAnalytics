@@ -244,6 +244,22 @@ class CLIRestClient:
         """Execute plan via POST /api/v1/plans/{id}/execute."""
         return self._make_request('POST', f'/api/v1/plans/{plan_id}/execute')
     
+    def view_plan(self, plan_id: str) -> Dict[str, Any]:
+        """Get plan by ID via GET /api/v1/plans/{id}."""
+        return self._make_request('GET', f'/api/v1/plans/{plan_id}')
+    
+    def update_plan(self, plan_id: str, update_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update plan via PUT /api/v1/plans/{id}."""
+        return self._make_request('PUT', f'/api/v1/plans/{plan_id}', json_data=update_data)
+    
+    def delete_plan(self, plan_id: str) -> Dict[str, Any]:
+        """Delete plan via DELETE /api/v1/plans/{id}."""
+        return self._make_request('DELETE', f'/api/v1/plans/{plan_id}')
+    
+    def delete_all_plans(self) -> Dict[str, Any]:
+        """Delete all plans via DELETE /api/v1/plans."""
+        return self._make_request('DELETE', '/api/v1/plans')
+    
     # Case operations
     def list_cases(self) -> List[Dict[str, Any]]:
         """List cases via GET /api/v1/cases."""
@@ -1225,6 +1241,48 @@ def plan_create(
         console.print(f"Analysis ID: [yellow]{analysis}[/yellow]")
         console.print(f"Status: [green]{result.get('status', 'N/A')}[/green]")
         
+        # Display the four-layer action plans
+        if 'borrower_plan' in result:
+            console.print(f"\n🏠 [bold blue]BORROWER PLAN[/bold blue]:")
+            borrower_plan = result['borrower_plan']
+            if 'immediate_actions' in borrower_plan:
+                console.print("  [yellow]Immediate Actions:[/yellow]")
+                for i, action in enumerate(borrower_plan['immediate_actions'][:3], 1):  # Show first 3
+                    console.print(f"    {i}. {action.get('action', 'N/A')} (Priority: {action.get('priority', 'N/A')})")
+                if len(borrower_plan['immediate_actions']) > 3:
+                    console.print(f"    ... and {len(borrower_plan['immediate_actions']) - 3} more actions")
+        
+        if 'advisor_plan' in result:
+            console.print(f"\n👨‍💼 [bold green]ADVISOR PLAN[/bold green]:")
+            advisor_plan = result['advisor_plan']
+            if 'coaching_items' in advisor_plan:
+                console.print("  [yellow]Coaching Items:[/yellow]")
+                for i, item in enumerate(advisor_plan['coaching_items'][:2], 1):  # Show first 2
+                    console.print(f"    {i}. {item.get('coaching_point', 'N/A')} (Priority: {item.get('priority', 'N/A')})")
+                if len(advisor_plan['coaching_items']) > 2:
+                    console.print(f"    ... and {len(advisor_plan['coaching_items']) - 2} more coaching items")
+        
+        if 'supervisor_plan' in result:
+            console.print(f"\n👔 [bold yellow]SUPERVISOR PLAN[/bold yellow]:")
+            supervisor_plan = result['supervisor_plan']
+            console.print(f"  [yellow]Approval Required:[/yellow] {supervisor_plan.get('approval_required', 'N/A')}")
+            if 'escalation_items' in supervisor_plan:
+                console.print("  [yellow]Escalation Items:[/yellow]")
+                for i, item in enumerate(supervisor_plan['escalation_items'][:2], 1):  # Show first 2
+                    console.print(f"    {i}. {item.get('item', 'N/A')} (Priority: {item.get('priority', 'N/A')})")
+        
+        if 'leadership_plan' in result:
+            console.print(f"\n🏢 [bold red]LEADERSHIP PLAN[/bold red]:")
+            leadership_plan = result['leadership_plan']
+            if 'portfolio_insights' in leadership_plan:
+                console.print("  [yellow]Portfolio Insights:[/yellow]")
+                for i, insight in enumerate(leadership_plan['portfolio_insights'][:2], 1):  # Show first 2
+                    console.print(f"    {i}. {insight}")
+                if len(leadership_plan['portfolio_insights']) > 2:
+                    console.print(f"    ... and {len(leadership_plan['portfolio_insights']) - 2} more insights")
+        
+        console.print(f"\n💡 [dim]Use 'python cli.py plan list' to see all plans[/dim]")
+        
     except CLIError as e:
         print_error(f"Plan creation failed: {str(e)}")
         raise typer.Exit(1)
@@ -1259,6 +1317,156 @@ def plan_list(
             
     except CLIError as e:
         print_error(f"List plans failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@plan_app.command("view")
+def plan_view(
+    plan_id: str = typer.Argument(..., help="Plan ID to view")
+):
+    """View detailed plan information."""
+    try:
+        client = get_client()
+        
+        console.print(f"📋 [bold magenta]Retrieving plan {plan_id}...[/bold magenta]")
+        plan = client.view_plan(plan_id)
+        
+        console.print(f"\n📄 [bold green]Plan Details[/bold green]:")
+        console.print(f"Plan ID: [cyan]{plan.get('plan_id', 'N/A')}[/cyan]")
+        console.print(f"Analysis ID: [yellow]{plan.get('analysis_id', 'N/A')}[/yellow]")
+        console.print(f"Status: [green]{plan.get('status', 'N/A')}[/green]")
+        console.print(f"Created: [dim]{plan.get('created_at', 'N/A')}[/dim]")
+        
+        # Display the four-layer action plans
+        if 'borrower_plan' in plan:
+            console.print(f"\n🏠 [bold blue]BORROWER PLAN[/bold blue]:")
+            borrower_plan = plan['borrower_plan']
+            if 'immediate_actions' in borrower_plan:
+                console.print("  [yellow]Immediate Actions:[/yellow]")
+                for i, action in enumerate(borrower_plan['immediate_actions'], 1):
+                    console.print(f"    {i}. {action.get('action', 'N/A')} (Priority: {action.get('priority', 'N/A')})")
+        
+        if 'advisor_plan' in plan:
+            console.print(f"\n👨‍💼 [bold green]ADVISOR PLAN[/bold green]:")
+            advisor_plan = plan['advisor_plan']
+            if 'coaching_items' in advisor_plan:
+                console.print("  [yellow]Coaching Items:[/yellow]")
+                for i, item in enumerate(advisor_plan['coaching_items'], 1):
+                    console.print(f"    {i}. {item.get('coaching_point', 'N/A')} (Priority: {item.get('priority', 'N/A')})")
+        
+        if 'supervisor_plan' in plan:
+            console.print(f"\n👔 [bold yellow]SUPERVISOR PLAN[/bold yellow]:")
+            supervisor_plan = plan['supervisor_plan']
+            console.print(f"  [yellow]Approval Required:[/yellow] {supervisor_plan.get('approval_required', 'N/A')}")
+            if 'escalation_items' in supervisor_plan:
+                console.print("  [yellow]Escalation Items:[/yellow]")
+                for i, item in enumerate(supervisor_plan['escalation_items'], 1):
+                    console.print(f"    {i}. {item.get('item', 'N/A')} (Priority: {item.get('priority', 'N/A')})")
+        
+        if 'leadership_plan' in plan:
+            console.print(f"\n🏢 [bold red]LEADERSHIP PLAN[/bold red]:")
+            leadership_plan = plan['leadership_plan']
+            if 'portfolio_insights' in leadership_plan:
+                console.print("  [yellow]Portfolio Insights:[/yellow]")
+                for i, insight in enumerate(leadership_plan['portfolio_insights'], 1):
+                    console.print(f"    {i}. {insight}")
+        
+        print_success(f"Plan {plan_id} retrieved successfully")
+            
+    except CLIError as e:
+        print_error(f"View plan failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@plan_app.command("update")
+def plan_update(
+    plan_id: str = typer.Argument(..., help="Plan ID to update"),
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Update plan status"),
+    approved_by: Optional[str] = typer.Option(None, "--approved-by", help="Set approver"),
+    notes: Optional[str] = typer.Option(None, "--notes", "-n", help="Add notes to the plan")
+):
+    """Update plan information."""
+    try:
+        client = get_client()
+        
+        # Build update data
+        update_data = {}
+        if status:
+            update_data["status"] = status
+        if approved_by:
+            update_data["approved_by"] = approved_by
+        if notes:
+            update_data["notes"] = notes
+        
+        if not update_data:
+            print_error("No update parameters provided. Use --status, --approved-by, or --notes")
+            raise typer.Exit(1)
+        
+        console.print(f"✏️ [bold magenta]Updating plan {plan_id}...[/bold magenta]")
+        updated_plan = client.update_plan(plan_id, update_data)
+        
+        console.print(f"\n📄 [bold green]Updated Plan[/bold green]:")
+        console.print(f"Plan ID: [cyan]{updated_plan.get('plan_id', 'N/A')}[/cyan]")
+        console.print(f"Analysis ID: [yellow]{updated_plan.get('analysis_id', 'N/A')}[/yellow]")
+        console.print(f"Status: [green]{updated_plan.get('status', 'N/A')}[/green]")
+        console.print(f"Updated: [dim]{updated_plan.get('updated_at', 'N/A')}[/dim]")
+        
+        print_success(f"Plan {plan_id} updated successfully")
+            
+    except CLIError as e:
+        print_error(f"Update plan failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@plan_app.command("delete")
+def plan_delete(
+    plan_id: str = typer.Argument(..., help="Plan ID to delete"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt")
+):
+    """Delete a plan."""
+    try:
+        client = get_client()
+        
+        if not force:
+            confirm = typer.confirm(f"Are you sure you want to delete plan {plan_id}?")
+            if not confirm:
+                console.print("❌ Delete cancelled")
+                return
+        
+        console.print(f"🗑️ [bold red]Deleting plan {plan_id}...[/bold red]")
+        result = client.delete_plan(plan_id)
+        
+        console.print(f"\n✅ [bold green]{result.get('message', 'Plan deleted successfully')}[/bold green]")
+        print_success(f"Plan {plan_id} deleted")
+            
+    except CLIError as e:
+        print_error(f"Delete plan failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@plan_app.command("delete-all")
+def plan_delete_all(
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt")
+):
+    """Delete all plans."""
+    try:
+        client = get_client()
+        
+        if not force:
+            confirm = typer.confirm("Are you sure you want to delete ALL plans? This cannot be undone!")
+            if not confirm:
+                console.print("❌ Delete cancelled")
+                return
+        
+        console.print("🗑️ [bold red]Deleting all plans...[/bold red]")
+        result = client.delete_all_plans()
+        
+        console.print(f"\n✅ [bold green]{result.get('message', 'All plans deleted successfully')}[/bold green]")
+        deleted_count = result.get('deleted_count', result.get('count', 'Unknown'))
+        print_success(f"Deleted {deleted_count} plan(s)")
+            
+    except CLIError as e:
+        print_error(f"Delete all plans failed: {str(e)}")
         raise typer.Exit(1)
 
 
