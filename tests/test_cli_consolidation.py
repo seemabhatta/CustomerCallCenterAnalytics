@@ -142,6 +142,62 @@ class TestAnalysisCommand:
         """
         result = run_cli(['analysis', 'risk-report'])
         assert result.returncode == 0, f"analysis risk-report failed: {result.stderr}"
+    
+    def test_analysis_delete_subcommand_exists(self):
+        """
+        TEST: analysis delete command should exist (TDD - fails first).
+        """
+        result = run_cli(['analysis', '--help'])
+        assert result.returncode == 0, "analysis command should exist"
+        assert 'delete' in result.stdout.lower(), "Should have delete subcommand"
+    
+    def test_analysis_delete_subcommand_with_confirmation(self):
+        """
+        TEST: analysis delete should work with confirmation like transcript delete (TDD - fails first).
+        """
+        # Create analysis first
+        transcript_result = run_cli(['transcript', 'create', '--topic', 'Delete Test', '--store'])
+        assert transcript_result.returncode == 0, "Failed to create test transcript"
+        
+        transcript_id_match = re.search(r'CALL_[A-Z0-9]{8}', transcript_result.stdout)
+        assert transcript_id_match, "No transcript ID found"
+        transcript_id = transcript_id_match.group()
+        
+        analysis_result = run_cli(['analysis', 'create', '--transcript', transcript_id])
+        assert analysis_result.returncode == 0, "Failed to create test analysis"
+        
+        analysis_id_match = re.search(r'ANALYSIS_[A-Z0-9_]{8,}', analysis_result.stdout)
+        assert analysis_id_match, "No analysis ID found"
+        analysis_id = analysis_id_match.group()
+        
+        # Test delete with force flag
+        delete_result = run_cli(['analysis', 'delete', analysis_id, '--force'])
+        assert delete_result.returncode == 0, f"analysis delete failed: {delete_result.stderr}"
+        assert 'deleted' in delete_result.stdout.lower(), "Should confirm deletion"
+    
+    def test_analysis_delete_all_subcommand_exists(self):
+        """
+        TEST: analysis delete-all command should exist (TDD - fails first).
+        """
+        result = run_cli(['analysis', '--help'])
+        assert result.returncode == 0, "analysis command should exist"
+        assert 'delete-all' in result.stdout.lower(), "Should have delete-all subcommand"
+    
+    def test_analysis_delete_all_with_force(self):
+        """
+        TEST: analysis delete-all should work with --force flag (TDD - fails first).
+        """
+        result = run_cli(['analysis', 'delete-all', '--force'])
+        assert result.returncode == 0, f"analysis delete-all failed: {result.stderr}"
+        assert 'deleted' in result.stdout.lower(), "Should confirm bulk deletion"
+    
+    def test_analysis_delete_nonexistent_fails_fast(self):
+        """
+        TEST: analysis delete with non-existent ID should fail fast (NO FALLBACK).
+        """
+        result = run_cli(['analysis', 'delete', 'ANALYSIS_NONEXISTENT', '--force'])
+        assert result.returncode == 1, "Should fail for non-existent analysis"
+        assert 'not found' in result.stdout.lower() or 'error' in result.stdout.lower(), "Should show clear error"
 
 
 class TestPlanCommand:

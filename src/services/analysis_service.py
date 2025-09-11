@@ -21,7 +21,17 @@ class AnalysisService:
         analyses = self.store.get_all()
         if limit:
             analyses = analyses[:limit]
-        return [a.to_dict() for a in analyses]
+        # NO FALLBACK: Handle both object and dict types properly
+        result = []
+        for a in analyses:
+            if hasattr(a, 'to_dict'):
+                result.append(a.to_dict())  # Object with to_dict method
+            elif isinstance(a, dict):
+                result.append(a)  # Already a dictionary
+            else:
+                # Fail fast if unexpected type
+                raise ValueError(f"Unexpected analysis type: {type(a)}")
+        return result
     
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new analysis from transcript."""
@@ -55,16 +65,38 @@ class AnalysisService:
         analysis = self.store.get_by_id(analysis_id)
         if not analysis:
             return None
-        return analysis.to_dict()
+        
+        # NO FALLBACK: Handle both object and dict types properly
+        if hasattr(analysis, 'to_dict'):
+            return analysis.to_dict()  # Object with to_dict method
+        elif isinstance(analysis, dict):
+            return analysis  # Already a dictionary
+        else:
+            # Fail fast if unexpected type
+            raise ValueError(f"Unexpected analysis type: {type(analysis)}")
     
     async def delete(self, analysis_id: str) -> bool:
         """Delete analysis by ID."""
         return self.store.delete(analysis_id)
     
+    async def delete_all(self) -> int:
+        """Delete all analyses - returns count of deleted analyses."""
+        return self.store.delete_all()
+    
     async def search_by_transcript(self, transcript_id: str) -> List[Dict[str, Any]]:
         """Search analyses by transcript ID."""
         results = self.store.search_by_transcript(transcript_id)
-        return [a.to_dict() for a in results]
+        # NO FALLBACK: Handle both object and dict types properly
+        result = []
+        for a in results:
+            if hasattr(a, 'to_dict'):
+                result.append(a.to_dict())  # Object with to_dict method
+            elif isinstance(a, dict):
+                result.append(a)  # Already a dictionary
+            else:
+                # Fail fast if unexpected type
+                raise ValueError(f"Unexpected analysis type: {type(a)}")
+        return result
     
     async def get_metrics(self) -> Dict[str, Any]:
         """Get analysis statistics and metrics."""

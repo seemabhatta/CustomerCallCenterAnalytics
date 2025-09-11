@@ -149,6 +149,14 @@ class CLIRestClient:
         params = {'limit': limit} if limit else {}
         return self._make_request('GET', '/api/v1/analyses', params=params)
     
+    def delete_analysis(self, analysis_id: str) -> Dict[str, Any]:
+        """Delete analysis via DELETE /api/v1/analyses/{id}."""
+        return self._make_request('DELETE', f'/api/v1/analyses/{analysis_id}')
+    
+    def delete_all_analyses(self) -> Dict[str, Any]:
+        """Delete all analyses via DELETE /api/v1/analyses."""
+        return self._make_request('DELETE', '/api/v1/analyses')
+    
     # Plan operations
     def create_plan(self, **kwargs) -> Dict[str, Any]:
         """Create action plan via POST /api/v1/plans."""
@@ -679,6 +687,56 @@ def analysis_risk_report(
             
     except CLIError as e:
         print_error(f"Risk report failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("delete")
+def analysis_delete(
+    analysis_id: str,
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation")
+):
+    """Delete specific analysis."""
+    try:
+        client = get_client()
+        
+        if not force:
+            confirm = typer.confirm(f"Delete analysis {analysis_id}?", default=False)
+            if not confirm:
+                console.print("❌ Deletion cancelled")
+                return
+        
+        console.print(f"🗑️ [bold magenta]Deleting analysis {analysis_id}...[/bold magenta]")
+        client.delete_analysis(analysis_id)
+        
+        print_success(f"Deleted analysis: {analysis_id}")
+        
+    except CLIError as e:
+        print_error(f"Delete failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@analysis_app.command("delete-all")
+def analysis_delete_all(
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation")
+):
+    """Delete all analyses."""
+    try:
+        client = get_client()
+        
+        if not force:
+            confirm = typer.confirm("Delete ALL analyses? This cannot be undone!", default=False)
+            if not confirm:
+                console.print("❌ Deletion cancelled")
+                return
+        
+        console.print("🗑️ [bold magenta]Deleting all analyses...[/bold magenta]")
+        result = client.delete_all_analyses()
+        
+        count = result.get('count', 0)
+        print_success(f"Deleted {count} analyses")
+        
+    except CLIError as e:
+        print_error(f"Delete all failed: {str(e)}")
         raise typer.Exit(1)
 
 

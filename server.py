@@ -322,6 +322,15 @@ async def delete_analysis(analysis_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")
 
+@app.delete("/api/v1/analyses")
+async def delete_all_analyses():
+    """Delete all analyses - proxies to analysis service."""
+    try:
+        count = await analysis_service.delete_all()
+        return {"message": f"Deleted {count} analyses successfully", "count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete all analyses: {str(e)}")
+
 @app.get("/api/v1/analyses/search/transcript/{transcript_id}")
 async def search_analyses_by_transcript(transcript_id: str):
     """Search analyses by transcript ID - proxies to analysis service."""
