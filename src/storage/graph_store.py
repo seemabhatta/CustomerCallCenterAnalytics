@@ -209,22 +209,34 @@ class GraphStore:
             raise GraphStoreError(f"Failed to add analysis: {str(e)}")
     
     def _add_analysis_node(self, analysis_data: Dict[str, Any]):
-        """Create analysis node."""
+        """Create analysis node with robust duplicate handling."""
         analysis_id = analysis_data.get('analysis_id')
+        if not analysis_id:
+            raise GraphStoreError("analysis_id is required for creating analysis node")
         
-        # First check if analysis already exists using fixed execute_query
+        # Robust existence check with multiple fallback strategies
+        exists = False
         try:
+            # Strategy 1: Count-based existence check
             check_query = "MATCH (a:Analysis {analysis_id: $analysis_id}) RETURN count(a) as count"
             result = self.execute_query(check_query, {"analysis_id": analysis_id})
-            count = result[0]["count"] if result else 0
             
-            if count > 0:
-                logger.info(f"Analysis {analysis_id} already exists, returning success (idempotent)")
-                return
-        except Exception:
-            pass  # If check fails, proceed with create
+            if result and len(result) > 0 and "count" in result[0]:
+                count = result[0]["count"]
+                exists = count > 0
+                logger.debug(f"Existence check for {analysis_id}: count={count}, exists={exists}")
+            else:
+                logger.warning(f"Unexpected existence check result for {analysis_id}: {result}")
+                
+        except Exception as check_error:
+            logger.warning(f"Existence check failed for {analysis_id}: {check_error}")
+            # Don't fail fast on existence check - proceed with create and handle duplicates there
         
-        # Create new analysis
+        if exists:
+            logger.info(f"Analysis {analysis_id} already exists, skipping creation (idempotent)")
+            return
+        
+        # Create new analysis with comprehensive error handling
         try:
             query = """
             CREATE (a:Analysis {
@@ -250,15 +262,22 @@ class GraphStore:
                 "escalation_needed": analysis_data.get('escalation_needed', False),
                 "created_at": created_at
             })
-        except Exception as e:
-            error_msg = str(e)
-            if "duplicated primary key" in error_msg:
-                # Analysis already exists - this is acceptable, idempotent behavior
-                logger.info(f"Analysis {analysis_id} already exists in database, returning success")
+            logger.debug(f"Successfully created analysis node {analysis_id}")
+            
+        except Exception as create_error:
+            error_msg = str(create_error)
+            if "duplicated primary key" in error_msg.lower():
+                # Analysis was created by another process between check and create (race condition)
+                logger.info(f"Analysis {analysis_id} was created concurrently, accepting idempotent success")
+                return
+            elif "primary key" in error_msg.lower() and "constraint" in error_msg.lower():
+                # Different format of primary key constraint error
+                logger.info(f"Primary key constraint hit for {analysis_id}, accepting idempotent success")
                 return
             else:
-                # Re-raise other errors
-                raise
+                # Real error - fail fast per NO FALLBACK principle
+                logger.error(f"Failed to create analysis {analysis_id}: {error_msg}")
+                raise GraphStoreError(f"Analysis creation failed: {error_msg}")
     
     def find_similar_risk_patterns(self, analysis_id: str, limit: int = 5) -> List[Dict[str, Any]]:
         """Find analyses with similar risk patterns."""
@@ -478,24 +497,33 @@ class GraphStore:
         })
     
     def add_transcript(self, transcript_id: str, topic: str = "", message_count: int = 0) -> bool:
-        """Add transcript node to graph."""
+        """Add transcript node to graph with robust duplicate handling."""
         try:
-            # First check if transcript already exists
-            check_query = "MATCH (t:Transcript {transcript_id: $transcript_id}) RETURN count(t) as count"
-            try:
-                result = self.connection.execute(check_query, {"transcript_id": transcript_id})
-                result_list = list(result)
-                count = result_list[0]["count"] if result_list else 0
+            if not transcript_id:
+                raise GraphStoreError("transcript_id is required")
                 
-                if count > 0:
-                    logger.info(f"Transcript {transcript_id} already exists, skipping")
-                    return True
+            # Robust existence check using improved execute_query
+            exists = False
+            try:
+                check_query = "MATCH (t:Transcript {transcript_id: $transcript_id}) RETURN count(t) as count"
+                result = self.execute_query(check_query, {"transcript_id": transcript_id})
+                
+                if result and len(result) > 0 and "count" in result[0]:
+                    count = result[0]["count"]
+                    exists = count > 0
+                    logger.debug(f"Transcript existence check for {transcript_id}: count={count}, exists={exists}")
+                else:
+                    logger.warning(f"Unexpected existence check result for transcript {transcript_id}: {result}")
+                    
             except Exception as check_e:
-                # If check fails, assume transcript doesn't exist and proceed
-                logger.debug(f"Transcript existence check failed, proceeding with create: {check_e}")
-                pass
+                logger.warning(f"Transcript existence check failed for {transcript_id}: {check_e}")
+                # Continue with create attempt - will handle duplicates in create block
             
-            # Create new transcript using KuzuDB table INSERT syntax
+            if exists:
+                logger.info(f"Transcript {transcript_id} already exists, skipping creation (idempotent)")
+                return True
+            
+            # Create new transcript
             query = """
             CREATE (t:Transcript {
                 transcript_id: $transcript_id,
@@ -509,16 +537,21 @@ class GraphStore:
                 "topic": topic,
                 "message_count": message_count
             })
-            logger.info(f"Created transcript node {transcript_id}")
+            logger.debug(f"Successfully created transcript node {transcript_id}")
             return True
             
         except Exception as e:
             error_msg = str(e)
-            if "duplicated primary key" in error_msg:
-                # Transcript already exists - this is acceptable, return success (idempotent behavior)
-                logger.info(f"Transcript {transcript_id} already exists in database, returning success")
+            if "duplicated primary key" in error_msg.lower():
+                # Transcript was created concurrently - idempotent behavior
+                logger.info(f"Transcript {transcript_id} was created concurrently, accepting idempotent success")
+                return True
+            elif "primary key" in error_msg.lower() and "constraint" in error_msg.lower():
+                # Different format of primary key constraint error
+                logger.info(f"Primary key constraint hit for transcript {transcript_id}, accepting idempotent success")
                 return True
             else:
+                # Real error - fail fast per NO FALLBACK principle
                 logger.error(f"Failed to add transcript {transcript_id}: {error_msg}")
                 raise GraphStoreError(f"Failed to add transcript: {error_msg}")
     
@@ -564,51 +597,79 @@ class GraphStore:
             if parameters is None:
                 parameters = {}
             
+            # Execute the query
             result = self.connection.execute(cypher_query, parameters)
             
-            # Convert KuzuDB result format to list of dictionaries
-            formatted_results = []
-            
-            # Get column names from the result
+            # Convert KuzuDB result to list for processing
             result_list = list(result)
             if not result_list:
                 return []
             
-            # For queries with named columns (e.g., RETURN count(n) as count)
-            # KuzuDB returns tuples, we need to map to column names
-            if hasattr(result, 'get_column_names'):
+            # Get column names - KuzuDB provides this through get_column_names()
+            formatted_results = []
+            
+            try:
+                # Try to get column names from the result object
                 column_names = result.get_column_names()
+                logger.debug(f"Query returned columns: {column_names}")
+                
                 for record in result_list:
                     if isinstance(record, (list, tuple)):
-                        formatted_results.append(dict(zip(column_names, record)))
+                        # Record is a tuple/list, map to column names
+                        if len(record) == len(column_names):
+                            formatted_results.append(dict(zip(column_names, record)))
+                        else:
+                            # Mismatch between columns and values - use positional mapping
+                            record_dict = {}
+                            for i, value in enumerate(record):
+                                col_name = column_names[i] if i < len(column_names) else f"col_{i}"
+                                record_dict[col_name] = value
+                            formatted_results.append(record_dict)
                     else:
-                        # Handle single value results
-                        formatted_results.append({"value": record})
-            else:
-                # Fallback: try to detect column names from query
-                if "as " in cypher_query.lower():
-                    # Extract column name after "as"
-                    import re
-                    as_matches = re.findall(r'as\s+(\w+)', cypher_query, re.IGNORECASE)
-                    if as_matches and result_list:
-                        column_name = as_matches[0]
-                        for record in result_list:
-                            if isinstance(record, (list, tuple)) and len(record) == 1:
-                                formatted_results.append({column_name: record[0]})
-                            else:
-                                formatted_results.append({column_name: record})
-                else:
-                    # Default handling for simple results
+                        # Single value result
+                        if len(column_names) == 1:
+                            formatted_results.append({column_names[0]: record})
+                        else:
+                            formatted_results.append({"value": record})
+                            
+            except (AttributeError, IndexError) as col_error:
+                # Fallback: get_column_names() failed or column mismatch
+                logger.warning(f"Could not get column names, using fallback: {col_error}")
+                
+                # Try to parse column names from the query itself
+                import re
+                as_matches = re.findall(r'as\s+(\w+)', cypher_query, re.IGNORECASE)
+                
+                if as_matches:
+                    # Use extracted column names
                     for record in result_list:
-                        if isinstance(record, (list, tuple)) and len(record) == 1:
-                            formatted_results.append({"count": record[0]})
+                        if isinstance(record, (list, tuple)):
+                            record_dict = {}
+                            for i, value in enumerate(record):
+                                col_name = as_matches[i] if i < len(as_matches) else f"col_{i}"
+                                record_dict[col_name] = value
+                            formatted_results.append(record_dict)
+                        else:
+                            formatted_results.append({as_matches[0]: record})
+                else:
+                    # Final fallback: generic column names
+                    for record in result_list:
+                        if isinstance(record, (list, tuple)):
+                            if len(record) == 1:
+                                formatted_results.append({"value": record[0]})
+                            else:
+                                record_dict = {}
+                                for i, value in enumerate(record):
+                                    record_dict[f"col_{i}"] = value
+                                formatted_results.append(record_dict)
                         else:
                             formatted_results.append({"value": record})
             
+            logger.debug(f"Query returned {len(formatted_results)} formatted results")
             return formatted_results
             
         except Exception as e:
-            logger.error(f"Failed to execute query: {str(e)}")
+            logger.error(f"Failed to execute query '{cypher_query[:100]}...': {str(e)}")
             raise GraphStoreError(f"Query execution failed: {str(e)}")
     
     def get_graph_statistics(self) -> Dict[str, Any]:
