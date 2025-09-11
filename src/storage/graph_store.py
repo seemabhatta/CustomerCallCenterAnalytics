@@ -308,23 +308,27 @@ class GraphStore:
     def get_high_risk_clusters(self, risk_threshold: float = 0.7) -> List[Dict[str, Any]]:
         """Find clusters of high-risk analyses."""
         try:
-            # Simplified query for KuzuDB compatibility
+            # Fixed query using WITH clause for proper KuzuDB aggregation
             query = """
             MATCH (a:Analysis)-[:HAS_RISK_PATTERN]->(p:RiskPattern)
             WHERE p.risk_score >= $risk_threshold
-            RETURN p.pattern_type as risk_type,
-                   p.description as description,
-                   p.risk_score as risk_score,
-                   count(*) as affected_analyses,
-                   collect(a.analysis_id) as analysis_ids
-            ORDER BY p.risk_score DESC
+            WITH p.pattern_type as pattern_type, 
+                 p.description as description,
+                 p.risk_score as risk_score,
+                 collect(a.analysis_id) as analysis_ids
+            RETURN pattern_type as risk_type,
+                   description as description,
+                   risk_score as risk_score,
+                   size(analysis_ids) as affected_analyses,
+                   analysis_ids as analysis_ids
+            ORDER BY risk_score DESC
             """
             
-            result = self.connection.execute(query, parameters={
+            result = self.execute_query(query, parameters={
                 "risk_threshold": risk_threshold
             })
             
-            return [dict(record) for record in result]
+            return result
             
         except Exception as e:
             logger.error(f"Failed to get high-risk clusters: {str(e)}")
@@ -565,7 +569,7 @@ class GraphStore:
                    avg(rp.risk_score) as avg_risk_score,
                    count(*) as pattern_count
             """
-            pattern_result = self.connection.execute(pattern_query)
+            pattern_result = self.execute_query(pattern_query)
             
             # Get compliance summary
             compliance_query = """
@@ -574,13 +578,13 @@ class GraphStore:
                    cf.severity as severity,
                    count(*) as flag_count
             """
-            compliance_result = self.connection.execute(compliance_query)
+            compliance_result = self.execute_query(compliance_query)
             
             return {
-                "risk_patterns": [dict(record) for record in pattern_result],
-                "compliance_flags": [dict(record) for record in compliance_result],
-                "total_patterns": len(list(pattern_result)),
-                "total_flags": len(list(compliance_result))
+                "risk_patterns": pattern_result,
+                "compliance_flags": compliance_result,
+                "total_patterns": len(pattern_result),
+                "total_flags": len(compliance_result)
             }
             
         except Exception as e:

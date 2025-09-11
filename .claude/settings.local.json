@@ -25,7 +25,11 @@
       "Bash(pytest:*)",
       "Read(///**)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(for cmd in transcript analysis plan case governance system)",
+      "Bash(done)",
+      "Bash(for i in {1..3})",
+      "Bash(do echo \"Run $i:\")"
     ],
     "deny": [],
     "ask": []

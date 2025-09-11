@@ -209,6 +209,60 @@ class TestGraphStoreBugReproduction:
                 raise
         
         gs.close()
+    
+    def test_bug_cypher_variable_scope_in_get_high_risk_clusters(self):
+        """
+        BUG REPRODUCTION: Cypher variable scope error in get_high_risk_clusters().
+        
+        Expected: Query should find high-risk clusters with proper variable scoping
+        Actual: "Binder exception: Variable p is not in scope" error
+        Root Cause: Aggregation query missing proper GROUP BY for variables used in RETURN
+        GitHub Issue: #39
+        """
+        gs = GraphStore(self.test_db_path)
+        
+        # Add test data that would create risk patterns
+        test_analysis = {
+            "analysis_id": "SCOPE_BUG_TEST_001",
+            "transcript_id": "TRANS_001",
+            "primary_intent": "test_intent",
+            "urgency_level": "high",
+            "confidence_score": 0.8,
+            "issue_resolved": False,
+            "escalation_needed": True,
+            "borrower_risks": {
+                "delinquency_risk": 0.8,  # Above 0.5 threshold to create pattern
+                "elder_abuse_risk": 0.9
+            },
+            "compliance_flags": ["potential UDAAP violation"]
+        }
+        
+        # Add transcript first (required for relationships)
+        gs.add_transcript("TRANS_001", "test_topic", 1)
+        
+        # Add analysis with relationships - this should create risk patterns
+        success = gs.add_analysis_with_relationships(test_analysis)
+        assert success is True
+        
+        # This should work but currently fails with variable scope error
+        try:
+            risk_clusters = gs.get_high_risk_clusters(risk_threshold=0.7)
+            
+            # Should return list of clusters, not fail with scope error
+            assert isinstance(risk_clusters, list), "Should return list of risk clusters"
+            # May be empty if no patterns above threshold, but should not error
+            
+        except Exception as e:
+            error_msg = str(e)
+            if "Variable p is not in scope" in error_msg:
+                pytest.fail(f"BUG: Cypher variable scope error in get_high_risk_clusters: {error_msg}")
+            elif "Binder exception" in error_msg:
+                pytest.fail(f"BUG: Cypher binder error in get_high_risk_clusters: {error_msg}")
+            else:
+                # Re-raise if it's a different error
+                raise
+        
+        gs.close()
 
 
 class TestNoFallbackPrincipleViolations:
