@@ -310,6 +310,7 @@ def main(
 # Create subapps for each resource
 transcript_app = typer.Typer(name="transcript", help="Transcript operations")
 analysis_app = typer.Typer(name="analysis", help="Analysis operations") 
+insights_app = typer.Typer(name="insights", help="Knowledge graph insights operations")
 plan_app = typer.Typer(name="plan", help="Plan operations")
 case_app = typer.Typer(name="case", help="Case operations")
 governance_app = typer.Typer(name="governance", help="Governance operations")
@@ -318,6 +319,7 @@ system_app = typer.Typer(name="system", help="System operations")
 # Add subapps to main app
 app.add_typer(transcript_app)
 app.add_typer(analysis_app)
+app.add_typer(insights_app)
 app.add_typer(plan_app)
 app.add_typer(case_app)
 app.add_typer(governance_app)
@@ -696,7 +698,7 @@ def analysis_delete_all(
         raise typer.Exit(1)
 
 
-@analysis_app.command("patterns")
+@insights_app.command("patterns")
 def analysis_patterns(
     risk_threshold: float = typer.Option(0.7, "--threshold", "-t", help="Risk threshold (0.0-1.0)")
 ):
@@ -740,7 +742,7 @@ def analysis_patterns(
         raise typer.Exit(1)
 
 
-@analysis_app.command("risks")
+@insights_app.command("risks")
 def analysis_risks(
     risk_threshold: float = typer.Option(0.8, "--threshold", "-t", help="High-risk threshold (0.0-1.0)")
 ):
@@ -778,7 +780,7 @@ def analysis_risks(
         raise typer.Exit(1)
 
 
-@analysis_app.command("recommend")
+@insights_app.command("recommend")
 def analysis_recommend(
     customer_id: str = typer.Argument(..., help="Customer ID for personalized recommendations")
 ):
@@ -819,7 +821,7 @@ def analysis_recommend(
         raise typer.Exit(1)
 
 
-@analysis_app.command("similar")
+@insights_app.command("similar")
 def analysis_similar(
     analysis_id: str = typer.Argument(..., help="Analysis ID to find similar cases for"),
     limit: int = typer.Option(5, "--limit", "-l", help="Maximum similar cases to return")
@@ -865,7 +867,7 @@ def analysis_similar(
         raise typer.Exit(1)
 
 
-@analysis_app.command("dashboard") 
+@insights_app.command("dashboard") 
 def analysis_dashboard():
     """Get comprehensive insights dashboard from knowledge graph analytics."""
     try:
@@ -906,7 +908,7 @@ def analysis_dashboard():
         raise typer.Exit(1)
 
 
-@analysis_app.command("populate")
+@insights_app.command("populate")
 def analysis_populate(
     analysis_id: Optional[str] = typer.Option(None, "--analysis-id", "-a", help="Single analysis ID to populate"),
     all: bool = typer.Option(False, "--all", help="Populate all analyses"),
@@ -943,7 +945,7 @@ def analysis_populate(
         raise typer.Exit(1)
 
 
-@analysis_app.command("query")
+@insights_app.command("query")
 def analysis_query(
     cypher: str = typer.Argument(..., help="Cypher query to execute")
 ):
@@ -986,7 +988,7 @@ def analysis_query(
         raise typer.Exit(1)
 
 
-@analysis_app.command("status")
+@insights_app.command("status")
 def analysis_status():
     """Get knowledge graph status and statistics."""
     try:
@@ -1016,7 +1018,7 @@ def analysis_status():
         raise typer.Exit(1)
 
 
-@analysis_app.command("delete-analysis")
+@insights_app.command("delete-analysis")
 def analysis_delete_analysis(
     analysis_id: str = typer.Argument(..., help="Analysis ID to delete from graph")
 ):
@@ -1033,7 +1035,7 @@ def analysis_delete_analysis(
         raise typer.Exit(1)
 
 
-@analysis_app.command("delete-customer")
+@insights_app.command("delete-customer")
 def analysis_delete_customer(
     customer_id: str = typer.Argument(..., help="Customer ID to delete from graph"),
     cascade: bool = typer.Option(False, "--cascade", help="Delete all related data")
@@ -1059,7 +1061,7 @@ def analysis_delete_customer(
         raise typer.Exit(1)
 
 
-@analysis_app.command("prune")
+@insights_app.command("prune")
 def analysis_prune(
     older_than_days: int = typer.Argument(..., help="Delete data older than N days"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deleted without deleting")
@@ -1095,7 +1097,7 @@ def analysis_prune(
         raise typer.Exit(1)
 
 
-@analysis_app.command("clear-graph")
+@insights_app.command("clear")
 def analysis_clear_graph(
     force: bool = typer.Option(False, "--force", help="Skip confirmation")
 ):

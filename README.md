@@ -28,9 +28,44 @@ python cli_fast.py stats
 
 ---
 
+## 📚 Documentation
+
+- **[COMMANDS.md](COMMANDS.md)** - Complete CLI commands reference with examples
+- **[DEMO.md](DEMO.md)** - Comprehensive workflow demonstration script
+- **API Documentation** - Interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
 ## 🚀 Usage
 
-### Fast CLI (Recommended)
+### Resource-Based CLI (Current)
+Structured commands by resource type:
+
+```bash
+# Transcript operations
+python cli.py transcript create --topic "PMI Removal" --urgency high
+python cli.py transcript list
+python cli.py transcript get CALL_123ABC
+
+# Analysis operations (core CRUD only)
+python cli.py analysis create --transcript-id CALL_123ABC
+python cli.py analysis list
+
+# Insights operations (knowledge graph analytics)
+python cli.py insights populate --analysis-id ANALYSIS_456DEF
+python cli.py insights patterns --risk-threshold 0.7
+python cli.py insights dashboard
+
+# Knowledge graph queries
+python cli.py insights query "MATCH (a:Analysis) RETURN count(a)"
+python cli.py insights status
+
+# System operations
+python cli.py system health
+python cli.py system metrics
+```
+
+### Fast CLI (Legacy)
 Instant execution via pre-loaded server:
 
 ```bash
@@ -85,6 +120,14 @@ python cli.py list
 - Multi-layer insights: **Borrower, Advisor, Supervisor, Leadership**  
 - Risk-based **approval routing** & workflow tracking  
 - AI-generated **action plans** (Borrower → Advisor → Supervisor → Leadership)
+
+### Knowledge Graph Analytics
+- **KuzuDB-powered** knowledge graph for pattern detection
+- **Risk pattern discovery** across customer interactions
+- **Similar case matching** for advisor guidance
+- **Customer relationship mapping** and compliance tracking
+- **Raw Cypher queries** for custom analytics
+- **GDPR compliance** with data deletion and pruning capabilities
 
 ### Data Management
 - SQLite storage (CRUD, search, export)  

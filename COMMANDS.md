@@ -1,0 +1,351 @@
+# 📚 Customer Call Center Analytics - CLI Commands Reference
+
+## Overview
+
+The CLI provides 7 resource-based command groups with comprehensive CRUD operations and advanced analytics capabilities. All commands follow the pattern: `python cli.py <resource> <command> [options]`
+
+## 🌐 Global Options
+
+```bash
+python cli.py [OPTIONS] COMMAND [ARGS]...
+```
+
+**Global Options:**
+- `--api-url TEXT` - API server URL (default: http://localhost:8000)
+- `--format TEXT` - Output format (table, json)
+- `--verbose -v` - Enable verbose output
+- `--help` - Show help message
+
+## 📋 Command Groups
+
+### 1. Transcript Operations
+
+**Resource Group:** `transcript`
+
+#### Available Commands:
+- `create` - Create new transcript
+- `list` - List all transcripts  
+- `get` - Get specific transcript details
+- `delete` - Delete specific transcript
+- `search` - Search transcripts
+
+#### Examples:
+
+```bash
+# Create a new transcript
+python cli.py transcript create --topic "Payment inquiry" --urgency high
+
+# List all transcripts
+python cli.py transcript list
+
+# Get specific transcript details
+python cli.py transcript get CALL_123ABC
+
+# Delete transcript
+python cli.py transcript delete CALL_123ABC
+
+# Search transcripts
+python cli.py transcript search --query "payment"
+```
+
+---
+
+### 2. Analysis Operations
+
+**Resource Group:** `analysis`
+
+#### Core Analysis Commands:
+- `create` - Create analysis for transcript
+- `list` - List all analyses  
+- `get` - Get specific analysis details
+- `delete` - Delete specific analysis
+- `delete-all` - Delete all analyses
+
+#### Examples:
+
+```bash
+# Core Analysis Operations
+python cli.py analysis create --transcript-id CALL_123ABC
+python cli.py analysis list
+python cli.py analysis get ANALYSIS_456DEF
+python cli.py analysis delete ANALYSIS_456DEF
+python cli.py analysis delete-all
+```
+
+---
+
+### 3. Insights Operations (Knowledge Graph Analytics)
+
+**Resource Group:** `insights`
+
+#### Knowledge Graph Analytics Commands:
+- `patterns` - Discover risk patterns across all analyses
+- `risks` - Get high-risk patterns using knowledge graph analytics
+- `recommend` - Get AI-powered recommendations for a customer
+- `similar` - Find similar cases using knowledge graph pattern matching
+- `dashboard` - Get comprehensive insights dashboard
+
+#### Knowledge Graph Management Commands:
+- `populate` - Populate knowledge graph from analysis data
+- `query` - Execute raw Cypher query on knowledge graph
+- `status` - Get knowledge graph status and statistics
+- `delete-analysis` - Delete analysis from knowledge graph
+- `delete-customer` - Delete customer from knowledge graph  
+- `prune` - Prune old data from knowledge graph (GDPR compliance)
+- `clear` - Clear entire knowledge graph (use with extreme caution)
+
+#### Examples:
+
+```bash
+# Knowledge Graph Analytics
+python cli.py insights patterns --risk-threshold 0.7
+python cli.py insights risks --limit 10
+python cli.py insights recommend --customer-id CUST_001
+python cli.py insights similar --analysis-id ANALYSIS_456DEF --limit 5
+python cli.py insights dashboard
+
+# Knowledge Graph Management
+python cli.py insights populate --analysis-id ANALYSIS_456DEF
+python cli.py insights populate --all
+python cli.py insights populate --from-date 2024-01-01
+python cli.py insights query "MATCH (a:Analysis) RETURN count(a)"
+python cli.py insights status
+python cli.py insights delete-analysis ANALYSIS_456DEF
+python cli.py insights delete-customer CUST_001 --cascade
+python cli.py insights prune --older-than-days 90
+python cli.py insights clear  # Requires confirmation
+```
+
+---
+
+### 4. Plan Operations
+
+**Resource Group:** `plan`
+
+#### Available Commands:
+- `create` - Create action plan from analysis
+- `list` - List all plans
+
+#### Examples:
+
+```bash
+# Create action plan from analysis
+python cli.py plan create --analysis-id ANALYSIS_456DEF
+
+# List all plans
+python cli.py plan list
+```
+
+---
+
+### 5. Case Operations
+
+**Resource Group:** `case`
+
+#### Available Commands:
+- `list` - List all cases
+
+#### Examples:
+
+```bash
+# List all cases
+python cli.py case list
+```
+
+---
+
+### 6. Governance Operations
+
+**Resource Group:** `governance`
+
+#### Available Commands:
+- `queue` - Show approval queue
+
+#### Examples:
+
+```bash
+# Show approval queue
+python cli.py governance queue
+```
+
+---
+
+### 7. System Operations
+
+**Resource Group:** `system`
+
+#### Available Commands:
+- `health` - Check system health
+- `metrics` - Show system metrics
+
+#### Examples:
+
+```bash
+# Check system health
+python cli.py system health
+
+# Show system metrics
+python cli.py system metrics
+```
+
+---
+
+## 🔍 Advanced Knowledge Graph Queries
+
+### Raw Cypher Query Examples:
+
+```bash
+# Count all nodes in the graph
+python cli.py insights query "MATCH (n) RETURN count(n) as total_nodes"
+
+# Find high-risk analyses
+python cli.py insights query "MATCH (a:Analysis) WHERE a.confidence_score > 0.8 RETURN a.analysis_id, a.primary_intent"
+
+# Find customer patterns
+python cli.py insights query "MATCH (c:Customer)-[:HAD_CALL]->(t:Transcript)-[:GENERATED_ANALYSIS]->(a:Analysis) RETURN c.customer_id, count(a) as analysis_count ORDER BY analysis_count DESC LIMIT 10"
+
+# Find risk patterns
+python cli.py insights query "MATCH (a:Analysis)-[:HAS_RISK_PATTERN]->(r:RiskPattern) WHERE r.risk_score >= 0.7 RETURN r.pattern_type, r.risk_score, count(a) as affected_analyses"
+
+# Find compliance flags
+python cli.py insights query "MATCH (a:Analysis)-[:HAS_COMPLIANCE_FLAG]->(c:ComplianceFlag) RETURN c.flag_type, c.severity, count(a) as flag_count"
+```
+
+---
+
+## 🛠️ Command Options Reference
+
+### Populate Command Options:
+```bash
+python cli.py insights populate [OPTIONS]
+```
+- `--analysis-id -a TEXT` - Single analysis ID to populate
+- `--all` - Populate all analyses
+- `--from-date TEXT` - Populate from date (YYYY-MM-DD)
+
+### Query Command Options:
+```bash
+python cli.py insights query [OPTIONS] CYPHER
+```
+- `CYPHER` (required) - Cypher query to execute
+
+### Delete Commands Options:
+```bash
+python cli.py insights delete-customer [OPTIONS] CUSTOMER_ID
+```
+- `--cascade` - Delete all related data (transcripts, analyses)
+
+```bash
+python cli.py insights prune [OPTIONS]
+```
+- `--older-than-days INTEGER` (required) - Delete data older than specified days
+
+---
+
+## 🎯 Common Workflows
+
+### Complete Knowledge Graph Workflow:
+
+```bash
+# 1. Create transcript and analysis
+python cli.py transcript create --topic "Payment dispute" --urgency high
+# Note the TRANSCRIPT_ID
+
+python cli.py analysis create --transcript-id CALL_123ABC
+# Note the ANALYSIS_ID
+
+# 2. Populate knowledge graph
+python cli.py insights populate --analysis-id ANALYSIS_456DEF
+
+# 3. Check status
+python cli.py insights status
+
+# 4. Run analytics
+python cli.py insights patterns
+python cli.py insights risks
+python cli.py analysis dashboard
+
+# 5. Query for insights
+python cli.py insights query "MATCH (a:Analysis) RETURN a.primary_intent, count(*) ORDER BY count(*) DESC"
+```
+
+### GDPR Compliance Workflow:
+
+```bash
+# Delete specific customer data
+python cli.py insights delete-customer CUST_001 --cascade
+
+# Prune old data (90 days)
+python cli.py insights prune --older-than-days 90
+
+# Complete cleanup (DANGER!)
+python cli.py insights clear
+```
+
+---
+
+## ⚠️ Important Notes
+
+### NO FALLBACK Principle:
+- All commands require proper API integration (OpenAI API key)
+- Commands fail fast rather than returning mock data
+- No placeholder or fallback responses
+
+### Knowledge Graph Operations:
+- `populate` commands are manual (not automatic)
+- `clear-graph` requires user confirmation
+- GDPR compliance through `delete-customer` and `prune` commands
+
+### Data Flow:
+1. **Transcript** → Created with customer conversation
+2. **Analysis** → AI analysis of transcript (requires OpenAI API)
+3. **Knowledge Graph** → Manual population from analysis data
+4. **Analytics** → Pattern detection and insights from graph data
+
+---
+
+## 🔧 Prerequisites
+
+1. **Virtual Environment**: `source venv/bin/activate`
+2. **OpenAI API Key**: Set `OPENAI_API_KEY` environment variable
+3. **Backend Running**: `python server.py` or `./start_services.sh`
+4. **Database**: SQLite and KuzuDB initialized automatically
+
+---
+
+## 📊 Success Indicators
+
+Commands should show:
+- ✅ Success confirmations with generated IDs
+- 📊 Tabulated output for list commands
+- 🔍 Structured JSON for detailed views
+- ⚠️ Clear error messages for failures (NO FALLBACK)
+
+Example success output:
+```
+✅ Analysis ANALYSIS_456DEF populated in knowledge graph
+📈 Knowledge Graph Status: Total Nodes: 5, Relationships: 8
+🔍 Found 3 high-risk patterns above threshold 0.7
+```
+
+---
+
+## 🆘 Troubleshooting
+
+### Common Issues:
+- **"Server not available"** → Start backend: `python server.py`  
+- **"OpenAI API error"** → Check `OPENAI_API_KEY` environment variable
+- **"Analysis not found"** → Verify analysis ID exists: `python cli.py analysis list`
+- **"Graph shows 0 nodes"** → Check if populate succeeded: `python cli.py insights status`
+
+### Debug Commands:
+```bash
+# System health check
+python cli.py system health
+
+# Verify API connectivity  
+python cli.py --verbose analysis status
+
+# Check server logs
+tail -f server.log
+```
