@@ -105,712 +105,287 @@ python3 cli.py approval-metrics                      # Approval system metrics
 
 ---
 
-## 📝 TRANSCRIPT MANAGEMENT
+## 🚀 CONSOLIDATED CLI COMMANDS
 
-### `generate` - Create New Transcripts
+### Resource-Based Command Structure
+
+The CLI now follows REST API resource patterns with consolidated commands:
+
+```bash
+python3 cli.py [RESOURCE] [ACTION] [OPTIONS]
+```
+
+**Available Resources:**
+- `transcript` - Transcript management
+- `analysis` - Analysis operations  
+- `plan` - Action plan management
+- `case` - Case operations
+- `governance` - Approval workflows
+- `system` - System health & metrics
+
+---
+
+## 📝 TRANSCRIPT RESOURCE
+
+### `transcript create` - Generate New Transcripts
 Generate realistic call transcripts with AI.
 
 ```bash
-python3 cli.py generate [OPTIONS] [PARAMS...]
+python3 cli.py transcript create [OPTIONS]
 ```
 
 **Options:**
-- `--count, -c INTEGER`: Number of transcripts (default: 1)
-- `--store, -s`: Store in database
+- `--topic TEXT`: Call topic/scenario
+- `--count INTEGER`: Number of transcripts (default: 1)  
+- `--store`: Store in database
 - `--show`: Display generated content
 
-**Dynamic Parameters:** `key=value` format
-- `topic='PMI Removal'` - Call topic/scenario
-- `customer_id='C123'` - Specific customer ID
-- `sentiment='frustrated'` - Customer emotional state
-- `urgency='high'` - Call urgency level
-- `duration='15'` - Call length in minutes
-
 **Examples:**
 ```bash
-# Basic generation
-python3 cli.py generate --store
+# Basic transcript creation
+python3 cli.py transcript create --topic "PMI Removal" --store
 
-# Complex scenario with 3 transcripts
-python3 cli.py generate --count 3 --store --show \
-    topic='Late Payment Hardship' sentiment='worried' urgency='medium'
-
-# Specific customer interaction
-python3 cli.py generate --store customer_id='CUST_2024_001' \
-    topic='Refinance Inquiry' duration='20'
+# Generate multiple transcripts
+python3 cli.py transcript create --topic "Late Payment" --count 3 --store --show
 ```
 
-**Output Format:**
-```json
-{
-  "success": true,
-  "transcripts": [...],
-  "count": 1,
-  "stored": true
-}
-```
-
-### `list` - View All Transcripts
-Display stored transcripts in table or detailed format.
+### `transcript list` - View All Transcripts
+Display stored transcripts in table format.
 
 ```bash
-python3 cli.py list [OPTIONS]
+python3 cli.py transcript list [OPTIONS]
 ```
 
 **Options:**
-- `--detailed, -d`: Show full conversation details
-
-**Output Formats:**
-- **Table Mode**: ID, Customer, Topic, Sentiment, Message Count, Preview
-- **Detailed Mode**: Full messages with speakers and timestamps
+- `--limit INTEGER`: Limit number of results
 
 **Examples:**
 ```bash
-# Quick table view
-python3 cli.py list
+# View all transcripts
+python3 cli.py transcript list
 
-# Full conversation details
-python3 cli.py list --detailed
+# View latest 10 transcripts
+python3 cli.py transcript list --limit 10
 ```
 
-### `get` - Retrieve Specific Transcript
+### `transcript get` - Retrieve Specific Transcript
 Fetch a single transcript by ID.
 
 ```bash
-python3 cli.py get [OPTIONS] TRANSCRIPT_ID
+python3 cli.py transcript get TRANSCRIPT_ID
 ```
-
-**Options:**
-- `--export, -e`: Save to JSON file
 
 **Examples:**
 ```bash
-# View transcript
-python3 cli.py get transcript_20241201_001
-
-# Export to file
-python3 cli.py get --export transcript_20241201_001
-# Creates: transcript_20241201_001.json
+# View specific transcript
+python3 cli.py transcript get CALL_ABC12345
 ```
 
-### `search` - Find Transcripts
-Search by customer, topic, or content.
+### `transcript delete` - Remove Transcript
+Delete a transcript from the system.
 
 ```bash
-python3 cli.py search [OPTIONS]
+python3 cli.py transcript delete TRANSCRIPT_ID [OPTIONS]
 ```
 
-**Options:** (exactly one required)
-- `--customer, -c TEXT`: Customer ID search
-- `--topic, -t TEXT`: Topic/scenario search
-- `--text TEXT`: Full-text content search
-- `--detailed, -d`: Show detailed results
+**Options:**
+- `--force`: Skip confirmation prompt
 
 **Examples:**
 ```bash
-# Customer-specific search
-python3 cli.py search --customer "CUST_2024"
+# Delete with confirmation
+python3 cli.py transcript delete CALL_ABC12345
 
-# Topic search with details
-python3 cli.py search --topic "refinance" --detailed
-
-# Content search across all conversations
-python3 cli.py search --text "payment plan"
+# Force delete without confirmation
+python3 cli.py transcript delete CALL_ABC12345 --force
 ```
 
-### `delete` - Remove Transcript
-Delete a specific transcript with confirmation.
+### `transcript search` - Find Transcripts
+Search transcripts by query.
 
 ```bash
-python3 cli.py delete [OPTIONS] TRANSCRIPT_ID
+python3 cli.py transcript search [OPTIONS]
 ```
 
 **Options:**
-- `--force, -f`: Skip confirmation
-
-**Safety Features:**
-- Requires confirmation unless `--force` is used
-- Shows transcript preview before deletion
-- Cannot be undone
-
-### `delete-all` - Clear All Data
-**⚠️ DESTRUCTIVE OPERATION** - Remove all transcripts.
-
-```bash
-python3 cli.py delete-all [OPTIONS]
-```
-
-**Options:**
-- `--force, -f`: Skip first confirmation (final confirmation still required)
-
-**Safety Protocol:**
-1. Shows count of transcripts to be deleted
-2. First confirmation (skippable with `--force`)
-3. **Required typed confirmation**: Must type `DELETE ALL {count}`
-4. No recovery possible after confirmation
-
-### `stats` - Database Statistics
-Comprehensive database overview and analytics.
-
-```bash
-python3 cli.py stats
-```
-
-**Output Includes:**
-- Total transcripts, messages, unique customers
-- Average messages per transcript
-- Top 5 topics and their frequency
-- Sentiment distribution (positive/negative/neutral)
-- Top 5 speakers by message count
-
-### `export` - Bulk Export
-Export all transcripts to JSON format.
-
-```bash
-python3 cli.py export [OPTIONS]
-```
-
-**Options:**
-- `--output, -o TEXT`: Custom filename (default: auto-generated timestamp)
+- `--query TEXT`: Search query
 
 **Examples:**
 ```bash
-# Auto-generated filename
-python3 cli.py export
-# Creates: transcripts_export_20241201_143022.json
-
-# Custom filename
-python3 cli.py export --output my_data.json
-```
-
-### `demo` - Sample Data Generator
-Create demonstration data for testing and training.
-
-```bash
-python3 cli.py demo [OPTIONS]
-```
-
-**Options:**
-- `--no-store`: Generate without saving to database
-
-**Generated Content:**
-- 5-10 diverse call scenarios
-- Various customer personas and sentiment states
-- Realistic conversation flows
-- Mixed urgency levels and topics
-
----
-
-## 🔍 ANALYSIS & INSIGHTS
-
-### `analyze` - AI-Powered Analysis
-Generate comprehensive mortgage servicing insights using AI.
-
-```bash
-python3 cli.py analyze [OPTIONS]
-```
-
-**Options:** (exactly one required)
-- `--transcript-id, -t TEXT`: Analyze specific transcript
-- `--all, -a`: Analyze all stored transcripts
-
-**Analysis Dimensions:**
-- **Intent Detection**: Primary reason for call
-- **Urgency Assessment**: Low/Medium/High priority classification
-- **Sentiment Analysis**: Customer emotional journey (start → end)
-- **Risk Scoring**: Delinquency, churn, complaint, refinance likelihood
-- **Advisor Performance**: Empathy, compliance, solution effectiveness
-- **Resolution Status**: First-call resolution, escalation needs
-
-**Examples:**
-```bash
-# Analyze specific conversation
-python3 cli.py analyze --transcript-id transcript_20241201_001
-
-# Batch analyze all data
-python3 cli.py analyze --all
-```
-
-**Output:**
-```
-✅ Analyzed 5 transcript(s)
-
-📄 Transcript: transcript_20241201_001
-   Intent: Payment Plan Setup
-   Urgency: Medium
-   Sentiment: frustrated → satisfied
-   Confidence: 0.89
-```
-
-### `analysis-report` - Detailed Analysis View
-Comprehensive analysis report for specific transcript.
-
-```bash
-python3 cli.py analysis-report [OPTIONS]
-```
-
-**Options:** (exactly one required)
-- `--transcript-id, -t TEXT`: View by transcript ID
-- `--analysis-id, -a TEXT`: View by analysis ID
-
-**Report Sections:**
-1. **Call Summary**: AI-generated overview
-2. **Key Insights**: Intent, urgency, resolution status
-3. **Borrower Profile**: Sentiment progression, risk assessment
-4. **Advisor Performance**: Coaching opportunities, strengths/improvements
-5. **Compliance**: Flags, adherence scores
-6. **Risk Scores**: Delinquency (0-1), Churn (0-1), Complaint (0-1), Refinance (0-1)
-
-### `analysis-metrics` - Aggregate Analytics Dashboard
-System-wide analysis performance metrics.
-
-```bash
-python3 cli.py analysis-metrics
-```
-
-**Metrics Included:**
-- Total analyses performed, average confidence score
-- First-call resolution rate, escalation rate
-- Average empathy and compliance scores
-- Risk indicator averages (delinquency, churn)
-- Top 5 call intents and urgency distribution
-
-### `risk-report` - High-Risk Borrower Identification
-Generate report of borrowers requiring immediate attention.
-
-```bash
-python3 cli.py risk-report [OPTIONS]
-```
-
-**Options:**
-- `--threshold, -t FLOAT`: Risk threshold 0.0-1.0 (default: 0.7)
-
-**Risk Categories:**
-- **High Delinquency Risk**: Payment issues, hardship indicators
-- **High Churn Risk**: Refinance inquiries, competitor mentions
-- **High Complaint Risk**: Service dissatisfaction patterns
-
-**Output Format:**
-```
-🚨 High Delinquency Risk (3 cases)
-  Transcript: transcript_20241201_003
-  Risk Score: 0.85
-  Intent: Payment Deferral Request
-  Summary: Customer facing temporary hardship...
-
-⚠️  High Churn Risk (2 cases)
-  Transcript: transcript_20241201_007
-  Risk Score: 0.73
-  Intent: Rate Shopping
-  Summary: Customer comparing rates with competitors...
+# Search for specific content
+python3 cli.py transcript search --query "payment"
 ```
 
 ---
 
-## 📋 ACTION PLAN MANAGEMENT
+## 🔍 ANALYSIS RESOURCE
 
-### `generate-action-plan` - Create Four-Layer Plans
-Generate comprehensive action plans from analysis results.
-
-```bash
-python3 cli.py generate-action-plan [OPTIONS]
-```
-
-**Options:** (exactly one required)
-- `--analysis-id, -a TEXT`: Generate from analysis ID
-- `--transcript-id, -t TEXT`: Generate from transcript ID
-
-**Four-Layer Plan Structure:**
-1. **Borrower Plan**: Immediate actions, follow-ups, timelines
-2. **Advisor Plan**: Coaching items, performance feedback
-3. **Supervisor Plan**: Escalation items, team pattern analysis
-4. **Leadership Plan**: Portfolio insights, strategic opportunities
-
-**Output:**
-```
-✅ Generated action plan: plan_20241201_001
-Risk Level: medium
-Approval Route: advisor_approval
-Queue Status: pending_approval
-Message: Plan ready for advisor review
-```
-
-### `view-action-plan` - Detailed Plan Review
-Display comprehensive action plan details.
+### `analysis create` - Analyze Transcript
+Generate AI analysis for a transcript.
 
 ```bash
-python3 cli.py view-action-plan [OPTIONS] PLAN_ID
+python3 cli.py analysis create [OPTIONS]
 ```
 
 **Options:**
-- `--layer, -l TEXT`: View specific layer only
-  - `borrower` - Customer-facing actions
-  - `advisor` - Agent coaching and feedback
-  - `supervisor` - Management escalations
-  - `leadership` - Strategic insights
+- `--transcript TEXT`: Transcript ID to analyze
+- `--store`: Store analysis results
 
 **Examples:**
 ```bash
-# View complete plan
-python3 cli.py view-action-plan plan_20241201_001
-
-# View only supervisor actions
-python3 cli.py view-action-plan --layer supervisor plan_20241201_001
+# Analyze specific transcript
+python3 cli.py analysis create --transcript CALL_ABC12345 --store
 ```
 
-**Sample Output Sections:**
-```
-📄 Action Plan Report
-Plan ID: plan_20241201_001
-Risk Level: medium
-Status: pending_approval
-
-🎯 Borrower Plan
-🚀 Immediate Actions:
-  • Send payment plan options email (Priority: high, Timeline: 24 hours)
-    ✅ Auto-executable
-  • Schedule follow-up call in 48 hours (Priority: medium)
-
-📅 Follow-ups:
-  • Payment confirmation check (Due: 2024-12-05, Owner: System)
-```
-
-### `action-plan-queue` - Approval Queue Management
-View plans awaiting approval in the system.
+### `analysis list` - View All Analyses
+Display all analysis results.
 
 ```bash
-python3 cli.py action-plan-queue [OPTIONS]
+python3 cli.py analysis list [OPTIONS]
 ```
 
 **Options:**
-- `--status, -s TEXT`: Filter by status
-  - `pending_approval` - Waiting for approval
-  - `approved` - Ready for execution
-  - `rejected` - Declined plans
-  - `executed` - Completed plans
+- `--limit INTEGER`: Limit number of results
 
-**Queue Display:**
-```
-📊 Action Plan Queue (3 items)
+**Examples:**
+```bash
+# View all analyses
+python3 cli.py analysis list
 
-Plan ID: plan_20241201_001
-  Transcript: transcript_20241201_001
-  Risk Level: medium
-  Status: pending_approval
-  Routing: advisor_approval
-  Reason: Medium risk financial action
-  Created: 2024-12-01 14:30:22
+# View latest 5 analyses
+python3 cli.py analysis list --limit 5
 ```
 
-### `approve-action-plan` - Plan Approval
-Approve action plans for execution.
+### `analysis get` - Retrieve Specific Analysis
+Fetch analysis results by ID.
 
 ```bash
-python3 cli.py approve-action-plan [OPTIONS] PLAN_ID
+python3 cli.py analysis get ANALYSIS_ID
 ```
 
-**Options:**
-- `--approver, -by TEXT`: Approver identifier (default: CLI_USER)
-
-**Approval Effects:**
-- Changes plan status to `approved`
-- Enables execution via `execute-plan`
-- Logs approval audit trail
-- Triggers auto-execution for qualifying plans
-
-### `action-plan-summary` - Planning Metrics
-Overview of action planning system performance.
-
+**Examples:**
 ```bash
-python3 cli.py action-plan-summary
+# View specific analysis
+python3 cli.py analysis get ANALYSIS_ABC12345_123
 ```
-
-**Metrics Displayed:**
-- Total plans created, pending approvals
-- Auto-executable percentage
-- Status distribution (pending/approved/executed)
-- Risk level distribution (low/medium/high)
-- Routing distribution (advisor/supervisor approval)
 
 ---
 
-## ⚡ EXECUTION SYSTEM
+## 📋 PLAN RESOURCE
 
-### `execute-plan` - Intelligent Plan Execution
-Execute approved action plans using AI-powered automation.
+### `plan create` - Generate Action Plan
+Create action plan from analysis.
 
 ```bash
-python3 cli.py execute-plan [OPTIONS] PLAN_ID
+python3 cli.py plan create [OPTIONS]
 ```
 
 **Options:**
-- `--mode, -m TEXT`: Execution mode
-  - `auto` (default): Respects approval requirements
-  - `manual`: Override for testing (bypasses approval)
-- `--dry-run`: Preview execution without performing actions
-
-**Execution Process:**
-1. **Approval Check**: Verifies plan approval status
-2. **Action Classification**: Identifies executable vs. manual actions
-3. **Automated Execution**: Emails, callbacks, document generation
-4. **Artifact Creation**: Generates evidence files
-5. **Status Tracking**: Updates execution history
+- `--analysis TEXT`: Analysis ID to create plan from
 
 **Examples:**
 ```bash
-# Standard execution (requires approval)
-python3 cli.py execute-plan plan_20241201_001
-
-# Preview what would be executed
-python3 cli.py execute-plan --dry-run plan_20241201_001
-
-# Manual override for testing
-python3 cli.py execute-plan --mode manual plan_20241201_001
+# Create plan from analysis
+python3 cli.py plan create --analysis ANALYSIS_ABC12345_123
 ```
 
-**Execution Results:**
-```
-✅ Execution completed successfully!
-Execution ID: exec_20241201_001
-Total Actions Executed: 4
-
-📋 Email Actions:
-  ✅ payment_plan_options: Email sent successfully
-  ✅ follow_up_reminder: Email scheduled
-
-📋 Callback Actions:
-  ✅ payment_confirmation_call: Callback scheduled
-
-📄 Artifacts Created (3):
-  📁 emails/payment_plan_options_CUST_001.html
-  📁 callbacks/payment_confirmation_CUST_001.json
-  📁 documents/payment_agreement_CUST_001.pdf
-```
-
-### `execution-history` - Execution Audit Trail
-View recent execution history and results.
+### `plan list` - View Action Plans
+Display all action plans.
 
 ```bash
-python3 cli.py execution-history [OPTIONS]
+python3 cli.py plan list
 ```
 
-**Options:**
-- `--limit, -l INTEGER`: Number of executions to show (default: 10)
-
-**History Format:**
-```
-📋 Recent Executions
---------------------------------------------------------------------------------
-✅ exec_20241201_001 | Plan: plan_20241201_001
-   📅 2024-12-01 15:45:22 | Artifacts: 3 | Errors: 0
-
-❌ exec_20241201_002 | Plan: plan_20241201_002
-   📅 2024-12-01 16:10:15 | Artifacts: 1 | Errors: 2
-```
-
-### `view-artifacts` - Execution Evidence
-View generated artifacts from plan executions.
+### `plan metrics` - Plan Statistics
+View action plan metrics and statistics.
 
 ```bash
-python3 cli.py view-artifacts [OPTIONS]
+python3 cli.py plan metrics
 ```
-
-**Options:**
-- `--type, -t TEXT`: Artifact type filter
-  - `emails` - Generated email communications
-  - `callbacks` - Scheduled callback records
-  - `documents` - PDF agreements, forms
-  - `all` (default) - All artifact types
-- `--limit, -l INTEGER`: Number to display (default: 10)
-
-**Examples:**
-```bash
-# View all recent artifacts
-python3 cli.py view-artifacts
-
-# View only email artifacts
-python3 cli.py view-artifacts --type emails --limit 20
-
-# View generated documents
-python3 cli.py view-artifacts --type documents
-```
-
-**Artifact Display:**
-```
-📄 Email Artifacts
---------------------------------------------------------------------------------
-📁 payment_plan_options_CUST_001.html
-   📅 2024-12-01 15:45:22 | Size: 2,847 bytes
-   👀 <html><body><h2>Payment Plan Options</h2><p>Dear Valued Customer...</p></body></html>...
-
-📁 follow_up_reminder_CUST_001.html
-   📅 2024-12-01 15:45:25 | Size: 1,923 bytes
-   👀 <html><body><h2>Follow-up Reminder</h2><p>This is a friendly reminder...</p></body></html>...
-```
-
-### `execution-metrics` - Performance Dashboard
-Execution system performance statistics.
-
-```bash
-python3 cli.py execution-metrics
-```
-
-**7-Day Performance Metrics:**
-- Total executions, success rate percentage
-- Total artifacts created
-- Status breakdown (success/failed/pending)
-- Actions by source (borrower_plan/advisor_plan/etc.)
-- Tools usage statistics (email/callback/document generation)
 
 ---
 
-## ✅ DECISION AGENT & APPROVALS
+## 📊 CASE RESOURCE
 
-### `get-approval-queue` - Pending Actions View
-View actions requiring approval in the Decision Agent system.
-
-```bash
-python3 cli.py get-approval-queue [OPTIONS]
-```
-
-**Options:**
-- `--route TEXT`: Filter by approval route
-  - `advisor_approval` - Actions requiring advisor approval
-  - `supervisor_approval` - Actions requiring supervisor approval
-
-**Queue Display Format:**
-```
-📋 Approval Queue (5 items)
-============================================================
-
-🎯 Advisor Approval (3 items):
-  🟡 action_20241201_001: Send payment plan options to customer...
-    Risk: medium (score: 0.654)
-    Financial: moderate, Compliance: low
-    Created: 2024-12-01 14:30:22
-
-  🔴 action_20241201_002: Process payment deferral request...
-    Risk: high (score: 0.821)
-    Financial: significant, Compliance: moderate
-    Created: 2024-12-01 14:35:18
-```
-
-### `approve-action` - Single Action Approval
-Approve specific action in the queue.
+### `case list` - View Cases
+Display all cases in the system.
 
 ```bash
-python3 cli.py approve-action [OPTIONS] ACTION_ID
+python3 cli.py case list
 ```
 
-**Options:**
-- `--approved-by TEXT`: Approver identifier (default: CLI_USER)
-- `--notes TEXT`: Optional approval notes
+---
 
-**Examples:**
-```bash
-# Basic approval
-python3 cli.py approve-action action_20241201_001
+## ✅ GOVERNANCE RESOURCE
 
-# Approval with notes
-python3 cli.py approve-action --notes "Approved for customer retention" \
-    --approved-by "John.Smith" action_20241201_001
-```
-
-### `reject-action` - Action Rejection
-Reject specific action with reason.
+### `governance queue` - Approval Queue
+View items waiting for approval.
 
 ```bash
-python3 cli.py reject-action [OPTIONS] ACTION_ID
+python3 cli.py governance queue
 ```
 
-**Options:**
-- `--rejected-by TEXT`: Rejector identifier (default: CLI_USER)
-- `--reason TEXT`: Rejection reason (default: "No reason provided")
-
-**Examples:**
-```bash
-# Basic rejection
-python3 cli.py reject-action action_20241201_002
-
-# Rejection with detailed reason
-python3 cli.py reject-action --reason "Requires additional customer verification" \
-    --rejected-by "Jane.Supervisor" action_20241201_002
-```
-
-### `bulk-approve` - Mass Action Approval
-Approve multiple actions simultaneously.
+### `governance metrics` - Approval Metrics
+View governance and approval statistics.
 
 ```bash
-python3 cli.py bulk-approve [OPTIONS] ACTION_IDS
+python3 cli.py governance metrics
 ```
 
-**Arguments:**
-- `ACTION_IDS`: Comma-separated list of action IDs (no spaces)
+---
 
-**Options:**
-- `--approved-by TEXT`: Approver identifier (default: CLI_USER)
-- `--notes TEXT`: Bulk approval notes (default: "Bulk approval")
+## 🔧 SYSTEM RESOURCE
 
-**Examples:**
-```bash
-# Bulk approve multiple actions
-python3 cli.py bulk-approve "action_001,action_002,action_003"
-
-# Bulk approve with custom notes
-python3 cli.py bulk-approve --notes "Weekly batch approval session" \
-    --approved-by "Manager.Smith" "action_004,action_005"
-```
-
-**Output:**
-```
-✅ Bulk approval completed
-Approved: 3/3 actions
-```
-
-### `approval-metrics` - Approval System Analytics
-Comprehensive approval queue performance metrics.
+### `system health` - Health Check
+Check system health and component status.
 
 ```bash
-python3 cli.py approval-metrics
+python3 cli.py system health
 ```
 
-**Metrics Dashboard:**
-```
-📊 Approval Metrics
-========================================
-Total Actions: 127
-Pending Approvals: 8
-Approval Rate: 89.2%
-Avg Approval Time: 2.3 hours
-
-📈 Queue Status:
-  Advisor Approval:
-    pending: 5
-    approved: 45
-    rejected: 3
-  Supervisor Approval:
-    pending: 3
-    approved: 67
-    rejected: 4
-
-⚠️  Risk Distribution:
-  low: 89
-  medium: 31
-  high: 7
-```
-
-### `decision-agent-summary` - Agent Configuration
-View Decision Agent settings and processing summary.
+### `system metrics` - System Statistics
+View comprehensive system metrics.
 
 ```bash
-python3 cli.py decision-agent-summary
+python3 cli.py system metrics
 ```
 
-**Summary Sections:**
-1. **Agent Version**: Current Decision Agent version
-2. **Configuration**: Thresholds and routing rules
-3. **Processing Summary**: Total decisions, routing distribution
-4. **Performance Metrics**: Auto-approval rates, average actions per plan
+---
+
+## 📖 COMMON WORKFLOWS
+
+### Basic Analysis Workflow
+```bash
+# 1. Create transcript
+python3 cli.py transcript create --topic "Customer Issue" --store
+
+# 2. List transcripts to get ID
+python3 cli.py transcript list
+
+# 3. Analyze transcript
+python3 cli.py analysis create --transcript CALL_ABC12345 --store
+
+# 4. Create action plan
+python3 cli.py plan create --analysis ANALYSIS_ABC12345_123
+
+# 5. Check system health
+python3 cli.py system health
+```
+
+### Monitoring Workflow
+```bash
+# View system status
+python3 cli.py system health
+python3 cli.py system metrics
+
+# Check analysis performance
+python3 cli.py analysis list --limit 10
+
+# Review governance queue
+python3 cli.py governance queue
+python3 cli.py governance metrics
+```
+
 
 ---
 
