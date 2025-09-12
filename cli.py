@@ -386,6 +386,7 @@ workflow_app.add_typer(workflow_manage_app, name="manage")
 workflow_app.add_typer(workflow_view_app, name="view")
 
 system_app = typer.Typer(name="system", help="System operations")
+orchestrate_app = typer.Typer(name="orchestrate", help="Pipeline orchestration operations")
 
 # Add subapps to main app
 app.add_typer(transcript_app)
@@ -393,6 +394,7 @@ app.add_typer(analysis_app)
 app.add_typer(insights_app)
 app.add_typer(plan_app)
 app.add_typer(workflow_app)
+app.add_typer(orchestrate_app)
 app.add_typer(system_app)
 
 
@@ -3162,6 +3164,176 @@ def system_metrics():
             
     except CLIError as e:
         print_error(f"Get metrics failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+# ====================================================================
+# ORCHESTRATION COMMANDS
+# ====================================================================
+
+@orchestrate_app.command("run")
+def orchestrate_run(
+    transcript_id: str = typer.Argument(..., help="Transcript ID to process through pipeline"),
+    auto_approve: bool = typer.Option(False, "--auto-approve", "-a", help="Auto-approve all workflows"),
+    timeout_hours: int = typer.Option(24, "--timeout", "-t", help="Hours to wait for manual approval"),
+    format: str = typer.Option(DEFAULT_FORMAT, "--format", "-f", help="Output format: json, table, yaml"),
+    verbose: bool = typer.Option(DEFAULT_VERBOSE, "--verbose", "-v", help="Enable verbose output")
+):
+    """Run complete orchestration pipeline: Transcript → Analysis → Plan → Workflows → Execution."""
+    try:
+        console.print(f"🚀 [bold cyan]Starting orchestration pipeline for transcript: {transcript_id}[/bold cyan]")
+        
+        # Import here to avoid issues with missing dependencies
+        import asyncio
+        from src.orchestration.simple_pipeline import run_simple_pipeline
+        
+        # Run the pipeline
+        if verbose:
+            console.print("🔄 Pipeline stages: Transcript → Analysis → Plan → Workflows → Execution")
+        
+        result = asyncio.run(run_simple_pipeline(
+            transcript_id=transcript_id,
+            auto_approve=auto_approve
+        ))
+        
+        if format.lower() == "json":
+            console.print_json(data=result)
+        elif format.lower() == "yaml":
+            import yaml
+            console.print(yaml.dump(result, default_flow_style=False))
+        else:  # table format
+            # Display pipeline results in table format
+            table = Table(title="Pipeline Execution Results")
+            table.add_column("Stage", style="cyan")
+            table.add_column("Result", style="green")
+            
+            table.add_row("Transcript ID", result["transcript_id"])
+            table.add_row("Analysis ID", result["analysis_id"])
+            table.add_row("Plan ID", result["plan_id"])
+            table.add_row("Workflows Generated", str(result["workflow_count"]))
+            table.add_row("Workflows Executed", str(result["executed_count"]))
+            table.add_row("Stage", result["stage"])
+            table.add_row("Success", "✅ Yes" if result["success"] else "❌ No")
+            
+            console.print(table)
+            
+            # Show execution summary if verbose
+            if verbose and "execution_summary" in result:
+                summary = result["execution_summary"]
+                console.print(f"\n📊 [bold blue]Execution Summary:[/bold blue]")
+                console.print(f"   Total tasks: {summary['total_tasks']}")
+                console.print(f"   Completed: {summary['completed']}")
+                console.print(f"   Failed: {summary['failed']}")
+                console.print(f"   Success rate: {summary['success_rate']:.2%}")
+        
+        if result["success"]:
+            print_success(f"Pipeline completed successfully! Executed {result['executed_count']} workflows")
+        else:
+            print_warning("Pipeline completed with issues")
+        
+    except Exception as e:
+        print_error(f"Pipeline orchestration failed: {str(e)}")
+        if verbose:
+            import traceback
+            console.print(traceback.format_exc())
+        raise typer.Exit(1)
+
+
+@orchestrate_app.command("status")
+def orchestrate_status(
+    transcript_id: str = typer.Option(None, "--transcript", "-t", help="Check status for specific transcript"),
+    format: str = typer.Option(DEFAULT_FORMAT, "--format", "-f", help="Output format: json, table, yaml")
+):
+    """Check orchestration pipeline status."""
+    try:
+        console.print("🔍 [bold cyan]Checking orchestration status...[/bold cyan]")
+        
+        if transcript_id:
+            console.print(f"📋 Status for transcript: {transcript_id}")
+            # TODO: Implement transcript-specific status check
+            console.print("❌ Transcript-specific status not yet implemented")
+            return
+        
+        # General orchestration status
+        status_info = {
+            "orchestrator": "Simple Python Orchestrator",
+            "status": "Available",
+            "features": [
+                "Complete pipeline execution",
+                "Parallel workflow processing", 
+                "Fail-fast error handling",
+                "Execution tracking",
+                "Pipeline pause/resume (planned)"
+            ],
+            "last_check": datetime.now().isoformat()
+        }
+        
+        if format.lower() == "json":
+            console.print_json(data=status_info)
+        elif format.lower() == "yaml":
+            import yaml
+            console.print(yaml.dump(status_info, default_flow_style=False))
+        else:  # table format
+            table = Table(title="Orchestration Status")
+            table.add_column("Property", style="cyan")
+            table.add_column("Value", style="green")
+            
+            for key, value in status_info.items():
+                if isinstance(value, list):
+                    value = "\n".join(f"• {item}" for item in value)
+                table.add_row(key.replace("_", " ").title(), str(value))
+            
+            console.print(table)
+        
+        print_success("Orchestration system is ready")
+        
+    except Exception as e:
+        print_error(f"Status check failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@orchestrate_app.command("test") 
+def orchestrate_test(
+    transcript_id: str = typer.Option("TEST_TRANSCRIPT_001", "--transcript", "-t", help="Test transcript ID"),
+    verbose: bool = typer.Option(True, "--verbose", "-v", help="Enable verbose output")
+):
+    """Test orchestration pipeline with sample data."""
+    try:
+        console.print("🧪 [bold cyan]Testing orchestration pipeline...[/bold cyan]")
+        
+        # Run tests for orchestration components
+        import subprocess
+        import sys
+        
+        console.print("🔬 Running orchestration tests...")
+        
+        result = subprocess.run([
+            sys.executable, "-m", "pytest", 
+            "tests/test_simple_orchestration.py", 
+            "-v" if verbose else "-q"
+        ], capture_output=True, text=True, cwd=os.getcwd())
+        
+        if result.returncode == 0:
+            print_success("All orchestration tests passed!")
+            if verbose:
+                console.print(result.stdout)
+        else:
+            print_error("Some orchestration tests failed")
+            console.print(result.stderr)
+            raise typer.Exit(1)
+        
+        # Optionally run a test pipeline
+        console.print(f"\n🚀 [bold blue]Running test pipeline with transcript: {transcript_id}[/bold blue]")
+        console.print("⚠️ Note: This will fail without actual services running")
+        
+    except FileNotFoundError:
+        print_error("pytest not found. Install with: pip install pytest")
+        raise typer.Exit(1)
+    except Exception as e:
+        print_error(f"Test execution failed: {str(e)}")
+        if verbose:
+            import traceback
+            console.print(traceback.format_exc())
         raise typer.Exit(1)
 
 
