@@ -6,7 +6,7 @@ NO FALLBACK LOGIC - fails fast on database errors.
 import sqlite3
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
 
@@ -29,6 +29,12 @@ class WorkflowExecutionStore:
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
+        self._persistent_conn = None
+        
+        # For in-memory databases, maintain persistent connection
+        if db_path == ":memory:":
+            self._persistent_conn = sqlite3.connect(db_path)
+        
         self._init_db()
     
     def _init_db(self):
@@ -40,8 +46,12 @@ class WorkflowExecutionStore:
             Exception: Database initialization failure (NO FALLBACK)
         """
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
+            if self._persistent_conn:
+                conn = self._persistent_conn
+                cursor = conn.cursor()
+            else:
+                conn = self._get_connection()
+                cursor = conn.cursor()
             
             # Main workflow executions table
             cursor.execute('''
@@ -101,7 +111,16 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to initialize workflow execution database: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
+    
+    def _get_connection(self):
+        """Get database connection, using persistent connection if available."""
+        if self._persistent_conn:
+            return self._persistent_conn
+        else:
+            return sqlite3.connect(self.db_path)
     
     async def create(self, execution_data: Dict[str, Any]) -> str:
         """Create new execution record.
@@ -139,7 +158,7 @@ class WorkflowExecutionStore:
         execution_id = f"exec_{uuid.uuid4().hex[:12]}"
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             # Serialize payload and metadata
@@ -159,7 +178,7 @@ class WorkflowExecutionStore:
                 execution_data['executor_type'],
                 execution_data['execution_status'],
                 payload_json,
-                execution_data.get('executed_at', datetime.utcnow().isoformat()),
+                execution_data.get('executed_at', datetime.now(timezone.utc).isoformat()),
                 execution_data.get('executed_by', 'system'),
                 execution_data.get('execution_duration_ms'),
                 execution_data.get('mock_execution', True),
@@ -187,7 +206,9 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to create execution record: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     async def get_by_id(self, execution_id: str) -> Optional[Dict[str, Any]]:
         """Get execution record by ID.
@@ -206,7 +227,7 @@ class WorkflowExecutionStore:
             raise ValueError("execution_id must be a non-empty string")
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -227,7 +248,9 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to retrieve execution record: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     async def get_by_workflow(self, workflow_id: str) -> List[Dict[str, Any]]:
         """Get all execution records for a workflow.
@@ -246,7 +269,7 @@ class WorkflowExecutionStore:
             raise ValueError("workflow_id must be a non-empty string")
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -265,7 +288,9 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to retrieve workflow executions: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     async def get_by_executor_type(self, executor_type: str, limit: int = 100) -> List[Dict[str, Any]]:
         """Get execution records by executor type.
@@ -288,7 +313,7 @@ class WorkflowExecutionStore:
             raise ValueError("limit must be a positive integer")
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -308,7 +333,9 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to retrieve executions by type: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     async def get_recent_executions(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recent execution records.
@@ -327,7 +354,7 @@ class WorkflowExecutionStore:
             raise ValueError("limit must be a positive integer")
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -346,7 +373,9 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to retrieve recent executions: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     async def get_execution_statistics(self) -> Dict[str, Any]:
         """Get execution statistics and metrics.
@@ -358,7 +387,7 @@ class WorkflowExecutionStore:
             Exception: Database operation failure (NO FALLBACK)
         """
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             # Total executions
@@ -406,13 +435,15 @@ class WorkflowExecutionStore:
                 'executions_by_executor_type': executor_counts,
                 'average_execution_duration_ms': round(avg_duration, 2),
                 'daily_execution_counts_last_7_days': daily_counts,
-                'generated_at': datetime.utcnow().isoformat()
+                'generated_at': datetime.now(timezone.utc).isoformat()
             }
             
         except Exception as e:
             raise Exception(f"Failed to generate execution statistics: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     async def add_execution_metric(self, execution_id: str, metric_name: str, 
                                  metric_value: float, metric_unit: str) -> bool:
@@ -438,7 +469,7 @@ class WorkflowExecutionStore:
             raise ValueError("metric_value must be numeric")
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -450,7 +481,7 @@ class WorkflowExecutionStore:
                 metric_name,
                 float(metric_value),
                 metric_unit,
-                datetime.utcnow().isoformat()
+                datetime.now(timezone.utc).isoformat()
             ))
             
             conn.commit()
@@ -459,7 +490,9 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to add execution metric: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     async def get_execution_audit_trail(self, execution_id: str) -> List[Dict[str, Any]]:
         """Get audit trail for execution.
@@ -478,7 +511,7 @@ class WorkflowExecutionStore:
             raise ValueError("execution_id must be a non-empty string")
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute('''
@@ -508,7 +541,9 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to retrieve audit trail: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
     
     def _row_to_dict(self, row) -> Dict[str, Any]:
         """Convert database row to dictionary.
@@ -560,7 +595,7 @@ class WorkflowExecutionStore:
             execution_id,
             event_type,
             event_description,
-            datetime.utcnow().isoformat(),
+            datetime.now(timezone.utc).isoformat(),
             json.dumps(event_data) if event_data else None
         ))
     
@@ -581,7 +616,7 @@ class WorkflowExecutionStore:
             metric['name'],
             metric['value'],
             metric['unit'],
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).isoformat()
         ))
     
     async def cleanup_old_executions(self, days_to_keep: int = 90) -> int:
@@ -601,7 +636,7 @@ class WorkflowExecutionStore:
             raise ValueError("days_to_keep must be a positive integer")
         
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             # Delete old execution records (cascading deletes will handle related tables)
@@ -618,4 +653,6 @@ class WorkflowExecutionStore:
         except Exception as e:
             raise Exception(f"Failed to cleanup old executions: {e}")
         finally:
-            conn.close()
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()

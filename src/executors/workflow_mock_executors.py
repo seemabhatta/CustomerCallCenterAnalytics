@@ -4,7 +4,7 @@ Each executor creates detailed mock payloads for demonstration purposes.
 NO FALLBACK LOGIC - fails fast if cannot generate valid payload.
 """
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
 from abc import ABC, abstractmethod
 
@@ -38,7 +38,7 @@ class BaseMockExecutor(ABC):
             'executor': executor_type,
             'payload': payload,
             'mock': True,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'execution_id': f'{executor_type}_{uuid.uuid4().hex[:8]}'
         }
 
@@ -263,7 +263,7 @@ class CRMockExecutor(BaseMockExecutor):
                 'updates': parameters.get('updates', self._generate_updates(action_item, description)),
                 'crm_system': 'salesforce',
                 'interaction_type': self._determine_interaction_type(action_item),
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'updated_by': 'system_workflow_execution',
                 'batch_operation': False,
                 'validation_rules': {
@@ -292,7 +292,7 @@ class CRMockExecutor(BaseMockExecutor):
         action_lower = action_item.lower()
         
         base_updates = {
-            'last_contact': datetime.utcnow().isoformat(),
+            'last_contact': datetime.now(timezone.utc).isoformat(),
             'contact_method': 'system_workflow',
             'notes': self._generate_notes(action_item, description),
             'updated_fields': []
@@ -325,7 +325,7 @@ class CRMockExecutor(BaseMockExecutor):
                 'compliance_status': 'disclosures_delivered',
                 'tags': ['disclosure_sent', 'awaiting_response'],
                 'next_action': 'follow_up_disclosure',
-                'document_delivery_date': datetime.utcnow().isoformat(),
+                'document_delivery_date': datetime.now(timezone.utc).isoformat(),
                 'updated_fields': ['status', 'compliance_status', 'document_delivery_date']
             })
         
@@ -333,7 +333,7 @@ class CRMockExecutor(BaseMockExecutor):
             base_updates.update({
                 'status': 'pending_callback',
                 'callback_scheduled': True,
-                'callback_date': (datetime.utcnow() + timedelta(days=1)).isoformat(),
+                'callback_date': (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
                 'tags': ['callback_scheduled'],
                 'next_action': 'advisor_contact',
                 'updated_fields': ['status', 'callback_scheduled', 'callback_date']
@@ -351,7 +351,7 @@ class CRMockExecutor(BaseMockExecutor):
     
     def _generate_notes(self, action_item: str, description: str) -> str:
         """Generate detailed notes for CRM update."""
-        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         
         return f"""[{timestamp}] WORKFLOW EXECUTION: {action_item}
 
@@ -417,14 +417,14 @@ class DisclosureMockExecutor(BaseMockExecutor):
                 'required_fields': self._generate_required_fields(action_item),
                 'compliance_flags': self._determine_compliance_flags(action_item),
                 'delivery_method': parameters.get('delivery_method', 'email'),
-                'generation_timestamp': datetime.utcnow().isoformat(),
+                'generation_timestamp': datetime.now(timezone.utc).isoformat(),
                 'document_id': f"DOC_{uuid.uuid4().hex[:12].upper()}",
                 'template_version': '2024.1',
                 'regulatory_requirements': self._get_regulatory_requirements(action_item),
                 'delivery_tracking': {
                     'delivery_confirmation_required': True,
                     'read_receipt_required': True,
-                    'response_deadline': (datetime.utcnow() + timedelta(days=3)).isoformat()
+                    'response_deadline': (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
                 },
                 'processing_metadata': {
                     'generated_by': 'workflow_executor',
@@ -498,7 +498,7 @@ class DisclosureMockExecutor(BaseMockExecutor):
             base_fields.update({
                 'final_loan_amount': '$275,000.00',
                 'final_apr': '6.95%',
-                'closing_date': (datetime.utcnow() + timedelta(days=15)).strftime('%Y-%m-%d'),
+                'closing_date': (datetime.now(timezone.utc) + timedelta(days=15)).strftime('%Y-%m-%d'),
                 'wire_instructions': 'Provided separately',
                 'title_company': 'Springfield Title & Escrow'
             })
@@ -601,7 +601,7 @@ class TaskMockExecutor(BaseMockExecutor):
                 'estimated_duration': self._estimate_duration(action_item),
                 'task_type': self._determine_task_type(action_item),
                 'status': 'assigned',
-                'created_at': datetime.utcnow().isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat(),
                 'created_by': 'workflow_executor',
                 'dependencies': [],
                 'tags': self._generate_tags(action_item),
@@ -703,13 +703,13 @@ Completion Requirements:
         action_lower = action_item.lower()
         
         if any(word in action_lower for word in ['urgent', 'immediate', 'asap']):
-            due_date = datetime.utcnow() + timedelta(hours=4)
+            due_date = datetime.now(timezone.utc) + timedelta(hours=4)
         elif any(word in action_lower for word in ['disclosure', 'compliance']):
-            due_date = datetime.utcnow() + timedelta(days=1)
+            due_date = datetime.now(timezone.utc) + timedelta(days=1)
         elif 'follow' in action_lower:
-            due_date = datetime.utcnow() + timedelta(days=2)
+            due_date = datetime.now(timezone.utc) + timedelta(days=2)
         else:
-            due_date = datetime.utcnow() + timedelta(days=3)
+            due_date = datetime.now(timezone.utc) + timedelta(days=3)
         
         return due_date.strftime('%Y-%m-%d')
     
@@ -860,7 +860,7 @@ class TrainingMockExecutor(BaseMockExecutor):
                 'certification_level': self._determine_certification_level(action_item),
                 'learning_path': self._determine_learning_path(action_item),
                 'delivery_method': 'online_lms',
-                'created_at': datetime.utcnow().isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat(),
                 'assigned_by': 'workflow_executor',
                 'tracking': {
                     'progress_tracking': True,
@@ -978,11 +978,11 @@ class TrainingMockExecutor(BaseMockExecutor):
         action_lower = action_item.lower()
         
         if 'urgent' in action_lower or 'immediate' in action_lower:
-            due_date = datetime.utcnow() + timedelta(days=3)
+            due_date = datetime.now(timezone.utc) + timedelta(days=3)
         elif 'compliance' in action_lower:
-            due_date = datetime.utcnow() + timedelta(days=7)
+            due_date = datetime.now(timezone.utc) + timedelta(days=7)
         else:
-            due_date = datetime.utcnow() + timedelta(days=14)
+            due_date = datetime.now(timezone.utc) + timedelta(days=14)
         
         return due_date.strftime('%Y-%m-%d')
     

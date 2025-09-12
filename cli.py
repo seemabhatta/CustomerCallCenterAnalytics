@@ -2065,16 +2065,6 @@ def workflow_process_execution_report():
     except CLIError as e:
         print_error(f"Failed to generate execution report: {str(e)}")
         raise typer.Exit(1)
-            workflows_to_execute.extend(workflows)
-        else:
-            # Get all approved workflows
-            workflows = client.list_workflows(status="APPROVED")
-            if workflow_type:
-                workflows = [w for w in workflows if w.get('workflow_type') == workflow_type]
-            workflows_to_execute.extend(workflows)
-        
-        # Filter to only approved workflows
-        workflows_to_execute = [w for w in workflows_to_execute if w.get('status') in ['APPROVED', 'AUTO_APPROVED']]
         
         if not workflows_to_execute:
             console.print("📭 No approved workflows found matching the criteria")

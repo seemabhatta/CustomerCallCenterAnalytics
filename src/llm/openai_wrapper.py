@@ -3,35 +3,13 @@ import os
 from pydantic import BaseModel, Field
 from openai import OpenAI, AsyncOpenAI
 import asyncio
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
-def rx_text(resp) -> str:
-    """Return best-effort concatenated text from a Responses API result."""
-    if getattr(resp, "output_text", None):
-        return resp.output_text
-    try:
-        parts = []
-        for b in getattr(resp, "output", []) or []:
-            for c in getattr(b, "content", []) or []:
-                t = getattr(c, "text", None)
-                if isinstance(t, str):
-                    parts.append(t)
-        return "".join(parts).strip()
-    except Exception:
-        return str(resp)
-
-
-def rx_parsed(resp):
-    """Return parsed JSON when using text.format json_schema (or None)."""
-    try:
-        for b in getattr(resp, "output", []) or []:
-            for c in getattr(b, "content", []) or []:
-                p = getattr(c, "parsed", None)
-                if p is not None:
-                    return p
-    except Exception:
-        pass
-    return None
+# Removed old helper functions - no longer needed with chat completions API
 
 
 class RiskAssessment(BaseModel):
@@ -72,7 +50,7 @@ class OpenAIWrapper:
     def __init__(self):
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.model = "gpt-4o"
+        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     
     def _create_json_schema(self, pydantic_model: BaseModel) -> Dict[str, Any]:
         """Convert Pydantic model to JSON schema for structured outputs."""
@@ -100,60 +78,48 @@ class OpenAIWrapper:
     
     def generate_text(self, prompt: str, temperature: float = 0.3) -> str:
         """Generate plain text response."""
-        resp = self.client.responses.create(
+        resp = self.client.chat.completions.create(
             model=self.model,
-            input=prompt,
+            messages=[{"role": "user", "content": prompt}],
             temperature=temperature
         )
-        return rx_text(resp)
+        return resp.choices[0].message.content
     
     def generate_structured(self, prompt: str, schema_model: BaseModel, temperature: float = 0.3) -> Any:
         """Generate structured output using Pydantic model schema."""
-        resp = self.client.responses.create(
+        resp = self.client.chat.completions.create(
             model=self.model,
-            input=prompt,
-            text={"format": self._create_json_schema(schema_model)},
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_schema", "json_schema": self._create_json_schema(schema_model)},
             temperature=temperature
         )
-        parsed_data = rx_parsed(resp)
-        if parsed_data:
-            return schema_model.model_validate(parsed_data)
-        raise ValueError("Failed to parse structured output")
+        content = resp.choices[0].message.content
+        import json
+        json_data = json.loads(content)
+        return schema_model.model_validate(json_data)
     
     async def generate_text_async(self, prompt: str, temperature: float = 0.3) -> str:
         """Generate plain text response asynchronously."""
-        resp = await self.async_client.responses.create(
+        resp = await self.async_client.chat.completions.create(
             model=self.model,
-            input=prompt,
+            messages=[{"role": "user", "content": prompt}],
             temperature=temperature
         )
-        return rx_text(resp)
+        return resp.choices[0].message.content
     
     async def generate_structured_async(self, prompt: str, schema_model: BaseModel, temperature: float = 0.3) -> Any:
         """Generate structured output using Pydantic model schema asynchronously."""
         try:
-            resp = await self.async_client.responses.create(
+            resp = await self.async_client.chat.completions.create(
                 model=self.model,
-                input=prompt,
-                text={"format": self._create_json_schema(schema_model)},
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_schema", "json_schema": self._create_json_schema(schema_model)},
                 temperature=temperature
             )
-            parsed_data = rx_parsed(resp)
-            if parsed_data:
-                return schema_model.model_validate(parsed_data)
-            
-            # Try to get text content if parsed data is not available
-            text_content = rx_text(resp)
-            if text_content:
-                # Try to parse as JSON manually
-                import json
-                try:
-                    json_data = json.loads(text_content)
-                    return schema_model.model_validate(json_data)
-                except json.JSONDecodeError:
-                    raise ValueError(f"Response is not valid JSON: {text_content}")
-            
-            raise ValueError("Failed to parse structured output - no content returned")
+            content = resp.choices[0].message.content
+            import json
+            json_data = json.loads(content)
+            return schema_model.model_validate(json_data)
         except Exception as e:
             raise ValueError(f"Structured output generation failed: {e}")
     

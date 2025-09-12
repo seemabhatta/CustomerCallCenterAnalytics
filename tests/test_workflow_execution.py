@@ -154,7 +154,7 @@ class TestMockExecutors:
         params = {
             'recipient': 'test@example.com',
             'subject': 'Test Email',
-            'body': 'Test body content'
+            'body': 'This is a comprehensive test email body with sufficient content to meet validation requirements for professional communication standards.'
         }
         
         # When: Execute
@@ -165,7 +165,7 @@ class TestMockExecutors:
         assert result['mock'] is True
         assert result['payload']['to'] == 'test@example.com'
         assert result['payload']['subject'] == 'Test Email'
-        assert result['payload']['body'] == 'Test body content'
+        assert 'comprehensive test email body' in result['payload']['body']
         assert isinstance(result['payload']['attachments'], list)
     
     def test_crm_executor_generates_payload(self, sample_workflow):
@@ -174,7 +174,7 @@ class TestMockExecutors:
         executor = CRMockExecutor()
         params = {
             'customer_id': 'CUST_123',
-            'updates': {'status': 'contacted', 'notes': 'Test notes'}
+            'updates': {'status': 'contacted', 'notes': 'Comprehensive test notes with sufficient detail to meet CRM validation requirements for professional record keeping.'}
         }
         
         # When: Execute

@@ -35,6 +35,7 @@ class WorkflowService:
         if not db_path:
             raise ValueError("Database path cannot be empty")
         
+        self.db_path = db_path
         self.workflow_store = WorkflowStore(db_path)
         self.action_plan_store = ActionPlanStore(db_path)
         self.risk_agent = RiskAssessmentAgent()

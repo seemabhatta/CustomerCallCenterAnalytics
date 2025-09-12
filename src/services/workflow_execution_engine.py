@@ -4,7 +4,7 @@ Coordinates between agents, executors, and storage systems.
 NO FALLBACK LOGIC - fails fast on any execution issues.
 """
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from src.agents.workflow_execution_agent import WorkflowExecutionAgent
@@ -74,8 +74,8 @@ class WorkflowExecutionEngine:
             if not workflow:
                 raise ValueError(f"Workflow not found: {workflow_id}")
             
-            # Validate workflow status
-            if workflow['status'] != 'APPROVED':
+            # Validate workflow status - accept both APPROVED and AUTO_APPROVED
+            if workflow['status'] not in ['APPROVED', 'AUTO_APPROVED']:
                 raise ValueError(
                     f"Workflow must be approved for execution. "
                     f"Current status: {workflow['status']}"
@@ -119,7 +119,7 @@ class WorkflowExecutionEngine:
                 'executor_type': executor_type,
                 'execution_payload': execution_result['payload'],
                 'execution_status': 'executed',
-                'executed_at': datetime.utcnow().isoformat(),
+                'executed_at': datetime.now(timezone.utc).isoformat(),
                 'executed_by': executed_by,
                 'execution_duration_ms': execution_duration,
                 'mock_execution': True,
@@ -170,7 +170,7 @@ class WorkflowExecutionEngine:
                     'executor_type': 'unknown',
                     'execution_payload': {},
                     'execution_status': 'failed',
-                    'executed_at': datetime.utcnow().isoformat(),
+                    'executed_at': datetime.now(timezone.utc).isoformat(),
                     'executed_by': executed_by,
                     'execution_duration_ms': execution_duration,
                     'mock_execution': True,
@@ -216,7 +216,7 @@ class WorkflowExecutionEngine:
                 'failure_count': 0,
                 'total_duration_ms': 0
             },
-            'started_at': datetime.utcnow().isoformat()
+            'started_at': datetime.now(timezone.utc).isoformat()
         }
         
         batch_start_time = time.time()
@@ -234,7 +234,7 @@ class WorkflowExecutionEngine:
                     'workflow_id': workflow_id,
                     'status': 'failed',
                     'error': str(e),
-                    'failed_at': datetime.utcnow().isoformat()
+                    'failed_at': datetime.now(timezone.utc).isoformat()
                 }
                 results['failed_executions'].append(failed_result)
                 results['execution_summary']['failure_count'] += 1
@@ -242,7 +242,7 @@ class WorkflowExecutionEngine:
         # Add batch timing
         batch_duration = int((time.time() - batch_start_time) * 1000)
         results['execution_summary']['batch_duration_ms'] = batch_duration
-        results['completed_at'] = datetime.utcnow().isoformat()
+        results['completed_at'] = datetime.now(timezone.utc).isoformat()
         
         return results
     
@@ -318,7 +318,7 @@ class WorkflowExecutionEngine:
             return {
                 'execution_record': execution_record,
                 'audit_trail': audit_trail,
-                'retrieved_at': datetime.utcnow().isoformat()
+                'retrieved_at': datetime.now(timezone.utc).isoformat()
             }
             
         except Exception as e:
@@ -354,7 +354,7 @@ class WorkflowExecutionEngine:
                 'execution_history': execution_records,
                 'total_executions': len(execution_records),
                 'last_execution': execution_records[0] if execution_records else None,
-                'retrieved_at': datetime.utcnow().isoformat()
+                'retrieved_at': datetime.now(timezone.utc).isoformat()
             }
             
         except Exception as e:
@@ -378,13 +378,13 @@ class WorkflowExecutionEngine:
                 'available_executors': list(self.executors.keys()),
                 'total_executor_types': len(self.executors),
                 'agent_version': self.execution_agent.agent_version,
-                'engine_initialized_at': datetime.utcnow().isoformat()
+                'engine_initialized_at': datetime.now(timezone.utc).isoformat()
             }
             
             return {
                 'store_statistics': store_stats,
                 'engine_statistics': engine_stats,
-                'generated_at': datetime.utcnow().isoformat()
+                'generated_at': datetime.now(timezone.utc).isoformat()
             }
             
         except Exception as e:
@@ -406,7 +406,7 @@ class WorkflowExecutionEngine:
         if not workflow.get('id'):
             raise ValueError("Workflow missing ID")
         
-        if workflow.get('status') != 'APPROVED':
+        if workflow.get('status') not in ['APPROVED', 'AUTO_APPROVED']:
             raise ValueError(f"Workflow not approved: {workflow.get('status')}")
         
         # Check workflow data
@@ -460,7 +460,7 @@ class WorkflowExecutionEngine:
                 },
                 'execution_plan': execution_decision,
                 'payload_preview': execution_payload,
-                'preview_generated_at': datetime.utcnow().isoformat(),
+                'preview_generated_at': datetime.now(timezone.utc).isoformat(),
                 'note': 'This is a preview only - no execution performed'
             }
             

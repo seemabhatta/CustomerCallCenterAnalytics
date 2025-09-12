@@ -87,8 +87,22 @@ class WorkflowExecutionAgent:
             # Get LLM decision
             response = await self.llm.generate_text_async(prompt, temperature=0.2)
             
+            # Debug: Check response
+            if not response or not response.strip():
+                raise ValueError(f"LLM returned empty response. Prompt length: {len(prompt)} chars")
+            
+            # Clean response - remove markdown code blocks if present
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]  # Remove ```
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]  # Remove ending ```
+            cleaned_response = cleaned_response.strip()
+            
             # Parse response as JSON
-            decision_data = json.loads(response)
+            decision_data = json.loads(cleaned_response)
             
             # Validate required fields
             required_fields = ['executor_type', 'parameters', 'confidence', 'reasoning']
@@ -153,8 +167,22 @@ class WorkflowExecutionAgent:
             # Get LLM payload
             response = await self.llm.generate_text_async(prompt, temperature=0.3)
             
+            # Debug: Check response
+            if not response or not response.strip():
+                raise ValueError(f"LLM returned empty response for payload. Prompt length: {len(prompt)} chars")
+            
+            # Clean response - remove markdown code blocks if present
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]  # Remove ```
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]  # Remove ending ```
+            cleaned_response = cleaned_response.strip()
+            
             # Parse response as JSON
-            payload_data = json.loads(response)
+            payload_data = json.loads(cleaned_response)
             
             # Validate payload structure based on executor type
             self._validate_payload_structure(executor_type, payload_data)
@@ -185,12 +213,30 @@ AVAILABLE EXECUTORS:
 4. task - Create tasks for advisors, supervisors, or teams
 5. training - Assign training modules to staff members
 
-ANALYSIS RULES:
-- If action involves "send email", "notify", "communicate" → email executor
-- If action involves "update record", "CRM", "customer data" → crm executor  
-- If action involves "disclosure", "documents", "compliance forms" → disclosure executor
-- If action involves "assign task", "follow up", "schedule" → task executor
-- If action involves "training", "coaching", "learning" → training executor
+CRITICAL RULE: PREFER DIRECT CUSTOMER ACTIONS OVER INTERNAL TASKS
+
+ANALYSIS RULES - CHOOSE DIRECT ACTIONS:
+1. email - FIRST CHOICE: Send direct customer communication (emails, notifications, requests)
+2. crm - SECOND CHOICE: Update customer records immediately 
+3. disclosure - THIRD CHOICE: Generate compliance documents for customer
+4. task - LAST RESORT: Only for pure internal advisor/supervisor work
+5. training - STAFF ONLY: Training assignments for employees
+
+DECISION MATRIX:
+- Customer needs to DO something → email executor (send instructions/requests to customer)
+- Customer needs DOCUMENTS → disclosure executor (generate forms/documents)
+- Customer record needs UPDATE → crm executor (update status/notes)
+- Internal staff needs to WORK → task executor (assign internal work)
+
+SPECIFIC EXAMPLES:
+- "Confirm prepayment penalties" → email (email customer requesting confirmation)
+- "Gather financial documents" → email (email customer with document checklist)
+- "Prepare for call" → email (email customer with call preparation instructions)
+- "Update customer status" → crm (update CRM record directly)
+- "Generate TILA disclosure" → disclosure (create compliance document)
+- "Review loan application" → task (internal advisor review work)
+
+BIAS TOWARD CUSTOMER-FACING ACTIONS: When in doubt, choose email to communicate directly with customer rather than creating internal tasks.
 
 CONFIDENCE RULES:
 - High confidence (0.9+): Clear action type with obvious executor
