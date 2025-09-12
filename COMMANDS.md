@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CLI provides 6 resource-based command groups with comprehensive CRUD operations and advanced analytics capabilities. All commands follow the pattern: `python3 cli.py <resource> <command> [options]`
+The CLI provides 8 resource-based command groups with comprehensive CRUD operations, advanced analytics capabilities, and human-in-the-loop orchestration. All commands follow the pattern: `python3 cli.py <resource> <command> [options]`
 
 ## 🌐 Global Options
 
@@ -254,6 +254,104 @@ python3 cli.py system health
 
 # Show system metrics
 python3 cli.py system metrics
+```
+
+---
+
+### 7. Pipeline Orchestration Operations
+
+**Resource Group:** `orchestrate`
+
+#### Available Commands:
+- `run` - Run complete orchestration pipeline
+- `status` - Check orchestration pipeline status  
+- `resume` - Resume orchestration after manual approvals
+- `pending` - Show plans with workflows pending approval
+- `execute-approved` - Execute all approved workflows for a plan
+- `test` - Test orchestration pipeline with sample data
+
+#### Examples:
+
+```bash
+# Run complete pipeline with auto-approval
+python3 cli.py orchestrate run CALL_123ABC --auto-approve
+
+# Run pipeline normally (workflows requiring approval will pause)
+python3 cli.py orchestrate run CALL_123ABC
+
+# Check orchestration status
+python3 cli.py orchestrate status
+
+# Show plans with pending approvals
+python3 cli.py orchestrate pending
+
+# Resume orchestration for a specific plan
+python3 cli.py orchestrate resume PLAN_ABC123 --execute-approved
+
+# Execute only the approved workflows
+python3 cli.py orchestrate execute-approved PLAN_ABC123
+
+# Test pipeline with sample data
+python3 cli.py orchestrate test --transcript TEST_001
+```
+
+---
+
+### 8. Approval Queue Management
+
+**Resource Group:** `approvals`
+
+#### Available Commands:
+- `queue` - Show approval queue with pending workflows
+- `process` - Bulk approve or reject workflows
+- `my-tasks` - Show pending tasks for a specific approver
+
+#### Examples:
+
+```bash
+# View approval queue
+python3 cli.py approvals queue
+
+# Filter queue by role
+python3 cli.py approvals queue --role SUPERVISOR
+
+# Filter queue by specific approver
+python3 cli.py approvals queue --approver "john@company.com"
+
+# Bulk approve multiple workflows
+python3 cli.py approvals process --approve "WF1,WF2,WF3" --approver "supervisor@company.com" --reason "Approved batch"
+
+# Bulk reject workflows
+python3 cli.py approvals process --reject "WF4,WF5" --approver "manager@company.com" --reason "Needs more documentation"
+
+# Show tasks assigned to specific approver
+python3 cli.py approvals my-tasks --approver "supervisor@company.com"
+```
+
+---
+
+## 🔄 Complete Human-in-the-Loop Workflow
+
+### Typical Approval Process:
+
+```bash
+# 1. Run orchestration pipeline (pauses at approvals)
+python3 cli.py orchestrate run CALL_123ABC
+
+# 2. Check what's pending approval
+python3 cli.py orchestrate pending
+
+# 3. View approval queue
+python3 cli.py approvals queue --role SUPERVISOR
+
+# 4. Approve workflows as supervisor
+python3 cli.py approvals process --approve "WF1,WF2" --approver "supervisor@company.com"
+
+# 5. Resume orchestration to execute approved workflows
+python3 cli.py orchestrate resume PLAN_ABC123
+
+# 6. Check execution results
+python3 cli.py workflow view execution-status
 ```
 
 ---
