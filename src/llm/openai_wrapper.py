@@ -77,6 +77,20 @@ class OpenAIWrapper:
     def _create_json_schema(self, pydantic_model: BaseModel) -> Dict[str, Any]:
         """Convert Pydantic model to JSON schema for structured outputs."""
         schema = pydantic_model.model_json_schema()
+        
+        # Ensure additionalProperties is false for all objects to meet OpenAI's strict requirements
+        def fix_schema(obj):
+            if isinstance(obj, dict):
+                if obj.get("type") == "object" and "additionalProperties" not in obj:
+                    obj["additionalProperties"] = False
+                for key, value in obj.items():
+                    fix_schema(value)
+            elif isinstance(obj, list):
+                for item in obj:
+                    fix_schema(item)
+        
+        fix_schema(schema)
+        
         return {
             "type": "json_schema",
             "name": pydantic_model.__name__,
@@ -117,16 +131,31 @@ class OpenAIWrapper:
     
     async def generate_structured_async(self, prompt: str, schema_model: BaseModel, temperature: float = 0.3) -> Any:
         """Generate structured output using Pydantic model schema asynchronously."""
-        resp = await self.async_client.responses.create(
-            model=self.model,
-            input=prompt,
-            text={"format": self._create_json_schema(schema_model)},
-            temperature=temperature
-        )
-        parsed_data = rx_parsed(resp)
-        if parsed_data:
-            return schema_model.model_validate(parsed_data)
-        raise ValueError("Failed to parse structured output")
+        try:
+            resp = await self.async_client.responses.create(
+                model=self.model,
+                input=prompt,
+                text={"format": self._create_json_schema(schema_model)},
+                temperature=temperature
+            )
+            parsed_data = rx_parsed(resp)
+            if parsed_data:
+                return schema_model.model_validate(parsed_data)
+            
+            # Try to get text content if parsed data is not available
+            text_content = rx_text(resp)
+            if text_content:
+                # Try to parse as JSON manually
+                import json
+                try:
+                    json_data = json.loads(text_content)
+                    return schema_model.model_validate(json_data)
+                except json.JSONDecodeError:
+                    raise ValueError(f"Response is not valid JSON: {text_content}")
+            
+            raise ValueError("Failed to parse structured output - no content returned")
+        except Exception as e:
+            raise ValueError(f"Structured output generation failed: {e}")
     
     async def assess_risk(self, prompt: str) -> RiskAssessment:
         """Perform risk assessment with structured output."""

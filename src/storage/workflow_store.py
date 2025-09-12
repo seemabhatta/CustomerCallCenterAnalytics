@@ -681,12 +681,26 @@ class WorkflowStore:
                 risk_level = risk_assessment.get('risk_level', 'MEDIUM')  # Default to MEDIUM (valid value)
                 status = approval_routing.get('initial_status', 'PENDING_ASSESSMENT')
                 requires_approval = approval_routing.get('requires_human_approval', True)
+                
+                # Ensure reasoning fields are strings, not dicts
                 risk_reasoning = risk_assessment.get('reasoning', '')
+                if isinstance(risk_reasoning, dict):
+                    risk_reasoning = json.dumps(risk_reasoning)
+                
                 approval_reasoning = approval_routing.get('routing_reasoning', '')
+                if isinstance(approval_reasoning, dict):
+                    approval_reasoning = json.dumps(approval_reasoning)
                 
                 # Validate risk_level to ensure it meets database constraint
                 if risk_level not in ['LOW', 'MEDIUM', 'HIGH']:
                     risk_level = 'MEDIUM'  # Fallback to valid value
+                
+                # Ensure all parameters are properly serialized
+                assigned_approver = approval_routing.get('suggested_approver_level', '')
+                if isinstance(assigned_approver, dict):
+                    assigned_approver = json.dumps(assigned_approver)
+                elif assigned_approver is None:
+                    assigned_approver = ''
                 
                 cursor.execute('''
                     INSERT INTO workflows (
@@ -696,18 +710,18 @@ class WorkflowStore:
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     workflow_id,
-                    workflow_data['plan_id'],
-                    workflow_data['analysis_id'], 
-                    workflow_data['transcript_id'],
+                    str(workflow_data['plan_id']),
+                    str(workflow_data['analysis_id']), 
+                    str(workflow_data['transcript_id']),
                     workflow_data_json,
-                    risk_level,
-                    status,
+                    str(risk_level),
+                    str(status),
                     context_data_json,
-                    risk_reasoning,
-                    approval_reasoning,
-                    requires_approval,
-                    approval_routing.get('suggested_approver_level', ''),
-                    workflow_data['workflow_type']
+                    str(risk_reasoning),
+                    str(approval_reasoning),
+                    bool(requires_approval),
+                    str(assigned_approver),
+                    str(workflow_data['workflow_type'])
                 ))
                 
                 # Log initial state
