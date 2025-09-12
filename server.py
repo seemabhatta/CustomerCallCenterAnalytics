@@ -609,6 +609,50 @@ async def get_pending_workflows():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get pending workflows: {str(e)}")
 
+@app.post("/api/v1/workflows/extract-all")
+async def extract_all_workflows(request: WorkflowExtractRequest):
+    """Extract all granular workflows from action plan."""
+    try:
+        result = await workflow_service.extract_all_workflows_from_plan(request.plan_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract all workflows: {str(e)}")
+
+@app.get("/api/v1/workflows/plan/{plan_id}")
+async def get_workflows_by_plan(plan_id: str):
+    """Get all workflows for a specific plan."""
+    try:
+        workflows = await workflow_service.get_workflows_by_plan(plan_id)
+        return workflows
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflows by plan: {str(e)}")
+
+@app.get("/api/v1/workflows/type/{workflow_type}")
+async def get_workflows_by_type(workflow_type: str):
+    """Get workflows by type."""
+    try:
+        workflows = await workflow_service.get_workflows_by_type(workflow_type)
+        return workflows
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflows by type: {str(e)}")
+
+@app.get("/api/v1/workflows/plan/{plan_id}/type/{workflow_type}")
+async def get_workflows_by_plan_and_type(plan_id: str, workflow_type: str):
+    """Get workflows by plan and type."""
+    try:
+        workflows = await workflow_service.get_workflows_by_plan_and_type(plan_id, workflow_type)
+        return workflows
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflows by plan and type: {str(e)}")
+
 @app.get("/api/v1/workflows/{workflow_id}")
 async def get_workflow(workflow_id: str):
     """Get workflow by ID."""
@@ -677,49 +721,6 @@ async def get_workflow_history(workflow_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get workflow history: {str(e)}")
 
-@app.post("/api/v1/workflows/extract-all")
-async def extract_all_workflows(request: WorkflowExtractRequest):
-    """Extract all granular workflows from action plan."""
-    try:
-        result = await workflow_service.extract_all_workflows_from_plan(request.plan_id)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to extract all workflows: {str(e)}")
-
-@app.get("/api/v1/workflows/plan/{plan_id}")
-async def get_workflows_by_plan(plan_id: str):
-    """Get all workflows for a specific plan."""
-    try:
-        workflows = await workflow_service.get_workflows_by_plan(plan_id)
-        return workflows
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get workflows by plan: {str(e)}")
-
-@app.get("/api/v1/workflows/type/{workflow_type}")
-async def get_workflows_by_type(workflow_type: str):
-    """Get workflows by type."""
-    try:
-        workflows = await workflow_service.get_workflows_by_type(workflow_type)
-        return workflows
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get workflows by type: {str(e)}")
-
-@app.get("/api/v1/workflows/plan/{plan_id}/type/{workflow_type}")
-async def get_workflows_by_plan_and_type(plan_id: str, workflow_type: str):
-    """Get workflows by plan and type."""
-    try:
-        workflows = await workflow_service.get_workflows_by_plan_and_type(plan_id, workflow_type)
-        return workflows
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get workflows by plan and type: {str(e)}")
 
 
 # ===============================================

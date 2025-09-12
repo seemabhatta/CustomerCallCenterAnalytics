@@ -591,7 +591,7 @@ class WorkflowStore:
         Raises:
             Exception: JSON parsing failure (NO FALLBACK)
         """
-        return {
+        result = {
             'id': row[0],
             'plan_id': row[1],
             'analysis_id': row[2],
@@ -612,9 +612,17 @@ class WorkflowStore:
             'executed_at': row[17],
             'execution_results': json.loads(row[18]) if row[18] else None,
             'created_at': row[19],
-            'updated_at': row[20],
-            'workflow_type': row[21]
+            'updated_at': row[20]
         }
+        
+        # Handle workflow_type field for backward compatibility
+        # Legacy records may not have this field
+        if len(row) > 21:
+            result['workflow_type'] = row[21]
+        else:
+            result['workflow_type'] = 'LEGACY'  # Default for old records
+            
+        return result
     
     def _log_state_transition(self, cursor, workflow_id: str, from_status: Optional[str],
                             to_status: str, reason: Optional[str], transitioned_by: str):
