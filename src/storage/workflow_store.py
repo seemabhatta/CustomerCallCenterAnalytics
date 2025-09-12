@@ -756,7 +756,7 @@ class WorkflowStore:
             Exception: Invalid type or database failure (NO FALLBACK)
         """
         # NO FALLBACK: Validate workflow type
-        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP', 'LEGACY']
         if workflow_type not in valid_types:
             raise ValueError(f"Invalid workflow type: {workflow_type}. Must be one of: {valid_types}")
         
@@ -788,7 +788,7 @@ class WorkflowStore:
             Exception: Invalid type or database failure (NO FALLBACK)
         """
         # NO FALLBACK: Validate workflow type
-        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP', 'LEGACY']
         if workflow_type not in valid_types:
             raise ValueError(f"Invalid workflow type: {workflow_type}. Must be one of: {valid_types}")
         

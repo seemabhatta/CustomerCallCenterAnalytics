@@ -1921,7 +1921,7 @@ def workflow_by_type(
         client = get_client()
         
         # Validate workflow type
-        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP', 'LEGACY']
         if workflow_type not in valid_types:
             print_error(f"Invalid workflow type. Must be one of: {', '.join(valid_types)}")
             raise typer.Exit(1)
@@ -1969,7 +1969,7 @@ def workflow_by_plan_type(
         client = get_client()
         
         # Validate workflow type
-        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP', 'LEGACY']
         if workflow_type not in valid_types:
             print_error(f"Invalid workflow type. Must be one of: {', '.join(valid_types)}")
             raise typer.Exit(1)
