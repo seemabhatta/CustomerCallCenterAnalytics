@@ -10,8 +10,8 @@ import json
 import uuid
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-import openai
 from dotenv import load_dotenv
+from ..llm import OpenAIWrapper, RiskAssessment, ApprovalRouting, ActionItemList
 
 load_dotenv()
 
@@ -44,12 +44,16 @@ class RiskAssessmentAgent:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is required - no fallback available")
         
-        self.client = openai.OpenAI(api_key=api_key)
-        self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+        self.llm = OpenAIWrapper()
+        
+        # Initialize attributes required by deprecated methods (for backward compatibility)
+        from openai import OpenAI
+        self.client = OpenAI(api_key=api_key)
+        self.model = model or os.getenv('OPENAI_MODEL', 'gpt-4o')
         
         # Agent metadata for audit trail
         self.agent_id = str(uuid.uuid4())
-        self.agent_version = "v1.0"
+        self.agent_version = "v2.0"
     
     async def extract_individual_action_items(self, plan_data: Dict[str, Any], 
                                                workflow_type: str, 
@@ -113,21 +117,10 @@ FULL CONTEXT:
 Extract individual action items from the {workflow_type.lower()} section of this plan. Each item should be assessable independently for risk evaluation. Return as JSON array."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Low temperature for consistent extraction
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate action items extraction response")
-            
-            response_data = json.loads(response.choices[0].message.content)
-            action_items = response_data.get('action_items', [])
+            # Use structured output for action item extraction
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            result = await self.llm.extract_action_items(full_prompt)
+            action_items = [item.model_dump() for item in result.action_items]
             
             # Add extraction metadata to each item
             for item in action_items:
@@ -327,34 +320,16 @@ Assess the risk level of this individual {workflow_type.lower()} action item. Co
 Return your assessment with detailed reasoning as valid JSON format."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Consistent risk assessment
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate risk assessment response")
-            
-            risk_assessment = json.loads(response.choices[0].message.content)
-            
-            # Validate required fields
-            if 'risk_level' not in risk_assessment or 'reasoning' not in risk_assessment:
-                raise Exception("LLM failed to provide required risk assessment fields")
-            
-            # Validate risk level
-            if risk_assessment['risk_level'] not in ['LOW', 'MEDIUM', 'HIGH']:
-                raise Exception(f"Invalid risk level from LLM: {risk_assessment['risk_level']}")
+            # Use structured output for risk assessment
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            result = await self.llm.assess_risk(full_prompt)
+            risk_assessment = result.model_dump()
             
             # Add assessment metadata
             risk_assessment['assessment_metadata'] = {
                 'agent_id': self.agent_id,
                 'agent_version': self.agent_version,
-                'model_used': self.model,
+                'model_used': 'gpt-4o',
                 'assessed_at': datetime.utcnow().isoformat(),
                 'workflow_type': workflow_type,
                 'assessment_type': 'granular_action_item'
@@ -568,37 +543,25 @@ Determine the approval routing for this {workflow_type.lower()} action item. Con
 Return routing decision with clear reasoning as valid JSON format using the exact field structure specified above."""
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Consistent routing decisions
-            )
+            # Use structured output for approval routing
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            result = await self.llm.determine_approval_routing(full_prompt)
             
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate routing response")
-            
-            routing_decision = json.loads(response.choices[0].message.content)
-            
-            # Validate required fields
-            required_fields = ['requires_human_approval', 'initial_status', 'routing_reasoning']
-            for field in required_fields:
-                if field not in routing_decision:
-                    raise Exception(f"LLM failed to provide required routing field: {field}")
-            
-            # Validate status values
-            valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'AUTO_APPROVED']
-            if routing_decision['initial_status'] not in valid_statuses:
-                raise Exception(f"Invalid initial status from LLM: {routing_decision['initial_status']}")
+            # Map structured output to expected format
+            routing_decision = {
+                'requires_human_approval': result.approval_level != 'ADVISOR',
+                'initial_status': 'AUTO_APPROVED' if result.approval_level == 'ADVISOR' else 'AWAITING_APPROVAL',
+                'routing_reasoning': result.reasoning,
+                'suggested_approver_level': result.approval_level.lower(),
+                'urgency': result.urgency.lower(),
+                'estimated_time_days': result.estimated_time_days
+            }
             
             # Add routing metadata
             routing_decision['routing_metadata'] = {
                 'agent_id': self.agent_id,
                 'agent_version': self.agent_version,
-                'model_used': self.model,
+                'model_used': 'gpt-4o',
                 'routed_at': datetime.utcnow().isoformat(),
                 'workflow_type': workflow_type,
                 'routing_type': 'granular_action_item'

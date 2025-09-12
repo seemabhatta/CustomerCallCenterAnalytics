@@ -300,7 +300,7 @@ class CLIRestClient:
     
     def extract_all_workflows(self, plan_id: str) -> List[Dict[str, Any]]:
         """Extract all granular workflows from plan via POST /api/v1/workflows/extract-all."""
-        return self._make_request('POST', '/api/v1/workflows/extract-all', json_data={'plan_id': plan_id})
+        return self._make_request('POST', '/api/v1/workflows/extract-all', json_data={'plan_id': plan_id}, timeout=300)
     
     def get_workflows_by_plan(self, plan_id: str) -> List[Dict[str, Any]]:
         """Get all workflows for a plan via GET /api/v1/workflows/plan/{plan_id}."""

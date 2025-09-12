@@ -5,6 +5,7 @@ Core Principles Applied:
 - AGENTIC: All routing and decisions made by LLM agents
 - Context Preservation: Complete traceability through pipeline
 """
+import asyncio
 import json
 import uuid
 from typing import Dict, List, Optional, Any
@@ -525,8 +526,9 @@ class WorkflowService:
         all_workflows = []
         workflow_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
         
-        # Extract action items for each workflow type
-        for workflow_type in workflow_types:
+        # Create async task for each workflow type to enable parallel processing
+        async def process_workflow_type(workflow_type: str) -> List[Dict[str, Any]]:
+            """Process a single workflow type in parallel."""
             try:
                 # Extract individual action items using LLM agent
                 action_items = await self.risk_agent.extract_individual_action_items(
@@ -535,20 +537,24 @@ class WorkflowService:
                     context=context_data
                 )
                 
-                # Process each action item as a separate workflow
-                for item in action_items:
-                    # Risk assessment using LLM agent
-                    risk_assessment = await self.risk_agent.assess_action_item_risk(
+                # Process action items in parallel batches
+                async def process_action_item(item: Dict[str, Any]) -> Dict[str, Any]:
+                    """Process a single action item with all required assessments."""
+                    # Run risk assessment and approval routing in parallel
+                    risk_assessment_task = self.risk_agent.assess_action_item_risk(
                         action_item=item,
                         workflow_type=workflow_type,
                         context=context_data
                     )
                     
+                    # We need risk assessment before approval routing, so we await it first
+                    risk_assessment = await risk_assessment_task
+                    
                     # Validate risk assessment
                     if 'risk_level' not in risk_assessment or 'reasoning' not in risk_assessment:
                         raise ValueError(f"LLM agent failed to provide complete risk assessment for {workflow_type} item")
                     
-                    # Approval routing decision using LLM agent
+                    # Now do approval routing with risk assessment results
                     approval_routing = await self.risk_agent.determine_action_item_approval_routing(
                         action_item=item,
                         risk_assessment=risk_assessment,
@@ -563,7 +569,7 @@ class WorkflowService:
                             raise ValueError(f"LLM agent failed to provide required routing field: {field}")
                     
                     # Create workflow data for this action item
-                    workflow_data = {
+                    return {
                         'plan_id': plan_id,
                         'analysis_id': plan_data['analysis_id'],
                         'transcript_id': plan_data['transcript_id'],
@@ -573,13 +579,64 @@ class WorkflowService:
                             **context_data,
                             'workflow_type': workflow_type,
                             'action_item_context': item.get('context', {})
-                        }
+                        },
+                        'risk_assessment': risk_assessment,
+                        'approval_routing': approval_routing
                     }
-                    
-                    all_workflows.append(workflow_data)
-                    
+                
+                # Process all action items for this workflow type in parallel
+                workflow_tasks = [process_action_item(item) for item in action_items]
+                workflows_for_type = await asyncio.gather(*workflow_tasks, return_exceptions=True)
+                
+                # Filter out exceptions and collect successful workflows
+                successful_workflows = []
+                failed_items = []
+                for i, result in enumerate(workflows_for_type):
+                    if isinstance(result, Exception):
+                        failed_items.append({
+                            'item_index': i,
+                            'item': action_items[i] if i < len(action_items) else None,
+                            'error': str(result)
+                        })
+                        print(f"Warning: Failed to process action item {i} in {workflow_type}: {result}")
+                    else:
+                        successful_workflows.append(result)
+                
+                # Log failures but don't fail the entire workflow type
+                if failed_items:
+                    print(f"Warning: {len(failed_items)} out of {len(action_items)} action items failed for {workflow_type}")
+                
+                return successful_workflows
+                
             except Exception as e:
                 raise Exception(f"Failed to extract {workflow_type} workflows: {str(e)}")
+        
+        # Process all workflow types in parallel
+        workflow_type_tasks = [process_workflow_type(wt) for wt in workflow_types]
+        workflow_results = await asyncio.gather(*workflow_type_tasks, return_exceptions=True)
+        
+        # Collect all successful workflows and handle any exceptions
+        failed_workflow_types = []
+        for i, result in enumerate(workflow_results):
+            if isinstance(result, Exception):
+                workflow_type = workflow_types[i]
+                failed_workflow_types.append({
+                    'workflow_type': workflow_type,
+                    'error': str(result)
+                })
+                print(f"Warning: Failed to extract {workflow_type} workflows: {result}")
+            else:
+                all_workflows.extend(result)
+        
+        # Log failures but continue with successful workflow types
+        if failed_workflow_types:
+            print(f"Warning: {len(failed_workflow_types)} out of {len(workflow_types)} workflow types failed")
+            for failure in failed_workflow_types:
+                print(f"  - {failure['workflow_type']}: {failure['error']}")
+        
+        # Only fail completely if no workflows were extracted at all
+        if not all_workflows and failed_workflow_types:
+            raise Exception(f"All workflow types failed: {[f['error'] for f in failed_workflow_types]}")
         
         # Bulk create all workflows
         if all_workflows:

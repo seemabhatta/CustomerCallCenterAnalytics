@@ -221,7 +221,7 @@ class WorkflowStore:
                 SELECT id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
                        assigned_approver, approved_by, approved_at, rejected_by, rejected_at,
-                       rejection_reason, executed_at, execution_results, created_at, updated_at
+                       rejection_reason, executed_at, execution_results, created_at, updated_at, workflow_type
                 FROM workflows WHERE id = ?
             ''', (workflow_id,))
             
@@ -254,7 +254,7 @@ class WorkflowStore:
                 SELECT id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
                        assigned_approver, approved_by, approved_at, rejected_by, rejected_at,
-                       rejection_reason, executed_at, execution_results, created_at, updated_at
+                       rejection_reason, executed_at, execution_results, created_at, updated_at, workflow_type
                 FROM workflows 
                 WHERE plan_id = ?
                 ORDER BY created_at DESC 
@@ -292,7 +292,7 @@ class WorkflowStore:
                 SELECT id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
                        assigned_approver, approved_by, approved_at, rejected_by, rejected_at,
-                       rejection_reason, executed_at, execution_results, created_at, updated_at
+                       rejection_reason, executed_at, execution_results, created_at, updated_at, workflow_type
                 FROM workflows 
                 WHERE status = ?
                 ORDER BY created_at DESC
@@ -335,7 +335,7 @@ class WorkflowStore:
                 SELECT id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
                        assigned_approver, approved_by, approved_at, rejected_by, rejected_at,
-                       rejection_reason, executed_at, execution_results, created_at, updated_at
+                       rejection_reason, executed_at, execution_results, created_at, updated_at, workflow_type
                 FROM workflows 
                 WHERE risk_level = ?
                 ORDER BY created_at DESC
@@ -368,7 +368,7 @@ class WorkflowStore:
                 SELECT id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
                        assigned_approver, approved_by, approved_at, rejected_by, rejected_at,
-                       rejection_reason, executed_at, execution_results, created_at, updated_at
+                       rejection_reason, executed_at, execution_results, created_at, updated_at, workflow_type
                 FROM workflows 
                 WHERE status = 'AWAITING_APPROVAL' AND requires_human_approval = 1
                 ORDER BY created_at ASC
@@ -563,7 +563,7 @@ class WorkflowStore:
                 SELECT id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
                        assigned_approver, approved_by, approved_at, rejected_by, rejected_at,
-                       rejection_reason, executed_at, execution_results, created_at, updated_at
+                       rejection_reason, executed_at, execution_results, created_at, updated_at, workflow_type
                 FROM workflows 
                 ORDER BY created_at DESC
             '''
@@ -612,15 +612,9 @@ class WorkflowStore:
             'executed_at': row[17],
             'execution_results': json.loads(row[18]) if row[18] else None,
             'created_at': row[19],
-            'updated_at': row[20]
+            'updated_at': row[20],
+            'workflow_type': row[21] if len(row) > 21 and row[21] else 'LEGACY'  # Handle missing workflow_type
         }
-        
-        # Handle workflow_type field for backward compatibility
-        # Legacy records may not have this field
-        if len(row) > 21:
-            result['workflow_type'] = row[21]
-        else:
-            result['workflow_type'] = 'LEGACY'  # Default for old records
             
         return result
     
@@ -679,6 +673,21 @@ class WorkflowStore:
                 workflow_data_json = json.dumps(workflow_data['workflow_data']) if isinstance(workflow_data['workflow_data'], dict) else workflow_data['workflow_data']
                 context_data_json = json.dumps(workflow_data.get('context_data', {})) if isinstance(workflow_data.get('context_data', {}), dict) else workflow_data.get('context_data', '{}')
                 
+                # Extract risk assessment and approval routing data if available
+                risk_assessment = workflow_data.get('risk_assessment', {})
+                approval_routing = workflow_data.get('approval_routing', {})
+                
+                # Get values from risk assessment and approval routing, with defaults
+                risk_level = risk_assessment.get('risk_level', 'MEDIUM')  # Default to MEDIUM (valid value)
+                status = approval_routing.get('initial_status', 'PENDING_ASSESSMENT')
+                requires_approval = approval_routing.get('requires_human_approval', True)
+                risk_reasoning = risk_assessment.get('reasoning', '')
+                approval_reasoning = approval_routing.get('routing_reasoning', '')
+                
+                # Validate risk_level to ensure it meets database constraint
+                if risk_level not in ['LOW', 'MEDIUM', 'HIGH']:
+                    risk_level = 'MEDIUM'  # Fallback to valid value
+                
                 cursor.execute('''
                     INSERT INTO workflows (
                         id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status, 
@@ -691,18 +700,18 @@ class WorkflowStore:
                     workflow_data['analysis_id'], 
                     workflow_data['transcript_id'],
                     workflow_data_json,
-                    'PENDING',  # Will be assessed by risk agent
-                    'PENDING_ASSESSMENT',
+                    risk_level,
+                    status,
                     context_data_json,
-                    '',  # Will be filled by risk assessment
-                    '',  # Will be filled by approval process
-                    True,  # Default to requiring approval
-                    '',  # Will be assigned by risk assessment
+                    risk_reasoning,
+                    approval_reasoning,
+                    requires_approval,
+                    approval_routing.get('suggested_approver_level', ''),
                     workflow_data['workflow_type']
                 ))
                 
                 # Log initial state
-                self._log_state_transition(cursor, workflow_id, None, 'PENDING_ASSESSMENT', 
+                self._log_state_transition(cursor, workflow_id, None, status, 
                                          'Initial workflow creation', 'SYSTEM')
             
             conn.commit()
