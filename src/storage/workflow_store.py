@@ -55,6 +55,9 @@ class WorkflowStore:
                     analysis_id TEXT NOT NULL,
                     transcript_id TEXT NOT NULL,
                     
+                    -- Granular workflow categorization
+                    workflow_type TEXT NOT NULL CHECK (workflow_type IN ('BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP')),
+                    
                     -- Workflow content (JSON - LLM extracted)
                     workflow_data TEXT NOT NULL,
                     
@@ -163,15 +166,16 @@ class WorkflowStore:
         try:
             cursor.execute('''
                 INSERT INTO workflows 
-                (id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
+                (id, plan_id, analysis_id, transcript_id, workflow_type, workflow_data, risk_level, status,
                  context_data, risk_reasoning, approval_reasoning, requires_human_approval,
                  assigned_approver)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 workflow_id,
                 workflow_data['plan_id'],
                 workflow_data['analysis_id'], 
                 workflow_data['transcript_id'],
+                workflow_data['workflow_type'],
                 json.dumps(workflow_data['workflow_data']),
                 workflow_data['risk_level'],
                 workflow_data['status'],
@@ -608,7 +612,8 @@ class WorkflowStore:
             'executed_at': row[17],
             'execution_results': json.loads(row[18]) if row[18] else None,
             'created_at': row[19],
-            'updated_at': row[20]
+            'updated_at': row[20],
+            'workflow_type': row[21]
         }
     
     def _log_state_transition(self, cursor, workflow_id: str, from_status: Optional[str],
@@ -629,3 +634,167 @@ class WorkflowStore:
             (id, workflow_id, from_status, to_status, transition_reason, transitioned_by)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (transition_id, workflow_id, from_status, to_status, reason, transitioned_by))
+    
+    def create_bulk(self, workflows_data: List[Dict[str, Any]]) -> List[str]:
+        """Create multiple workflows in a single transaction.
+        
+        Args:
+            workflows_data: List of workflow data dictionaries, each containing:
+                - plan_id: Plan ID
+                - analysis_id: Analysis ID  
+                - transcript_id: Transcript ID
+                - workflow_data: Action item data
+                - workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
+                - context_data: Additional context
+                
+        Returns:
+            List of created workflow IDs
+            
+        Raises:
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        conn = sqlite3.connect(self.db_path)
+        workflow_ids = []
+        
+        try:
+            cursor = conn.cursor()
+            
+            for workflow_data in workflows_data:
+                workflow_id = str(uuid.uuid4())
+                workflow_ids.append(workflow_id)
+                
+                # NO FALLBACK: Require all essential fields
+                if not all(key in workflow_data for key in ['plan_id', 'analysis_id', 'transcript_id', 'workflow_data', 'workflow_type']):
+                    raise ValueError(f"Missing required fields in workflow data: {workflow_data}")
+                
+                # Serialize dict fields to JSON
+                workflow_data_json = json.dumps(workflow_data['workflow_data']) if isinstance(workflow_data['workflow_data'], dict) else workflow_data['workflow_data']
+                context_data_json = json.dumps(workflow_data.get('context_data', {})) if isinstance(workflow_data.get('context_data', {}), dict) else workflow_data.get('context_data', '{}')
+                
+                cursor.execute('''
+                    INSERT INTO workflows (
+                        id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status, 
+                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
+                        assigned_approver, workflow_type
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    workflow_id,
+                    workflow_data['plan_id'],
+                    workflow_data['analysis_id'], 
+                    workflow_data['transcript_id'],
+                    workflow_data_json,
+                    'PENDING',  # Will be assessed by risk agent
+                    'PENDING_ASSESSMENT',
+                    context_data_json,
+                    '',  # Will be filled by risk assessment
+                    '',  # Will be filled by approval process
+                    True,  # Default to requiring approval
+                    '',  # Will be assigned by risk assessment
+                    workflow_data['workflow_type']
+                ))
+                
+                # Log initial state
+                self._log_state_transition(cursor, workflow_id, None, 'PENDING_ASSESSMENT', 
+                                         'Initial workflow creation', 'SYSTEM')
+            
+            conn.commit()
+            return workflow_ids
+            
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Bulk workflow creation failed: {str(e)}")
+        finally:
+            conn.close()
+    
+    def get_by_plan_id(self, plan_id: str) -> List[Dict[str, Any]]:
+        """Get all workflows for a specific plan.
+        
+        Args:
+            plan_id: Plan ID
+            
+        Returns:
+            List of workflow dictionaries
+            
+        Raises:
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        conn = sqlite3.connect(self.db_path)
+        
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM workflows WHERE plan_id = ?', (plan_id,))
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return []
+            
+            return [self._row_to_dict(row) for row in rows]
+            
+        except Exception as e:
+            raise Exception(f"Failed to retrieve workflows for plan {plan_id}: {str(e)}")
+        finally:
+            conn.close()
+    
+    def get_by_type(self, workflow_type: str) -> List[Dict[str, Any]]:
+        """Get all workflows of a specific type.
+        
+        Args:
+            workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
+            
+        Returns:
+            List of workflow dictionaries
+            
+        Raises:
+            Exception: Invalid type or database failure (NO FALLBACK)
+        """
+        # NO FALLBACK: Validate workflow type
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        if workflow_type not in valid_types:
+            raise ValueError(f"Invalid workflow type: {workflow_type}. Must be one of: {valid_types}")
+        
+        conn = sqlite3.connect(self.db_path)
+        
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM workflows WHERE workflow_type = ?', (workflow_type,))
+            rows = cursor.fetchall()
+            
+            return [self._row_to_dict(row) for row in rows]
+            
+        except Exception as e:
+            raise Exception(f"Failed to retrieve workflows by type {workflow_type}: {str(e)}")
+        finally:
+            conn.close()
+    
+    def get_by_plan_and_type(self, plan_id: str, workflow_type: str) -> List[Dict[str, Any]]:
+        """Get workflows for a specific plan and type combination.
+        
+        Args:
+            plan_id: Plan ID
+            workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
+            
+        Returns:
+            List of workflow dictionaries
+            
+        Raises:
+            Exception: Invalid type or database failure (NO FALLBACK)
+        """
+        # NO FALLBACK: Validate workflow type
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        if workflow_type not in valid_types:
+            raise ValueError(f"Invalid workflow type: {workflow_type}. Must be one of: {valid_types}")
+        
+        conn = sqlite3.connect(self.db_path)
+        
+        try:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM workflows WHERE plan_id = ? AND workflow_type = ?', 
+                         (plan_id, workflow_type))
+            rows = cursor.fetchall()
+            
+            return [self._row_to_dict(row) for row in rows]
+            
+        except Exception as e:
+            raise Exception(f"Failed to retrieve workflows for plan {plan_id} and type {workflow_type}: {str(e)}")
+        finally:
+            conn.close()

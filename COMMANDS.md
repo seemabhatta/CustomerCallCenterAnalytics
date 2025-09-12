@@ -159,11 +159,17 @@ python3 cli.py plan delete-all
 **Resource Group:** `workflow`
 
 #### Core Workflow Commands:
-- `extract` - Extract workflow from action plan
+- `extract` - Extract single workflow from action plan (legacy)
+- `extract-all` - Extract all granular workflows from action plan (4 types)
 - `list` - List workflows with optional filters
 - `view` - View detailed workflow information
 - `pending` - List workflows pending approval
 - `history` - View workflow state transition history
+
+#### Granular Workflow Query Commands:
+- `by-plan` - List all workflows for a specific plan
+- `by-type` - List workflows by type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
+- `by-plan-type` - List workflows for specific plan and type combination
 
 #### Approval Commands:
 - `approve` - Approve a workflow
@@ -173,8 +179,11 @@ python3 cli.py plan delete-all
 #### Examples:
 
 ```bash
-# Extract workflow from action plan
+# Legacy workflow extraction (single workflow)
 python3 cli.py workflow extract PLAN_GHI789
+
+# NEW: Extract all granular workflows from action plan
+python3 cli.py workflow extract-all PLAN_GHI789
 
 # List all workflows
 python3 cli.py workflow list
@@ -184,6 +193,18 @@ python3 cli.py workflow list --status AWAITING_APPROVAL
 
 # List workflows by risk level
 python3 cli.py workflow list --risk HIGH
+
+# NEW: List all workflows for a specific plan
+python3 cli.py workflow by-plan PLAN_GHI789
+
+# NEW: List workflows by type
+python3 cli.py workflow by-type BORROWER
+python3 cli.py workflow by-type ADVISOR
+python3 cli.py workflow by-type SUPERVISOR
+python3 cli.py workflow by-type LEADERSHIP
+
+# NEW: List workflows for specific plan and type
+python3 cli.py workflow by-plan-type PLAN_GHI789 BORROWER
 
 # View detailed workflow information
 python3 cli.py workflow view WF_JKL012
@@ -203,6 +224,17 @@ python3 cli.py workflow execute WF_JKL012 --executor advisor_001
 # View workflow history
 python3 cli.py workflow history WF_JKL012
 ```
+
+#### Granular Workflow Types:
+
+The new granular workflow system extracts individual action items from the 4-pillar action plans:
+
+- **BORROWER**: Customer-facing actions (callbacks, disclosures, offers, hardship assistance)
+- **ADVISOR**: Coaching items and performance feedback for agents  
+- **SUPERVISOR**: Escalation items and compliance review actions
+- **LEADERSHIP**: Portfolio insights and strategic recommendations
+
+Each action item becomes an independent workflow with its own risk assessment and approval routing.
 
 ---
 

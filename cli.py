@@ -298,6 +298,22 @@ class CLIRestClient:
         """Get pending workflows via GET /api/v1/workflows/pending."""
         return self._make_request('GET', '/api/v1/workflows/pending')
     
+    def extract_all_workflows(self, plan_id: str) -> List[Dict[str, Any]]:
+        """Extract all granular workflows from plan via POST /api/v1/workflows/extract-all."""
+        return self._make_request('POST', '/api/v1/workflows/extract-all', json_data={'plan_id': plan_id})
+    
+    def get_workflows_by_plan(self, plan_id: str) -> List[Dict[str, Any]]:
+        """Get all workflows for a plan via GET /api/v1/workflows/plan/{plan_id}."""
+        return self._make_request('GET', f'/api/v1/workflows/plan/{plan_id}')
+    
+    def get_workflows_by_type(self, workflow_type: str) -> List[Dict[str, Any]]:
+        """Get workflows by type via GET /api/v1/workflows/type/{workflow_type}."""
+        return self._make_request('GET', f'/api/v1/workflows/type/{workflow_type}')
+    
+    def get_workflows_by_plan_and_type(self, plan_id: str, workflow_type: str) -> List[Dict[str, Any]]:
+        """Get workflows by plan and type via GET /api/v1/workflows/plan/{plan_id}/type/{workflow_type}."""
+        return self._make_request('GET', f'/api/v1/workflows/plan/{plan_id}/type/{workflow_type}')
+    
     # System operations
     def get_health(self) -> Dict[str, Any]:
         """Get system health via GET /api/v1/health."""
@@ -1801,6 +1817,200 @@ def workflow_pending():
         
     except CLIError as e:
         print_error(f"Get pending workflows failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("extract-all")
+def workflow_extract_all(
+    plan_id: str = typer.Argument(..., help="Plan ID to extract all granular workflows from")
+):
+    """Extract all granular workflows from action plan."""
+    try:
+        client = get_client()
+        
+        console.print("🔄 [bold magenta]Extracting all granular workflows from plan...[/bold magenta]")
+        result = client.extract_all_workflows(plan_id=plan_id)
+        
+        if not result:
+            console.print("📭 No workflows extracted")
+            return
+        
+        workflow_count = len(result)
+        console.print(f"\n✅ [bold green]Successfully extracted {workflow_count} workflows![/bold green]")
+        
+        # Group by workflow type
+        type_groups = {}
+        for workflow in result:
+            wf_type = workflow.get('workflow_type', 'Unknown')
+            if wf_type not in type_groups:
+                type_groups[wf_type] = []
+            type_groups[wf_type].append(workflow)
+        
+        for wf_type, workflows in type_groups.items():
+            console.print(f"\n[bold blue]{wf_type} Workflows ({len(workflows)}):[/bold blue]")
+            for workflow in workflows:
+                workflow_id = workflow.get('id')
+                status = workflow.get('status', 'Unknown')
+                risk_level = workflow.get('risk_level', 'Unknown')
+                
+                console.print(f"  • [cyan]{workflow_id[:8]}...[/cyan] [{status}] [{risk_level}]")
+        
+        print_success(f"Extracted {workflow_count} granular workflows from plan {plan_id}")
+        
+    except CLIError as e:
+        print_error(f"Extract all workflows failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("by-plan")
+def workflow_by_plan(
+    plan_id: str = typer.Argument(..., help="Plan ID to get workflows for")
+):
+    """List all workflows for a specific plan."""
+    try:
+        client = get_client()
+        
+        console.print(f"📋 [bold magenta]Getting workflows for plan {plan_id}...[/bold magenta]")
+        workflows = client.get_workflows_by_plan(plan_id=plan_id)
+        
+        if not workflows:
+            console.print(f"📭 No workflows found for plan {plan_id}")
+            return
+        
+        console.print(f"\n📊 Found {len(workflows)} workflow(s) for plan {plan_id}:")
+        
+        # Group by type and status
+        type_groups = {}
+        for workflow in workflows:
+            wf_type = workflow.get('workflow_type', 'Unknown')
+            if wf_type not in type_groups:
+                type_groups[wf_type] = []
+            type_groups[wf_type].append(workflow)
+        
+        for wf_type, type_workflows in type_groups.items():
+            console.print(f"\n[bold blue]{wf_type} ({len(type_workflows)}):[/bold blue]")
+            
+            for workflow in type_workflows:
+                workflow_id = workflow.get('id', 'N/A')
+                status = workflow.get('status', 'Unknown')
+                risk_level = workflow.get('risk_level', 'Unknown')
+                created = workflow.get('created_at', 'N/A')
+                
+                console.print(f"\n[cyan]Workflow ID:[/cyan] {workflow_id}")
+                console.print(f"[cyan]Status:[/cyan] {status}")
+                console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
+                console.print(f"[cyan]Created:[/cyan] {created}")
+                
+                if workflow.get('requires_human_approval'):
+                    approver = workflow.get('assigned_approver', 'Unassigned')
+                    console.print(f"[cyan]Assigned Approver:[/cyan] {approver}")
+                
+                console.print("─" * 40)
+        
+    except CLIError as e:
+        print_error(f"Get workflows by plan failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("by-type")
+def workflow_by_type(
+    workflow_type: str = typer.Argument(..., help="Workflow type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)")
+):
+    """List all workflows of a specific type."""
+    try:
+        client = get_client()
+        
+        # Validate workflow type
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        if workflow_type not in valid_types:
+            print_error(f"Invalid workflow type. Must be one of: {', '.join(valid_types)}")
+            raise typer.Exit(1)
+        
+        console.print(f"📋 [bold magenta]Getting {workflow_type} workflows...[/bold magenta]")
+        workflows = client.get_workflows_by_type(workflow_type=workflow_type)
+        
+        if not workflows:
+            console.print(f"📭 No {workflow_type} workflows found")
+            return
+        
+        console.print(f"\n📊 Found {len(workflows)} {workflow_type} workflow(s):")
+        
+        for workflow in workflows:
+            workflow_id = workflow.get('id', 'N/A')
+            plan_id = workflow.get('plan_id', 'N/A')
+            status = workflow.get('status', 'Unknown')
+            risk_level = workflow.get('risk_level', 'Unknown')
+            created = workflow.get('created_at', 'N/A')
+            
+            console.print(f"\n[cyan]Workflow ID:[/cyan] {workflow_id}")
+            console.print(f"[cyan]Plan ID:[/cyan] {plan_id}")
+            console.print(f"[cyan]Status:[/cyan] {status}")
+            console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
+            console.print(f"[cyan]Created:[/cyan] {created}")
+            
+            if workflow.get('requires_human_approval'):
+                approver = workflow.get('assigned_approver', 'Unassigned')
+                console.print(f"[cyan]Assigned Approver:[/cyan] {approver}")
+            
+            console.print("─" * 40)
+        
+    except CLIError as e:
+        print_error(f"Get workflows by type failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("by-plan-type")
+def workflow_by_plan_type(
+    plan_id: str = typer.Argument(..., help="Plan ID"),
+    workflow_type: str = typer.Argument(..., help="Workflow type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)")
+):
+    """List workflows for a specific plan and type combination."""
+    try:
+        client = get_client()
+        
+        # Validate workflow type
+        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        if workflow_type not in valid_types:
+            print_error(f"Invalid workflow type. Must be one of: {', '.join(valid_types)}")
+            raise typer.Exit(1)
+        
+        console.print(f"📋 [bold magenta]Getting {workflow_type} workflows for plan {plan_id}...[/bold magenta]")
+        workflows = client.get_workflows_by_plan_and_type(plan_id=plan_id, workflow_type=workflow_type)
+        
+        if not workflows:
+            console.print(f"📭 No {workflow_type} workflows found for plan {plan_id}")
+            return
+        
+        console.print(f"\n📊 Found {len(workflows)} {workflow_type} workflow(s) for plan {plan_id}:")
+        
+        for workflow in workflows:
+            workflow_id = workflow.get('id', 'N/A')
+            status = workflow.get('status', 'Unknown')
+            risk_level = workflow.get('risk_level', 'Unknown')
+            created = workflow.get('created_at', 'N/A')
+            
+            console.print(f"\n[cyan]Workflow ID:[/cyan] {workflow_id}")
+            console.print(f"[cyan]Status:[/cyan] {status}")
+            console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
+            console.print(f"[cyan]Created:[/cyan] {created}")
+            
+            # Show action item details if available
+            workflow_data = workflow.get('workflow_data', {})
+            if 'action' in workflow_data:
+                console.print(f"[cyan]Action:[/cyan] {workflow_data['action']}")
+            if 'timeline' in workflow_data:
+                console.print(f"[cyan]Timeline:[/cyan] {workflow_data['timeline']}")
+            if 'priority' in workflow_data:
+                console.print(f"[cyan]Priority:[/cyan] {workflow_data['priority']}")
+            
+            if workflow.get('requires_human_approval'):
+                approver = workflow.get('assigned_approver', 'Unassigned')
+                console.print(f"[cyan]Assigned Approver:[/cyan] {approver}")
+            
+            console.print("─" * 40)
+        
+    except CLIError as e:
+        print_error(f"Get workflows by plan and type failed: {str(e)}")
         raise typer.Exit(1)
 
 
