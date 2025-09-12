@@ -387,6 +387,7 @@ workflow_app.add_typer(workflow_view_app, name="view")
 
 system_app = typer.Typer(name="system", help="System operations")
 orchestrate_app = typer.Typer(name="orchestrate", help="Pipeline orchestration operations")
+approvals_app = typer.Typer(name="approvals", help="Approval queue management operations")
 
 # Add subapps to main app
 app.add_typer(transcript_app)
@@ -395,6 +396,7 @@ app.add_typer(insights_app)
 app.add_typer(plan_app)
 app.add_typer(workflow_app)
 app.add_typer(orchestrate_app)
+app.add_typer(approvals_app)
 app.add_typer(system_app)
 
 
@@ -3312,6 +3314,212 @@ def orchestrate_status(
         raise typer.Exit(1)
 
 
+@orchestrate_app.command("resume")
+def orchestrate_resume(
+    plan_id: str = typer.Argument(..., help="Plan ID to resume execution for"),
+    execute_approved: bool = typer.Option(True, "--execute-approved/--no-execute", help="Execute approved workflows immediately")
+):
+    """Resume orchestration pipeline after manual approvals."""
+    try:
+        console.print(f"🔄 [bold magenta]Resuming orchestration for plan: {plan_id}[/bold magenta]")
+        
+        from src.services.workflow_service import WorkflowService
+        workflow_service = WorkflowService("data/call_center.db")
+        
+        # Get all workflows for this plan
+        all_workflows = workflow_service.workflow_store.get_by_plan_id(plan_id)
+        
+        if not all_workflows:
+            print_error(f"No workflows found for plan: {plan_id}")
+            raise typer.Exit(1)
+        
+        # Filter approved workflows
+        approved_workflows = [w for w in all_workflows if w.get('status') in ['APPROVED', 'AUTO_APPROVED']]
+        pending_workflows = [w for w in all_workflows if w.get('status') == 'AWAITING_APPROVAL']
+        
+        console.print(f"📊 Plan Status Summary:")
+        console.print(f"   Total workflows: {len(all_workflows)}")
+        console.print(f"   ✅ Approved: {len(approved_workflows)}")
+        console.print(f"   ⏳ Pending approval: {len(pending_workflows)}")
+        
+        if pending_workflows:
+            console.print(f"\n⚠️ [yellow]{len(pending_workflows)} workflow(s) still awaiting approval:[/yellow]")
+            for workflow in pending_workflows[:5]:  # Show first 5
+                console.print(f"   - {workflow.get('id', 'N/A')[:8]}... ({workflow.get('risk_level', 'Unknown')} risk)")
+            if len(pending_workflows) > 5:
+                console.print(f"   ... and {len(pending_workflows) - 5} more")
+            
+            console.print(f"\n💡 [dim]Use 'python cli.py approvals queue' to see pending approvals[/dim]")
+            console.print(f"💡 [dim]Use 'python cli.py approvals process --approve <id1>,<id2>' to approve workflows[/dim]")
+        
+        if not approved_workflows:
+            console.print("⚠️ [yellow]No approved workflows to execute[/yellow]")
+            return
+        
+        if execute_approved:
+            console.print(f"\n🚀 [bold blue]Executing {len(approved_workflows)} approved workflow(s)...[/bold blue]")
+            
+            from src.services.workflow_execution_engine import WorkflowExecutionEngine
+            execution_engine = WorkflowExecutionEngine("data/call_center.db")
+            
+            successful = 0
+            failed = 0
+            
+            for workflow in approved_workflows:
+                workflow_id = workflow.get('id')
+                try:
+                    console.print(f"🔄 Executing: {workflow_id[:8]}...")
+                    import asyncio
+                    result = asyncio.run(execution_engine.execute_workflow(workflow_id))
+                    
+                    if result and result.get('status') == 'success':
+                        successful += 1
+                        console.print(f"✅ [green]Executed: {workflow_id[:8]}...[/green]")
+                    else:
+                        failed += 1
+                        console.print(f"❌ [red]Failed: {workflow_id[:8]}...[/red]")
+                        
+                except Exception as e:
+                    failed += 1
+                    console.print(f"❌ [red]Error executing {workflow_id[:8]}...: {str(e)[:50]}...[/red]")
+            
+            # Summary
+            console.print(f"\n📊 [bold blue]Execution Summary:[/bold blue]")
+            console.print(f"✅ Successful: {successful}")
+            console.print(f"❌ Failed: {failed}")
+            
+            if failed > 0:
+                console.print(f"⚠️ [yellow]Partial success: {successful}/{len(approved_workflows)} workflows executed[/yellow]")
+            else:
+                console.print(f"🎉 [bold green]All approved workflows executed successfully![/bold green]")
+        else:
+            console.print(f"\n💡 [dim]Use --execute-approved to run the approved workflows[/dim]")
+        
+    except Exception as e:
+        print_error(f"Failed to resume orchestration: {str(e)}")
+        raise typer.Exit(1)
+
+
+@orchestrate_app.command("pending")
+def orchestrate_pending():
+    """Show plans with workflows pending approval."""
+    try:
+        console.print("📋 [bold magenta]Fetching plans with pending approvals...[/bold magenta]")
+        
+        from src.services.workflow_service import WorkflowService
+        workflow_service = WorkflowService("data/call_center.db")
+        
+        # Get all pending workflows
+        pending_workflows = workflow_service.workflow_store.get_pending_approval()
+        
+        if not pending_workflows:
+            console.print("✅ [bold green]No workflows pending approval![/bold green]")
+            return
+        
+        # Group by plan_id
+        plans_with_pending = {}
+        for workflow in pending_workflows:
+            plan_id = workflow.get('plan_id', 'Unknown')
+            if plan_id not in plans_with_pending:
+                plans_with_pending[plan_id] = []
+            plans_with_pending[plan_id].append(workflow)
+        
+        console.print(f"\n📋 [bold yellow]{len(plans_with_pending)} plan(s) with pending approvals:[/bold yellow]\n")
+        
+        # Create table
+        table = Table(show_header=True, header_style="bold blue")
+        table.add_column("Plan ID", style="cyan", width=15)
+        table.add_column("Pending Count", style="red", width=12)
+        table.add_column("Risk Levels", style="yellow", width=15)
+        table.add_column("Transcript ID", style="dim", width=15)
+        
+        for plan_id, workflows in plans_with_pending.items():
+            pending_count = len(workflows)
+            risk_levels = list(set([w.get('risk_level', 'Unknown') for w in workflows]))
+            transcript_id = workflows[0].get('transcript_id', 'N/A')[:12] + "..." if workflows[0].get('transcript_id') else 'N/A'
+            
+            table.add_row(
+                plan_id[:12] + "..." if len(plan_id) > 12 else plan_id,
+                str(pending_count),
+                ", ".join(risk_levels),
+                transcript_id
+            )
+        
+        console.print(table)
+        
+        console.print(f"\n💡 [dim]Use 'python cli.py orchestrate resume <plan_id>' to resume a specific plan[/dim]")
+        console.print(f"💡 [dim]Use 'python cli.py approvals queue' to see detailed approval queue[/dim]")
+        
+    except Exception as e:
+        print_error(f"Failed to fetch pending plans: {str(e)}")
+        raise typer.Exit(1)
+
+
+@orchestrate_app.command("execute-approved")
+def orchestrate_execute_approved(
+    plan_id: str = typer.Argument(..., help="Plan ID to execute approved workflows for")
+):
+    """Execute all approved workflows for a specific plan."""
+    try:
+        console.print(f"🚀 [bold magenta]Executing approved workflows for plan: {plan_id}[/bold magenta]")
+        
+        from src.services.workflow_service import WorkflowService
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        
+        workflow_service = WorkflowService("data/call_center.db")
+        execution_engine = WorkflowExecutionEngine("data/call_center.db")
+        
+        # Get approved workflows for this plan
+        all_workflows = workflow_service.workflow_store.get_by_plan_id(plan_id)
+        approved_workflows = [w for w in all_workflows if w.get('status') in ['APPROVED', 'AUTO_APPROVED']]
+        
+        if not approved_workflows:
+            console.print(f"⚠️ [yellow]No approved workflows found for plan: {plan_id}[/yellow]")
+            console.print(f"💡 [dim]Use 'python cli.py orchestrate pending' to see plans with pending approvals[/dim]")
+            return
+        
+        console.print(f"🔄 [bold blue]Found {len(approved_workflows)} approved workflow(s) to execute...[/bold blue]\n")
+        
+        successful = 0
+        failed = 0
+        
+        for workflow in approved_workflows:
+            workflow_id = workflow.get('id')
+            workflow_type = workflow.get('workflow_type', 'Unknown')
+            
+            try:
+                console.print(f"🔄 Executing {workflow_type}: {workflow_id[:8]}...")
+                import asyncio
+                result = asyncio.run(execution_engine.execute_workflow(workflow_id))
+                
+                if result and result.get('status') == 'success':
+                    successful += 1
+                    console.print(f"✅ [green]Success: {workflow_id[:8]}...[/green]")
+                else:
+                    failed += 1
+                    error_msg = result.get('error', 'Unknown error') if result else 'No result returned'
+                    console.print(f"❌ [red]Failed: {workflow_id[:8]}... - {error_msg[:50]}...[/red]")
+                    
+            except Exception as e:
+                failed += 1
+                console.print(f"❌ [red]Error: {workflow_id[:8]}... - {str(e)[:50]}...[/red]")
+        
+        # Final summary
+        console.print(f"\n📊 [bold blue]Final Execution Summary:[/bold blue]")
+        console.print(f"✅ Successful: {successful}")
+        console.print(f"❌ Failed: {failed}")
+        console.print(f"📈 Success Rate: {(successful / len(approved_workflows) * 100):.1f}%")
+        
+        if failed > 0:
+            console.print(f"\n⚠️ [yellow]Partial success: {successful}/{len(approved_workflows)} workflows executed[/yellow]")
+        else:
+            console.print(f"\n🎉 [bold green]All workflows executed successfully![/bold green]")
+        
+    except Exception as e:
+        print_error(f"Failed to execute approved workflows: {str(e)}")
+        raise typer.Exit(1)
+
+
 @orchestrate_app.command("test") 
 def orchestrate_test(
     transcript_id: str = typer.Option("TEST_TRANSCRIPT_001", "--transcript", "-t", help="Test transcript ID"),
@@ -3354,6 +3562,202 @@ def orchestrate_test(
         if verbose:
             import traceback
             console.print(traceback.format_exc())
+        raise typer.Exit(1)
+
+
+# ====================================================================
+# APPROVAL QUEUE COMMANDS
+# ====================================================================
+
+@approvals_app.command("queue")
+def approvals_queue(
+    role: Optional[str] = typer.Option(None, "--role", "-r", help="Filter by approver role (SUPERVISOR, MANAGER)"),
+    approver: Optional[str] = typer.Option(None, "--approver", "-a", help="Filter by specific approver"),
+    limit: int = typer.Option(20, "--limit", "-l", help="Maximum number of workflows to show")
+):
+    """Show approval queue - pending workflows requiring manual approval."""
+    try:
+        console.print("📋 [bold magenta]Fetching approval queue...[/bold magenta]")
+        
+        from src.services.workflow_service import WorkflowService
+        workflow_service = WorkflowService("data/call_center.db")
+        
+        # Get pending approvals
+        pending_workflows = workflow_service.workflow_store.get_pending_approval()
+        
+        if not pending_workflows:
+            console.print("✅ [bold green]No workflows pending approval![/bold green]")
+            return
+        
+        # Filter by role or approver if specified
+        if role:
+            pending_workflows = [w for w in pending_workflows if role.upper() in str(w.get('assigned_approver', '')).upper()]
+        if approver:
+            pending_workflows = [w for w in pending_workflows if approver in str(w.get('assigned_approver', ''))]
+        
+        # Limit results
+        pending_workflows = pending_workflows[:limit]
+        
+        if not pending_workflows:
+            console.print(f"✅ [bold green]No workflows pending approval for the specified filters[/bold green]")
+            return
+        
+        console.print(f"\n📋 [bold yellow]{len(pending_workflows)} workflow(s) in approval queue:[/bold yellow]\n")
+        
+        # Create table
+        table = Table(show_header=True, header_style="bold blue")
+        table.add_column("Workflow ID", style="cyan", width=12)
+        table.add_column("Risk", style="red", width=8)
+        table.add_column("Type", style="green", width=10)
+        table.add_column("Assigned To", style="yellow", width=15)
+        table.add_column("Created", style="dim", width=12)
+        table.add_column("Plan ID", style="dim", width=12)
+        
+        for workflow in pending_workflows:
+            workflow_id = workflow.get('id', 'N/A')[:8] + "..."
+            risk_level = workflow.get('risk_level', 'Unknown')
+            workflow_type = workflow.get('workflow_type', 'Unknown')
+            assigned_approver = workflow.get('assigned_approver', 'Unassigned')
+            created_at = workflow.get('created_at', 'N/A')
+            plan_id = workflow.get('plan_id', 'N/A')[:8] + "..."
+            
+            # Format created date
+            if created_at != 'N/A':
+                try:
+                    from datetime import datetime
+                    created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    created_at = created_dt.strftime('%m/%d %H:%M')
+                except:
+                    pass
+            
+            table.add_row(workflow_id, risk_level, workflow_type, assigned_approver, created_at, plan_id)
+        
+        console.print(table)
+        
+        console.print(f"\n💡 [dim]Use 'python cli.py approvals process --approve <id1>,<id2>' to approve workflows[/dim]")
+        console.print(f"💡 [dim]Use 'python cli.py workflow process approve <id>' for individual approvals[/dim]")
+        
+    except Exception as e:
+        print_error(f"Failed to fetch approval queue: {str(e)}")
+        raise typer.Exit(1)
+
+
+@approvals_app.command("process")
+def approvals_process(
+    approve: Optional[str] = typer.Option(None, "--approve", help="Comma-separated workflow IDs to approve"),
+    reject: Optional[str] = typer.Option(None, "--reject", help="Comma-separated workflow IDs to reject"),
+    approver: str = typer.Option(..., "--approver", "-a", help="Approver identifier (email)"),
+    reason: Optional[str] = typer.Option(None, "--reason", "-r", help="Approval/rejection reason")
+):
+    """Bulk approve or reject workflows from the approval queue."""
+    if not approve and not reject:
+        print_error("Must specify either --approve or --reject with workflow IDs")
+        raise typer.Exit(1)
+    
+    if approve and reject:
+        print_error("Cannot both approve and reject in the same command")
+        raise typer.Exit(1)
+    
+    try:
+        from src.services.workflow_service import WorkflowService
+        workflow_service = WorkflowService("data/call_center.db")
+        
+        workflow_ids = []
+        action = ""
+        
+        if approve:
+            workflow_ids = [id.strip() for id in approve.split(',')]
+            action = "AUTO_APPROVED"
+        elif reject:
+            workflow_ids = [id.strip() for id in reject.split(',')]
+            action = "REJECTED"
+        
+        action_display = "approval" if action == "AUTO_APPROVED" else "rejection"
+        console.print(f"🔄 [bold magenta]Processing {len(workflow_ids)} workflow(s) for {action_display}...[/bold magenta]")
+        
+        successful = 0
+        failed = 0
+        
+        for workflow_id in workflow_ids:
+            try:
+                # Update workflow status
+                success = workflow_service.workflow_store.update_status(
+                    workflow_id,
+                    action,
+                    transitioned_by=approver,
+                    reason=reason or f"Bulk {action_display} via CLI"
+                )
+                
+                if success:
+                    successful += 1
+                    action_verb = "APPROVED" if action == "AUTO_APPROVED" else action
+                    console.print(f"✅ [green]{action_verb} workflow: {workflow_id[:8]}...[/green]")
+                else:
+                    failed += 1
+                    action_verb = "approve" if action == "AUTO_APPROVED" else action.lower()
+                    console.print(f"❌ [red]Failed to {action_verb} workflow: {workflow_id[:8]}... (not found)[/red]")
+                    
+            except Exception as e:
+                failed += 1
+                console.print(f"❌ [red]Error processing workflow {workflow_id[:8]}...: {str(e)}[/red]")
+        
+        # Summary
+        console.print(f"\n📊 [bold blue]Processing Summary:[/bold blue]")
+        console.print(f"✅ Successful: {successful}")
+        console.print(f"❌ Failed: {failed}")
+        
+        if successful > 0 and action == "AUTO_APPROVED":
+            console.print(f"\n💡 [dim]Use 'python cli.py orchestrate execute-approved <plan_id>' to execute approved workflows[/dim]")
+        
+    except Exception as e:
+        print_error(f"Failed to process approvals: {str(e)}")
+        raise typer.Exit(1)
+
+
+@approvals_app.command("my-tasks") 
+def approvals_my_tasks(
+    approver: str = typer.Option(..., "--approver", "-a", help="Approver identifier to filter tasks"),
+    limit: int = typer.Option(10, "--limit", "-l", help="Maximum number of tasks to show")
+):
+    """Show pending approval tasks for a specific approver."""
+    try:
+        console.print(f"👤 [bold magenta]Fetching tasks for approver: {approver}[/bold magenta]")
+        
+        from src.services.workflow_service import WorkflowService
+        workflow_service = WorkflowService("data/call_center.db")
+        
+        # Get pending approvals
+        pending_workflows = workflow_service.workflow_store.get_pending_approval()
+        
+        # Filter by approver
+        my_tasks = [w for w in pending_workflows if approver in str(w.get('assigned_approver', ''))]
+        my_tasks = my_tasks[:limit]
+        
+        if not my_tasks:
+            console.print(f"✅ [bold green]No pending tasks for {approver}[/bold green]")
+            return
+        
+        console.print(f"\n📋 [bold yellow]{len(my_tasks)} task(s) assigned to {approver}:[/bold yellow]\n")
+        
+        # Create detailed task list
+        for i, workflow in enumerate(my_tasks, 1):
+            workflow_id = workflow.get('id', 'N/A')
+            risk_level = workflow.get('risk_level', 'Unknown')
+            workflow_type = workflow.get('workflow_type', 'Unknown')
+            plan_id = workflow.get('plan_id', 'N/A')
+            
+            console.print(f"[bold cyan]{i}. Task {workflow_id[:8]}...[/bold cyan]")
+            console.print(f"   Risk Level: [red]{risk_level}[/red]")
+            console.print(f"   Type: [green]{workflow_type}[/green]") 
+            console.print(f"   Plan: {plan_id}")
+            console.print(f"   Actions: [yellow]Approve[/yellow] | [red]Reject[/red]")
+            console.print()
+        
+        console.print(f"💡 [dim]Use 'python cli.py workflow process approve <id>' to approve individual tasks[/dim]")
+        console.print(f"💡 [dim]Use 'python cli.py approvals process --approve <id1>,<id2>' for bulk approval[/dim]")
+        
+    except Exception as e:
+        print_error(f"Failed to fetch tasks for {approver}: {str(e)}")
         raise typer.Exit(1)
 
 
