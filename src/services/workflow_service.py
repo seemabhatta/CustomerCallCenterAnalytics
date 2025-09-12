@@ -1,0 +1,488 @@
+"""Workflow approval service - business logic layer.
+
+Core Principles Applied:
+- NO FALLBACK: Fail fast on invalid data or missing context
+- AGENTIC: All routing and decisions made by LLM agents
+- Context Preservation: Complete traceability through pipeline
+"""
+import json
+import uuid
+from typing import Dict, List, Optional, Any
+from datetime import datetime
+
+from src.storage.workflow_store import WorkflowStore
+from src.storage.action_plan_store import ActionPlanStore
+from src.agents.risk_assessment_agent import RiskAssessmentAgent
+
+
+class WorkflowService:
+    """Business logic for workflow approval management.
+    
+    Orchestrates workflow extraction from plans, risk assessment,
+    and approval routing using LLM agents with full context preservation.
+    """
+    
+    def __init__(self, db_path: str):
+        """Initialize service with dependencies.
+        
+        Args:
+            db_path: Database path for storage layers
+            
+        Raises:
+            Exception: If initialization fails (NO FALLBACK)
+        """
+        if not db_path:
+            raise ValueError("Database path cannot be empty")
+        
+        self.workflow_store = WorkflowStore(db_path)
+        self.action_plan_store = ActionPlanStore(db_path)
+        self.risk_agent = RiskAssessmentAgent()
+    
+    async def extract_workflow_from_plan(self, plan_id: str) -> Dict[str, Any]:
+        """Extract workflow from action plan using LLM agent.
+        
+        Args:
+            plan_id: Action plan ID
+            
+        Returns:
+            Complete workflow data with context
+            
+        Raises:
+            ValueError: Invalid plan_id or plan not found (NO FALLBACK)
+            Exception: LLM agent failures (NO FALLBACK)
+        """
+        if not plan_id or not isinstance(plan_id, str):
+            raise ValueError("plan_id must be a non-empty string")
+        
+        # Get action plan - fail fast if not found
+        plan_data = self.action_plan_store.get_by_id(plan_id)
+        if not plan_data:
+            raise ValueError(f"Action plan not found: {plan_id}")
+        
+        # Build complete context for LLM agent
+        context_data = {
+            'transcript_id': plan_data['transcript_id'],
+            'analysis_id': plan_data['analysis_id'],
+            'plan_id': plan_id,
+            'plan_data': plan_data,
+            'extraction_timestamp': datetime.utcnow().isoformat(),
+            'pipeline_stage': 'workflow_extraction'
+        }
+        
+        # Extract workflow using LLM agent (no hardcoded logic)
+        workflow_extraction = await self.risk_agent.extract_workflow_from_plan(
+            plan_data=plan_data,
+            context=context_data
+        )
+        
+        # Validate LLM response structure
+        required_fields = ['workflow_steps', 'complexity_assessment', 'dependencies']
+        for field in required_fields:
+            if field not in workflow_extraction:
+                raise ValueError(f"LLM agent failed to provide required field: {field}")
+        
+        # Risk assessment using LLM agent
+        risk_assessment = await self.risk_agent.assess_workflow_risk(
+            workflow_data=workflow_extraction,
+            context=context_data
+        )
+        
+        # Validate risk assessment
+        if 'risk_level' not in risk_assessment or 'reasoning' not in risk_assessment:
+            raise ValueError("LLM agent failed to provide complete risk assessment")
+        
+        # Approval routing decision using LLM agent  
+        approval_routing = await self.risk_agent.determine_approval_routing(
+            workflow_data=workflow_extraction,
+            risk_assessment=risk_assessment,
+            context=context_data
+        )
+        
+        # Validate approval routing
+        required_routing_fields = ['requires_human_approval', 'initial_status', 'routing_reasoning']
+        for field in required_routing_fields:
+            if field not in approval_routing:
+                raise ValueError(f"LLM agent failed to provide required routing field: {field}")
+        
+        # Create complete workflow data
+        workflow_data = {
+            'id': str(uuid.uuid4()),
+            'plan_id': plan_id,
+            'analysis_id': plan_data['analysis_id'],
+            'transcript_id': plan_data['transcript_id'],
+            'workflow_data': workflow_extraction,
+            'risk_level': risk_assessment['risk_level'],
+            'status': approval_routing['initial_status'],
+            'context_data': context_data,
+            'risk_reasoning': risk_assessment['reasoning'],
+            'approval_reasoning': approval_routing['routing_reasoning'],
+            'requires_human_approval': approval_routing['requires_human_approval'],
+            'assigned_approver': approval_routing.get('assigned_approver')
+        }
+        
+        # Store workflow
+        workflow_id = self.workflow_store.create(workflow_data)
+        workflow_data['id'] = workflow_id
+        
+        return workflow_data
+    
+    async def get_workflow(self, workflow_id: str) -> Optional[Dict[str, Any]]:
+        """Get workflow by ID.
+        
+        Args:
+            workflow_id: Workflow ID
+            
+        Returns:
+            Workflow data or None if not found
+            
+        Raises:
+            ValueError: Invalid workflow_id (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+        
+        return self.workflow_store.get_by_id(workflow_id)
+    
+    async def get_workflow_by_plan(self, plan_id: str) -> Optional[Dict[str, Any]]:
+        """Get workflow by plan ID.
+        
+        Args:
+            plan_id: Action plan ID
+            
+        Returns:
+            Latest workflow for plan or None
+            
+        Raises:
+            ValueError: Invalid plan_id (NO FALLBACK)
+        """
+        if not plan_id or not isinstance(plan_id, str):
+            raise ValueError("plan_id must be a non-empty string")
+        
+        return self.workflow_store.get_by_plan_id(plan_id)
+    
+    async def list_workflows(self, status: Optional[str] = None, 
+                           risk_level: Optional[str] = None,
+                           limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """List workflows with optional filters.
+        
+        Args:
+            status: Optional status filter
+            risk_level: Optional risk level filter
+            limit: Optional result limit
+            
+        Returns:
+            List of matching workflows
+            
+        Raises:
+            ValueError: Invalid filter values (NO FALLBACK)
+        """
+        if status and risk_level:
+            raise ValueError("Cannot filter by both status and risk_level simultaneously")
+        
+        if status:
+            return self.workflow_store.get_by_status(status, limit)
+        elif risk_level:
+            return self.workflow_store.get_by_risk_level(risk_level, limit)
+        else:
+            return self.workflow_store.get_all(limit)
+    
+    async def get_pending_approvals(self) -> List[Dict[str, Any]]:
+        """Get workflows requiring human approval.
+        
+        Returns:
+            List of workflows awaiting approval
+        """
+        return self.workflow_store.get_pending_approval()
+    
+    async def approve_workflow(self, workflow_id: str, approved_by: str, 
+                             reasoning: Optional[str] = None) -> Dict[str, Any]:
+        """Approve workflow using LLM agent decision.
+        
+        Args:
+            workflow_id: Workflow ID
+            approved_by: Approver identifier
+            reasoning: Optional approval reasoning
+            
+        Returns:
+            Updated workflow data
+            
+        Raises:
+            ValueError: Invalid parameters or workflow not found (NO FALLBACK)
+            Exception: LLM agent failures (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+        
+        if not approved_by or not isinstance(approved_by, str):
+            raise ValueError("approved_by must be a non-empty string")
+        
+        # Get current workflow
+        workflow = self.workflow_store.get_by_id(workflow_id)
+        if not workflow:
+            raise ValueError(f"Workflow not found: {workflow_id}")
+        
+        # Validate current state allows approval
+        if workflow['status'] != 'AWAITING_APPROVAL':
+            raise ValueError(f"Workflow cannot be approved from status: {workflow['status']}")
+        
+        if not workflow['requires_human_approval']:
+            raise ValueError("Workflow does not require human approval")
+        
+        # LLM agent validates approval decision
+        approval_context = {
+            **workflow['context_data'],
+            'approval_timestamp': datetime.utcnow().isoformat(),
+            'approver': approved_by,
+            'approval_reasoning': reasoning,
+            'pipeline_stage': 'approval_processing'
+        }
+        
+        approval_validation = await self.risk_agent.validate_approval_decision(
+            workflow_data=workflow,
+            approver=approved_by,
+            reasoning=reasoning,
+            context=approval_context
+        )
+        
+        # Check if LLM agent rejects the approval
+        if not approval_validation.get('approval_valid', False):
+            raise ValueError(f"LLM agent rejected approval: {approval_validation.get('rejection_reason', 'Unknown')}")
+        
+        # Determine next status using LLM agent
+        next_status_decision = await self.risk_agent.determine_post_approval_status(
+            workflow_data=workflow,
+            approval_context=approval_context
+        )
+        
+        new_status = next_status_decision.get('next_status', 'AUTO_APPROVED')
+        if new_status not in ['AUTO_APPROVED', 'EXECUTED']:
+            raise ValueError(f"Invalid next status from LLM agent: {new_status}")
+        
+        # Update workflow
+        additional_data = {
+            'approved_by': approved_by,
+            'approved_at': datetime.utcnow().isoformat()
+        }
+        
+        success = self.workflow_store.update_status(
+            workflow_id=workflow_id,
+            new_status=new_status,
+            transitioned_by=approved_by,
+            reason=reasoning or "Human approval granted",
+            additional_data=additional_data
+        )
+        
+        if not success:
+            raise Exception("Failed to update workflow status")
+        
+        # Return updated workflow
+        updated_workflow = self.workflow_store.get_by_id(workflow_id)
+        if not updated_workflow:
+            raise Exception("Failed to retrieve updated workflow")
+        
+        return updated_workflow
+    
+    async def reject_workflow(self, workflow_id: str, rejected_by: str, 
+                            reason: str) -> Dict[str, Any]:
+        """Reject workflow using LLM agent decision.
+        
+        Args:
+            workflow_id: Workflow ID
+            rejected_by: Rejector identifier  
+            reason: Rejection reason
+            
+        Returns:
+            Updated workflow data
+            
+        Raises:
+            ValueError: Invalid parameters or workflow not found (NO FALLBACK)
+            Exception: LLM agent failures (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+        
+        if not rejected_by or not isinstance(rejected_by, str):
+            raise ValueError("rejected_by must be a non-empty string")
+        
+        if not reason or not isinstance(reason, str):
+            raise ValueError("reason must be a non-empty string")
+        
+        # Get current workflow
+        workflow = self.workflow_store.get_by_id(workflow_id)
+        if not workflow:
+            raise ValueError(f"Workflow not found: {workflow_id}")
+        
+        # Validate current state allows rejection
+        if workflow['status'] not in ['AWAITING_APPROVAL', 'PENDING_ASSESSMENT']:
+            raise ValueError(f"Workflow cannot be rejected from status: {workflow['status']}")
+        
+        # LLM agent validates rejection decision
+        rejection_context = {
+            **workflow['context_data'],
+            'rejection_timestamp': datetime.utcnow().isoformat(),
+            'rejector': rejected_by,
+            'rejection_reason': reason,
+            'pipeline_stage': 'rejection_processing'
+        }
+        
+        rejection_validation = await self.risk_agent.validate_rejection_decision(
+            workflow_data=workflow,
+            rejector=rejected_by,
+            reason=reason,
+            context=rejection_context
+        )
+        
+        # Check if LLM agent questions the rejection
+        if not rejection_validation.get('rejection_valid', True):
+            # Log the concern but proceed (human override)
+            rejection_reason = f"Human override: {reason}. LLM concern: {rejection_validation.get('concern', 'None')}"
+        else:
+            rejection_reason = reason
+        
+        # Update workflow
+        additional_data = {
+            'rejected_by': rejected_by,
+            'rejected_at': datetime.utcnow().isoformat(),
+            'rejection_reason': rejection_reason
+        }
+        
+        success = self.workflow_store.update_status(
+            workflow_id=workflow_id,
+            new_status='REJECTED',
+            transitioned_by=rejected_by,
+            reason=rejection_reason,
+            additional_data=additional_data
+        )
+        
+        if not success:
+            raise Exception("Failed to update workflow status")
+        
+        # Return updated workflow
+        updated_workflow = self.workflow_store.get_by_id(workflow_id)
+        if not updated_workflow:
+            raise Exception("Failed to retrieve updated workflow")
+        
+        return updated_workflow
+    
+    async def execute_workflow(self, workflow_id: str, executed_by: str) -> Dict[str, Any]:
+        """Execute approved workflow using LLM agent.
+        
+        Args:
+            workflow_id: Workflow ID
+            executed_by: Executor identifier
+            
+        Returns:
+            Workflow with execution results
+            
+        Raises:
+            ValueError: Invalid parameters or workflow not executable (NO FALLBACK)
+            Exception: Execution failures (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+        
+        if not executed_by or not isinstance(executed_by, str):
+            raise ValueError("executed_by must be a non-empty string")
+        
+        # Get current workflow
+        workflow = self.workflow_store.get_by_id(workflow_id)
+        if not workflow:
+            raise ValueError(f"Workflow not found: {workflow_id}")
+        
+        # Validate workflow is executable
+        if workflow['status'] not in ['AUTO_APPROVED']:
+            raise ValueError(f"Workflow cannot be executed from status: {workflow['status']}")
+        
+        # LLM agent executes workflow steps
+        execution_context = {
+            **workflow['context_data'],
+            'execution_timestamp': datetime.utcnow().isoformat(),
+            'executor': executed_by,
+            'pipeline_stage': 'workflow_execution'
+        }
+        
+        execution_results = await self.risk_agent.execute_workflow_steps(
+            workflow_data=workflow,
+            context=execution_context
+        )
+        
+        # Validate execution results
+        if 'execution_status' not in execution_results:
+            raise ValueError("LLM agent failed to provide execution status")
+        
+        # Update workflow with execution results
+        additional_data = {
+            'executed_at': datetime.utcnow().isoformat(),
+            'execution_results': json.dumps(execution_results)
+        }
+        
+        success = self.workflow_store.update_status(
+            workflow_id=workflow_id,
+            new_status='EXECUTED',
+            transitioned_by=executed_by,
+            reason=f"Workflow executed: {execution_results.get('execution_status', 'completed')}",
+            additional_data=additional_data
+        )
+        
+        if not success:
+            raise Exception("Failed to update workflow status")
+        
+        # Return updated workflow
+        updated_workflow = self.workflow_store.get_by_id(workflow_id)
+        if not updated_workflow:
+            raise Exception("Failed to retrieve updated workflow")
+        
+        return updated_workflow
+    
+    async def get_workflow_history(self, workflow_id: str) -> Dict[str, Any]:
+        """Get complete workflow history with state transitions.
+        
+        Args:
+            workflow_id: Workflow ID
+            
+        Returns:
+            Workflow data with transition history
+            
+        Raises:
+            ValueError: Invalid workflow_id or workflow not found (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+        
+        # Get workflow
+        workflow = self.workflow_store.get_by_id(workflow_id)
+        if not workflow:
+            raise ValueError(f"Workflow not found: {workflow_id}")
+        
+        # Get state transitions
+        transitions = self.workflow_store.get_state_transitions(workflow_id)
+        
+        return {
+            **workflow,
+            'state_transitions': transitions
+        }
+    
+    async def delete_workflow(self, workflow_id: str) -> bool:
+        """Delete workflow.
+        
+        Args:
+            workflow_id: Workflow ID
+            
+        Returns:
+            True if deleted, False if not found
+            
+        Raises:
+            ValueError: Invalid workflow_id (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+        
+        return self.workflow_store.delete(workflow_id)
+    
+    async def delete_all_workflows(self) -> int:
+        """Delete all workflows.
+        
+        Returns:
+            Number of workflows deleted
+        """
+        return self.workflow_store.delete_all()

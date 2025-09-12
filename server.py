@@ -23,6 +23,7 @@ from src.services.transcript_service import TranscriptService
 from src.services.analysis_service import AnalysisService
 from src.services.insights_service import InsightsService
 from src.services.plan_service import PlanService
+from src.services.workflow_service import WorkflowService
 from src.services.system_service import SystemService
 
 # Load environment variables from .env file
@@ -34,10 +35,12 @@ if not api_key:
     sys.exit(1)
 
 # Initialize all services at startup (fail-fast)
+db_path = os.getenv('DATABASE_PATH', './data/call_center.db')
 transcript_service = TranscriptService(api_key=api_key)
 analysis_service = AnalysisService(api_key=api_key)
 insights_service = InsightsService()
 plan_service = PlanService(api_key=api_key)
+workflow_service = WorkflowService(db_path=db_path)
 system_service = SystemService(api_key=api_key)
 
 print("✅ All services initialized successfully")
@@ -91,8 +94,21 @@ class ApprovalRequest(BaseModel):
 
 class ExecutionRequest(BaseModel):
     executed_by: str
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
+
+# Workflow request models
+class WorkflowExtractRequest(BaseModel):
+    plan_id: str
+
+class WorkflowApprovalRequest(BaseModel):
+    approved_by: str
+    reasoning: Optional[str] = None
+
+class WorkflowRejectionRequest(BaseModel):
+    rejected_by: str
+    reason: str
+
+class WorkflowExecutionRequest(BaseModel):
+    executed_by: str
 
 
 @app.get("/")
@@ -547,6 +563,119 @@ async def execute_plan(plan_id: str, request: ExecutionRequest):
         return await plan_service.execute(plan_id, request.dict())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to execute plan: {str(e)}")
+
+
+# ===============================================
+# WORKFLOW APPROVAL ENDPOINTS
+# Pure routing layer - all logic in WorkflowService
+# ===============================================
+
+@app.post("/api/v1/workflows/extract")
+async def extract_workflow(request: WorkflowExtractRequest):
+    """Extract workflow from action plan."""
+    try:
+        result = await workflow_service.extract_workflow_from_plan(request.plan_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract workflow: {str(e)}")
+
+@app.get("/api/v1/workflows")
+async def list_workflows(
+    status: Optional[str] = Query(None, description="Filter by workflow status"),
+    risk_level: Optional[str] = Query(None, description="Filter by risk level"), 
+    limit: Optional[int] = Query(None, description="Limit number of results")
+):
+    """List workflows with optional filters."""
+    try:
+        workflows = await workflow_service.list_workflows(
+            status=status,
+            risk_level=risk_level,
+            limit=limit
+        )
+        return workflows
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list workflows: {str(e)}")
+
+@app.get("/api/v1/workflows/pending")
+async def get_pending_workflows():
+    """Get workflows requiring human approval."""
+    try:
+        workflows = await workflow_service.get_pending_approvals()
+        return workflows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get pending workflows: {str(e)}")
+
+@app.get("/api/v1/workflows/{workflow_id}")
+async def get_workflow(workflow_id: str):
+    """Get workflow by ID."""
+    try:
+        workflow = await workflow_service.get_workflow(workflow_id)
+        if not workflow:
+            raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
+        return workflow
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflow: {str(e)}")
+
+@app.post("/api/v1/workflows/{workflow_id}/approve")
+async def approve_workflow(workflow_id: str, request: WorkflowApprovalRequest):
+    """Approve a workflow."""
+    try:
+        result = await workflow_service.approve_workflow(
+            workflow_id=workflow_id,
+            approved_by=request.approved_by,
+            reasoning=request.reasoning
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to approve workflow: {str(e)}")
+
+@app.post("/api/v1/workflows/{workflow_id}/reject")
+async def reject_workflow(workflow_id: str, request: WorkflowRejectionRequest):
+    """Reject a workflow."""
+    try:
+        result = await workflow_service.reject_workflow(
+            workflow_id=workflow_id,
+            rejected_by=request.rejected_by,
+            reason=request.reason
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reject workflow: {str(e)}")
+
+@app.post("/api/v1/workflows/{workflow_id}/execute")
+async def execute_workflow(workflow_id: str, request: WorkflowExecutionRequest):
+    """Execute an approved workflow."""
+    try:
+        result = await workflow_service.execute_workflow(
+            workflow_id=workflow_id,
+            executed_by=request.executed_by
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute workflow: {str(e)}")
+
+@app.get("/api/v1/workflows/{workflow_id}/history")
+async def get_workflow_history(workflow_id: str):
+    """Get workflow state transition history."""
+    try:
+        result = await workflow_service.get_workflow_history(workflow_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflow history: {str(e)}")
 
 
 # ===============================================

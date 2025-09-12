@@ -521,127 +521,128 @@ Customer: I want to remove PMI from my mortgage. My home value has increased sig
             assert stored_plan_by_transcript['transcript_id'] == transcript.id
             assert stored_plan_by_transcript['analysis_id'] == stored_analysis['analysis_id']
 
-    def test_approval_workflow_all_routes(self, temp_db):
-        """Test approval workflow for all risk levels: high → supervisor, medium → advisor, low → auto."""
-        action_plan_store = ActionPlanStore(temp_db)
-        
-        # Create action plans with different risk levels
-        high_risk_plan = {
-            'plan_id': 'PLAN_HIGH_001',
-            'analysis_id': 'ANALYSIS_HIGH_001',
-            'transcript_id': 'TRANSCRIPT_HIGH_001',
-            'risk_level': 'high',
-            'approval_route': 'supervisor_approval',
-            'queue_status': 'pending_supervisor',
-            'auto_executable': False,
-            'generator_version': '1.0',
-            'routing_reason': 'High risk: compliance flags detected',
-            'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
-            'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
-            'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': True, 'process_improvements': []},
-            'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
-        }
-        
-        medium_risk_plan = {
-            'plan_id': 'PLAN_MEDIUM_001',
-            'analysis_id': 'ANALYSIS_MEDIUM_001',
-            'transcript_id': 'TRANSCRIPT_MEDIUM_001',
-            'risk_level': 'medium',
-            'approval_route': 'advisor_approval',
-            'queue_status': 'pending_advisor',
-            'auto_executable': False,
-            'generator_version': '1.0',
-            'routing_reason': 'Medium risk: moderate confidence score',
-            'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
-            'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
-            'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': False, 'process_improvements': []},
-            'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
-        }
-        
-        low_risk_plan = {
-            'plan_id': 'PLAN_LOW_001',
-            'analysis_id': 'ANALYSIS_LOW_001',
-            'transcript_id': 'TRANSCRIPT_LOW_001',
-            'risk_level': 'low',
-            'approval_route': 'auto_approved',
-            'queue_status': 'approved',
-            'auto_executable': True,
-            'generator_version': '1.0',
-            'routing_reason': 'Low risk - auto-approved',
-            'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
-            'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
-            'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': False, 'process_improvements': []},
-            'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
-        }
-        
-        # Store all plans
-        action_plan_store.store(high_risk_plan)
-        action_plan_store.store(medium_risk_plan)
-        action_plan_store.store(low_risk_plan)
-        
-        # Test approval queues
-        supervisor_queue = action_plan_store.get_approval_queue('pending_supervisor')
-        advisor_queue = action_plan_store.get_approval_queue('pending_advisor')
-        approved_plans = action_plan_store.get_approval_queue('approved')
-        
-        assert len(supervisor_queue) == 1
-        assert len(advisor_queue) == 1
-        assert len(approved_plans) == 1
-        
-        assert supervisor_queue[0]['plan_id'] == 'PLAN_HIGH_001'
-        assert advisor_queue[0]['plan_id'] == 'PLAN_MEDIUM_001'
-        assert approved_plans[0]['plan_id'] == 'PLAN_LOW_001'
-        
-        # Test approval workflow
-        high_plan_approved = action_plan_store.approve_plan('PLAN_HIGH_001', 'SUPERVISOR_001')
-        assert high_plan_approved is True
-        
-        medium_plan_approved = action_plan_store.approve_plan('PLAN_MEDIUM_001', 'ADVISOR_001')
-        assert medium_plan_approved is True
-        
-        # Verify approval updates
-        approved_high_plan = action_plan_store.get_by_id('PLAN_HIGH_001')
-        approved_medium_plan = action_plan_store.get_by_id('PLAN_MEDIUM_001')
-        
-        assert approved_high_plan['queue_status'] == 'approved'
-        assert approved_high_plan['approved_by'] == 'SUPERVISOR_001'
-        assert approved_high_plan['approved_at'] is not None
-        
-        assert approved_medium_plan['queue_status'] == 'approved'
-        assert approved_medium_plan['approved_by'] == 'ADVISOR_001'
-        assert approved_medium_plan['approved_at'] is not None
-        
-        # Test rejection workflow
-        test_rejection_plan = {
-            'plan_id': 'PLAN_REJECT_001',
-            'analysis_id': 'ANALYSIS_REJECT_001',
-            'transcript_id': 'TRANSCRIPT_REJECT_001',
-            'risk_level': 'high',
-            'approval_route': 'supervisor_approval',
-            'queue_status': 'pending_supervisor',
-            'auto_executable': False,
-            'generator_version': '1.0',
-            'routing_reason': 'High risk: requires review',
-            'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
-            'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
-            'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': True, 'process_improvements': []},
-            'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
-        }
-        
-        action_plan_store.store(test_rejection_plan)
-        rejected = action_plan_store.reject_plan('PLAN_REJECT_001', 'SUPERVISOR_002')
-        assert rejected is True
-        
-        rejected_plan = action_plan_store.get_by_id('PLAN_REJECT_001')
-        assert rejected_plan['queue_status'] == 'rejected'
-        assert rejected_plan['approved_by'] == 'SUPERVISOR_002'
-        
-        # Final metrics check
-        final_metrics = action_plan_store.get_summary_metrics()
-        assert final_metrics['total_plans'] == 4
-        assert final_metrics['status_distribution']['approved'] == 3
-        assert final_metrics['status_distribution']['rejected'] == 1
-
+    #     # Removed: governance/approval workflow functionality has been deleted
+    #     # def test_approval_workflow_all_routes(self, temp_db):
+    #         """Test approval workflow for all risk levels: high → supervisor, medium → advisor, low → auto."""
+    #         action_plan_store = ActionPlanStore(temp_db)
+    #         
+    #         # Create action plans with different risk levels
+    #         high_risk_plan = {
+    #             'plan_id': 'PLAN_HIGH_001',
+    #             'analysis_id': 'ANALYSIS_HIGH_001',
+    #             'transcript_id': 'TRANSCRIPT_HIGH_001',
+    #             'risk_level': 'high',
+    #             'approval_route': 'supervisor_approval',
+    #             'queue_status': 'pending_supervisor',
+    #             'auto_executable': False,
+    #             'generator_version': '1.0',
+    #             'routing_reason': 'High risk: compliance flags detected',
+    #             'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
+    #             'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
+    #             'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': True, 'process_improvements': []},
+    #             'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
+    #         }
+    #         
+    #         medium_risk_plan = {
+    #             'plan_id': 'PLAN_MEDIUM_001',
+    #             'analysis_id': 'ANALYSIS_MEDIUM_001',
+    #             'transcript_id': 'TRANSCRIPT_MEDIUM_001',
+    #             'risk_level': 'medium',
+    #             'approval_route': 'advisor_approval',
+    #             'queue_status': 'pending_advisor',
+    #             'auto_executable': False,
+    #             'generator_version': '1.0',
+    #             'routing_reason': 'Medium risk: moderate confidence score',
+    #             'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
+    #             'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
+    #             'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': False, 'process_improvements': []},
+    #             'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
+    #         }
+    #         
+    #         low_risk_plan = {
+    #             'plan_id': 'PLAN_LOW_001',
+    #             'analysis_id': 'ANALYSIS_LOW_001',
+    #             'transcript_id': 'TRANSCRIPT_LOW_001',
+    #             'risk_level': 'low',
+    #             'approval_route': 'auto_approved',
+    #             'queue_status': 'approved',
+    #             'auto_executable': True,
+    #             'generator_version': '1.0',
+    #             'routing_reason': 'Low risk - auto-approved',
+    #             'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
+    #             'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
+    #             'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': False, 'process_improvements': []},
+    #             'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
+    #         }
+    #         
+    #         # Store all plans
+    #         action_plan_store.store(high_risk_plan)
+    #         action_plan_store.store(medium_risk_plan)
+    #         action_plan_store.store(low_risk_plan)
+    #         
+    #         # Test approval queues
+    #         supervisor_queue = action_plan_store.get_approval_queue('pending_supervisor')
+    #         advisor_queue = action_plan_store.get_approval_queue('pending_advisor')
+    #         approved_plans = action_plan_store.get_approval_queue('approved')
+    #         
+    #         assert len(supervisor_queue) == 1
+    #         assert len(advisor_queue) == 1
+    #         assert len(approved_plans) == 1
+    #         
+    #         assert supervisor_queue[0]['plan_id'] == 'PLAN_HIGH_001'
+    #         assert advisor_queue[0]['plan_id'] == 'PLAN_MEDIUM_001'
+    #         assert approved_plans[0]['plan_id'] == 'PLAN_LOW_001'
+    #         
+    #         # Test approval workflow
+    #         high_plan_approved = action_plan_store.approve_plan('PLAN_HIGH_001', 'SUPERVISOR_001')
+    #         assert high_plan_approved is True
+    #         
+    #         medium_plan_approved = action_plan_store.approve_plan('PLAN_MEDIUM_001', 'ADVISOR_001')
+    #         assert medium_plan_approved is True
+    #         
+    #         # Verify approval updates
+    #         approved_high_plan = action_plan_store.get_by_id('PLAN_HIGH_001')
+    #         approved_medium_plan = action_plan_store.get_by_id('PLAN_MEDIUM_001')
+    #         
+    #         assert approved_high_plan['queue_status'] == 'approved'
+    #         assert approved_high_plan['approved_by'] == 'SUPERVISOR_001'
+    #         assert approved_high_plan['approved_at'] is not None
+    #         
+    #         assert approved_medium_plan['queue_status'] == 'approved'
+    #         assert approved_medium_plan['approved_by'] == 'ADVISOR_001'
+    #         assert approved_medium_plan['approved_at'] is not None
+    #         
+    #         # Test rejection workflow
+    #         test_rejection_plan = {
+    #             'plan_id': 'PLAN_REJECT_001',
+    #             'analysis_id': 'ANALYSIS_REJECT_001',
+    #             'transcript_id': 'TRANSCRIPT_REJECT_001',
+    #             'risk_level': 'high',
+    #             'approval_route': 'supervisor_approval',
+    #             'queue_status': 'pending_supervisor',
+    #             'auto_executable': False,
+    #             'generator_version': '1.0',
+    #             'routing_reason': 'High risk: requires review',
+    #             'borrower_plan': {'immediate_actions': [], 'follow_ups': [], 'personalized_offers': [], 'risk_mitigation': []},
+    #             'advisor_plan': {'coaching_items': [], 'performance_feedback': {'strengths': [], 'improvements': [], 'score_explanations': []}, 'training_recommendations': [], 'next_actions': []},
+    #             'supervisor_plan': {'escalation_items': [], 'team_patterns': [], 'compliance_review': [], 'approval_required': True, 'process_improvements': []},
+    #             'leadership_plan': {'portfolio_insights': [], 'strategic_opportunities': [], 'risk_indicators': [], 'trend_analysis': [], 'resource_allocation': []}
+    #         }
+    #         
+    #         action_plan_store.store(test_rejection_plan)
+    #         rejected = action_plan_store.reject_plan('PLAN_REJECT_001', 'SUPERVISOR_002')
+    #         assert rejected is True
+    #         
+    #         rejected_plan = action_plan_store.get_by_id('PLAN_REJECT_001')
+    #         assert rejected_plan['queue_status'] == 'rejected'
+    #         assert rejected_plan['approved_by'] == 'SUPERVISOR_002'
+    #         
+    #         # Final metrics check
+    #         final_metrics = action_plan_store.get_summary_metrics()
+    #         assert final_metrics['total_plans'] == 4
+    #         assert final_metrics['status_distribution']['approved'] == 3
+    #         assert final_metrics['status_distribution']['rejected'] == 1
+    # 
     @patch('openai.OpenAI')
     def test_batch_processing_with_analysis_and_plans(self, mock_openai, temp_db, mock_analysis_response, mock_action_plan_response):
         """Test batch processing: Generate multiple transcripts → Analyze all → Generate action plans for all."""

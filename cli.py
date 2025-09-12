@@ -260,6 +260,43 @@ class CLIRestClient:
         """Delete all plans via DELETE /api/v1/plans."""
         return self._make_request('DELETE', '/api/v1/plans')
     
+    # Workflow operations
+    def extract_workflow(self, plan_id: str) -> Dict[str, Any]:
+        """Extract workflow from plan via POST /api/v1/workflows/extract."""
+        return self._make_request('POST', '/api/v1/workflows/extract', json_data={'plan_id': plan_id})
+    
+    def list_workflows(self, **params) -> List[Dict[str, Any]]:
+        """List workflows via GET /api/v1/workflows."""
+        return self._make_request('GET', '/api/v1/workflows', params=params)
+    
+    def get_workflow(self, workflow_id: str) -> Dict[str, Any]:
+        """Get workflow by ID via GET /api/v1/workflows/{workflow_id}."""
+        return self._make_request('GET', f'/api/v1/workflows/{workflow_id}')
+    
+    def approve_workflow(self, workflow_id: str, approved_by: str, reasoning: Optional[str] = None) -> Dict[str, Any]:
+        """Approve workflow via POST /api/v1/workflows/{workflow_id}/approve."""
+        json_data = {'approved_by': approved_by}
+        if reasoning:
+            json_data['reasoning'] = reasoning
+        return self._make_request('POST', f'/api/v1/workflows/{workflow_id}/approve', json_data=json_data)
+    
+    def reject_workflow(self, workflow_id: str, rejected_by: str, reason: str) -> Dict[str, Any]:
+        """Reject workflow via POST /api/v1/workflows/{workflow_id}/reject."""
+        json_data = {'rejected_by': rejected_by, 'reason': reason}
+        return self._make_request('POST', f'/api/v1/workflows/{workflow_id}/reject', json_data=json_data)
+    
+    def execute_workflow(self, workflow_id: str, executed_by: str) -> Dict[str, Any]:
+        """Execute workflow via POST /api/v1/workflows/{workflow_id}/execute."""
+        json_data = {'executed_by': executed_by}
+        return self._make_request('POST', f'/api/v1/workflows/{workflow_id}/execute', json_data=json_data)
+    
+    def get_workflow_history(self, workflow_id: str) -> Dict[str, Any]:
+        """Get workflow history via GET /api/v1/workflows/{workflow_id}/history."""
+        return self._make_request('GET', f'/api/v1/workflows/{workflow_id}/history')
+    
+    def get_pending_workflows(self) -> List[Dict[str, Any]]:
+        """Get pending workflows via GET /api/v1/workflows/pending."""
+        return self._make_request('GET', '/api/v1/workflows/pending')
     
     # System operations
     def get_health(self) -> Dict[str, Any]:
@@ -319,6 +356,7 @@ transcript_app = typer.Typer(name="transcript", help="Transcript operations")
 analysis_app = typer.Typer(name="analysis", help="Analysis operations") 
 insights_app = typer.Typer(name="insights", help="Insights operations")
 plan_app = typer.Typer(name="plan", help="Plan operations")
+workflow_app = typer.Typer(name="workflow", help="Workflow approval operations")
 system_app = typer.Typer(name="system", help="System operations")
 
 # Add subapps to main app
@@ -326,6 +364,7 @@ app.add_typer(transcript_app)
 app.add_typer(analysis_app)
 app.add_typer(insights_app)
 app.add_typer(plan_app)
+app.add_typer(workflow_app)
 app.add_typer(system_app)
 
 
@@ -1449,6 +1488,320 @@ def plan_delete_all(
         raise typer.Exit(1)
 
 
+# ====================================================================
+# WORKFLOW COMMANDS
+# ====================================================================
+
+@workflow_app.command("extract")
+def workflow_extract(
+    plan_id: str = typer.Argument(..., help="Plan ID to extract workflow from")
+):
+    """Extract workflow from action plan."""
+    try:
+        client = get_client()
+        
+        console.print("🔄 [bold magenta]Extracting workflow from plan...[/bold magenta]")
+        result = client.extract_workflow(plan_id=plan_id)
+        
+        workflow_id = result.get('id')
+        status = result.get('status', 'Unknown')
+        risk_level = result.get('risk_level', 'Unknown')
+        
+        console.print(f"\n✅ [bold green]Workflow Extracted[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+        console.print(f"Plan ID: [yellow]{plan_id}[/yellow]")
+        console.print(f"Status: [blue]{status}[/blue]")
+        console.print(f"Risk Level: [red]{risk_level}[/red]")
+        
+        if result.get('requires_human_approval'):
+            console.print(f"⚠️  [yellow]Requires human approval[/yellow]")
+        else:
+            console.print(f"✅ [green]Auto-approved[/green]")
+        
+        print_success(f"Workflow extracted: {workflow_id}")
+        
+    except CLIError as e:
+        print_error(f"Workflow extraction failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("list")
+def workflow_list(
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
+    risk_level: Optional[str] = typer.Option(None, "--risk", "-r", help="Filter by risk level"),
+    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of results")
+):
+    """List workflows with optional filters."""
+    try:
+        client = get_client()
+        
+        console.print("📋 [bold magenta]Listing workflows...[/bold magenta]")
+        params = {}
+        if status:
+            params['status'] = status
+        if risk_level:
+            params['risk_level'] = risk_level
+        if limit:
+            params['limit'] = limit
+            
+        workflows = client.list_workflows(**params)
+        
+        if not workflows:
+            console.print("📭 No workflows found")
+            return
+        
+        console.print(f"\n📊 Found {len(workflows)} workflow(s):")
+        
+        for workflow in workflows:
+            workflow_id = workflow.get('id', 'N/A')
+            plan_id = workflow.get('plan_id', 'N/A')
+            status = workflow.get('status', 'Unknown')
+            risk_level = workflow.get('risk_level', 'Unknown')
+            created = workflow.get('created_at', 'N/A')
+            
+            console.print(f"\n[cyan]Workflow ID:[/cyan] {workflow_id}")
+            console.print(f"[cyan]Plan ID:[/cyan] {plan_id}")
+            console.print(f"[cyan]Status:[/cyan] {status}")
+            console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
+            console.print(f"[cyan]Created:[/cyan] {created}")
+            
+            if workflow.get('requires_human_approval'):
+                approver = workflow.get('assigned_approver', 'Unassigned')
+                console.print(f"[yellow]Assigned Approver:[/yellow] {approver}")
+            
+            console.print("─" * 50)
+            
+    except CLIError as e:
+        print_error(f"List workflows failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("view")
+def workflow_view(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to view")
+):
+    """View detailed workflow information."""
+    try:
+        client = get_client()
+        
+        console.print(f"🔍 [bold magenta]Getting workflow details...[/bold magenta]")
+        workflow = client.get_workflow(workflow_id=workflow_id)
+        
+        if not workflow:
+            print_error(f"Workflow not found: {workflow_id}")
+            raise typer.Exit(1)
+        
+        console.print(f"\n📄 [bold green]Workflow Details[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{workflow.get('id')}[/cyan]")
+        console.print(f"Plan ID: [yellow]{workflow.get('plan_id')}[/yellow]")
+        console.print(f"Analysis ID: [blue]{workflow.get('analysis_id')}[/blue]")
+        console.print(f"Status: [green]{workflow.get('status')}[/green]")
+        console.print(f"Risk Level: [red]{workflow.get('risk_level')}[/red]")
+        
+        # Risk reasoning
+        if workflow.get('risk_reasoning'):
+            console.print(f"\n💭 [bold blue]Risk Assessment:[/bold blue]")
+            console.print(f"{workflow['risk_reasoning']}")
+        
+        # Approval information
+        console.print(f"\n🔐 [bold blue]Approval Status:[/bold blue]")
+        console.print(f"Requires Approval: {'Yes' if workflow.get('requires_human_approval') else 'No'}")
+        
+        if workflow.get('assigned_approver'):
+            console.print(f"Assigned Approver: {workflow['assigned_approver']}")
+        
+        if workflow.get('approved_by'):
+            console.print(f"Approved By: {workflow['approved_by']}")
+            console.print(f"Approved At: {workflow.get('approved_at', 'N/A')}")
+        
+        if workflow.get('rejected_by'):
+            console.print(f"Rejected By: {workflow['rejected_by']}")
+            console.print(f"Rejected At: {workflow.get('rejected_at', 'N/A')}")
+            console.print(f"Rejection Reason: {workflow.get('rejection_reason', 'N/A')}")
+        
+        # Workflow steps
+        if workflow.get('workflow_data', {}).get('workflow_steps'):
+            console.print(f"\n📝 [bold blue]Workflow Steps:[/bold blue]")
+            for i, step in enumerate(workflow['workflow_data']['workflow_steps'], 1):
+                console.print(f"{i}. {step}")
+        
+        # Timestamps
+        console.print(f"\n⏰ [bold blue]Timestamps:[/bold blue]")
+        console.print(f"Created: {workflow.get('created_at', 'N/A')}")
+        console.print(f"Updated: {workflow.get('updated_at', 'N/A')}")
+        
+        if workflow.get('executed_at'):
+            console.print(f"Executed: {workflow['executed_at']}")
+        
+    except CLIError as e:
+        print_error(f"View workflow failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("approve")
+def workflow_approve(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to approve"),
+    approver: str = typer.Option(..., "--approver", "-a", help="Approver identifier"),
+    reasoning: Optional[str] = typer.Option(None, "--reasoning", "-r", help="Approval reasoning")
+):
+    """Approve a workflow."""
+    try:
+        client = get_client()
+        
+        console.print(f"✅ [bold magenta]Approving workflow...[/bold magenta]")
+        result = client.approve_workflow(
+            workflow_id=workflow_id, 
+            approved_by=approver, 
+            reasoning=reasoning
+        )
+        
+        console.print(f"\n✅ [bold green]Workflow Approved[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{result.get('id')}[/cyan]")
+        console.print(f"Approved By: [yellow]{result.get('approved_by')}[/yellow]")
+        console.print(f"New Status: [green]{result.get('status')}[/green]")
+        console.print(f"Approved At: [blue]{result.get('approved_at', 'N/A')}[/blue]")
+        
+        print_success(f"Workflow approved: {workflow_id}")
+        
+    except CLIError as e:
+        print_error(f"Approval failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("reject")
+def workflow_reject(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to reject"),
+    rejector: str = typer.Option(..., "--rejector", "-r", help="Rejector identifier"),
+    reason: str = typer.Option(..., "--reason", "-e", help="Rejection reason")
+):
+    """Reject a workflow."""
+    try:
+        client = get_client()
+        
+        console.print(f"❌ [bold magenta]Rejecting workflow...[/bold magenta]")
+        result = client.reject_workflow(
+            workflow_id=workflow_id, 
+            rejected_by=rejector, 
+            reason=reason
+        )
+        
+        console.print(f"\n❌ [bold red]Workflow Rejected[/bold red]:")
+        console.print(f"Workflow ID: [cyan]{result.get('id')}[/cyan]")
+        console.print(f"Rejected By: [yellow]{result.get('rejected_by')}[/yellow]")
+        console.print(f"Status: [red]{result.get('status')}[/red]")
+        console.print(f"Rejection Reason: [dim]{result.get('rejection_reason')}[/dim]")
+        
+        print_success(f"Workflow rejected: {workflow_id}")
+        
+    except CLIError as e:
+        print_error(f"Rejection failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("execute")
+def workflow_execute(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to execute"),
+    executor: str = typer.Option(..., "--executor", "-e", help="Executor identifier")
+):
+    """Execute an approved workflow."""
+    try:
+        client = get_client()
+        
+        console.print(f"🚀 [bold magenta]Executing workflow...[/bold magenta]")
+        result = client.execute_workflow(
+            workflow_id=workflow_id,
+            executed_by=executor
+        )
+        
+        console.print(f"\n🚀 [bold green]Workflow Executed[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{result.get('id')}[/cyan]")
+        console.print(f"Executed By: [yellow]{result.get('execution_results', {}).get('executor', executor)}[/yellow]")
+        console.print(f"Status: [green]{result.get('status')}[/green]")
+        console.print(f"Executed At: [blue]{result.get('executed_at', 'N/A')}[/blue]")
+        
+        # Show execution results if available
+        exec_results = result.get('execution_results', {})
+        if exec_results.get('execution_status'):
+            console.print(f"Execution Status: [green]{exec_results['execution_status']}[/green]")
+        
+        print_success(f"Workflow executed: {workflow_id}")
+        
+    except CLIError as e:
+        print_error(f"Execution failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("history")
+def workflow_history(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to get history for")
+):
+    """View workflow state transition history."""
+    try:
+        client = get_client()
+        
+        console.print(f"📜 [bold magenta]Getting workflow history...[/bold magenta]")
+        result = client.get_workflow_history(workflow_id=workflow_id)
+        
+        workflow = result
+        transitions = result.get('state_transitions', [])
+        
+        console.print(f"\n📄 [bold green]Workflow History[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{workflow.get('id')}[/cyan]")
+        console.print(f"Current Status: [green]{workflow.get('status')}[/green]")
+        
+        if transitions:
+            console.print(f"\n🔄 [bold blue]State Transitions:[/bold blue]")
+            for transition in transitions:
+                from_status = transition.get('from_status', 'Initial')
+                to_status = transition.get('to_status', 'Unknown')
+                transitioned_by = transition.get('transitioned_by', 'Unknown')
+                transitioned_at = transition.get('transitioned_at', 'N/A')
+                reason = transition.get('transition_reason', 'No reason provided')
+                
+                console.print(f"\n• {from_status} → [green]{to_status}[/green]")
+                console.print(f"  By: [yellow]{transitioned_by}[/yellow]")
+                console.print(f"  At: [dim]{transitioned_at}[/dim]")
+                console.print(f"  Reason: [dim]{reason}[/dim]")
+        else:
+            console.print("\n📭 No state transitions found")
+        
+    except CLIError as e:
+        print_error(f"Get workflow history failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("pending")
+def workflow_pending():
+    """List workflows pending approval."""
+    try:
+        client = get_client()
+        
+        console.print("⏳ [bold magenta]Getting pending approvals...[/bold magenta]")
+        workflows = client.get_pending_workflows()
+        
+        if not workflows:
+            console.print("✅ No workflows pending approval")
+            return
+        
+        console.print(f"\n⏳ [bold yellow]{len(workflows)} workflow(s) pending approval:[/bold yellow]")
+        
+        for workflow in workflows:
+            workflow_id = workflow.get('id', 'N/A')
+            plan_id = workflow.get('plan_id', 'N/A')
+            risk_level = workflow.get('risk_level', 'Unknown')
+            assigned_approver = workflow.get('assigned_approver', 'Unassigned')
+            created = workflow.get('created_at', 'N/A')
+            
+            console.print(f"\n[cyan]Workflow ID:[/cyan] {workflow_id}")
+            console.print(f"[cyan]Plan ID:[/cyan] {plan_id}")
+            console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
+            console.print(f"[cyan]Assigned to:[/cyan] {assigned_approver}")
+            console.print(f"[cyan]Created:[/cyan] {created}")
+            console.print("─" * 40)
+        
+    except CLIError as e:
+        print_error(f"Get pending workflows failed: {str(e)}")
+        raise typer.Exit(1)
 
 
 # ====================================================================

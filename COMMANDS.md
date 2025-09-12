@@ -2,12 +2,12 @@
 
 ## Overview
 
-The CLI provides 7 resource-based command groups with comprehensive CRUD operations and advanced analytics capabilities. All commands follow the pattern: `python cli.py <resource> <command> [options]`
+The CLI provides 6 resource-based command groups with comprehensive CRUD operations and advanced analytics capabilities. All commands follow the pattern: `python3 cli.py <resource> <command> [options]`
 
 ## 🌐 Global Options
 
 ```bash
-python cli.py [OPTIONS] COMMAND [ARGS]...
+python3 cli.py [OPTIONS] COMMAND [ARGS]...
 ```
 
 **Global Options:**
@@ -33,19 +33,19 @@ python cli.py [OPTIONS] COMMAND [ARGS]...
 
 ```bash
 # Create a new transcript
-python cli.py transcript create --topic "Payment inquiry" --urgency high
+python3 cli.py transcript create --topic "Payment inquiry" --urgency high
 
 # List all transcripts
-python cli.py transcript list
+python3 cli.py transcript list
 
 # Get specific transcript details
-python cli.py transcript get CALL_123ABC
+python3 cli.py transcript get CALL_123ABC
 
 # Delete transcript
-python cli.py transcript delete CALL_123ABC
+python3 cli.py transcript delete CALL_123ABC
 
 # Search transcripts
-python cli.py transcript search --query "payment"
+python3 cli.py transcript search --query "payment"
 ```
 
 ---
@@ -65,11 +65,11 @@ python cli.py transcript search --query "payment"
 
 ```bash
 # Core Analysis Operations
-python cli.py analysis create --transcript-id CALL_123ABC
-python cli.py analysis list
-python cli.py analysis get ANALYSIS_456DEF
-python cli.py analysis delete ANALYSIS_456DEF
-python cli.py analysis delete-all
+python3 cli.py analysis create --transcript-id CALL_123ABC
+python3 cli.py analysis list
+python3 cli.py analysis get ANALYSIS_456DEF
+python3 cli.py analysis delete ANALYSIS_456DEF
+python3 cli.py analysis delete-all
 ```
 
 ---
@@ -98,22 +98,22 @@ python cli.py analysis delete-all
 
 ```bash
 # Knowledge Graph Analytics
-python cli.py insights patterns --risk-threshold 0.7
-python cli.py insights risks --limit 10
-python cli.py insights recommend --customer-id CUST_001
-python cli.py insights similar --analysis-id ANALYSIS_456DEF --limit 5
-python cli.py insights dashboard
+python3 cli.py insights patterns --risk-threshold 0.7
+python3 cli.py insights risks --limit 10
+python3 cli.py insights recommend --customer-id CUST_001
+python3 cli.py insights similar --analysis-id ANALYSIS_456DEF --limit 5
+python3 cli.py insights dashboard
 
 # Knowledge Graph Management
-python cli.py insights populate --analysis-id ANALYSIS_456DEF
-python cli.py insights populate --all
-python cli.py insights populate --from-date 2024-01-01
-python cli.py insights query "MATCH (a:Analysis) RETURN count(a)"
-python cli.py insights status
-python cli.py insights delete-analysis ANALYSIS_456DEF
-python cli.py insights delete-customer CUST_001 --cascade
-python cli.py insights prune --older-than-days 90
-python cli.py insights clear  # Requires confirmation
+python3 cli.py insights populate --analysis-id ANALYSIS_456DEF
+python3 cli.py insights populate --all
+python3 cli.py insights populate --from-date 2024-01-01
+python3 cli.py insights query "MATCH (a:Analysis) RETURN count(a)"
+python3 cli.py insights status
+python3 cli.py insights delete-analysis ANALYSIS_456DEF
+python3 cli.py insights delete-customer CUST_001 --cascade
+python3 cli.py insights prune --older-than-days 90
+python3 cli.py insights clear  # Requires confirmation
 ```
 
 ---
@@ -125,20 +125,88 @@ python cli.py insights clear  # Requires confirmation
 #### Available Commands:
 - `create` - Create action plan from analysis
 - `list` - List all plans
+- `view` - View detailed plan information
+- `update` - Update plan status
+- `delete` - Delete specific plan
+- `delete-all` - Delete all plans
 
 #### Examples:
 
 ```bash
 # Create action plan from analysis
-python cli.py plan create --analysis-id ANALYSIS_456DEF
+python3 cli.py plan create --analysis ANALYSIS_456DEF
 
 # List all plans
-python cli.py plan list
+python3 cli.py plan list
+
+# View detailed plan
+python3 cli.py plan view PLAN_GHI789
+
+# Update plan status
+python3 cli.py plan update PLAN_GHI789 --status approved --approved-by advisor_001
+
+# Delete specific plan
+python3 cli.py plan delete PLAN_GHI789
+
+# Delete all plans
+python3 cli.py plan delete-all
 ```
 
 ---
 
-### 5. System Operations
+### 5. Workflow Approval Operations
+
+**Resource Group:** `workflow`
+
+#### Core Workflow Commands:
+- `extract` - Extract workflow from action plan
+- `list` - List workflows with optional filters
+- `view` - View detailed workflow information
+- `pending` - List workflows pending approval
+- `history` - View workflow state transition history
+
+#### Approval Commands:
+- `approve` - Approve a workflow
+- `reject` - Reject a workflow
+- `execute` - Execute an approved workflow
+
+#### Examples:
+
+```bash
+# Extract workflow from action plan
+python3 cli.py workflow extract PLAN_GHI789
+
+# List all workflows
+python3 cli.py workflow list
+
+# List workflows by status
+python3 cli.py workflow list --status AWAITING_APPROVAL
+
+# List workflows by risk level
+python3 cli.py workflow list --risk HIGH
+
+# View detailed workflow information
+python3 cli.py workflow view WF_JKL012
+
+# List pending approvals
+python3 cli.py workflow pending
+
+# Approve a workflow
+python3 cli.py workflow approve WF_JKL012 --approver advisor_001 --reasoning "Customer qualifies for program"
+
+# Reject a workflow
+python3 cli.py workflow reject WF_JKL012 --rejector supervisor_001 --reason "Additional documentation required"
+
+# Execute approved workflow
+python3 cli.py workflow execute WF_JKL012 --executor advisor_001
+
+# View workflow history
+python3 cli.py workflow history WF_JKL012
+```
+
+---
+
+### 6. System Operations
 
 **Resource Group:** `system`
 
@@ -150,10 +218,10 @@ python cli.py plan list
 
 ```bash
 # Check system health
-python cli.py system health
+python3 cli.py system health
 
 # Show system metrics
-python cli.py system metrics
+python3 cli.py system metrics
 ```
 
 ---
@@ -164,19 +232,19 @@ python cli.py system metrics
 
 ```bash
 # Count all nodes in the graph
-python cli.py insights query "MATCH (n) RETURN count(n) as total_nodes"
+python3 cli.py insights query "MATCH (n) RETURN count(n) as total_nodes"
 
 # Find high-risk analyses
-python cli.py insights query "MATCH (a:Analysis) WHERE a.confidence_score > 0.8 RETURN a.analysis_id, a.primary_intent"
+python3 cli.py insights query "MATCH (a:Analysis) WHERE a.confidence_score > 0.8 RETURN a.analysis_id, a.primary_intent"
 
 # Find customer patterns
-python cli.py insights query "MATCH (c:Customer)-[:HAD_CALL]->(t:Transcript)-[:GENERATED_ANALYSIS]->(a:Analysis) RETURN c.customer_id, count(a) as analysis_count ORDER BY analysis_count DESC LIMIT 10"
+python3 cli.py insights query "MATCH (c:Customer)-[:HAD_CALL]->(t:Transcript)-[:GENERATED_ANALYSIS]->(a:Analysis) RETURN c.customer_id, count(a) as analysis_count ORDER BY analysis_count DESC LIMIT 10"
 
 # Find risk patterns
-python cli.py insights query "MATCH (a:Analysis)-[:HAS_RISK_PATTERN]->(r:RiskPattern) WHERE r.risk_score >= 0.7 RETURN r.pattern_type, r.risk_score, count(a) as affected_analyses"
+python3 cli.py insights query "MATCH (a:Analysis)-[:HAS_RISK_PATTERN]->(r:RiskPattern) WHERE r.risk_score >= 0.7 RETURN r.pattern_type, r.risk_score, count(a) as affected_analyses"
 
 # Find compliance flags
-python cli.py insights query "MATCH (a:Analysis)-[:HAS_COMPLIANCE_FLAG]->(c:ComplianceFlag) RETURN c.flag_type, c.severity, count(a) as flag_count"
+python3 cli.py insights query "MATCH (a:Analysis)-[:HAS_COMPLIANCE_FLAG]->(c:ComplianceFlag) RETURN c.flag_type, c.severity, count(a) as flag_count"
 ```
 
 ---
@@ -185,7 +253,7 @@ python cli.py insights query "MATCH (a:Analysis)-[:HAS_COMPLIANCE_FLAG]->(c:Comp
 
 ### Populate Command Options:
 ```bash
-python cli.py insights populate [OPTIONS]
+python3 cli.py insights populate [OPTIONS]
 ```
 - `--analysis-id -a TEXT` - Single analysis ID to populate
 - `--all` - Populate all analyses
@@ -193,18 +261,18 @@ python cli.py insights populate [OPTIONS]
 
 ### Query Command Options:
 ```bash
-python cli.py insights query [OPTIONS] CYPHER
+python3 cli.py insights query [OPTIONS] CYPHER
 ```
 - `CYPHER` (required) - Cypher query to execute
 
 ### Delete Commands Options:
 ```bash
-python cli.py insights delete-customer [OPTIONS] CUSTOMER_ID
+python3 cli.py insights delete-customer [OPTIONS] CUSTOMER_ID
 ```
 - `--cascade` - Delete all related data (transcripts, analyses)
 
 ```bash
-python cli.py insights prune [OPTIONS]
+python3 cli.py insights prune [OPTIONS]
 ```
 - `--older-than-days INTEGER` (required) - Delete data older than specified days
 
@@ -276,7 +344,7 @@ python cli.py insights clear
 
 1. **Virtual Environment**: `source venv/bin/activate`
 2. **OpenAI API Key**: Set `OPENAI_API_KEY` environment variable
-3. **Backend Running**: `python server.py` or `./start_services.sh`
+3. **Backend Running**: `python3 server.py` or `./start_services.sh`
 4. **Database**: SQLite and KuzuDB initialized automatically
 
 ---
@@ -301,18 +369,18 @@ Example success output:
 ## 🆘 Troubleshooting
 
 ### Common Issues:
-- **"Server not available"** → Start backend: `python server.py`  
+- **"Server not available"** → Start backend: `python3 server.py`  
 - **"OpenAI API error"** → Check `OPENAI_API_KEY` environment variable
-- **"Analysis not found"** → Verify analysis ID exists: `python cli.py analysis list`
-- **"Graph shows 0 nodes"** → Check if populate succeeded: `python cli.py insights status`
+- **"Analysis not found"** → Verify analysis ID exists: `python3 cli.py analysis list`
+- **"Graph shows 0 nodes"** → Check if populate succeeded: `python3 cli.py insights status`
 
 ### Debug Commands:
 ```bash
 # System health check
-python cli.py system health
+python3 cli.py system health
 
 # Verify API connectivity  
-python cli.py --verbose analysis status
+python3 cli.py --verbose system health
 
 # Check server logs
 tail -f server.log

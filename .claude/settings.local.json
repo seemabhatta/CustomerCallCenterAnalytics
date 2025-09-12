@@ -34,7 +34,10 @@
       "Bash(awk:*)",
       "Bash(xargs -r kill -9)",
       "Bash(kill:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(for file in tests/test_*.py)",
+      "Bash(head:*)"
     ],
     "deny": [],
     "ask": []
