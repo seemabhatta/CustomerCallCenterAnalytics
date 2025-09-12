@@ -37,7 +37,8 @@
       "Bash(grep:*)",
       "Bash(sed:*)",
       "Bash(for file in tests/test_*.py)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true python cli.py transcript create --topic 'Technical support request' --store)"
     ],
     "deny": [],
     "ask": []

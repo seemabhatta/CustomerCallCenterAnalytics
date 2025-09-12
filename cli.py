@@ -5,21 +5,44 @@ Direct REST API client following industry best practices
 No fallback logic - fail fast with clear error messages
 Resource-aligned commands: transcript, analysis, plan, system
 """
+import os
+import sys
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Initialize OpenTelemetry tracing IMMEDIATELY after env loading for complete observability coverage
+try:
+    from src.telemetry import initialize_tracing
+    initialize_tracing(
+        service_name="xai",
+        enable_console=os.getenv("OTEL_CONSOLE_ENABLED", "true").lower() == "true",
+        enable_jaeger=os.getenv("OTEL_JAEGER_ENABLED", "false").lower() == "true"
+    )
+except ImportError:
+    print("Warning: OpenTelemetry tracing not available. Install telemetry dependencies for observability.")
+
+# NOW import everything else
 import json
 import requests
-import sys
 import typer
-import os
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from dotenv import load_dotenv
 from urllib.parse import urljoin, urlencode
 
-# Load environment variables from .env file
-load_dotenv()
+# Direct mode imports (for bypassing server)
+try:
+    import sys
+    sys.path.insert(0, '.')
+    from src.generators.transcript_generator import TranscriptGenerator
+    from src.storage.transcript_store import TranscriptStore
+    DIRECT_MODE_AVAILABLE = True
+except ImportError as e:
+    DIRECT_MODE_AVAILABLE = False
 
 # Default API configuration
 DEFAULT_API_URL = os.getenv("CCANALYTICS_API_URL", "http://localhost:8000")
@@ -407,14 +430,41 @@ app.add_typer(system_app)
 @transcript_app.command("create")
 def transcript_create(
     topic: str = typer.Option(..., "--topic", help="Topic/scenario for transcript"),
-    store: bool = typer.Option(True, "--store/--no-store", help="Store transcript in database")
+    store: bool = typer.Option(True, "--store/--no-store", help="Store transcript in database"),
+    direct: bool = typer.Option(False, "--direct", help="Generate transcript directly (shows OpenAI telemetry)")
 ):
     """Create new transcript."""
     try:
-        client = get_client()
-        
         console.print("📝 [bold magenta]Generating transcript...[/bold magenta]")
-        result = client.generate_transcript(topic=topic, store=store)
+        
+        if direct:
+            # Direct mode - generate transcript locally with telemetry visibility
+            if not DIRECT_MODE_AVAILABLE:
+                print_error("Direct mode not available. Missing dependencies.")
+                raise typer.Exit(1)
+            
+            # Get API key from environment
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                print_error("OPENAI_API_KEY not found in environment")
+                raise typer.Exit(1)
+            
+            # Generate transcript directly
+            generator = TranscriptGenerator(api_key=api_key)
+            transcript = generator.generate(topic=topic)
+            
+            # Store if requested
+            if store:
+                db_path = os.getenv('DATABASE_PATH', './data/call_center.db')
+                store_obj = TranscriptStore(db_path)
+                store_obj.store(transcript)
+            
+            # Convert to dict for display
+            result = transcript.to_dict()
+        else:
+            # Server mode - use API client (existing behavior)
+            client = get_client()
+            result = client.generate_transcript(topic=topic, store=store)
         
         console.print(f"\n📄 [bold green]Generated Transcript[/bold green]:")
         console.print(f"ID: [cyan]{result['id']}[/cyan]")

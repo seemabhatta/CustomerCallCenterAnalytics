@@ -144,7 +144,6 @@ class TranscriptGenerator:
                 transcript = self.generate(**context)
                 transcripts.append(transcript)
             except Exception as e:
-                print(f"Error generating transcript {i+1}: {e}")
                 continue
         
         return transcripts

@@ -9,9 +9,7 @@ import kuzu
 import os
 from typing import Dict, List, Any, Optional
 from pathlib import Path
-import logging
 
-logger = logging.getLogger(__name__)
 
 
 class GraphStoreError(Exception):
@@ -35,7 +33,6 @@ class GraphStore:
             # Initialize schema
             self._initialize_schema()
             
-            logger.info(f"GraphStore initialized with database at {self.db_path}")
             
         except Exception as e:
             raise GraphStoreError(f"Failed to initialize GraphStore: {str(e)}")
@@ -146,7 +143,6 @@ class GraphStore:
             for query in schema_queries + relationship_queries:
                 self.connection.execute(query)
                 
-            logger.info("Graph schema initialized successfully")
             
         except Exception as e:
             raise GraphStoreError(f"Failed to initialize schema: {str(e)}")
@@ -174,10 +170,8 @@ class GraphStore:
             error_msg = str(e)
             if "duplicated primary key" in error_msg:
                 # Customer already exists - this is acceptable, return success (idempotent behavior)
-                logger.info(f"Customer {customer_id} already exists in database, returning success")
                 return True
             else:
-                logger.error(f"Failed to add customer {customer_id}: {error_msg}")
                 raise GraphStoreError(f"Failed to add customer: {error_msg}")
     
     def add_analysis_with_relationships(self, analysis_data: Dict[str, Any]) -> bool:
@@ -205,7 +199,6 @@ class GraphStore:
             return True
             
         except Exception as e:
-            logger.error(f"Failed to add analysis with relationships: {str(e)}")
             raise GraphStoreError(f"Failed to add analysis: {str(e)}")
     
     def _add_analysis_node(self, analysis_data: Dict[str, Any]):
@@ -224,16 +217,13 @@ class GraphStore:
             if result and len(result) > 0 and "count" in result[0]:
                 count = result[0]["count"]
                 exists = count > 0
-                logger.debug(f"Existence check for {analysis_id}: count={count}, exists={exists}")
             else:
-                logger.warning(f"Unexpected existence check result for {analysis_id}: {result}")
-                
+                exists = False
         except Exception as check_error:
-            logger.warning(f"Existence check failed for {analysis_id}: {check_error}")
             # Don't fail fast on existence check - proceed with create and handle duplicates there
+            pass
         
         if exists:
-            logger.info(f"Analysis {analysis_id} already exists, skipping creation (idempotent)")
             return
         
         # Create new analysis with comprehensive error handling
@@ -262,21 +252,17 @@ class GraphStore:
                 "escalation_needed": analysis_data.get('escalation_needed', False),
                 "created_at": created_at
             })
-            logger.debug(f"Successfully created analysis node {analysis_id}")
             
         except Exception as create_error:
             error_msg = str(create_error)
             if "duplicated primary key" in error_msg.lower():
                 # Analysis was created by another process between check and create (race condition)
-                logger.info(f"Analysis {analysis_id} was created concurrently, accepting idempotent success")
                 return
             elif "primary key" in error_msg.lower() and "constraint" in error_msg.lower():
                 # Different format of primary key constraint error
-                logger.info(f"Primary key constraint hit for {analysis_id}, accepting idempotent success")
                 return
             else:
                 # Real error - fail fast per NO FALLBACK principle
-                logger.error(f"Failed to create analysis {analysis_id}: {error_msg}")
                 raise GraphStoreError(f"Analysis creation failed: {error_msg}")
     
     def find_similar_risk_patterns(self, analysis_id: str, limit: int = 5) -> List[Dict[str, Any]]:
@@ -302,7 +288,6 @@ class GraphStore:
             return [dict(record) for record in result]
             
         except Exception as e:
-            logger.error(f"Failed to find similar patterns for {analysis_id}: {str(e)}")
             raise GraphStoreError(f"Failed to find similar patterns: {str(e)}")
     
     def get_high_risk_clusters(self, risk_threshold: float = 0.7) -> List[Dict[str, Any]]:
@@ -331,7 +316,6 @@ class GraphStore:
             return result
             
         except Exception as e:
-            logger.error(f"Failed to get high-risk clusters: {str(e)}")
             raise GraphStoreError(f"Failed to get risk clusters: {str(e)}")
     
     def get_customer_recommendations(self, customer_id: str) -> List[Dict[str, Any]]:
@@ -356,7 +340,6 @@ class GraphStore:
             return [dict(record) for record in result]
             
         except Exception as e:
-            logger.error(f"Failed to get recommendations for {customer_id}: {str(e)}")
             raise GraphStoreError(f"Failed to get recommendations: {str(e)}")
     
     def _process_risk_patterns(self, analysis_data: Dict[str, Any]):
@@ -515,16 +498,13 @@ class GraphStore:
                 if result and len(result) > 0 and "count" in result[0]:
                     count = result[0]["count"]
                     exists = count > 0
-                    logger.debug(f"Transcript existence check for {transcript_id}: count={count}, exists={exists}")
                 else:
-                    logger.warning(f"Unexpected existence check result for transcript {transcript_id}: {result}")
-                    
+                    exists = False
             except Exception as check_e:
-                logger.warning(f"Transcript existence check failed for {transcript_id}: {check_e}")
                 # Continue with create attempt - will handle duplicates in create block
+                pass
             
             if exists:
-                logger.info(f"Transcript {transcript_id} already exists, skipping creation (idempotent)")
                 return True
             
             # Create new transcript
@@ -541,22 +521,18 @@ class GraphStore:
                 "topic": topic,
                 "message_count": message_count
             })
-            logger.debug(f"Successfully created transcript node {transcript_id}")
             return True
             
         except Exception as e:
             error_msg = str(e)
             if "duplicated primary key" in error_msg.lower():
                 # Transcript was created concurrently - idempotent behavior
-                logger.info(f"Transcript {transcript_id} was created concurrently, accepting idempotent success")
                 return True
             elif "primary key" in error_msg.lower() and "constraint" in error_msg.lower():
                 # Different format of primary key constraint error
-                logger.info(f"Primary key constraint hit for transcript {transcript_id}, accepting idempotent success")
                 return True
             else:
                 # Real error - fail fast per NO FALLBACK principle
-                logger.error(f"Failed to add transcript {transcript_id}: {error_msg}")
                 raise GraphStoreError(f"Failed to add transcript: {error_msg}")
     
     def get_insights_summary(self) -> Dict[str, Any]:
@@ -588,7 +564,6 @@ class GraphStore:
             }
             
         except Exception as e:
-            logger.error(f"Failed to get insights summary: {str(e)}")
             raise GraphStoreError(f"Failed to get insights: {str(e)}")
     
     # ===============================================
@@ -615,7 +590,6 @@ class GraphStore:
             try:
                 # Try to get column names from the result object
                 column_names = result.get_column_names()
-                logger.debug(f"Query returned columns: {column_names}")
                 
                 for record in result_list:
                     if isinstance(record, (list, tuple)):
@@ -638,7 +612,6 @@ class GraphStore:
                             
             except (AttributeError, IndexError) as col_error:
                 # Fallback: get_column_names() failed or column mismatch
-                logger.warning(f"Could not get column names, using fallback: {col_error}")
                 
                 # Try to parse column names from the query itself
                 import re
@@ -669,11 +642,9 @@ class GraphStore:
                         else:
                             formatted_results.append({"value": record})
             
-            logger.debug(f"Query returned {len(formatted_results)} formatted results")
             return formatted_results
             
         except Exception as e:
-            logger.error(f"Failed to execute query '{cypher_query[:100]}...': {str(e)}")
             raise GraphStoreError(f"Query execution failed: {str(e)}")
     
     def get_graph_statistics(self) -> Dict[str, Any]:
@@ -706,7 +677,6 @@ class GraphStore:
             return stats
             
         except Exception as e:
-            logger.error(f"Failed to get graph statistics: {str(e)}")
             raise GraphStoreError(f"Statistics failed: {str(e)}")
     
     # ===============================================
@@ -722,11 +692,9 @@ class GraphStore:
             """
             
             result = self.connection.execute(query, {"analysis_id": analysis_id})
-            logger.info(f"Deleted analysis node {analysis_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to delete analysis {analysis_id}: {str(e)}")
             raise GraphStoreError(f"Delete analysis failed: {str(e)}")
     
     def delete_customer_cascade(self, customer_id: str) -> bool:
@@ -742,11 +710,9 @@ class GraphStore:
             """
             
             result = self.connection.execute(query, {"customer_id": customer_id})
-            logger.info(f"Deleted customer {customer_id} with cascade")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to delete customer {customer_id}: {str(e)}")
             raise GraphStoreError(f"Delete customer failed: {str(e)}")
     
     def prune_old_data(self, older_than_days: int) -> int:
@@ -775,12 +741,10 @@ class GraphStore:
             """
             
             self.connection.execute(delete_query, {"cutoff_timestamp": cutoff_timestamp})
-            logger.info(f"Pruned {count} old nodes (older than {older_than_days} days)")
             
             return count
             
         except Exception as e:
-            logger.error(f"Failed to prune old data: {str(e)}")
             raise GraphStoreError(f"Prune failed: {str(e)}")
     
     def clear_graph(self) -> bool:
@@ -789,11 +753,9 @@ class GraphStore:
             query = "MATCH (n) DETACH DELETE n"
             self.connection.execute(query)
             
-            logger.info("Cleared entire graph")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to clear graph: {str(e)}")
             raise GraphStoreError(f"Clear graph failed: {str(e)}")
     
     def get_graph_for_visualization(self) -> Dict[str, Any]:
@@ -941,7 +903,6 @@ class GraphStore:
                 }
                 edges.append(edge_data)
             
-            logger.info(f"Extracted {len(nodes)} nodes and {len(edges)} edges for visualization")
             
             return {
                 "nodes": nodes,
@@ -949,7 +910,6 @@ class GraphStore:
             }
             
         except Exception as e:
-            logger.error(f"Failed to get graph data for visualization: {str(e)}")
             raise GraphStoreError(f"Graph visualization data extraction failed: {str(e)}")
 
     def close(self):
@@ -957,6 +917,5 @@ class GraphStore:
         try:
             if hasattr(self, 'connection'):
                 self.connection.close()
-            logger.info("GraphStore connection closed")
         except Exception as e:
-            logger.error(f"Error closing GraphStore: {str(e)}")
+            pass

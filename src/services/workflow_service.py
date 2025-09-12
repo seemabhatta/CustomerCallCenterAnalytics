@@ -465,19 +465,23 @@ class WorkflowService:
             ValueError: Invalid plan_id or plan not found (NO FALLBACK)
             Exception: LLM agent failures (NO FALLBACK)
         """
-        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Starting workflow extraction for plan: {plan_id}")
+        # Set up tracing for workflow extraction
+        from src.telemetry import set_span_attributes, add_span_event
+        set_span_attributes(plan_id=plan_id, operation="extract_all_workflows")
+        add_span_event("extraction.started", plan_id=plan_id)
+        
         if not plan_id or not isinstance(plan_id, str):
             raise ValueError("plan_id must be a non-empty string")
         
         # Get action plan - fail fast if not found
-        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Fetching plan from store")
+        add_span_event("extraction.fetching_plan", plan_id=plan_id)
         plan_data = self.action_plan_store.get_by_id(plan_id)
         if not plan_data:
             raise ValueError(f"Action plan not found: {plan_id}")
-        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Found plan data")
+        add_span_event("extraction.plan_loaded", plan_id=plan_id)
         
         # Build complete context for LLM agent
-        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Building context for LLM agent")
+        add_span_event("extraction.building_context", plan_id=plan_id)
         context_data = {
             'transcript_id': plan_data['transcript_id'],
             'analysis_id': plan_data['analysis_id'],
@@ -489,25 +493,36 @@ class WorkflowService:
         
         all_workflows = []
         workflow_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
-        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Processing {len(workflow_types)} workflow types in parallel")
+        add_span_event("extraction.processing_workflow_types", workflow_types=len(workflow_types))
         
         # Create async task for each workflow type to enable parallel processing
         async def process_workflow_type(workflow_type: str) -> List[Dict[str, Any]]:
             """Process a single workflow type in parallel."""
-            print(f"[workflow_service.py::WorkflowService::process_workflow_type] Processing {workflow_type} workflows")
+            add_span_event("workflow_type.processing_started", workflow_type=workflow_type)
             try:
                 # Extract individual action items using LLM agent
-                print(f"[workflow_service.py::WorkflowService::process_workflow_type] Calling RiskAssessmentAgent.extract_individual_action_items for {workflow_type}")
+                add_span_event("workflow_type.extracting_items", workflow_type=workflow_type)
                 action_items = await self.risk_agent.extract_individual_action_items(
                     plan_data=plan_data,
                     workflow_type=workflow_type,
                     context=context_data
                 )
-                print(f"[workflow_service.py::WorkflowService::process_workflow_type] Extracted {len(action_items)} action items for {workflow_type}")
+                add_span_event("workflow_type.items_extracted", workflow_type=workflow_type, items_count=len(action_items))
+                
+                # Add progress information before risk assessment
+                if action_items:
+                    add_span_event("workflow_type.risk_assessment_starting", workflow_type=workflow_type, items_count=len(action_items))
                 
                 # Process action items in parallel batches
                 async def process_action_item(item: Dict[str, Any]) -> Dict[str, Any]:
                     """Process a single action item with all required assessments."""
+                    import time
+                    start_time = time.time()
+                    
+                    # Start processing individual action item
+                    item_description = item.get('action', 'Unknown action')[:50]
+                    add_span_event("action_item.processing_started", workflow_type=workflow_type, description=item_description)
+                    
                     # Run risk assessment and approval routing in parallel
                     risk_assessment_task = self.risk_agent.assess_action_item_risk(
                         action_item=item,
@@ -517,6 +532,12 @@ class WorkflowService:
                     
                     # We need risk assessment before approval routing, so we await it first
                     risk_assessment = await risk_assessment_task
+                    
+                    # Log completion with timing
+                    elapsed = time.time() - start_time
+                    risk_level = risk_assessment.get('risk_level', 'UNKNOWN')
+                    add_span_event("action_item.processing_completed", workflow_type=workflow_type, 
+                                  risk_level=risk_level, duration_seconds=round(elapsed, 1))
                     
                     # Validate risk assessment
                     if 'risk_level' not in risk_assessment or 'reasoning' not in risk_assessment:
@@ -566,13 +587,18 @@ class WorkflowService:
                             'item': action_items[i] if i < len(action_items) else None,
                             'error': str(result)
                         })
-                        print(f"Warning: Failed to process action item {i} in {workflow_type}: {result}")
+                        add_span_event("action_item.processing_failed", workflow_type=workflow_type, item_index=i, error=str(result))
                     else:
                         successful_workflows.append(result)
                 
                 # Log failures but don't fail the entire workflow type
                 if failed_items:
-                    print(f"Warning: {len(failed_items)} out of {len(action_items)} action items failed for {workflow_type}")
+                    add_span_event("workflow_type.partial_failures", workflow_type=workflow_type, 
+                                  failed_count=len(failed_items), total_count=len(action_items))
+                
+                # Log completion summary for this workflow type
+                add_span_event("workflow_type.processing_completed", workflow_type=workflow_type, 
+                              successful_count=len(successful_workflows))
                 
                 return successful_workflows
                 
@@ -592,15 +618,17 @@ class WorkflowService:
                     'workflow_type': workflow_type,
                     'error': str(result)
                 })
-                print(f"Warning: Failed to extract {workflow_type} workflows: {result}")
+                add_span_event("workflow_type.extraction_failed", workflow_type=workflow_type, error=str(result))
             else:
                 all_workflows.extend(result)
         
         # Log failures but continue with successful workflow types
         if failed_workflow_types:
-            print(f"Warning: {len(failed_workflow_types)} out of {len(workflow_types)} workflow types failed")
+            add_span_event("extraction.partial_failures", failed_types=len(failed_workflow_types), 
+                          total_types=len(workflow_types))
             for failure in failed_workflow_types:
-                print(f"  - {failure['workflow_type']}: {failure['error']}")
+                add_span_event("extraction.type_failure", workflow_type=failure['workflow_type'], 
+                              error=failure['error'])
         
         # Only fail completely if no workflows were extracted at all
         if not all_workflows and failed_workflow_types:

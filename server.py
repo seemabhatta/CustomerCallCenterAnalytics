@@ -7,16 +7,32 @@ Clean routing layer - NO business logic, only proxy to services
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent / 'src'))
+
+# Initialize OpenTelemetry tracing IMMEDIATELY after env loading for complete observability coverage
+try:
+    from src.telemetry import initialize_tracing
+    initialize_tracing(
+        service_name="xai",
+        enable_console=os.getenv("OTEL_CONSOLE_ENABLED", "true").lower() == "true",
+        enable_jaeger=os.getenv("OTEL_JAEGER_ENABLED", "false").lower() == "true"
+    )
+except ImportError:
+    pass  # Telemetry not available
+
+# NOW import everything else
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import uvicorn
-from dotenv import load_dotenv
-
-# Add src to Python path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 # Import service abstractions - NO business logic in routes
 from src.services.transcript_service import TranscriptService
@@ -25,9 +41,6 @@ from src.services.insights_service import InsightsService
 from src.services.plan_service import PlanService
 from src.services.workflow_service import WorkflowService
 from src.services.system_service import SystemService
-
-# Load environment variables from .env file
-load_dotenv()
 
 api_key = os.environ.get("OPENAI_API_KEY")
 if not api_key:

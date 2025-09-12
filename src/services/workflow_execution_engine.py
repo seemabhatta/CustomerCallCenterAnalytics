@@ -181,8 +181,8 @@ class WorkflowExecutionEngine:
                 await self.execution_store.create(failed_execution_record)
                 
             except Exception as store_error:
-                # Even storage failed - log but don't mask original error
-                print(f"Failed to store failed execution record: {store_error}")
+                # Even storage failed - but don't mask original error
+                pass
             
             # Re-raise original exception - NO FALLBACK
             raise Exception(f"Workflow execution failed for {workflow_id}: {e}")

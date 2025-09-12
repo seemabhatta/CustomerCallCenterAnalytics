@@ -25,14 +25,17 @@ class PlanService:
     
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new action plan from analysis."""
-        print(f"[plan_service.py::PlanService::create] Starting plan creation")
+        # Set up tracing for plan creation
+        from src.telemetry import set_span_attributes, add_span_event
         analysis_id = request_data.get("analysis_id")
         if not analysis_id:
             raise ValueError("analysis_id is required")
-        print(f"[plan_service.py::PlanService::create] Processing analysis_id: {analysis_id}")
+        
+        set_span_attributes(analysis_id=analysis_id, operation="create_plan")
+        add_span_event("plan.creation_started", analysis_id=analysis_id)
         
         # Get analysis and transcript from stores
-        print(f"[plan_service.py::PlanService::create] Fetching analysis and transcript from stores")
+        add_span_event("plan.fetching_data", analysis_id=analysis_id)
         from ..storage.analysis_store import AnalysisStore
         from ..storage.transcript_store import TranscriptStore
         analysis_store = AnalysisStore(self.db_path)
@@ -41,18 +44,19 @@ class PlanService:
         analysis = analysis_store.get_by_id(analysis_id)
         if not analysis:
             raise ValueError(f"Analysis {analysis_id} not found")
-        print(f"[plan_service.py::PlanService::create] Found analysis")
+        add_span_event("plan.analysis_loaded", analysis_id=analysis_id)
         
         transcript_id = analysis.get("transcript_id")
         transcript = transcript_store.get_by_id(transcript_id)
         if not transcript:
             raise ValueError(f"Transcript {transcript_id} not found")
-        print(f"[plan_service.py::PlanService::create] Found transcript: {transcript_id}")
+        add_span_event("plan.transcript_loaded", transcript_id=transcript_id)
         
         # Generate plan using action plan generator
-        print(f"[plan_service.py::PlanService::create] Calling ActionPlanGenerator.generate()")
+        add_span_event("plan.generator_started", analysis_id=analysis_id)
         plan_result = self.generator.generate(analysis, transcript)
-        print(f"[plan_service.py::PlanService::create] ActionPlanGenerator completed, got result keys: {list(plan_result.keys()) if isinstance(plan_result, dict) else 'not dict'}")
+        result_keys = list(plan_result.keys()) if isinstance(plan_result, dict) else []
+        add_span_event("plan.generator_completed", analysis_id=analysis_id, result_keys_count=len(result_keys))
         
         # Add metadata
         plan_result["analysis_id"] = analysis_id

@@ -4,14 +4,14 @@ Connects: Transcript → Analysis → Plan → Workflows → Execution
 NO FALLBACK LOGIC - fails fast on any errors
 """
 import asyncio
-import logging
 from typing import Dict, Any, List
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-# Configure logger for this module
-logger = logging.getLogger(__name__)
+# Import OpenTelemetry tracing
+from src.telemetry import get_tracer, set_span_attributes, add_span_event, trace_async_function
+
 
 from src.orchestration.simple_orchestrator import SimpleOrchestrator
 from src.orchestration.models.pipeline_models import PipelineResult, PipelineStage, WorkflowType
@@ -27,8 +27,15 @@ class SimplePipeline:
     def __init__(self, api_key: str, db_path: str):
         self.api_key = api_key
         self.db_path = db_path
-        self.logger = logging.getLogger(__name__)
-        self.orchestrator = SimpleOrchestrator(self.logger)
+        self.orchestrator = SimpleOrchestrator()
+        
+        # Initialize tracing to ensure OpenAI instrumentation is active
+        from src.telemetry import initialize_tracing
+        initialize_tracing(
+            service_name="call-center-analytics-pipeline",
+            enable_console=True,
+            enable_jaeger=False
+        )
         
         # Initialize services
         self.analysis_service = AnalysisService(api_key, db_path)
@@ -51,139 +58,178 @@ class SimplePipeline:
         Returns:
             Complete pipeline result
         """
-        try:
-            logger.info(f"[SimplePipeline::run_complete_pipeline] Starting pipeline for transcript: {transcript_id}, auto_approve: {auto_approve}")
-            self.logger.info(f"🚀 Starting complete pipeline for transcript: {transcript_id}")
-            
-            # Stage 1: Generate Analysis (1:1)
-            self.orchestrator.current_stage = PipelineStage.ANALYSIS
-            analysis_result = await self.orchestrator.execute_task(
-                "generate-analysis",
-                self._generate_analysis_task,
-                transcript_id
+        tracer = get_tracer()
+        
+        with tracer.start_as_current_span("orchestration.run_complete_pipeline") as root_span:
+            # Set root span attributes
+            set_span_attributes(
+                transcript_id=transcript_id,
+                auto_approve=auto_approve,
+                service="call-center-analytics",
+                operation="orchestration"
             )
-            analysis = analysis_result.result
             
-            # Stage 2: Create Plan (1:1)
-            self.orchestrator.current_stage = PipelineStage.PLAN
-            plan_result = await self.orchestrator.execute_task(
-                "create-plan",
-                self._create_plan_task,
-                analysis["id"]
-            )
-            plan = plan_result.result
+            try:
+                add_span_event("pipeline.started", transcript_id=transcript_id)
             
-            # Stage 3: Extract Workflows (1:n)
-            self.orchestrator.current_stage = PipelineStage.WORKFLOWS
-            workflows_result = await self.orchestrator.execute_task(
-                "extract-workflows",
-                self._extract_workflows_task,
-                plan["id"]
-            )
-            workflows = workflows_result.result
-            
-            # Stage 4: Process approvals
-            logger.info(f"[SimplePipeline::run_complete_pipeline] Processing approvals, auto_approve={auto_approve}")
-            self.orchestrator.current_stage = PipelineStage.APPROVAL
-            if auto_approve:
-                logger.info(f"[SimplePipeline::run_complete_pipeline] Auto-approving all {len(workflows)} workflows")
-                # Force approve all workflows (both in memory and database)
-                for i, workflow in enumerate(workflows):
-                    logger.debug(f"[SimplePipeline::run_complete_pipeline] Auto-approving workflow {i+1}/{len(workflows)}: {workflow.get('id', 'unknown')}")
-                    workflow["status"] = "AUTO_APPROVED"
-                    # Update status in database
-                    try:
-                        self.workflow_service.workflow_store.update_status(
-                            workflow["id"], 
-                            "AUTO_APPROVED",
-                            transitioned_by="orchestration_system",
-                            reason="Auto-approved by orchestration pipeline (LOW risk)"
-                        )
-                        logger.debug(f"[SimplePipeline::run_complete_pipeline] Updated workflow {workflow['id']} status in database")
-                    except Exception as e:
-                        logger.warning(f"[SimplePipeline::run_complete_pipeline] Failed to update workflow {workflow['id']} in database: {e}")
-            
-            # Filter approved workflows
-            approved_workflows = [
-                wf for wf in workflows 
-                if wf.get("status") in ["APPROVED", "AUTO_APPROVED"]
-            ]
-            logger.info(f"[SimplePipeline::run_complete_pipeline] Found {len(approved_workflows)} approved workflows out of {len(workflows)} total")
-            
-            # Stage 5: Execute workflows in parallel (n:n)
-            self.orchestrator.current_stage = PipelineStage.EXECUTION
-            execution_results = []
-            failed_executions = []
-            
-            if approved_workflows:
-                logger.info(f"[SimplePipeline::run_complete_pipeline] Attempting to execute {len(approved_workflows)} approved workflows")
+                # Stage 1: Generate Analysis (1:1)
+                with tracer.start_as_current_span("pipeline.stage.analysis") as analysis_span:
+                    self.orchestrator.current_stage = PipelineStage.ANALYSIS
+                    add_span_event("stage.started", stage="analysis")
+                    
+                    analysis_result = await self.orchestrator.execute_task(
+                        "generate-analysis",
+                        self._generate_analysis_task,
+                        transcript_id
+                    )
+                    analysis = analysis_result.result
+                    
+                    analysis_span.set_attribute("analysis_id", analysis["id"])
+                    add_span_event("stage.completed", stage="analysis", analysis_id=analysis["id"])
                 
-                # Execute workflows individually with graceful error handling
-                for workflow in approved_workflows:
-                    try:
-                        logger.debug(f"[SimplePipeline::run_complete_pipeline] Executing workflow: {workflow['id']}")
-                        result = await self._execute_workflow_task(workflow["id"])
-                        execution_results.append(result)
-                        logger.info(f"[SimplePipeline::run_complete_pipeline] Successfully executed workflow: {workflow['id']}")
-                    except Exception as e:
-                        logger.warning(f"[SimplePipeline::run_complete_pipeline] Failed to execute workflow {workflow['id']}: {e}")
-                        failed_executions.append({
-                            "workflow_id": workflow["id"],
-                            "error": str(e),
-                            "status": "failed"
-                        })
+                # Stage 2: Create Plan (1:1)
+                with tracer.start_as_current_span("pipeline.stage.plan") as plan_span:
+                    self.orchestrator.current_stage = PipelineStage.PLAN
+                    add_span_event("stage.started", stage="plan")
+                    
+                    plan_result = await self.orchestrator.execute_task(
+                        "create-plan",
+                        self._create_plan_task,
+                        analysis["id"]
+                    )
+                    plan = plan_result.result
+                    
+                    plan_span.set_attribute("plan_id", plan["id"])
+                    add_span_event("stage.completed", stage="plan", plan_id=plan["id"])
+                
+                # Stage 3: Extract Workflows (1:n) - THE BOTTLENECK
+                with tracer.start_as_current_span("pipeline.stage.workflows") as workflows_span:
+                    self.orchestrator.current_stage = PipelineStage.WORKFLOWS
+                    add_span_event("stage.started", stage="workflows", message="This stage may take 2-5 minutes")
+                    
+                    workflows_result = await self.orchestrator.execute_task(
+                        "extract-workflows",
+                        self._extract_workflows_task,
+                        plan["id"]
+                    )
+                    workflows = workflows_result.result
+                    
+                    workflows_span.set_attribute("workflow_count", len(workflows))
+                    workflows_span.set_attribute("plan_id", plan["id"])
+                    add_span_event("stage.completed", stage="workflows", workflow_count=len(workflows))
+            
+                # Stage 4: Process approvals
+                with tracer.start_as_current_span("pipeline.stage.approval") as approval_span:
+                    self.orchestrator.current_stage = PipelineStage.APPROVAL
+                    approval_span.set_attribute("auto_approve", auto_approve)
+                    add_span_event("stage.started", stage="approval")
+                    
+                    if auto_approve:
+                        add_span_event("approval.auto_approving", workflow_count=len(workflows))
+                        # Force approve all workflows (both in memory and database)
+                        for i, workflow in enumerate(workflows):
+                            workflow["status"] = "AUTO_APPROVED"
+                            # Update status in database
+                            try:
+                                self.workflow_service.workflow_store.update_status(
+                                    workflow["id"], 
+                                    "AUTO_APPROVED",
+                                    transitioned_by="orchestration_system",
+                                    reason="Auto-approved by orchestration pipeline (LOW risk)"
+                                )
+                            except Exception as e:
+                                pass
+                    
+                    add_span_event("stage.completed", stage="approval", workflow_count=len(workflows))
+                
+                # Filter approved workflows
+                approved_workflows = [
+                    wf for wf in workflows 
+                    if wf.get("status") in ["APPROVED", "AUTO_APPROVED"]
+                ]
+                # Stage 5: Execute workflows in parallel (n:n)
+                with tracer.start_as_current_span("pipeline.stage.execution") as execution_span:
+                    self.orchestrator.current_stage = PipelineStage.EXECUTION
+                    execution_span.set_attribute("approved_workflow_count", len(approved_workflows))
+                    add_span_event("stage.started", stage="execution", approved_workflows=len(approved_workflows))
+                    
+                    execution_results = []
+                    failed_executions = []
+                    
+                    if approved_workflows:
                         
-                logger.info(f"[SimplePipeline::run_complete_pipeline] Execution completed: {len(execution_results)} succeeded, {len(failed_executions)} failed")
+                        # Execute workflows individually with graceful error handling
+                        for workflow in approved_workflows:
+                            try:
+                                result = await self._execute_workflow_task(workflow["id"])
+                                execution_results.append(result)
+                            except Exception as e:
+                                failed_executions.append({
+                                    "workflow_id": workflow["id"],
+                                    "error": str(e),
+                                    "status": "failed"
+                                })
+                    
+                    execution_span.set_attribute("successful_executions", len(execution_results))
+                    execution_span.set_attribute("failed_executions", len(failed_executions))
+                    add_span_event("stage.completed", stage="execution", 
+                                  successful=len(execution_results), failed=len(failed_executions))
+                
+                # Stage 6: Complete
+                self.orchestrator.current_stage = PipelineStage.COMPLETE
             
-            # Stage 6: Complete
-            self.orchestrator.current_stage = PipelineStage.COMPLETE
-            
-            # Build final result
-            pipeline_result = {
-                "transcript_id": transcript_id,
-                "analysis_id": analysis["id"],
-                "plan_id": plan["id"],
-                "workflow_count": len(workflows),
-                "approved_count": len(approved_workflows),
-                "executed_count": len(execution_results),
-                "failed_count": len(failed_executions),
-                "execution_results": execution_results,
-                "failed_executions": failed_executions,
-                "stage": PipelineStage.COMPLETE.value,
-                "success": len(execution_results) > 0 or len(approved_workflows) == 0,  # Success if we executed something or had nothing to execute
-                "partial_success": len(failed_executions) > 0 and len(execution_results) > 0,
-                "execution_summary": self.orchestrator.get_execution_summary()
-            }
-            
-            if pipeline_result["success"]:
-                self.logger.info(
-                    f"🎉 Pipeline completed successfully! "
-                    f"Processed {len(workflows)} workflows, executed {len(execution_results)}"
+                # Build final result
+                pipeline_result = {
+                    "transcript_id": transcript_id,
+                    "analysis_id": analysis["id"],
+                    "plan_id": plan["id"],
+                    "workflow_count": len(workflows),
+                    "approved_count": len(approved_workflows),
+                    "executed_count": len(execution_results),
+                    "failed_count": len(failed_executions),
+                    "execution_results": execution_results,
+                    "failed_executions": failed_executions,
+                    "stage": PipelineStage.COMPLETE.value,
+                    "success": len(execution_results) > 0 or len(approved_workflows) == 0,  # Success if we executed something or had nothing to execute
+                    "partial_success": len(failed_executions) > 0 and len(execution_results) > 0,
+                    "execution_summary": self.orchestrator.get_execution_summary()
+                }
+                
+                # Set final span attributes for observability
+                set_span_attributes(
+                    pipeline_status="success" if pipeline_result["success"] else "partial" if pipeline_result["partial_success"] else "failed",
+                    workflow_count=len(workflows),
+                    approved_count=len(approved_workflows),
+                    executed_count=len(execution_results),
+                    failed_count=len(failed_executions),
+                    analysis_id=analysis["id"],
+                    plan_id=plan["id"]
                 )
-            elif pipeline_result["partial_success"]:
-                self.logger.warning(
-                    f"⚠️ Pipeline completed with partial success! "
-                    f"Processed {len(workflows)} workflows, executed {len(execution_results)}, failed {len(failed_executions)}"
-                )
-            else:
-                self.logger.error(
-                    f"❌ Pipeline completed with failures! "
-                    f"Processed {len(workflows)} workflows, executed {len(execution_results)}, failed {len(failed_executions)}"
-                )
+                
+                if pipeline_result["success"]:
+                    add_span_event("pipeline.completed", status="success", 
+                                  workflows_processed=len(workflows), workflows_executed=len(execution_results))
+                elif pipeline_result["partial_success"]:
+                    add_span_event("pipeline.completed", status="partial_success",
+                                  workflows_processed=len(workflows), workflows_executed=len(execution_results), 
+                                  workflows_failed=len(failed_executions))
+                else:
+                    add_span_event("pipeline.completed", status="failed",
+                                  workflows_processed=len(workflows), workflows_executed=len(execution_results), 
+                                  workflows_failed=len(failed_executions))
+                
+                return pipeline_result
             
-            return pipeline_result
-            
-        except Exception as e:
-            # NO FALLBACK - fail immediately
-            self.logger.error(f"💥 Pipeline failed: {e}")
-            raise Exception(f"Pipeline execution failed for {transcript_id}: {e}")
+            except Exception as e:
+                # NO FALLBACK - fail immediately
+                set_span_attributes(pipeline_status="error", error_message=str(e))
+                add_span_event("pipeline.failed", error=str(e), transcript_id=transcript_id)
+                raise Exception(f"Pipeline execution failed for {transcript_id}: {e}")
     
+    @trace_async_function("task.generate_analysis")
     async def _generate_analysis_task(self, transcript_id: str) -> Dict[str, Any]:
         """Generate analysis from transcript"""
-        logger.debug(f"[SimplePipeline::_generate_analysis_task] Starting analysis for transcript: {transcript_id}")
-        logger.debug(f"[SimplePipeline::_generate_analysis_task] Calling AnalysisService.create()")
         analysis = await self.analysis_service.create({"transcript_id": transcript_id})
-        logger.info(f"[SimplePipeline::_generate_analysis_task] Analysis created: {analysis.get('analysis_id', 'unknown')}")
         
         if not analysis:
             raise ValueError(f"Analysis generation returned empty result for {transcript_id}")
@@ -200,12 +246,10 @@ class SimplePipeline:
         
         return analysis
     
+    @trace_async_function("task.create_plan")
     async def _create_plan_task(self, analysis_id: str) -> Dict[str, Any]:
         """Create action plan from analysis"""
-        print(f"[simple_pipeline.py::SimplePipeline::_create_plan_task] Starting plan creation for analysis: {analysis_id}")
-        print(f"[simple_pipeline.py::SimplePipeline::_create_plan_task] Calling PlanService.create()")
         plan = await self.plan_service.create({"analysis_id": analysis_id})
-        print(f"[simple_pipeline.py::SimplePipeline::_create_plan_task] Plan created: {plan.get('plan_id', 'unknown')}")
         
         if not plan:
             raise ValueError(f"Plan creation returned empty result for {analysis_id}")
@@ -222,12 +266,10 @@ class SimplePipeline:
         
         return plan
     
+    @trace_async_function("task.extract_workflows")
     async def _extract_workflows_task(self, plan_id: str) -> List[Dict[str, Any]]:
         """Extract workflows from plan"""
-        print(f"[simple_pipeline.py::SimplePipeline::_extract_workflows_task] Starting workflow extraction for plan: {plan_id}")
-        print(f"[simple_pipeline.py::SimplePipeline::_extract_workflows_task] Calling WorkflowService.extract_all_workflows_from_plan()")
         workflows = await self.workflow_service.extract_all_workflows_from_plan(plan_id)
-        print(f"[simple_pipeline.py::SimplePipeline::_extract_workflows_task] Extracted {len(workflows)} workflows")
         
         if not workflows:
             raise ValueError(f"Workflow extraction returned empty result for {plan_id}")
@@ -237,7 +279,6 @@ class SimplePipeline:
         if len(workflows) > 50:  # Increased upper limit to allow more workflows
             raise ValueError(f"Too many workflows generated: {len(workflows)} for {plan_id}")
         
-        print(f"✅ Extracted {len(workflows)} workflows from plan")
         
         # Validate and process each workflow
         validated_workflows = []
@@ -256,6 +297,7 @@ class SimplePipeline:
         
         return validated_workflows
     
+    @trace_async_function("task.execute_workflow")
     async def _execute_workflow_task(self, workflow_id: str) -> Dict[str, Any]:
         """Execute a single workflow"""
         result = await self.execution_engine.execute_workflow(workflow_id)

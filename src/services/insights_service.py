@@ -6,13 +6,11 @@ Uses GraphStore (KuzuDB) for relationship-aware analytics.
 Follows NO FALLBACK principle - fails fast on errors.
 """
 
-import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from ..storage.graph_store import GraphStore, GraphStoreError
 
-logger = logging.getLogger(__name__)
 
 
 class InsightsServiceError(Exception):
@@ -30,7 +28,6 @@ class InsightsService:
         else:
             self.graph_store = graph_store
         
-        logger.info("InsightsService initialized with knowledge graph")
     
     async def store_analysis_relationships(self, analysis_data: Dict[str, Any]) -> bool:
         """
@@ -60,16 +57,13 @@ class InsightsService:
             success = self.graph_store.add_analysis_with_relationships(analysis_data)
             
             if success:
-                logger.info(f"Stored analysis relationships for {analysis_id}")
                 return True
             else:
                 raise InsightsServiceError("Failed to store analysis relationships")
                 
         except GraphStoreError as e:
-            logger.error(f"GraphStore error storing analysis {analysis_id}: {str(e)}")
             raise InsightsServiceError(f"Failed to store analysis: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected error storing analysis {analysis_id}: {str(e)}")
             raise InsightsServiceError(f"Storage failed: {str(e)}")
     
     async def discover_risk_patterns(self, risk_threshold: float = 0.7) -> List[Dict[str, Any]]:
@@ -106,14 +100,11 @@ class InsightsService:
                 }
                 enhanced_clusters.append(enhanced_cluster)
             
-            logger.info(f"Discovered {len(enhanced_clusters)} risk patterns above threshold {risk_threshold}")
             return enhanced_clusters
             
         except GraphStoreError as e:
-            logger.error(f"GraphStore error discovering patterns: {str(e)}")
             raise InsightsServiceError(f"Pattern discovery failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected error discovering patterns: {str(e)}")
             raise InsightsServiceError(f"Discovery failed: {str(e)}")
     
     async def get_customer_recommendations(self, customer_id: str) -> List[Dict[str, Any]]:
@@ -155,14 +146,11 @@ class InsightsService:
                 }
                 enhanced_recommendations.append(enhanced_rec)
             
-            logger.info(f"Generated {len(enhanced_recommendations)} recommendations for customer {customer_id}")
             return enhanced_recommendations
             
         except GraphStoreError as e:
-            logger.error(f"GraphStore error getting recommendations: {str(e)}")
             raise InsightsServiceError(f"Recommendation failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected error getting recommendations: {str(e)}")
             raise InsightsServiceError(f"Recommendation failed: {str(e)}")
     
     async def find_similar_cases(self, analysis_id: str, limit: int = 5) -> List[Dict[str, Any]]:
@@ -208,14 +196,11 @@ class InsightsService:
                 }
                 enhanced_similar.append(enhanced_pattern)
             
-            logger.info(f"Found {len(enhanced_similar)} similar cases for analysis {analysis_id}")
             return enhanced_similar
             
         except GraphStoreError as e:
-            logger.error(f"GraphStore error finding similar cases: {str(e)}")
             raise InsightsServiceError(f"Similarity search failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected error finding similar cases: {str(e)}")
             raise InsightsServiceError(f"Similarity search failed: {str(e)}")
     
     async def get_insights_dashboard(self) -> Dict[str, Any]:
@@ -256,14 +241,11 @@ class InsightsService:
                 }
             }
             
-            logger.info("Generated comprehensive insights dashboard")
             return dashboard
             
         except GraphStoreError as e:
-            logger.error(f"GraphStore error generating dashboard: {str(e)}")
             raise InsightsServiceError(f"Dashboard generation failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected error generating dashboard: {str(e)}")
             raise InsightsServiceError(f"Dashboard generation failed: {str(e)}")
     
     # Private helper methods
@@ -282,14 +264,11 @@ class InsightsService:
             # Check if it's a "already exists" error (acceptable) vs real error (fail fast)
             error_msg = str(e).lower()
             if "duplicated primary key" in error_msg or "already exists" in error_msg:
-                logger.info(f"Transcript {transcript_id} already exists in graph")
                 return  # This is fine, transcript exists
             else:
                 # Real error - fail fast per NO FALLBACK principle
-                logger.error(f"Failed to ensure transcript exists: {str(e)}")
                 raise InsightsServiceError(f"Failed to ensure transcript exists: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected error ensuring transcript exists: {str(e)}")
             raise InsightsServiceError(f"Failed to ensure transcript exists: {str(e)}")
     
     def _calculate_severity(self, risk_score: float) -> str:
@@ -466,7 +445,6 @@ class InsightsService:
             success = await self.store_analysis_relationships(analysis_data)
             
             if success:
-                logger.info(f"Successfully populated graph from analysis {analysis_id}")
                 return {
                     "success": True,
                     "analysis_id": analysis_id,
@@ -476,7 +454,6 @@ class InsightsService:
                 raise InsightsServiceError("Failed to populate graph")
                 
         except Exception as e:
-            logger.error(f"Failed to populate from analysis {analysis_id}: {str(e)}")
             raise InsightsServiceError(f"Populate failed: {str(e)}")
     
     async def populate_batch(self, analysis_ids: List[str]) -> Dict[str, Any]:
@@ -503,7 +480,6 @@ class InsightsService:
                 except InsightsServiceError as e:
                     errors.append({"analysis_id": analysis_id, "error": str(e)})
             
-            logger.info(f"Batch populate: {len(results)} successful, {len(errors)} errors")
             
             return {
                 "success": len(errors) == 0,
@@ -514,7 +490,6 @@ class InsightsService:
             }
             
         except Exception as e:
-            logger.error(f"Batch populate failed: {str(e)}")
             raise InsightsServiceError(f"Batch populate failed: {str(e)}")
     
     async def populate_all(self, from_date: str = None) -> Dict[str, Any]:
@@ -569,7 +544,6 @@ class InsightsService:
             return await self.populate_batch(analysis_ids)
             
         except Exception as e:
-            logger.error(f"Populate all failed: {str(e)}")
             raise InsightsServiceError(f"Populate all failed: {str(e)}")
     
     # ===============================================
@@ -596,14 +570,11 @@ class InsightsService:
             
             results = self.graph_store.execute_query(cypher_query, parameters)
             
-            logger.info(f"Executed query, returned {len(results)} results")
             return results
             
         except GraphStoreError as e:
-            logger.error(f"Graph query failed: {str(e)}")
             raise InsightsServiceError(f"Query failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected query error: {str(e)}")
             raise InsightsServiceError(f"Query failed: {str(e)}")
     
     async def get_graph_status(self) -> Dict[str, Any]:
@@ -623,14 +594,11 @@ class InsightsService:
             stats["graph_populated"] = stats.get("total_nodes", 0) > 0
             stats["last_checked"] = datetime.utcnow().isoformat()
             
-            logger.info("Retrieved graph status")
             return stats
             
         except GraphStoreError as e:
-            logger.error(f"Graph status failed: {str(e)}")
             raise InsightsServiceError(f"Status check failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected status error: {str(e)}")
             raise InsightsServiceError(f"Status check failed: {str(e)}")
     
     # ===============================================
@@ -657,7 +625,6 @@ class InsightsService:
             success = self.graph_store.delete_analysis_node(analysis_id)
             
             if success:
-                logger.info(f"Deleted analysis {analysis_id} from graph")
                 return {
                     "success": True,
                     "analysis_id": analysis_id,
@@ -667,10 +634,8 @@ class InsightsService:
                 raise InsightsServiceError("Delete operation returned false")
                 
         except GraphStoreError as e:
-            logger.error(f"Graph delete failed for {analysis_id}: {str(e)}")
             raise InsightsServiceError(f"Delete failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected delete error for {analysis_id}: {str(e)}")
             raise InsightsServiceError(f"Delete failed: {str(e)}")
     
     async def delete_customer(self, customer_id: str, cascade: bool = False) -> Dict[str, Any]:
@@ -700,7 +665,6 @@ class InsightsService:
                 message = f"Customer {customer_id} deleted"
             
             if success:
-                logger.info(f"Deleted customer {customer_id} (cascade={cascade})")
                 return {
                     "success": True,
                     "customer_id": customer_id,
@@ -711,10 +675,8 @@ class InsightsService:
                 raise InsightsServiceError("Delete operation returned false")
                 
         except GraphStoreError as e:
-            logger.error(f"Graph delete failed for customer {customer_id}: {str(e)}")
             raise InsightsServiceError(f"Delete customer failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected delete error for customer {customer_id}: {str(e)}")
             raise InsightsServiceError(f"Delete customer failed: {str(e)}")
     
     async def prune_old_data(self, older_than_days: int) -> Dict[str, Any]:
@@ -736,7 +698,6 @@ class InsightsService:
             
             deleted_count = self.graph_store.prune_old_data(older_than_days)
             
-            logger.info(f"Pruned {deleted_count} nodes older than {older_than_days} days")
             return {
                 "success": True,
                 "deleted_count": deleted_count,
@@ -745,10 +706,8 @@ class InsightsService:
             }
             
         except GraphStoreError as e:
-            logger.error(f"Graph prune failed: {str(e)}")
             raise InsightsServiceError(f"Prune failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected prune error: {str(e)}")
             raise InsightsServiceError(f"Prune failed: {str(e)}")
     
     async def clear_graph(self) -> Dict[str, Any]:
@@ -765,7 +724,6 @@ class InsightsService:
             success = self.graph_store.clear_graph()
             
             if success:
-                logger.info("Cleared entire knowledge graph")
                 return {
                     "success": True,
                     "message": "Knowledge graph cleared completely"
@@ -774,10 +732,8 @@ class InsightsService:
                 raise InsightsServiceError("Clear operation returned false")
                 
         except GraphStoreError as e:
-            logger.error(f"Graph clear failed: {str(e)}")
             raise InsightsServiceError(f"Clear failed: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected clear error: {str(e)}")
             raise InsightsServiceError(f"Clear failed: {str(e)}")
     
     async def get_visualization_data(self) -> Dict[str, Any]:
@@ -793,14 +749,11 @@ class InsightsService:
         try:
             graph_data = self.graph_store.get_graph_for_visualization()
             
-            logger.info(f"Extracted visualization data: {len(graph_data.get('nodes', []))} nodes, {len(graph_data.get('edges', []))} edges")
             return graph_data
             
         except GraphStoreError as e:
-            logger.error(f"Visualization data extraction failed: {str(e)}")
             raise InsightsServiceError(f"Failed to get visualization data: {str(e)}")
         except Exception as e:
-            logger.error(f"Unexpected visualization error: {str(e)}")
             raise InsightsServiceError(f"Visualization failed: {str(e)}")
     
     async def get_visualization_statistics(self) -> Dict[str, Any]:
@@ -820,17 +773,14 @@ class InsightsService:
             visualizer = GraphVisualizer()
             stats = visualizer.get_graph_statistics(graph_data)
             
-            logger.info(f"Generated visualization statistics: {stats.get('total_nodes', 0)} nodes")
             return stats
             
         except InsightsServiceError:
             raise  # Re-raise our own exceptions
         except Exception as e:
-            logger.error(f"Statistics generation failed: {str(e)}")
             raise InsightsServiceError(f"Failed to generate statistics: {str(e)}")
     
     def close(self):
         """Close service and underlying connections."""
         if self.graph_store:
             self.graph_store.close()
-        logger.info("InsightsService closed")

@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 from dotenv import load_dotenv
 from ..llm import OpenAIWrapper, RiskAssessment, ApprovalRouting, ActionItemList
+from ..telemetry import trace_async_function, set_span_attributes, add_span_event
 
 load_dotenv()
 
@@ -55,6 +56,7 @@ class RiskAssessmentAgent:
         self.agent_id = str(uuid.uuid4())
         self.agent_version = "v2.0"
     
+    @trace_async_function("risk_agent.extract_action_items")
     async def extract_individual_action_items(self, plan_data: Dict[str, Any], 
                                                workflow_type: str, 
                                                context: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -81,9 +83,12 @@ class RiskAssessmentAgent:
         if not context or not isinstance(context, dict):
             raise ValueError("context must be a non-empty dictionary")
         
-        print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] Starting extraction for {workflow_type}")
+        # Start tracing the extraction process
+        set_span_attributes(workflow_type=workflow_type, operation="extract_action_items")
+        add_span_event("extraction.started", workflow_type=workflow_type)
+        
         # Build comprehensive prompt for extracting individual items by workflow type
-        print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] Building extraction prompt for {workflow_type}")
+        add_span_event("extraction.prompt_building", workflow_type=workflow_type)
         system_prompt = f"""You are an Action Item Extraction Agent for mortgage servicing operations.
 
 Your role is to extract individual actionable items from {workflow_type.lower()} plans for granular risk assessment.
@@ -119,7 +124,7 @@ FULL CONTEXT:
 Extract individual action items from the {workflow_type.lower()} section of this plan. Each item should be assessable independently for risk evaluation. Return as JSON array."""
 
         try:
-            print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] Making OpenAI API call for {workflow_type} extraction")
+            add_span_event("extraction.api_call_started", workflow_type=workflow_type, model=self.model)
             # Use old approach with OpenAI client for action item extraction
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -130,13 +135,13 @@ Extract individual action items from the {workflow_type.lower()} section of this
                 response_format={"type": "json_object"},
                 temperature=0.1  # Low temperature for consistent extraction
             )
-            print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] OpenAI API call completed for {workflow_type}")
             
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate action items extraction response")
             
             response_data = json.loads(response.choices[0].message.content)
             action_items = response_data.get('action_items', [])
+            add_span_event("extraction.api_call_completed", workflow_type=workflow_type, items_extracted=len(action_items))
             
             # Add extraction metadata to each item
             for item in action_items:
@@ -243,6 +248,7 @@ Extract an executable workflow from this action plan. Focus on concrete, actiona
         except Exception as e:
             raise Exception(f"Workflow extraction failed: {e}")
     
+    @trace_async_function("risk_agent.assess_action_item_risk")
     async def assess_action_item_risk(self, action_item: Dict[str, Any], 
                                      workflow_type: str,
                                      context: Dict[str, Any]) -> Dict[str, Any]:
@@ -336,6 +342,17 @@ Assess the risk level of this individual {workflow_type.lower()} action item. Co
 Return your assessment with detailed reasoning as valid JSON format."""
 
         try:
+            # Add tracing attributes for observability
+            set_span_attributes(
+                workflow_type=workflow_type,
+                action_item_id=action_item.get('id', 'unknown'),
+                action_description=action_item.get('action_item', 'unknown')[:100],  # Truncate for logs
+                model=self.model
+            )
+            add_span_event("risk_assessment.llm_call_started", 
+                          workflow_type=workflow_type, 
+                          action_item_id=action_item.get('id', 'unknown'))
+            
             # Use old approach for now - will migrate to structured outputs later
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -349,6 +366,8 @@ Return your assessment with detailed reasoning as valid JSON format."""
             
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate risk assessment response")
+            
+            add_span_event("risk_assessment.llm_call_completed")
             
             risk_assessment = json.loads(response.choices[0].message.content)
             
@@ -371,6 +390,15 @@ Return your assessment with detailed reasoning as valid JSON format."""
                 'assessment_type': 'granular_action_item'
             }
             
+            # Add final span attributes with results
+            set_span_attributes(
+                risk_level=risk_assessment['risk_level'],
+                assessment_completed=True
+            )
+            add_span_event("risk_assessment.completed", 
+                          risk_level=risk_assessment['risk_level'],
+                          action_item_id=action_item.get('id', 'unknown'))
+            
             return risk_assessment
             
         except json.JSONDecodeError as e:
@@ -378,6 +406,7 @@ Return your assessment with detailed reasoning as valid JSON format."""
         except Exception as e:
             raise Exception(f"Action item risk assessment failed: {e}")
     
+    @trace_async_function("risk_agent.assess_workflow_risk")
     async def assess_workflow_risk(self, workflow_data: Dict[str, Any], 
                                  context: Dict[str, Any]) -> Dict[str, Any]:
         """Assess workflow risk level using LLM agent.

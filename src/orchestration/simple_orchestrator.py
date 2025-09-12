@@ -5,7 +5,6 @@ NO FALLBACK LOGIC - fails fast on any errors
 """
 import asyncio
 import json
-import logging
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -40,8 +39,7 @@ class TaskResult:
 class SimpleOrchestrator:
     """Simple orchestrator for pipeline execution"""
     
-    def __init__(self, logger: Optional[logging.Logger] = None):
-        self.logger = logger or logging.getLogger(__name__)
+    def __init__(self):
         self.task_results: List[TaskResult] = []
         self.paused = False
         self.current_stage = PipelineStage.TRANSCRIPT
@@ -55,26 +53,19 @@ class SimpleOrchestrator:
         )
         
         try:
-            self.logger.info(f"🚀 Starting task: {task_name}")
-            print(f"🔄 Executing task: {task_name}")
             task_result.status = TaskStatus.RUNNING
             
             # Execute the task
             result = await task_func(*args, **kwargs)
-            print(f"✅ Task completed: {task_name}")
             
             task_result.result = result
             task_result.status = TaskStatus.COMPLETED
             task_result.end_time = datetime.now()
             
-            self.logger.info(f"✅ Completed task: {task_name}")
-            
         except Exception as e:
             task_result.error = str(e)
             task_result.status = TaskStatus.FAILED
             task_result.end_time = datetime.now()
-            
-            self.logger.error(f"💥 Task failed: {task_name} - {e}")
             
             # NO FALLBACK - fail immediately
             raise Exception(f"Task '{task_name}' failed: {e}")
@@ -86,8 +77,6 @@ class SimpleOrchestrator:
     
     async def execute_parallel_tasks(self, tasks: List[tuple]) -> List[TaskResult]:
         """Execute multiple tasks in parallel"""
-        self.logger.info(f"⚡ Starting {len(tasks)} parallel tasks")
-        
         # Create coroutines for all tasks
         task_coroutines = [
             self.execute_task(name, func, *args, **kwargs)
@@ -97,26 +86,21 @@ class SimpleOrchestrator:
         # Execute all tasks in parallel
         try:
             results = await asyncio.gather(*task_coroutines)
-            self.logger.info(f"✅ Completed all {len(tasks)} parallel tasks")
             return results
         except Exception as e:
-            self.logger.error(f"💥 Parallel execution failed: {e}")
             raise
     
     def pause_execution(self):
         """Pause orchestration execution"""
         self.paused = True
-        self.logger.info("⏸️ Orchestration paused")
     
     def resume_execution(self):
         """Resume orchestration execution"""
         self.paused = False
-        self.logger.info("▶️ Orchestration resumed")
     
     def check_if_paused(self):
         """Check if execution should be paused"""
         if self.paused:
-            self.logger.info("⏸️ Execution is paused, waiting for resume...")
             # In a real implementation, this would wait for external signal
             # For now, we'll just raise an exception to stop execution
             raise Exception("Execution paused - manual resume required")

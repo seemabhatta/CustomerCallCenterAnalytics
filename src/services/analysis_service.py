@@ -35,25 +35,31 @@ class AnalysisService:
     
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new analysis from transcript."""
-        print(f"[analysis_service.py::AnalysisService::create] Starting analysis creation")
+        # Set up tracing for analysis creation
+        from src.telemetry import set_span_attributes, add_span_event
         transcript_id = request_data.get("transcript_id")
         if not transcript_id:
             raise ValueError("transcript_id is required")
-        print(f"[analysis_service.py::AnalysisService::create] Processing transcript_id: {transcript_id}")
+        
+        set_span_attributes(transcript_id=transcript_id, operation="create_analysis")
+        add_span_event("analysis.creation_started", transcript_id=transcript_id)
         
         # Get transcript from store
-        print(f"[analysis_service.py::AnalysisService::create] Fetching transcript from store")
+        add_span_event("analysis.fetching_transcript", transcript_id=transcript_id)
         from ..storage.transcript_store import TranscriptStore
         transcript_store = TranscriptStore(self.db_path)
         transcript = transcript_store.get_by_id(transcript_id)
         if not transcript:
             raise ValueError(f"Transcript {transcript_id} not found")
-        print(f"[analysis_service.py::AnalysisService::create] Found transcript with {len(transcript.messages) if hasattr(transcript, 'messages') else 'unknown'} messages")
+        
+        message_count = len(transcript.messages) if hasattr(transcript, 'messages') else 0
+        add_span_event("analysis.transcript_loaded", transcript_id=transcript_id, message_count=message_count)
         
         # Generate analysis using call analyzer
-        print(f"[analysis_service.py::AnalysisService::create] Calling CallAnalyzer.analyze()")
+        add_span_event("analysis.analyzer_started", transcript_id=transcript_id)
         analysis_result = self.analyzer.analyze(transcript)
-        print(f"[analysis_service.py::AnalysisService::create] CallAnalyzer completed, got result keys: {list(analysis_result.keys()) if isinstance(analysis_result, dict) else 'not dict'}")
+        result_keys = list(analysis_result.keys()) if isinstance(analysis_result, dict) else []
+        add_span_event("analysis.analyzer_completed", transcript_id=transcript_id, result_keys_count=len(result_keys))
         
         # Add metadata
         analysis_result["transcript_id"] = transcript_id
