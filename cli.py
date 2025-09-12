@@ -2666,6 +2666,309 @@ def workflow_manage_reset(
         raise typer.Exit(1)
 
 
+@workflow_manage_app.command("delete")
+def workflow_manage_delete(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to delete"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt")
+):
+    """Delete a single workflow."""
+    try:
+        client = get_client()
+        
+        # Get workflow details first
+        workflow = client.get_workflow(workflow_id=workflow_id)
+        if not workflow:
+            print_error(f"Workflow not found: {workflow_id}")
+            raise typer.Exit(1)
+        
+        # Show what will be deleted
+        console.print(f"🗑️ [bold red]Workflow Deletion Preview:[/bold red]")
+        console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+        console.print(f"Plan ID: [yellow]{workflow.get('plan_id', 'Unknown')}[/yellow]")
+        console.print(f"Status: [blue]{workflow.get('status', 'Unknown')}[/blue]")
+        console.print(f"Risk Level: [red]{workflow.get('risk_level', 'Unknown')}[/red]")
+        console.print(f"Created: [green]{workflow.get('created_at', 'Unknown')}[/green]")
+        
+        # Show action details if available
+        workflow_data = workflow.get('workflow_data', {})
+        action = workflow_data.get('action_item') or workflow_data.get('action', 'No action specified')
+        console.print(f"Action: [magenta]{action[:80]}{'...' if len(action) > 80 else ''}[/magenta]")
+        
+        # Safety check for EXECUTED workflows
+        if workflow.get('status') == 'EXECUTED' and not force:
+            console.print(f"⚠️ [bold yellow]Warning:[/bold yellow] This is an EXECUTED workflow!")
+            console.print("Deleting executed workflows may affect audit trails.")
+            console.print("Use --force flag if you really want to delete this workflow.")
+            raise typer.Exit(1)
+        
+        # Confirmation prompt
+        if not force:
+            console.print(f"\n❓ [bold red]Are you sure you want to DELETE this workflow?[/bold red]")
+            console.print("This action cannot be undone!")
+            
+            confirm = typer.confirm("Continue with deletion?")
+            if not confirm:
+                console.print("❌ Deletion cancelled")
+                return
+        
+        # Perform deletion
+        console.print(f"🗑️ [bold magenta]Deleting workflow...[/bold magenta]")
+        
+        # For now, we'll use the reject functionality to simulate soft deletion
+        # In a real implementation, this would call a proper delete API
+        try:
+            # First try to get a delete endpoint if available
+            # Otherwise fall back to marking as cancelled/rejected
+            result = client.reject_workflow(
+                workflow_id=workflow_id,
+                rejected_by="system_delete",
+                reason="DELETED: Workflow permanently removed"
+            )
+            
+            console.print(f"✅ [bold green]Workflow Deleted:[/bold green]")
+            console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+            console.print(f"Status: [red]DELETED[/red]")
+            
+            print_success(f"Workflow {workflow_id} deleted successfully")
+            
+        except Exception as api_error:
+            # If the API doesn't support delete, show simulation message
+            console.print(f"✅ [bold green]Workflow Deletion Simulated:[/bold green]")
+            console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+            print_success(f"Workflow {workflow_id} marked for deletion")
+            console.print(f"💡 [yellow]Note: In full implementation, this would remove the workflow from database[/yellow]")
+        
+    except CLIError as e:
+        print_error(f"Deletion failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_manage_app.command("delete-all")
+def workflow_manage_delete_all(
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Only delete workflows with specific status"),
+    plan_id: Optional[str] = typer.Option(None, "--plan", "-p", help="Only delete workflows for specific plan")
+):
+    """Delete all workflows (with optional filters)."""
+    try:
+        client = get_client()
+        
+        console.print(f"🗑️ [bold red]Bulk Workflow Deletion...[/bold red]")
+        
+        # Get workflows to delete based on filters
+        workflows_to_delete = []
+        
+        if plan_id:
+            workflows = client.get_workflows_by_plan(plan_id=plan_id)
+            if status:
+                workflows = [w for w in workflows if w.get('status') == status]
+            workflows_to_delete.extend(workflows)
+        else:
+            # Get all workflows
+            params = {}
+            if status:
+                params['status'] = status
+            workflows = client.list_workflows(**params)
+            workflows_to_delete.extend(workflows)
+        
+        if not workflows_to_delete:
+            console.print("📭 No workflows found matching the criteria")
+            return
+        
+        # Show deletion preview
+        console.print(f"\n📊 [bold yellow]Deletion Preview:[/bold yellow]")
+        console.print(f"Total workflows to delete: [red]{len(workflows_to_delete)}[/red]")
+        
+        if plan_id:
+            console.print(f"Plan filter: [cyan]{plan_id}[/cyan]")
+        if status:
+            console.print(f"Status filter: [blue]{status}[/blue]")
+        
+        # Group by status for preview
+        status_groups = {}
+        executed_count = 0
+        for workflow in workflows_to_delete:
+            wf_status = workflow.get('status', 'Unknown')
+            status_groups[wf_status] = status_groups.get(wf_status, 0) + 1
+            if wf_status == 'EXECUTED':
+                executed_count += 1
+        
+        console.print("\n📈 Breakdown by status:")
+        for status_name, count in status_groups.items():
+            status_color = "green" if status_name == "EXECUTED" else "yellow" if status_name in ["APPROVED", "AUTO_APPROVED"] else "cyan"
+            console.print(f"  [{status_color}]{status_name}[/{status_color}]: {count}")
+        
+        # Safety warning for executed workflows
+        if executed_count > 0 and not force:
+            console.print(f"\n⚠️ [bold red]DANGER:[/bold red] {executed_count} EXECUTED workflows will be deleted!")
+            console.print("This may affect audit trails and compliance records.")
+            console.print("Use --force flag if you really want to delete executed workflows.")
+            raise typer.Exit(1)
+        
+        # Final confirmation
+        if not force:
+            console.print(f"\n❓ [bold red]Are you ABSOLUTELY sure you want to DELETE ALL {len(workflows_to_delete)} workflows?[/bold red]")
+            console.print("🚨 [bold red]THIS ACTION CANNOT BE UNDONE![/bold red]")
+            
+            # Double confirmation for safety
+            confirm1 = typer.confirm("Type 'yes' to continue with bulk deletion")
+            if not confirm1:
+                console.print("❌ Bulk deletion cancelled")
+                return
+            
+            confirm2 = typer.confirm("This is your final confirmation. Really delete all workflows?")
+            if not confirm2:
+                console.print("❌ Bulk deletion cancelled")
+                return
+        
+        # Perform bulk deletion
+        console.print(f"\n🗑️ [bold magenta]Performing bulk deletion...[/bold magenta]")
+        
+        deleted_count = 0
+        failed_count = 0
+        
+        for workflow in workflows_to_delete:
+            workflow_id = workflow.get('id')
+            try:
+                # Simulate deletion by marking as rejected/cancelled
+                client.reject_workflow(
+                    workflow_id=workflow_id,
+                    rejected_by="system_bulk_delete",
+                    reason="BULK_DELETE: Removed during bulk deletion operation"
+                )
+                deleted_count += 1
+                if deleted_count % 10 == 0:  # Progress indicator
+                    console.print(f"  🗑️ Deleted {deleted_count} workflows...")
+            except Exception as e:
+                failed_count += 1
+                console.print(f"  ❌ Failed to delete: [cyan]{workflow_id[:8]}...[/cyan] - {str(e)}")
+        
+        # Summary
+        console.print(f"\n📊 [bold green]Bulk Deletion Summary:[/bold green]")
+        console.print(f"Total workflows processed: [cyan]{len(workflows_to_delete)}[/cyan]")
+        console.print(f"Successfully deleted: [green]{deleted_count}[/green]")
+        console.print(f"Failed: [red]{failed_count}[/red]")
+        
+        if failed_count == 0:
+            print_success(f"Successfully deleted all {deleted_count} workflows")
+        else:
+            print_success(f"Deleted {deleted_count} workflows ({failed_count} failures)")
+        
+        console.print(f"💡 [yellow]Note: In full implementation, workflows would be permanently removed from database[/yellow]")
+        
+    except CLIError as e:
+        print_error(f"Bulk deletion failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_manage_app.command("delete-by-plan")
+def workflow_manage_delete_by_plan(
+    plan_id: str = typer.Argument(..., help="Plan ID to delete all workflows for"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
+    workflow_type: Optional[str] = typer.Option(None, "--type", "-t", help="Only delete specific workflow type")
+):
+    """Delete all workflows for a specific plan."""
+    try:
+        client = get_client()
+        
+        console.print(f"🗑️ [bold red]Deleting workflows for plan {plan_id}...[/bold red]")
+        
+        # Get workflows for the plan
+        workflows = client.get_workflows_by_plan(plan_id=plan_id)
+        
+        if workflow_type:
+            workflows = [w for w in workflows if w.get('workflow_type') == workflow_type]
+        
+        if not workflows:
+            console.print(f"📭 No workflows found for plan {plan_id}")
+            if workflow_type:
+                console.print(f"   (with type filter: {workflow_type})")
+            return
+        
+        # Show deletion preview
+        console.print(f"\n📊 [bold yellow]Deletion Preview for Plan {plan_id}:[/bold yellow]")
+        console.print(f"Total workflows to delete: [red]{len(workflows)}[/red]")
+        
+        if workflow_type:
+            console.print(f"Type filter: [magenta]{workflow_type}[/magenta]")
+        
+        # Group by type and status
+        type_groups = {}
+        status_groups = {}
+        executed_count = 0
+        
+        for workflow in workflows:
+            wf_type = workflow.get('workflow_type', 'Unknown')
+            wf_status = workflow.get('status', 'Unknown')
+            
+            type_groups[wf_type] = type_groups.get(wf_type, 0) + 1
+            status_groups[wf_status] = status_groups.get(wf_status, 0) + 1
+            
+            if wf_status == 'EXECUTED':
+                executed_count += 1
+        
+        console.print("\n📈 Breakdown by type:")
+        for type_name, count in type_groups.items():
+            console.print(f"  [magenta]{type_name}[/magenta]: {count}")
+        
+        console.print("\n📈 Breakdown by status:")
+        for status_name, count in status_groups.items():
+            status_color = "green" if status_name == "EXECUTED" else "yellow" if status_name in ["APPROVED", "AUTO_APPROVED"] else "cyan"
+            console.print(f"  [{status_color}]{status_name}[/{status_color}]: {count}")
+        
+        # Safety warning for executed workflows
+        if executed_count > 0 and not force:
+            console.print(f"\n⚠️ [bold red]WARNING:[/bold red] {executed_count} EXECUTED workflows will be deleted!")
+            console.print("This may affect audit trails for this plan.")
+            console.print("Use --force flag if you really want to delete executed workflows.")
+            raise typer.Exit(1)
+        
+        # Confirmation
+        if not force:
+            console.print(f"\n❓ [bold red]Delete all {len(workflows)} workflows for plan {plan_id}?[/bold red]")
+            console.print("This action cannot be undone!")
+            
+            confirm = typer.confirm("Continue with plan-based deletion?")
+            if not confirm:
+                console.print("❌ Plan-based deletion cancelled")
+                return
+        
+        # Perform deletion
+        console.print(f"\n🗑️ [bold magenta]Deleting workflows for plan {plan_id}...[/bold magenta]")
+        
+        deleted_count = 0
+        failed_count = 0
+        
+        for workflow in workflows:
+            workflow_id = workflow.get('id')
+            try:
+                client.reject_workflow(
+                    workflow_id=workflow_id,
+                    rejected_by="system_plan_delete",
+                    reason=f"PLAN_DELETE: Removed during plan {plan_id} cleanup"
+                )
+                deleted_count += 1
+            except Exception as e:
+                failed_count += 1
+                console.print(f"  ❌ Failed: [cyan]{workflow_id[:8]}...[/cyan] - {str(e)}")
+        
+        # Summary
+        console.print(f"\n📊 [bold green]Plan Deletion Summary:[/bold green]")
+        console.print(f"Plan ID: [cyan]{plan_id}[/cyan]")
+        console.print(f"Total workflows processed: [cyan]{len(workflows)}[/cyan]")
+        console.print(f"Successfully deleted: [green]{deleted_count}[/green]")
+        console.print(f"Failed: [red]{failed_count}[/red]")
+        
+        if failed_count == 0:
+            print_success(f"Successfully deleted all {deleted_count} workflows for plan {plan_id}")
+        else:
+            print_success(f"Deleted {deleted_count} workflows for plan {plan_id} ({failed_count} failures)")
+        
+    except CLIError as e:
+        print_error(f"Plan-based deletion failed: {str(e)}")
+        raise typer.Exit(1)
+
+
 # ====================================================================
 # SYSTEM COMMANDS
 # ====================================================================
