@@ -6,7 +6,6 @@ from typing import List, Optional, Dict, Any
 from ..storage.transcript_store import TranscriptStore
 from ..storage.analysis_store import AnalysisStore
 from ..storage.action_plan_store import ActionPlanStore
-from ..storage.governance_store import GovernanceStore
 import time
 from datetime import datetime, timedelta
 
@@ -20,7 +19,6 @@ class SystemService:
         self.transcript_store = TranscriptStore(db_path)
         self.analysis_store = AnalysisStore(db_path)
         self.plan_store = ActionPlanStore(db_path)
-        self.governance_store = GovernanceStore(db_path)
         self.start_time = time.time()
     
     async def get_dashboard_metrics(self) -> Dict[str, Any]:
@@ -95,7 +93,6 @@ class SystemService:
             self.transcript_store.get_all()
             self.analysis_store.get_all()
             self.plan_store.get_all()
-            self.governance_store.get_all()
         except Exception:
             database_status = "error"
         
@@ -107,7 +104,6 @@ class SystemService:
             "transcript_store": "healthy" if database_status == "connected" else "error",
             "analysis_engine": "healthy" if api_key_status == "configured" else "error",
             "plan_generator": "healthy" if api_key_status == "configured" else "error",
-            "governance_engine": "healthy" if database_status == "connected" else "error"
         }
         
         # Overall status
@@ -234,13 +230,11 @@ class SystemService:
         transcript_metrics = await self._get_transcript_metrics()
         analysis_metrics = await self._get_analysis_metrics()
         plan_metrics = await self._get_plan_metrics()
-        governance_metrics = await self._get_governance_metrics()
         
         return {
             "transcripts": transcript_metrics,
             "analyses": analysis_metrics,
             "plans": plan_metrics,
-            "governance": governance_metrics,
             "system": {
                 "uptime_seconds": int(time.time() - self.start_time),
                 "database_size_mb": 10.5,  # Placeholder
@@ -278,15 +272,6 @@ class SystemService:
             "execution_rate": executed / len(plans) if plans else 0.0
         }
     
-    async def _get_governance_metrics(self) -> Dict[str, Any]:
-        """Get governance-specific metrics."""
-        records = self.governance_store.get_all()
-        approved = sum(1 for r in records if r.get("status") == "approved")
-        return {
-            "total_submissions": len(records),
-            "approved": approved,
-            "approval_rate": approved / len(records) if records else 0.0
-        }
     
     def _is_recent(self, timestamp_str: Optional[str], days: int = 0, hours: int = 0) -> bool:
         """Check if timestamp is within recent time period."""
