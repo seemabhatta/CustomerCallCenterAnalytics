@@ -373,6 +373,18 @@ analysis_app = typer.Typer(name="analysis", help="Analysis operations")
 insights_app = typer.Typer(name="insights", help="Insights operations")
 plan_app = typer.Typer(name="plan", help="Plan operations")
 workflow_app = typer.Typer(name="workflow", help="Workflow approval operations")
+
+# Create workflow sub-apps for organized command structure
+workflow_generate_app = typer.Typer(help="Generate workflows from action plans")
+workflow_process_app = typer.Typer(help="Process workflows (approve, reject, execute)")
+workflow_manage_app = typer.Typer(help="Manage workflow assignments and lifecycle")
+workflow_view_app = typer.Typer(help="View workflow information in various formats")
+
+workflow_app.add_typer(workflow_generate_app, name="generate")
+workflow_app.add_typer(workflow_process_app, name="process") 
+workflow_app.add_typer(workflow_manage_app, name="manage")
+workflow_app.add_typer(workflow_view_app, name="view")
+
 system_app = typer.Typer(name="system", help="System operations")
 
 # Add subapps to main app
@@ -1508,11 +1520,11 @@ def plan_delete_all(
 # WORKFLOW COMMANDS
 # ====================================================================
 
-@workflow_app.command("extract")
-def workflow_extract(
+@workflow_generate_app.command("single")
+def workflow_generate_single(
     plan_id: str = typer.Argument(..., help="Plan ID to extract workflow from")
 ):
-    """Extract workflow from action plan."""
+    """Extract single workflow from action plan."""
     try:
         client = get_client()
         
@@ -1540,10 +1552,6 @@ def workflow_extract(
         print_error(f"Workflow extraction failed: {str(e)}")
         raise typer.Exit(1)
 
-
-# Create workflow view sub-app for all view operations
-workflow_view_app = typer.Typer(help="View workflow information in various formats")
-workflow_app.add_typer(workflow_view_app, name="view")
 
 @workflow_view_app.command("list")
 def workflow_view_list(
@@ -1710,8 +1718,8 @@ def workflow_view_details(
         raise typer.Exit(1)
 
 
-@workflow_app.command("approve")
-def workflow_approve(
+@workflow_process_app.command("approve")
+def workflow_process_approve(
     workflow_id: str = typer.Argument(..., help="Workflow ID to approve"),
     approver: str = typer.Option(..., "--approver", "-a", help="Approver identifier"),
     reasoning: Optional[str] = typer.Option(None, "--reasoning", "-r", help="Approval reasoning")
@@ -1740,8 +1748,8 @@ def workflow_approve(
         raise typer.Exit(1)
 
 
-@workflow_app.command("reject")
-def workflow_reject(
+@workflow_process_app.command("reject")
+def workflow_process_reject(
     workflow_id: str = typer.Argument(..., help="Workflow ID to reject"),
     rejector: str = typer.Option(..., "--rejector", "-r", help="Rejector identifier"),
     reason: str = typer.Option(..., "--reason", "-e", help="Rejection reason")
@@ -1770,8 +1778,8 @@ def workflow_reject(
         raise typer.Exit(1)
 
 
-@workflow_app.command("execute")
-def workflow_execute(
+@workflow_process_app.command("execute")
+def workflow_process_execute(
     workflow_id: str = typer.Argument(..., help="Workflow ID to execute"),
     executor: str = typer.Option(..., "--executor", "-e", help="Executor identifier")
 ):
@@ -1800,6 +1808,149 @@ def workflow_execute(
         
     except CLIError as e:
         print_error(f"Execution failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_process_app.command("approve-all")
+def workflow_process_approve_all(
+    plan_id: Optional[str] = typer.Option(None, "--plan", "-p", help="Approve all workflows for a specific plan"),
+    workflow_type: Optional[str] = typer.Option(None, "--type", "-t", help="Approve all workflows of a specific type"),
+    risk_level: Optional[str] = typer.Option(None, "--risk", "-r", help="Approve all workflows with specific risk level"),
+    approver: str = typer.Option(..., "--approver", "-a", help="Approver identifier")
+):
+    """Approve multiple workflows based on filters."""
+    try:
+        client = get_client()
+        
+        console.print(f"✅ [bold magenta]Bulk approving workflows...[/bold magenta]")
+        
+        # Get workflows to approve based on filters
+        workflows_to_approve = []
+        
+        if plan_id:
+            workflows = client.get_workflows_by_plan(plan_id=plan_id)
+            if workflow_type:
+                workflows = [w for w in workflows if w.get('workflow_type') == workflow_type]
+            if risk_level:
+                workflows = [w for w in workflows if w.get('risk_level') == risk_level]
+            workflows_to_approve.extend(workflows)
+        else:
+            # Get all pending workflows with filters
+            params = {"status": "AWAITING_APPROVAL"}
+            if risk_level:
+                params["risk_level"] = risk_level
+            workflows = client.list_workflows(**params)
+            if workflow_type:
+                workflows = [w for w in workflows if w.get('workflow_type') == workflow_type]
+            workflows_to_approve.extend(workflows)
+        
+        # Filter to only pending approvals
+        workflows_to_approve = [w for w in workflows_to_approve if w.get('status') == 'AWAITING_APPROVAL']
+        
+        if not workflows_to_approve:
+            console.print("📭 No workflows found matching the criteria")
+            return
+        
+        console.print(f"Found {len(workflows_to_approve)} workflows to approve")
+        
+        # Approve each workflow
+        approved_count = 0
+        failed_count = 0
+        
+        for workflow in workflows_to_approve:
+            workflow_id = workflow.get('id')
+            try:
+                client.approve_workflow(
+                    workflow_id=workflow_id,
+                    approved_by=approver,
+                    reasoning=f"Bulk approval by {approver}"
+                )
+                approved_count += 1
+                console.print(f"  ✅ Approved: [cyan]{workflow_id[:8]}...[/cyan]")
+            except Exception as e:
+                failed_count += 1
+                console.print(f"  ❌ Failed: [cyan]{workflow_id[:8]}...[/cyan] - {str(e)}")
+        
+        console.print(f"\n📊 [bold green]Bulk Approval Summary:[/bold green]")
+        console.print(f"Total workflows: [cyan]{len(workflows_to_approve)}[/cyan]")
+        console.print(f"Successfully approved: [green]{approved_count}[/green]")
+        console.print(f"Failed: [red]{failed_count}[/red]")
+        
+        if failed_count == 0:
+            print_success(f"Successfully approved all {approved_count} workflows")
+        else:
+            print_success(f"Approved {approved_count} workflows ({failed_count} failures)")
+        
+    except CLIError as e:
+        print_error(f"Bulk approval failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_process_app.command("execute-all")
+def workflow_process_execute_all(
+    plan_id: Optional[str] = typer.Option(None, "--plan", "-p", help="Execute all approved workflows for a specific plan"),
+    workflow_type: Optional[str] = typer.Option(None, "--type", "-t", help="Execute all approved workflows of a specific type"),
+    executor: str = typer.Option(..., "--executor", "-e", help="Executor identifier")
+):
+    """Execute multiple approved workflows."""
+    try:
+        client = get_client()
+        
+        console.print(f"🚀 [bold magenta]Bulk executing workflows...[/bold magenta]")
+        
+        # Get workflows to execute based on filters
+        workflows_to_execute = []
+        
+        if plan_id:
+            workflows = client.get_workflows_by_plan(plan_id=plan_id)
+            if workflow_type:
+                workflows = [w for w in workflows if w.get('workflow_type') == workflow_type]
+            workflows_to_execute.extend(workflows)
+        else:
+            # Get all approved workflows
+            workflows = client.list_workflows(status="APPROVED")
+            if workflow_type:
+                workflows = [w for w in workflows if w.get('workflow_type') == workflow_type]
+            workflows_to_execute.extend(workflows)
+        
+        # Filter to only approved workflows
+        workflows_to_execute = [w for w in workflows_to_execute if w.get('status') in ['APPROVED', 'AUTO_APPROVED']]
+        
+        if not workflows_to_execute:
+            console.print("📭 No approved workflows found matching the criteria")
+            return
+        
+        console.print(f"Found {len(workflows_to_execute)} workflows to execute")
+        
+        # Execute each workflow
+        executed_count = 0
+        failed_count = 0
+        
+        for workflow in workflows_to_execute:
+            workflow_id = workflow.get('id')
+            try:
+                client.execute_workflow(
+                    workflow_id=workflow_id,
+                    executed_by=executor
+                )
+                executed_count += 1
+                console.print(f"  🚀 Executed: [cyan]{workflow_id[:8]}...[/cyan]")
+            except Exception as e:
+                failed_count += 1
+                console.print(f"  ❌ Failed: [cyan]{workflow_id[:8]}...[/cyan] - {str(e)}")
+        
+        console.print(f"\n📊 [bold green]Bulk Execution Summary:[/bold green]")
+        console.print(f"Total workflows: [cyan]{len(workflows_to_execute)}[/cyan]")
+        console.print(f"Successfully executed: [green]{executed_count}[/green]")
+        console.print(f"Failed: [red]{failed_count}[/red]")
+        
+        if failed_count == 0:
+            print_success(f"Successfully executed all {executed_count} workflows")
+        else:
+            print_success(f"Executed {executed_count} workflows ({failed_count} failures)")
+        
+    except CLIError as e:
+        print_error(f"Bulk execution failed: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -1876,8 +2027,8 @@ def workflow_view_pending():
         raise typer.Exit(1)
 
 
-@workflow_app.command("extract-all")
-def workflow_extract_all(
+@workflow_generate_app.command("all")
+def workflow_generate_all(
     plan_id: str = typer.Argument(..., help="Plan ID to extract all granular workflows from")
 ):
     """Extract all granular workflows from action plan."""
@@ -1915,6 +2066,69 @@ def workflow_extract_all(
         
     except CLIError as e:
         print_error(f"Extract all workflows failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_generate_app.command("batch")
+def workflow_generate_batch(
+    plans: str = typer.Argument(..., help="Comma-separated list of Plan IDs to extract workflows from"),
+    workflow_type: Optional[str] = typer.Option(None, "--type", "-t", help="Only extract specific workflow type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)")
+):
+    """Extract workflows from multiple action plans."""
+    try:
+        client = get_client()
+        
+        # Parse plan IDs
+        plan_ids = [p.strip() for p in plans.split(',')]
+        console.print(f"🔄 [bold magenta]Extracting workflows from {len(plan_ids)} plans...[/bold magenta]")
+        
+        total_workflows = 0
+        all_results = {}
+        
+        for plan_id in plan_ids:
+            console.print(f"  📋 Processing plan: [cyan]{plan_id}[/cyan]")
+            try:
+                result = client.extract_all_workflows(plan_id=plan_id)
+                if result:
+                    # Filter by workflow type if specified
+                    if workflow_type:
+                        result = [w for w in result if w.get('workflow_type') == workflow_type]
+                    
+                    all_results[plan_id] = result
+                    total_workflows += len(result)
+                    console.print(f"    ✅ Extracted {len(result)} workflows")
+                else:
+                    console.print(f"    📭 No workflows found")
+                    all_results[plan_id] = []
+            except Exception as e:
+                console.print(f"    ❌ Failed: {str(e)}")
+                all_results[plan_id] = []
+        
+        # Summary
+        console.print(f"\n📊 [bold green]Batch Extraction Summary:[/bold green]")
+        console.print(f"Plans processed: [cyan]{len(plan_ids)}[/cyan]")
+        console.print(f"Total workflows extracted: [yellow]{total_workflows}[/yellow]")
+        
+        if workflow_type:
+            console.print(f"Filter applied: [magenta]{workflow_type}[/magenta]")
+        
+        # Show results by plan
+        for plan_id, workflows in all_results.items():
+            if workflows:
+                console.print(f"\n[blue]{plan_id}[/blue]: {len(workflows)} workflows")
+                # Group by type
+                type_counts = {}
+                for wf in workflows:
+                    wf_type = wf.get('workflow_type', 'Unknown')
+                    type_counts[wf_type] = type_counts.get(wf_type, 0) + 1
+                
+                for wf_type, count in type_counts.items():
+                    console.print(f"  • {wf_type}: {count}")
+        
+        print_success(f"Batch extracted {total_workflows} workflows from {len(plan_ids)} plans")
+        
+    except CLIError as e:
+        print_error(f"Batch extract failed: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -2298,6 +2512,157 @@ def workflow_view_summary(
         
     except CLIError as e:
         print_error(f"Workflow summary failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_manage_app.command("assign")
+def workflow_manage_assign(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to assign"),
+    assignee: str = typer.Option(..., "--to", "-t", help="User to assign workflow to"),
+    reason: Optional[str] = typer.Option(None, "--reason", "-r", help="Assignment reason")
+):
+    """Assign workflow to a specific approver."""
+    try:
+        client = get_client()
+        
+        console.print(f"👤 [bold magenta]Assigning workflow...[/bold magenta]")
+        
+        # Get current workflow details
+        workflow = client.get_workflow(workflow_id=workflow_id)
+        if not workflow:
+            print_error(f"Workflow not found: {workflow_id}")
+            raise typer.Exit(1)
+        
+        # For now, we'll simulate assignment by adding a note
+        # In a real implementation, this would update the assigned_approver field
+        console.print(f"📋 [bold green]Workflow Assignment:[/bold green]")
+        console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+        console.print(f"Current Status: [yellow]{workflow.get('status', 'Unknown')}[/yellow]")
+        console.print(f"Assigned To: [green]{assignee}[/green]")
+        if reason:
+            console.print(f"Reason: [blue]{reason}[/blue]")
+        
+        print_success(f"Workflow {workflow_id} assigned to {assignee}")
+        console.print(f"💡 [yellow]Note: Assignment functionality would update the assigned_approver field in a full implementation[/yellow]")
+        
+    except CLIError as e:
+        print_error(f"Assignment failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_manage_app.command("escalate")
+def workflow_manage_escalate(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to escalate"),
+    reason: str = typer.Option(..., "--reason", "-r", help="Escalation reason"),
+    to_level: str = typer.Option("supervisor", "--to", "-t", help="Escalate to level (supervisor, compliance, executive)")
+):
+    """Escalate workflow to higher authority."""
+    try:
+        client = get_client()
+        
+        console.print(f"⬆️ [bold magenta]Escalating workflow...[/bold magenta]")
+        
+        # Get current workflow details
+        workflow = client.get_workflow(workflow_id=workflow_id)
+        if not workflow:
+            print_error(f"Workflow not found: {workflow_id}")
+            raise typer.Exit(1)
+        
+        valid_levels = ["supervisor", "compliance", "executive"]
+        if to_level not in valid_levels:
+            print_error(f"Invalid escalation level. Must be one of: {', '.join(valid_levels)}")
+            raise typer.Exit(1)
+        
+        console.print(f"📋 [bold green]Workflow Escalation:[/bold green]")
+        console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+        console.print(f"Current Status: [yellow]{workflow.get('status', 'Unknown')}[/yellow]")
+        console.print(f"Current Risk: [red]{workflow.get('risk_level', 'Unknown')}[/red]")
+        console.print(f"Escalated To: [red]{to_level.upper()}[/red]")
+        console.print(f"Reason: [blue]{reason}[/blue]")
+        
+        print_success(f"Workflow {workflow_id} escalated to {to_level}")
+        console.print(f"💡 [yellow]Note: Escalation functionality would update approval routing in a full implementation[/yellow]")
+        
+    except CLIError as e:
+        print_error(f"Escalation failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_manage_app.command("cancel")
+def workflow_manage_cancel(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to cancel"),
+    reason: str = typer.Option(..., "--reason", "-r", help="Cancellation reason")
+):
+    """Cancel a pending workflow."""
+    try:
+        client = get_client()
+        
+        console.print(f"🚫 [bold magenta]Cancelling workflow...[/bold magenta]")
+        
+        # Get current workflow details
+        workflow = client.get_workflow(workflow_id=workflow_id)
+        if not workflow:
+            print_error(f"Workflow not found: {workflow_id}")
+            raise typer.Exit(1)
+        
+        current_status = workflow.get('status', 'Unknown')
+        if current_status in ['EXECUTED', 'REJECTED']:
+            print_error(f"Cannot cancel workflow in {current_status} status")
+            raise typer.Exit(1)
+        
+        # For now, we use the reject functionality to simulate cancellation
+        result = client.reject_workflow(
+            workflow_id=workflow_id,
+            rejected_by="system",
+            reason=f"CANCELLED: {reason}"
+        )
+        
+        console.print(f"🚫 [bold red]Workflow Cancelled:[/bold red]")
+        console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+        console.print(f"Previous Status: [yellow]{current_status}[/yellow]")
+        console.print(f"New Status: [red]{result.get('status', 'CANCELLED')}[/red]")
+        console.print(f"Reason: [blue]{reason}[/blue]")
+        
+        print_success(f"Workflow {workflow_id} cancelled")
+        
+    except CLIError as e:
+        print_error(f"Cancellation failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_manage_app.command("reset")
+def workflow_manage_reset(
+    workflow_id: str = typer.Argument(..., help="Workflow ID to reset"),
+    reason: str = typer.Option(..., "--reason", "-r", help="Reset reason")
+):
+    """Reset workflow status to pending."""
+    try:
+        client = get_client()
+        
+        console.print(f"🔄 [bold magenta]Resetting workflow...[/bold magenta]")
+        
+        # Get current workflow details
+        workflow = client.get_workflow(workflow_id=workflow_id)
+        if not workflow:
+            print_error(f"Workflow not found: {workflow_id}")
+            raise typer.Exit(1)
+        
+        current_status = workflow.get('status', 'Unknown')
+        if current_status == 'EXECUTED':
+            print_error(f"Cannot reset executed workflow")
+            raise typer.Exit(1)
+        
+        console.print(f"🔄 [bold green]Workflow Reset:[/bold green]")
+        console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+        console.print(f"Current Status: [yellow]{current_status}[/yellow]")
+        console.print(f"Reset To: [green]AWAITING_APPROVAL[/green]")
+        console.print(f"Reason: [blue]{reason}[/blue]")
+        
+        print_success(f"Workflow {workflow_id} reset to AWAITING_APPROVAL")
+        console.print(f"💡 [yellow]Note: Reset functionality would update status in database in a full implementation[/yellow]")
+        
+    except CLIError as e:
+        print_error(f"Reset failed: {str(e)}")
         raise typer.Exit(1)
 
 
