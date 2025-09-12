@@ -1541,8 +1541,12 @@ def workflow_extract(
         raise typer.Exit(1)
 
 
-@workflow_app.command("list")
-def workflow_list(
+# Create workflow view sub-app for all view operations
+workflow_view_app = typer.Typer(help="View workflow information in various formats")
+workflow_app.add_typer(workflow_view_app, name="view")
+
+@workflow_view_app.command("list")
+def workflow_view_list(
     status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
     risk_level: Optional[str] = typer.Option(None, "--risk", "-r", help="Filter by risk level"),
     limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of results")
@@ -1592,8 +1596,8 @@ def workflow_list(
         raise typer.Exit(1)
 
 
-@workflow_app.command("view")
-def workflow_view(
+@workflow_view_app.command("details")
+def workflow_view_details(
     workflow_id: str = typer.Argument(..., help="Workflow ID to view")
 ):
     """View detailed workflow information."""
@@ -1799,8 +1803,8 @@ def workflow_execute(
         raise typer.Exit(1)
 
 
-@workflow_app.command("history")
-def workflow_history(
+@workflow_view_app.command("history")
+def workflow_view_history(
     workflow_id: str = typer.Argument(..., help="Workflow ID to get history for")
 ):
     """View workflow state transition history."""
@@ -1838,8 +1842,8 @@ def workflow_history(
         raise typer.Exit(1)
 
 
-@workflow_app.command("pending")
-def workflow_pending():
+@workflow_view_app.command("pending")
+def workflow_view_pending():
     """List workflows pending approval."""
     try:
         client = get_client()
@@ -1914,8 +1918,8 @@ def workflow_extract_all(
         raise typer.Exit(1)
 
 
-@workflow_app.command("by-plan")
-def workflow_by_plan(
+@workflow_view_app.command("by-plan")
+def workflow_view_by_plan(
     plan_id: str = typer.Argument(..., help="Plan ID to get workflows for")
 ):
     """List all workflows for a specific plan."""
@@ -1977,8 +1981,8 @@ def workflow_by_plan(
         raise typer.Exit(1)
 
 
-@workflow_app.command("by-type")
-def workflow_by_type(
+@workflow_view_app.command("by-type")
+def workflow_view_by_type(
     workflow_type: str = typer.Argument(..., help="Workflow type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)")
 ):
     """List all workflows of a specific type."""
@@ -2037,8 +2041,8 @@ def workflow_by_type(
         raise typer.Exit(1)
 
 
-@workflow_app.command("by-plan-type")
-def workflow_by_plan_type(
+@workflow_view_app.command("by-plan-type")
+def workflow_view_by_plan_type(
     plan_id: str = typer.Argument(..., help="Plan ID"),
     workflow_type: str = typer.Argument(..., help="Workflow type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)")
 ):
@@ -2096,8 +2100,8 @@ def workflow_by_plan_type(
         raise typer.Exit(1)
 
 
-@workflow_app.command("tree")
-def workflow_tree(
+@workflow_view_app.command("tree")
+def workflow_view_tree(
     plan_id: str = typer.Argument(..., help="Plan ID to show workflow tree for"),
     detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed workflow info")
 ):
@@ -2198,8 +2202,8 @@ def workflow_tree(
         raise typer.Exit(1)
 
 
-@workflow_app.command("summary") 
-def workflow_summary(
+@workflow_view_app.command("summary") 
+def workflow_view_summary(
     plan_id: str = typer.Argument(..., help="Plan ID to show summary for")
 ):
     """Show workflow summary with progress tracking."""
