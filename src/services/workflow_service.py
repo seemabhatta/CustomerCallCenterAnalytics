@@ -366,14 +366,14 @@ class WorkflowService:
         return updated_workflow
     
     async def execute_workflow(self, workflow_id: str, executed_by: str) -> Dict[str, Any]:
-        """Execute approved workflow using LLM agent.
+        """Execute approved workflow using new workflow execution engine.
         
         Args:
             workflow_id: Workflow ID
             executed_by: Executor identifier
             
         Returns:
-            Workflow with execution results
+            Complete execution results with payload
             
         Raises:
             ValueError: Invalid parameters or workflow not executable (NO FALLBACK)
@@ -385,55 +385,14 @@ class WorkflowService:
         if not executed_by or not isinstance(executed_by, str):
             raise ValueError("executed_by must be a non-empty string")
         
-        # Get current workflow
-        workflow = self.workflow_store.get_by_id(workflow_id)
-        if not workflow:
-            raise ValueError(f"Workflow not found: {workflow_id}")
+        # Import and initialize execution engine
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine(self.db_path)
         
-        # Validate workflow is executable
-        if workflow['status'] not in ['AUTO_APPROVED']:
-            raise ValueError(f"Workflow cannot be executed from status: {workflow['status']}")
+        # Execute workflow using new engine
+        execution_result = await execution_engine.execute_workflow(workflow_id, executed_by)
         
-        # LLM agent executes workflow steps
-        execution_context = {
-            **workflow['context_data'],
-            'execution_timestamp': datetime.utcnow().isoformat(),
-            'executor': executed_by,
-            'pipeline_stage': 'workflow_execution'
-        }
-        
-        execution_results = await self.risk_agent.execute_workflow_steps(
-            workflow_data=workflow,
-            context=execution_context
-        )
-        
-        # Validate execution results
-        if 'execution_status' not in execution_results:
-            raise ValueError("LLM agent failed to provide execution status")
-        
-        # Update workflow with execution results
-        additional_data = {
-            'executed_at': datetime.utcnow().isoformat(),
-            'execution_results': json.dumps(execution_results)
-        }
-        
-        success = self.workflow_store.update_status(
-            workflow_id=workflow_id,
-            new_status='EXECUTED',
-            transitioned_by=executed_by,
-            reason=f"Workflow executed: {execution_results.get('execution_status', 'completed')}",
-            additional_data=additional_data
-        )
-        
-        if not success:
-            raise Exception("Failed to update workflow status")
-        
-        # Return updated workflow
-        updated_workflow = self.workflow_store.get_by_id(workflow_id)
-        if not updated_workflow:
-            raise Exception("Failed to retrieve updated workflow")
-        
-        return updated_workflow
+        return execution_result
     
     async def get_workflow_history(self, workflow_id: str) -> Dict[str, Any]:
         """Get complete workflow history with state transitions.

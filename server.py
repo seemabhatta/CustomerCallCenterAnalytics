@@ -721,6 +721,82 @@ async def get_workflow_history(workflow_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get workflow history: {str(e)}")
 
+@app.post("/api/v1/workflows/execute-all")
+async def execute_all_approved_workflows(request: Optional[Dict] = None):
+    """Execute all approved workflows."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+        
+        workflow_type = None
+        executed_by = "api_user"
+        
+        if request:
+            workflow_type = request.get('workflow_type')
+            executed_by = request.get('executed_by', executed_by)
+        
+        result = await execution_engine.execute_all_approved_workflows(
+            workflow_type=workflow_type,
+            executed_by=executed_by
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute all workflows: {str(e)}")
+
+@app.get("/api/v1/executions/{execution_id}")
+async def get_execution_status(execution_id: str):
+    """Get detailed execution status and results."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+        
+        result = await execution_engine.get_execution_status(execution_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get execution status: {str(e)}")
+
+@app.get("/api/v1/workflows/{workflow_id}/executions")
+async def get_workflow_executions(workflow_id: str):
+    """Get all execution records for a workflow."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+        
+        result = await execution_engine.get_workflow_execution_history(workflow_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflow executions: {str(e)}")
+
+@app.get("/api/v1/executions/statistics")
+async def get_execution_statistics():
+    """Get comprehensive execution statistics."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+        
+        result = await execution_engine.get_execution_statistics()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get execution statistics: {str(e)}")
+
+@app.post("/api/v1/workflows/{workflow_id}/preview-execution")
+async def preview_workflow_execution(workflow_id: str):
+    """Preview what would be executed without actually executing."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+        
+        result = await execution_engine.preview_execution(workflow_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to preview execution: {str(e)}")
+
 
 
 # ===============================================

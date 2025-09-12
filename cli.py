@@ -1781,30 +1781,61 @@ def workflow_process_reject(
 @workflow_process_app.command("execute")
 def workflow_process_execute(
     workflow_id: str = typer.Argument(..., help="Workflow ID to execute"),
-    executor: str = typer.Option(..., "--executor", "-e", help="Executor identifier")
+    executor: str = typer.Option("cli_user", "--executor", "-e", help="Executor identifier"),
+    preview: bool = typer.Option(False, "--preview", "-p", help="Preview execution without actually executing")
 ):
     """Execute an approved workflow."""
     try:
         client = get_client()
         
-        console.print(f"🚀 [bold magenta]Executing workflow...[/bold magenta]")
-        result = client.execute_workflow(
-            workflow_id=workflow_id,
-            executed_by=executor
-        )
-        
-        console.print(f"\n🚀 [bold green]Workflow Executed[/bold green]:")
-        console.print(f"Workflow ID: [cyan]{result.get('id')}[/cyan]")
-        console.print(f"Executed By: [yellow]{result.get('execution_results', {}).get('executor', executor)}[/yellow]")
-        console.print(f"Status: [green]{result.get('status')}[/green]")
-        console.print(f"Executed At: [blue]{result.get('executed_at', 'N/A')}[/blue]")
-        
-        # Show execution results if available
-        exec_results = result.get('execution_results', {})
-        if exec_results.get('execution_status'):
-            console.print(f"Execution Status: [green]{exec_results['execution_status']}[/green]")
-        
-        print_success(f"Workflow executed: {workflow_id}")
+        if preview:
+            console.print(f"👀 [bold cyan]Previewing workflow execution...[/bold cyan]")
+            # Call preview endpoint
+            response = requests.post(f"{client.base_url}/workflows/{workflow_id}/preview-execution")
+            if response.status_code != 200:
+                raise CLIError(f"Preview failed: {response.text}")
+            
+            result = response.json()
+            
+            console.print(f"\n📋 [bold blue]Execution Preview[/bold blue]:")
+            console.print(f"Workflow ID: [cyan]{result['workflow_id']}[/cyan]")
+            console.print(f"Action: [yellow]{result['workflow_summary']['action_item']}[/yellow]")
+            console.print(f"Executor Type: [magenta]{result['execution_plan']['executor_type']}[/magenta]")
+            console.print(f"Confidence: [green]{result['execution_plan']['confidence']:.1%}[/green]")
+            
+            console.print(f"\n💼 [bold yellow]Generated Payload Preview:[/bold yellow]")
+            payload = result['payload_preview']
+            console.print(json.dumps(payload, indent=2))
+            
+            console.print(f"\n💡 [blue]{result['note']}[/blue]")
+            
+        else:
+            console.print(f"🚀 [bold magenta]Executing workflow...[/bold magenta]")
+            result = client.execute_workflow(
+                workflow_id=workflow_id,
+                executed_by=executor
+            )
+            
+            console.print(f"\n✅ [bold green]Workflow Executed (Mock)[/bold green]:")
+            console.print(f"Execution ID: [cyan]{result.get('execution_id')}[/cyan]")
+            console.print(f"Workflow ID: [yellow]{result.get('workflow_id')}[/yellow]")
+            console.print(f"Executor Type: [magenta]{result.get('executor_type')}[/magenta]")
+            console.print(f"Executed By: [blue]{result.get('executed_by')}[/blue]")
+            console.print(f"Status: [green]{result.get('status')}[/green]")
+            console.print(f"Duration: [cyan]{result.get('execution_duration_ms', 0)}ms[/cyan]")
+            
+            # Show generated payload
+            if result.get('payload'):
+                console.print(f"\n💼 [bold yellow]Generated Payload:[/bold yellow]")
+                console.print(json.dumps(result['payload'], indent=2))
+            
+            # Show agent decision
+            if result.get('agent_decision'):
+                decision = result['agent_decision']
+                console.print(f"\n🤖 [bold purple]Agent Decision:[/bold purple]")
+                console.print(f"Reasoning: [italic]{decision.get('reasoning', 'N/A')}[/italic]")
+            
+            print_success(f"Mock execution completed: {workflow_id}")
         
     except CLIError as e:
         print_error(f"Execution failed: {str(e)}")
@@ -1888,23 +1919,152 @@ def workflow_process_approve_all(
 
 @workflow_process_app.command("execute-all")
 def workflow_process_execute_all(
-    plan_id: Optional[str] = typer.Option(None, "--plan", "-p", help="Execute all approved workflows for a specific plan"),
     workflow_type: Optional[str] = typer.Option(None, "--type", "-t", help="Execute all approved workflows of a specific type"),
-    executor: str = typer.Option(..., "--executor", "-e", help="Executor identifier")
+    executor: str = typer.Option("cli_user", "--executor", "-e", help="Executor identifier")
 ):
-    """Execute multiple approved workflows."""
+    """Execute all approved workflows using new execution engine."""
     try:
-        client = get_client()
-        
         console.print(f"🚀 [bold magenta]Bulk executing workflows...[/bold magenta]")
         
-        # Get workflows to execute based on filters
-        workflows_to_execute = []
+        # Call new execution engine API
+        data = {
+            'workflow_type': workflow_type,
+            'executed_by': executor
+        }
         
-        if plan_id:
-            workflows = client.get_workflows_by_plan(plan_id=plan_id)
-            if workflow_type:
-                workflows = [w for w in workflows if w.get('workflow_type') == workflow_type]
+        response = requests.post(f"{get_client().base_url}/workflows/execute-all", json=data)
+        if response.status_code != 200:
+            raise CLIError(f"Bulk execution failed: {response.text}")
+        
+        result = response.json()
+        
+        console.print(f"\n📊 [bold green]Bulk Execution Summary:[/bold green]")
+        console.print(f"Total workflows: [cyan]{result['total_workflows']}[/cyan]")
+        console.print(f"Successfully executed: [green]{result['execution_summary']['success_count']}[/green]")
+        console.print(f"Failed: [red]{result['execution_summary']['failure_count']}[/red]")
+        console.print(f"Total duration: [cyan]{result['execution_summary']['total_duration_ms']}ms[/cyan]")
+        
+        # Show successful executions
+        if result['successful_executions']:
+            console.print(f"\n✅ [bold green]Successful Executions:[/bold green]")
+            for execution in result['successful_executions'][:5]:  # Show first 5
+                console.print(f"  • [cyan]{execution['execution_id']}[/cyan] - {execution['executor_type']}")
+            
+            if len(result['successful_executions']) > 5:
+                console.print(f"  ... and {len(result['successful_executions']) - 5} more")
+        
+        # Show failures
+        if result['failed_executions']:
+            console.print(f"\n❌ [bold red]Failed Executions:[/bold red]")
+            for failure in result['failed_executions']:
+                console.print(f"  • [cyan]{failure['workflow_id']}[/cyan] - {failure['error']}")
+        
+        if result['execution_summary']['failure_count'] == 0:
+            print_success(f"Successfully executed all {result['execution_summary']['success_count']} workflows")
+        else:
+            print_success(f"Executed {result['execution_summary']['success_count']} workflows ({result['execution_summary']['failure_count']} failures)")
+        
+    except CLIError as e:
+        print_error(f"Bulk execution failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_process_app.command("execution-status")
+def workflow_process_execution_status(
+    execution_id: str = typer.Argument(..., help="Execution ID to check")
+):
+    """Get detailed execution status and results."""
+    try:
+        console.print(f"🔍 [bold cyan]Getting execution status...[/bold cyan]")
+        
+        response = requests.get(f"{get_client().base_url}/executions/{execution_id}")
+        if response.status_code != 200:
+            raise CLIError(f"Failed to get execution status: {response.text}")
+        
+        result = response.json()
+        execution = result['execution_record']
+        
+        console.print(f"\n📋 [bold blue]Execution Status:[/bold blue]")
+        console.print(f"Execution ID: [cyan]{execution['id']}[/cyan]")
+        console.print(f"Workflow ID: [yellow]{execution['workflow_id']}[/yellow]")
+        console.print(f"Executor Type: [magenta]{execution['executor_type']}[/magenta]")
+        console.print(f"Status: [green]{execution['execution_status']}[/green]")
+        console.print(f"Executed By: [blue]{execution['executed_by']}[/blue]")
+        console.print(f"Executed At: [cyan]{execution['executed_at']}[/cyan]")
+        console.print(f"Duration: [yellow]{execution.get('execution_duration_ms', 0)}ms[/yellow]")
+        console.print(f"Mock Execution: [purple]{execution['mock_execution']}[/purple]")
+        
+        # Show payload
+        if execution.get('execution_payload'):
+            console.print(f"\n💼 [bold yellow]Execution Payload:[/bold yellow]")
+            console.print(json.dumps(execution['execution_payload'], indent=2))
+        
+        # Show metadata
+        if execution.get('metadata'):
+            console.print(f"\n🔧 [bold purple]Metadata:[/bold purple]")
+            metadata = execution['metadata']
+            if 'agent_decision' in metadata:
+                decision = metadata['agent_decision']
+                console.print(f"Agent Reasoning: [italic]{decision.get('reasoning', 'N/A')}[/italic]")
+        
+        # Show audit trail if available
+        if result.get('audit_trail'):
+            console.print(f"\n📜 [bold gray]Audit Trail:[/bold gray]")
+            for event in result['audit_trail'][:3]:  # Show first 3 events
+                console.print(f"  • [{event['event_timestamp']}] {event['event_description']}")
+        
+        print_success(f"Execution status retrieved: {execution_id}")
+        
+    except CLIError as e:
+        print_error(f"Failed to get execution status: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_process_app.command("execution-report")
+def workflow_process_execution_report():
+    """Get comprehensive execution statistics and report."""
+    try:
+        console.print(f"📊 [bold magenta]Generating execution report...[/bold magenta]")
+        
+        response = requests.get(f"{get_client().base_url}/executions/statistics")
+        if response.status_code != 200:
+            raise CLIError(f"Failed to get execution statistics: {response.text}")
+        
+        result = response.json()
+        store_stats = result['store_statistics']
+        engine_stats = result['engine_statistics']
+        
+        console.print(f"\n📈 [bold green]Execution Statistics:[/bold green]")
+        console.print(f"Total Executions: [cyan]{store_stats['total_executions']}[/cyan]")
+        console.print(f"Average Duration: [yellow]{store_stats['average_execution_duration_ms']:.1f}ms[/yellow]")
+        
+        # Executions by status
+        console.print(f"\n📊 [bold blue]By Status:[/bold blue]")
+        for status, count in store_stats['executions_by_status'].items():
+            color = "green" if status == "executed" else "red"
+            console.print(f"  {status.title()}: [{color}]{count}[/{color}]")
+        
+        # Executions by executor type
+        console.print(f"\n🔧 [bold purple]By Executor Type:[/bold purple]")
+        for executor_type, count in store_stats['executions_by_executor_type'].items():
+            console.print(f"  {executor_type.title()}: [cyan]{count}[/cyan]")
+        
+        # Daily trends
+        if store_stats['daily_execution_counts_last_7_days']:
+            console.print(f"\n📅 [bold yellow]Last 7 Days:[/bold yellow]")
+            for date, count in store_stats['daily_execution_counts_last_7_days'].items():
+                console.print(f"  {date}: [cyan]{count}[/cyan] executions")
+        
+        # Engine info
+        console.print(f"\n🚀 [bold magenta]Engine Info:[/bold magenta]")
+        console.print(f"Available Executors: [cyan]{', '.join(engine_stats['available_executors'])}[/cyan]")
+        console.print(f"Agent Version: [yellow]{engine_stats['agent_version']}[/yellow]")
+        
+        print_success("Execution report generated successfully")
+        
+    except CLIError as e:
+        print_error(f"Failed to generate execution report: {str(e)}")
+        raise typer.Exit(1)
             workflows_to_execute.extend(workflows)
         else:
             # Get all approved workflows
