@@ -38,7 +38,10 @@
       "Bash(sed:*)",
       "Bash(for file in tests/test_*.py)",
       "Bash(head:*)",
-      "Bash(OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true python cli.py transcript create --topic 'Technical support request' --store)"
+      "Bash(OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true python cli.py transcript create --topic 'Technical support request' --store)",
+      "Bash(tree:*)",
+      "Read(//home/ujjal/code/**)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []
