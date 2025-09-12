@@ -3478,18 +3478,18 @@ def orchestrate_pending():
         
         # Create table
         table = Table(show_header=True, header_style="bold blue")
-        table.add_column("Plan ID", style="cyan", width=15)
+        table.add_column("Plan ID", style="cyan", width=30)
         table.add_column("Pending Count", style="red", width=12)
         table.add_column("Risk Levels", style="yellow", width=15)
-        table.add_column("Transcript ID", style="dim", width=15)
+        table.add_column("Transcript ID", style="dim", width=25)
         
         for plan_id, workflows in plans_with_pending.items():
             pending_count = len(workflows)
             risk_levels = list(set([w.get('risk_level', 'Unknown') for w in workflows]))
-            transcript_id = workflows[0].get('transcript_id', 'N/A')[:12] + "..." if workflows[0].get('transcript_id') else 'N/A'
+            transcript_id = workflows[0].get('transcript_id', 'N/A')
             
             table.add_row(
-                plan_id[:12] + "..." if len(plan_id) > 12 else plan_id,
+                plan_id,
                 str(pending_count),
                 ", ".join(risk_levels),
                 transcript_id
@@ -3623,6 +3623,7 @@ def orchestrate_test(
 def approvals_queue(
     role: Optional[str] = typer.Option(None, "--role", "-r", help="Filter by approver role (SUPERVISOR, MANAGER)"),
     approver: Optional[str] = typer.Option(None, "--approver", "-a", help="Filter by specific approver"),
+    plan_id: Optional[str] = typer.Option(None, "--plan-id", "-p", help="Filter by specific plan ID"),
     limit: int = typer.Option(20, "--limit", "-l", help="Maximum number of workflows to show")
 ):
     """Show approval queue - pending workflows requiring manual approval."""
@@ -3639,11 +3640,13 @@ def approvals_queue(
             console.print("✅ [bold green]No workflows pending approval![/bold green]")
             return
         
-        # Filter by role or approver if specified
+        # Filter by role, approver, or plan_id if specified
         if role:
             pending_workflows = [w for w in pending_workflows if role.upper() in str(w.get('assigned_approver', '')).upper()]
         if approver:
             pending_workflows = [w for w in pending_workflows if approver in str(w.get('assigned_approver', ''))]
+        if plan_id:
+            pending_workflows = [w for w in pending_workflows if w.get('plan_id') == plan_id]
         
         # Limit results
         pending_workflows = pending_workflows[:limit]
