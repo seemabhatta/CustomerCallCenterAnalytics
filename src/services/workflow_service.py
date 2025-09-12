@@ -465,15 +465,19 @@ class WorkflowService:
             ValueError: Invalid plan_id or plan not found (NO FALLBACK)
             Exception: LLM agent failures (NO FALLBACK)
         """
+        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Starting workflow extraction for plan: {plan_id}")
         if not plan_id or not isinstance(plan_id, str):
             raise ValueError("plan_id must be a non-empty string")
         
         # Get action plan - fail fast if not found
+        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Fetching plan from store")
         plan_data = self.action_plan_store.get_by_id(plan_id)
         if not plan_data:
             raise ValueError(f"Action plan not found: {plan_id}")
+        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Found plan data")
         
         # Build complete context for LLM agent
+        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Building context for LLM agent")
         context_data = {
             'transcript_id': plan_data['transcript_id'],
             'analysis_id': plan_data['analysis_id'],
@@ -485,17 +489,21 @@ class WorkflowService:
         
         all_workflows = []
         workflow_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
+        print(f"[workflow_service.py::WorkflowService::extract_all_workflows_from_plan] Processing {len(workflow_types)} workflow types in parallel")
         
         # Create async task for each workflow type to enable parallel processing
         async def process_workflow_type(workflow_type: str) -> List[Dict[str, Any]]:
             """Process a single workflow type in parallel."""
+            print(f"[workflow_service.py::WorkflowService::process_workflow_type] Processing {workflow_type} workflows")
             try:
                 # Extract individual action items using LLM agent
+                print(f"[workflow_service.py::WorkflowService::process_workflow_type] Calling RiskAssessmentAgent.extract_individual_action_items for {workflow_type}")
                 action_items = await self.risk_agent.extract_individual_action_items(
                     plan_data=plan_data,
                     workflow_type=workflow_type,
                     context=context_data
                 )
+                print(f"[workflow_service.py::WorkflowService::process_workflow_type] Extracted {len(action_items)} action items for {workflow_type}")
                 
                 # Process action items in parallel batches
                 async def process_action_item(item: Dict[str, Any]) -> Dict[str, Any]:

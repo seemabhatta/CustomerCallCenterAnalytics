@@ -36,15 +36,15 @@ class CallAnalyzer:
             Analysis results with mortgage-specific insights
         """
         try:
-            print(f"DEBUG: Starting analysis for transcript {transcript.id}")
-            print(f"DEBUG: Transcript has {len(transcript.messages)} messages")
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] Starting analysis for transcript {transcript.id}")
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] Transcript has {len(transcript.messages)} messages")
             
             # Build transcript text for analysis
-            print("DEBUG: Building transcript text...")
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] Building transcript text...")
             transcript_text = self._build_transcript_text(transcript)
-            print(f"DEBUG: Built transcript text, length: {len(transcript_text)}")
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] Built transcript text, length: {len(transcript_text)}")
         except Exception as e:
-            print(f"DEBUG: Error in transcript text building: {e}")
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] Error in transcript text building: {e}")
             raise e
         
         # Define the structured output schema aligned with mortgage servicing vision
@@ -153,6 +153,8 @@ class CallAnalyzer:
         """
         
         try:
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] Making OpenAI Responses API call...")
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] Using model: gpt-4.1, temperature: 0.3")
             # Use OpenAI Responses API for structured analysis
             response = self.client.responses.create(
                 model="gpt-4.1",
@@ -160,6 +162,7 @@ class CallAnalyzer:
                 text={"format": text_format},
                 temperature=0.3  # Lower temperature for consistent analysis
             )
+            print(f"[call_analyzer.py::CallAnalyzer::analyze] OpenAI API call completed successfully")
 
             # Robust extraction of structured output across SDK variants
             analysis: Optional[Dict[str, Any]] = None

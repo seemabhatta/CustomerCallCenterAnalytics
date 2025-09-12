@@ -39,16 +39,22 @@ class ActionPlanGenerator:
         Returns:
             Dictionary containing four layer action plans
         """
+        print(f"[action_plan_generator.py::ActionPlanGenerator::generate] Starting plan generation for transcript: {transcript.id}")
         # Extract contextual information from transcript and analysis
+        print(f"[action_plan_generator.py::ActionPlanGenerator::generate] Extracting context...")
         context = self._extract_context(transcript, analysis)
+        print(f"[action_plan_generator.py::ActionPlanGenerator::generate] Context extracted, building prompt...")
         
         # Build comprehensive prompt for action plan generation
         prompt = self._build_prompt(context)
+        print(f"[action_plan_generator.py::ActionPlanGenerator::generate] Prompt built, defining schema...")
         
         # Define structured output schema for four layers
         action_plan_schema = self._get_action_plan_schema()
+        print(f"[action_plan_generator.py::ActionPlanGenerator::generate] Schema defined, making OpenAI API call...")
         
         try:
+            print(f"[action_plan_generator.py::ActionPlanGenerator::generate] Making OpenAI Responses API call with model: gpt-4.1")
             # Use OpenAI Responses API for structured output
             response = self.client.responses.create(
                 model="gpt-4.1",
@@ -63,6 +69,7 @@ class ActionPlanGenerator:
                 },
                 temperature=0.3  # Lower temperature for consistent action planning
             )
+            print(f"[action_plan_generator.py::ActionPlanGenerator::generate] OpenAI API call completed successfully")
             
             
             # NO FALLBACK: Fail fast with proper OpenAI Responses API integration

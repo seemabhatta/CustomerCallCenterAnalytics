@@ -35,19 +35,25 @@ class AnalysisService:
     
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new analysis from transcript."""
+        print(f"[analysis_service.py::AnalysisService::create] Starting analysis creation")
         transcript_id = request_data.get("transcript_id")
         if not transcript_id:
             raise ValueError("transcript_id is required")
+        print(f"[analysis_service.py::AnalysisService::create] Processing transcript_id: {transcript_id}")
         
         # Get transcript from store
+        print(f"[analysis_service.py::AnalysisService::create] Fetching transcript from store")
         from ..storage.transcript_store import TranscriptStore
         transcript_store = TranscriptStore(self.db_path)
         transcript = transcript_store.get_by_id(transcript_id)
         if not transcript:
             raise ValueError(f"Transcript {transcript_id} not found")
+        print(f"[analysis_service.py::AnalysisService::create] Found transcript with {len(transcript.messages) if hasattr(transcript, 'messages') else 'unknown'} messages")
         
         # Generate analysis using call analyzer
+        print(f"[analysis_service.py::AnalysisService::create] Calling CallAnalyzer.analyze()")
         analysis_result = self.analyzer.analyze(transcript)
+        print(f"[analysis_service.py::AnalysisService::create] CallAnalyzer completed, got result keys: {list(analysis_result.keys()) if isinstance(analysis_result, dict) else 'not dict'}")
         
         # Add metadata
         analysis_result["transcript_id"] = transcript_id

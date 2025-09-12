@@ -56,10 +56,12 @@ class SimpleOrchestrator:
         
         try:
             self.logger.info(f"🚀 Starting task: {task_name}")
+            print(f"🔄 Executing task: {task_name}")
             task_result.status = TaskStatus.RUNNING
             
             # Execute the task
             result = await task_func(*args, **kwargs)
+            print(f"✅ Task completed: {task_name}")
             
             task_result.result = result
             task_result.status = TaskStatus.COMPLETED

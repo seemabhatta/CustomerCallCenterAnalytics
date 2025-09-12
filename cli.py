@@ -3177,10 +3177,20 @@ def orchestrate_run(
     auto_approve: bool = typer.Option(False, "--auto-approve", "-a", help="Auto-approve all workflows"),
     timeout_hours: int = typer.Option(24, "--timeout", "-t", help="Hours to wait for manual approval"),
     format: str = typer.Option(DEFAULT_FORMAT, "--format", "-f", help="Output format: json, table, yaml"),
-    verbose: bool = typer.Option(DEFAULT_VERBOSE, "--verbose", "-v", help="Enable verbose output")
+    verbose: bool = typer.Option(DEFAULT_VERBOSE, "--verbose", "-v", help="Enable verbose output"),
+    debug: bool = typer.Option(False, "--debug", "-d", help="Enable debug logging")
 ):
     """Run complete orchestration pipeline: Transcript → Analysis → Plan → Workflows → Execution."""
     try:
+        # Configure logging based on debug/verbose flags
+        import logging
+        if debug:
+            logging.basicConfig(level=logging.DEBUG, format='%(levelname)s:%(name)s:%(message)s')
+        elif verbose:
+            logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message)s')
+        else:
+            logging.basicConfig(level=logging.WARNING, format='%(levelname)s:%(message)s')
+        
         console.print(f"🚀 [bold cyan]Starting orchestration pipeline for transcript: {transcript_id}[/bold cyan]")
         
         # Import here to avoid issues with missing dependencies
@@ -3211,9 +3221,17 @@ def orchestrate_run(
             table.add_row("Analysis ID", result["analysis_id"])
             table.add_row("Plan ID", result["plan_id"])
             table.add_row("Workflows Generated", str(result["workflow_count"]))
+            table.add_row("Workflows Approved", str(result.get("approved_count", "N/A")))
             table.add_row("Workflows Executed", str(result["executed_count"]))
+            table.add_row("Workflows Failed", str(result.get("failed_count", 0)))
             table.add_row("Stage", result["stage"])
-            table.add_row("Success", "✅ Yes" if result["success"] else "❌ No")
+            
+            if result.get("partial_success"):
+                table.add_row("Status", "⚠️ Partial Success")
+            elif result["success"]:
+                table.add_row("Status", "✅ Success")
+            else:
+                table.add_row("Status", "❌ Failed")
             
             console.print(table)
             
@@ -3226,10 +3244,12 @@ def orchestrate_run(
                 console.print(f"   Failed: {summary['failed']}")
                 console.print(f"   Success rate: {summary['success_rate']:.2%}")
         
-        if result["success"]:
+        if result.get("partial_success"):
+            print_warning(f"Pipeline completed with partial success! Executed {result['executed_count']}, failed {result.get('failed_count', 0)} workflows")
+        elif result["success"]:
             print_success(f"Pipeline completed successfully! Executed {result['executed_count']} workflows")
         else:
-            print_warning("Pipeline completed with issues")
+            print_error(f"Pipeline failed! Executed {result['executed_count']}, failed {result.get('failed_count', 0)} workflows")
         
     except Exception as e:
         print_error(f"Pipeline orchestration failed: {str(e)}")

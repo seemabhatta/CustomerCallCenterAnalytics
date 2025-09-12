@@ -81,7 +81,9 @@ class RiskAssessmentAgent:
         if not context or not isinstance(context, dict):
             raise ValueError("context must be a non-empty dictionary")
         
+        print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] Starting extraction for {workflow_type}")
         # Build comprehensive prompt for extracting individual items by workflow type
+        print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] Building extraction prompt for {workflow_type}")
         system_prompt = f"""You are an Action Item Extraction Agent for mortgage servicing operations.
 
 Your role is to extract individual actionable items from {workflow_type.lower()} plans for granular risk assessment.
@@ -117,6 +119,7 @@ FULL CONTEXT:
 Extract individual action items from the {workflow_type.lower()} section of this plan. Each item should be assessable independently for risk evaluation. Return as JSON array."""
 
         try:
+            print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] Making OpenAI API call for {workflow_type} extraction")
             # Use old approach with OpenAI client for action item extraction
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -127,6 +130,7 @@ Extract individual action items from the {workflow_type.lower()} section of this
                 response_format={"type": "json_object"},
                 temperature=0.1  # Low temperature for consistent extraction
             )
+            print(f"[risk_assessment_agent.py::RiskAssessmentAgent::extract_individual_action_items] OpenAI API call completed for {workflow_type}")
             
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate action items extraction response")
