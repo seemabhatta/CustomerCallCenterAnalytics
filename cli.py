@@ -3659,7 +3659,7 @@ def approvals_queue(
         
         # Create table
         table = Table(show_header=True, header_style="bold blue")
-        table.add_column("Workflow ID", style="cyan", width=20)
+        table.add_column("Workflow ID", style="cyan", width=36)
         table.add_column("Risk", style="red", width=8)
         table.add_column("Type", style="green", width=10)
         table.add_column("Assigned To", style="yellow", width=15)
