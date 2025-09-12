@@ -1611,34 +1611,86 @@ def workflow_view(
         console.print(f"Workflow ID: [cyan]{workflow.get('id')}[/cyan]")
         console.print(f"Plan ID: [yellow]{workflow.get('plan_id')}[/yellow]")
         console.print(f"Analysis ID: [blue]{workflow.get('analysis_id')}[/blue]")
+        console.print(f"Workflow Type: [magenta]{workflow.get('workflow_type', 'UNKNOWN')}[/magenta]")
         console.print(f"Status: [green]{workflow.get('status')}[/green]")
         console.print(f"Risk Level: [red]{workflow.get('risk_level')}[/red]")
+        
+        # Action Item Details
+        workflow_data = workflow.get('workflow_data', {})
+        if workflow_data:
+            console.print(f"\n🎯 [bold blue]Action Item Details:[/bold blue]")
+            
+            # Display action details
+            if 'action_item' in workflow_data:
+                console.print(f"[cyan]Action:[/cyan] {workflow_data['action_item']}")
+            elif 'action' in workflow_data:
+                console.print(f"[cyan]Action:[/cyan] {workflow_data['action']}")
+                
+            if 'description' in workflow_data:
+                console.print(f"[cyan]Description:[/cyan] {workflow_data['description']}")
+                
+            if 'priority' in workflow_data:
+                priority_color = "red" if workflow_data['priority'].lower() == "high" else "yellow" if workflow_data['priority'].lower() == "medium" else "green"
+                console.print(f"[cyan]Priority:[/cyan] [{priority_color}]{workflow_data['priority']}[/{priority_color}]")
+                
+            if 'timeline' in workflow_data:
+                console.print(f"[cyan]Timeline:[/cyan] {workflow_data['timeline']}")
+                
+            if 'workflow_type' in workflow_data:
+                console.print(f"[cyan]Layer:[/cyan] {workflow_data['workflow_type']}")
+                
+            # Display any additional metadata
+            if 'item_metadata' in workflow_data:
+                metadata = workflow_data['item_metadata']
+                if metadata:
+                    console.print(f"[cyan]Additional Info:[/cyan] {metadata}")
         
         # Risk reasoning
         if workflow.get('risk_reasoning'):
             console.print(f"\n💭 [bold blue]Risk Assessment:[/bold blue]")
-            console.print(f"{workflow['risk_reasoning']}")
+            try:
+                # Try to parse as JSON for better formatting
+                risk_data = json.loads(workflow['risk_reasoning']) if isinstance(workflow['risk_reasoning'], str) else workflow['risk_reasoning']
+                if isinstance(risk_data, dict):
+                    for key, value in risk_data.items():
+                        if key and value:
+                            console.print(f"[cyan]{key.replace('_', ' ').title()}:[/cyan] {value}")
+                else:
+                    console.print(f"{workflow['risk_reasoning']}")
+            except:
+                console.print(f"{workflow['risk_reasoning']}")
         
         # Approval information
         console.print(f"\n🔐 [bold blue]Approval Status:[/bold blue]")
         console.print(f"Requires Approval: {'Yes' if workflow.get('requires_human_approval') else 'No'}")
         
         if workflow.get('assigned_approver'):
-            console.print(f"Assigned Approver: {workflow['assigned_approver']}")
+            console.print(f"Assigned Approver: [yellow]{workflow['assigned_approver']}[/yellow]")
         
         if workflow.get('approved_by'):
-            console.print(f"Approved By: {workflow['approved_by']}")
+            console.print(f"Approved By: [green]{workflow['approved_by']}[/green]")
             console.print(f"Approved At: {workflow.get('approved_at', 'N/A')}")
         
         if workflow.get('rejected_by'):
-            console.print(f"Rejected By: {workflow['rejected_by']}")
+            console.print(f"Rejected By: [red]{workflow['rejected_by']}[/red]")
             console.print(f"Rejected At: {workflow.get('rejected_at', 'N/A')}")
             console.print(f"Rejection Reason: {workflow.get('rejection_reason', 'N/A')}")
         
+        # Business context from context_data
+        context_data = workflow.get('context_data', {})
+        if context_data and isinstance(context_data, dict):
+            console.print(f"\n📋 [bold blue]Business Context:[/bold blue]")
+            if 'transcript_id' in context_data:
+                console.print(f"[cyan]Source Call:[/cyan] {context_data['transcript_id']}")
+            if 'pipeline_stage' in context_data:
+                console.print(f"[cyan]Pipeline Stage:[/cyan] {context_data['pipeline_stage']}")
+            if 'extraction_timestamp' in context_data:
+                console.print(f"[cyan]Extracted At:[/cyan] {context_data['extraction_timestamp']}")
+        
         # Workflow steps
-        if workflow.get('workflow_data', {}).get('workflow_steps'):
-            console.print(f"\n📝 [bold blue]Workflow Steps:[/bold blue]")
-            for i, step in enumerate(workflow['workflow_data']['workflow_steps'], 1):
+        if workflow_data.get('workflow_steps'):
+            console.print(f"\n📝 [bold blue]Execution Steps:[/bold blue]")
+            for i, step in enumerate(workflow_data['workflow_steps'], 1):
                 console.print(f"{i}. {step}")
         
         # Timestamps
@@ -1901,6 +1953,19 @@ def workflow_by_plan(
                 console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
                 console.print(f"[cyan]Created:[/cyan] {created}")
                 
+                # Add action details
+                workflow_data = workflow.get('workflow_data', {})
+                action = workflow_data.get('action_item') or workflow_data.get('action', 'No action specified')
+                if action:
+                    console.print(f"[cyan]Action:[/cyan] {action}")
+                    
+                if workflow_data.get('priority'):
+                    priority_color = "red" if workflow_data['priority'].lower() == "high" else "yellow" if workflow_data['priority'].lower() == "medium" else "green"
+                    console.print(f"[cyan]Priority:[/cyan] [{priority_color}]{workflow_data['priority']}[/{priority_color}]")
+                    
+                if workflow_data.get('timeline'):
+                    console.print(f"[cyan]Timeline:[/cyan] {workflow_data['timeline']}")
+                
                 if workflow.get('requires_human_approval'):
                     approver = workflow.get('assigned_approver', 'Unassigned')
                     console.print(f"[cyan]Assigned Approver:[/cyan] {approver}")
@@ -1948,6 +2013,19 @@ def workflow_by_type(
             console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
             console.print(f"[cyan]Created:[/cyan] {created}")
             
+            # Add action details
+            workflow_data = workflow.get('workflow_data', {})
+            action = workflow_data.get('action_item') or workflow_data.get('action', 'No action specified')
+            if action:
+                console.print(f"[cyan]Action:[/cyan] {action}")
+                
+            if workflow_data.get('priority'):
+                priority_color = "red" if workflow_data['priority'].lower() == "high" else "yellow" if workflow_data['priority'].lower() == "medium" else "green"
+                console.print(f"[cyan]Priority:[/cyan] [{priority_color}]{workflow_data['priority']}[/{priority_color}]")
+                
+            if workflow_data.get('timeline'):
+                console.print(f"[cyan]Timeline:[/cyan] {workflow_data['timeline']}")
+            
             if workflow.get('requires_human_approval'):
                 approver = workflow.get('assigned_approver', 'Unassigned')
                 console.print(f"[cyan]Assigned Approver:[/cyan] {approver}")
@@ -1994,14 +2072,18 @@ def workflow_by_plan_type(
             console.print(f"[cyan]Risk Level:[/cyan] {risk_level}")
             console.print(f"[cyan]Created:[/cyan] {created}")
             
-            # Show action item details if available
+            # Add action details
             workflow_data = workflow.get('workflow_data', {})
-            if 'action' in workflow_data:
-                console.print(f"[cyan]Action:[/cyan] {workflow_data['action']}")
-            if 'timeline' in workflow_data:
+            action = workflow_data.get('action_item') or workflow_data.get('action', 'No action specified')
+            if action:
+                console.print(f"[cyan]Action:[/cyan] {action}")
+                
+            if workflow_data.get('priority'):
+                priority_color = "red" if workflow_data['priority'].lower() == "high" else "yellow" if workflow_data['priority'].lower() == "medium" else "green"
+                console.print(f"[cyan]Priority:[/cyan] [{priority_color}]{workflow_data['priority']}[/{priority_color}]")
+                
+            if workflow_data.get('timeline'):
                 console.print(f"[cyan]Timeline:[/cyan] {workflow_data['timeline']}")
-            if 'priority' in workflow_data:
-                console.print(f"[cyan]Priority:[/cyan] {workflow_data['priority']}")
             
             if workflow.get('requires_human_approval'):
                 approver = workflow.get('assigned_approver', 'Unassigned')
@@ -2011,6 +2093,207 @@ def workflow_by_plan_type(
         
     except CLIError as e:
         print_error(f"Get workflows by plan and type failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("tree")
+def workflow_tree(
+    plan_id: str = typer.Argument(..., help="Plan ID to show workflow tree for"),
+    detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed workflow info")
+):
+    """Display workflow tree showing parent-child relationships."""
+    try:
+        client = get_client()
+        
+        console.print(f"🌳 [bold magenta]Getting workflow tree for plan {plan_id}...[/bold magenta]")
+        workflows = client.get_workflows_by_plan(plan_id=plan_id)
+        
+        if not workflows:
+            console.print("📭 No workflows found for plan")
+            return
+        
+        # Group by workflow type for tree structure
+        type_groups = {}
+        for workflow in workflows:
+            wf_type = workflow.get('workflow_type', 'UNKNOWN')
+            if wf_type not in type_groups:
+                type_groups[wf_type] = []
+            type_groups[wf_type].append(workflow)
+        
+        # Display tree
+        console.print(f"\n📋 [bold green]Plan: {plan_id}[/bold green]")
+        
+        workflow_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP', 'LEGACY']
+        for i, wf_type in enumerate(workflow_types):
+            if wf_type in type_groups:
+                workflows_of_type = type_groups[wf_type]
+                is_last_type = i == len([t for t in workflow_types if t in type_groups]) - 1
+                tree_prefix = "└── " if is_last_type else "├── "
+                
+                # Type header with count
+                console.print(f"{tree_prefix}[bold blue]{wf_type}[/bold blue] ([cyan]{len(workflows_of_type)}[/cyan] workflows)")
+                
+                # Display each workflow
+                for j, workflow in enumerate(workflows_of_type):
+                    is_last_workflow = j == len(workflows_of_type) - 1
+                    
+                    if is_last_type:
+                        wf_prefix = "    └── " if is_last_workflow else "    ├── "
+                    else:
+                        wf_prefix = "│   └── " if is_last_workflow else "│   ├── "
+                    
+                    # Extract action details
+                    workflow_data = workflow.get('workflow_data', {})
+                    action = workflow_data.get('action_item') or workflow_data.get('action', 'No action specified')
+                    status = workflow.get('status', 'UNKNOWN')
+                    risk_level = workflow.get('risk_level', 'UNKNOWN')
+                    
+                    # Color code risk level
+                    risk_color = "red" if risk_level == "HIGH" else "yellow" if risk_level == "MEDIUM" else "green"
+                    status_color = "green" if status == "EXECUTED" else "yellow" if status == "APPROVED" else "cyan"
+                    
+                    if detailed:
+                        # Show more details in tree view
+                        console.print(f"{wf_prefix}[{risk_color}]{risk_level}[/{risk_color}] [{status_color}]{status}[/{status_color}] {action[:80]}{'...' if len(action) > 80 else ''}")
+                        
+                        # Add timeline and priority if available
+                        if workflow_data.get('priority') or workflow_data.get('timeline'):
+                            detail_prefix = "    │   " if not is_last_type else "        "
+                            if not is_last_workflow:
+                                detail_prefix = "│   │   " if not is_last_type else "    │   "
+                            
+                            details = []
+                            if workflow_data.get('priority'):
+                                priority_color = "red" if workflow_data['priority'].lower() == "high" else "yellow" if workflow_data['priority'].lower() == "medium" else "green"
+                                details.append(f"[{priority_color}]{workflow_data['priority']} priority[/{priority_color}]")
+                            if workflow_data.get('timeline'):
+                                details.append(f"Timeline: {workflow_data['timeline']}")
+                            
+                            if details:
+                                console.print(f"{detail_prefix}    ({', '.join(details)})")
+                    else:
+                        # Compact view
+                        workflow_id_short = workflow.get('id', 'Unknown')[:8] + '...'
+                        console.print(f"{wf_prefix}[{risk_color}]{risk_level}[/{risk_color}] [{status_color}]{status}[/{status_color}] {workflow_id_short} - {action[:60]}{'...' if len(action) > 60 else ''}")
+        
+        # Summary
+        total_workflows = len(workflows)
+        console.print(f"\n📊 [bold blue]Summary:[/bold blue] {total_workflows} total workflows across {len(type_groups)} types")
+        
+        # Status breakdown
+        status_counts = {}
+        for workflow in workflows:
+            status = workflow.get('status', 'UNKNOWN')
+            status_counts[status] = status_counts.get(status, 0) + 1
+        
+        console.print("📈 Status breakdown:", end=' ')
+        status_parts = []
+        for status, count in status_counts.items():
+            status_color = "green" if status == "EXECUTED" else "yellow" if status == "APPROVED" else "cyan"
+            status_parts.append(f"[{status_color}]{status}: {count}[/{status_color}]")
+        console.print(' | '.join(status_parts))
+        
+    except CLIError as e:
+        print_error(f"Workflow tree failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("summary") 
+def workflow_summary(
+    plan_id: str = typer.Argument(..., help="Plan ID to show summary for")
+):
+    """Show workflow summary with progress tracking."""
+    try:
+        client = get_client()
+        
+        console.print(f"📊 [bold magenta]Getting workflow summary for plan {plan_id}...[/bold magenta]")
+        workflows = client.get_workflows_by_plan(plan_id=plan_id)
+        
+        if not workflows:
+            console.print("📭 No workflows found for plan")
+            return
+        
+        total_workflows = len(workflows)
+        
+        # Group by type and status
+        type_status_matrix = {}
+        risk_level_counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0}
+        approver_counts = {}
+        
+        for workflow in workflows:
+            wf_type = workflow.get('workflow_type', 'UNKNOWN')
+            status = workflow.get('status', 'UNKNOWN')
+            risk_level = workflow.get('risk_level', 'UNKNOWN')
+            approver = workflow.get('assigned_approver', 'None')
+            
+            # Initialize type if not exists
+            if wf_type not in type_status_matrix:
+                type_status_matrix[wf_type] = {}
+            
+            # Count by status within type
+            if status not in type_status_matrix[wf_type]:
+                type_status_matrix[wf_type][status] = 0
+            type_status_matrix[wf_type][status] += 1
+            
+            # Count risk levels
+            if risk_level in risk_level_counts:
+                risk_level_counts[risk_level] += 1
+                
+            # Count approvers
+            approver_counts[approver] = approver_counts.get(approver, 0) + 1
+        
+        # Display summary
+        console.print(f"\n📋 [bold green]Workflow Summary for Plan: {plan_id}[/bold green]")
+        console.print(f"Total Workflows: [cyan]{total_workflows}[/cyan]")
+        
+        # Type breakdown table
+        console.print(f"\n🏗️ [bold blue]By Workflow Type:[/bold blue]")
+        for wf_type, statuses in type_status_matrix.items():
+            total_for_type = sum(statuses.values())
+            console.print(f"  [magenta]{wf_type}[/magenta]: [cyan]{total_for_type}[/cyan] workflows")
+            
+            for status, count in statuses.items():
+                percentage = (count / total_for_type) * 100
+                status_color = "green" if status == "EXECUTED" else "yellow" if status in ["APPROVED", "AUTO_APPROVED"] else "cyan"
+                console.print(f"    [{status_color}]{status}[/{status_color}]: {count} ({percentage:.1f}%)")
+        
+        # Risk level breakdown
+        console.print(f"\n⚡ [bold blue]By Risk Level:[/bold blue]")
+        for risk_level, count in risk_level_counts.items():
+            if count > 0:
+                percentage = (count / total_workflows) * 100
+                risk_color = "red" if risk_level == "HIGH" else "yellow" if risk_level == "MEDIUM" else "green"
+                console.print(f"  [{risk_color}]{risk_level}[/{risk_color}]: {count} ({percentage:.1f}%)")
+        
+        # Approver workload
+        console.print(f"\n👥 [bold blue]Approval Workload:[/bold blue]")
+        for approver, count in sorted(approver_counts.items(), key=lambda x: x[1], reverse=True):
+            if approver != 'None':
+                percentage = (count / total_workflows) * 100
+                console.print(f"  [yellow]{approver}[/yellow]: {count} workflows ({percentage:.1f}%)")
+        
+        # Progress indicators
+        executed_count = sum(statuses.get('EXECUTED', 0) for statuses in type_status_matrix.values())
+        approved_count = sum(statuses.get('APPROVED', 0) + statuses.get('AUTO_APPROVED', 0) for statuses in type_status_matrix.values())
+        pending_count = sum(statuses.get('AWAITING_APPROVAL', 0) + statuses.get('PENDING_ASSESSMENT', 0) for statuses in type_status_matrix.values())
+        
+        execution_percentage = (executed_count / total_workflows) * 100 if total_workflows > 0 else 0
+        approval_percentage = (approved_count / total_workflows) * 100 if total_workflows > 0 else 0
+        
+        console.print(f"\n🎯 [bold blue]Progress Summary:[/bold blue]")
+        console.print(f"  [green]Completed[/green]: {executed_count} workflows ({execution_percentage:.1f}%)")
+        console.print(f"  [yellow]Approved (pending execution)[/yellow]: {approved_count} workflows ({approval_percentage:.1f}%)")
+        console.print(f"  [cyan]Pending approval[/cyan]: {pending_count} workflows")
+        
+        # Identify bottlenecks
+        if pending_count > 0:
+            console.print(f"\n🚨 [bold red]Bottlenecks:[/bold red]")
+            max_pending_approver = max(approver_counts.items(), key=lambda x: x[1] if x[0] != 'None' else 0)
+            if max_pending_approver[0] != 'None':
+                console.print(f"  Highest workload: [red]{max_pending_approver[0]}[/red] ({max_pending_approver[1]} workflows)")
+        
+    except CLIError as e:
+        print_error(f"Workflow summary failed: {str(e)}")
         raise typer.Exit(1)
 
 
