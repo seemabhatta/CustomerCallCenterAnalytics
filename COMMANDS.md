@@ -82,7 +82,7 @@ python cli.py analysis delete-all
 - `patterns` - Discover risk patterns across all analyses
 - `risks` - Get high-risk patterns using knowledge graph analytics
 - `recommend` - Get AI-powered recommendations for a customer
-- `similar` - Find similar cases using knowledge graph pattern matching
+- `similar` - Find similar analyses using knowledge graph pattern matching
 - `dashboard` - Get comprehensive insights dashboard
 
 #### Knowledge Graph Management Commands:
@@ -138,39 +138,7 @@ python cli.py plan list
 
 ---
 
-### 5. Case Operations
-
-**Resource Group:** `case`
-
-#### Available Commands:
-- `list` - List all cases
-
-#### Examples:
-
-```bash
-# List all cases
-python cli.py case list
-```
-
----
-
-### 6. Governance Operations
-
-**Resource Group:** `governance`
-
-#### Available Commands:
-- `queue` - Show approval queue
-
-#### Examples:
-
-```bash
-# Show approval queue
-python cli.py governance queue
-```
-
----
-
-### 7. System Operations
+### 5. System Operations
 
 **Resource Group:** `system`
 
