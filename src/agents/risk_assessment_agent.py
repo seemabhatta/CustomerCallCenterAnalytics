@@ -365,7 +365,12 @@ CRITICAL INSTRUCTIONS:
 - Provide validation result (approval_valid: true/false)
 - Include detailed reasoning for validation decision
 - NO BLANKET APPROVALS - evaluate each decision carefully
-- Return your response as valid JSON format"""
+- Return your response as valid JSON format with exact fields:
+  {
+    "approval_valid": boolean,
+    "validation_reasoning": "detailed explanation",
+    "rejection_reason": "reason if approval_valid is false"
+  }"""
 
         user_prompt = f"""WORKFLOW TO VALIDATE:
 {json.dumps(workflow_data, indent=2)}
