@@ -23,8 +23,6 @@ from src.services.transcript_service import TranscriptService
 from src.services.analysis_service import AnalysisService
 from src.services.insights_service import InsightsService
 from src.services.plan_service import PlanService
-from src.services.case_service import CaseService
-from src.services.governance_service import GovernanceService
 from src.services.system_service import SystemService
 
 # Load environment variables from .env file
@@ -40,8 +38,6 @@ transcript_service = TranscriptService(api_key=api_key)
 analysis_service = AnalysisService(api_key=api_key)
 insights_service = InsightsService()
 plan_service = PlanService(api_key=api_key)
-case_service = CaseService(api_key=api_key)
-governance_service = GovernanceService(api_key=api_key)
 system_service = SystemService(api_key=api_key)
 
 print("✅ All services initialized successfully")
@@ -98,30 +94,6 @@ class ExecutionRequest(BaseModel):
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
 
-class GovernanceSubmissionRequest(BaseModel):
-    action_id: str
-    description: str
-    financial_impact: Optional[bool] = False
-    risk_score: Optional[float] = 0.5
-    amount: Optional[float] = 0
-    submitted_by: str
-    submitted_at: Optional[str] = None
-
-class GovernanceApprovalRequest(BaseModel):
-    governance_id: str
-    action: str  # "approve" or "reject"
-    approved_by: str
-    conditions: Optional[List[str]] = []
-    notes: Optional[str] = ""
-    approved_at: Optional[str] = None
-
-class EmergencyOverrideRequest(BaseModel):
-    action_id: str
-    override_by: str
-    emergency_type: str
-    justification: str
-    approval_level_bypassed: str
-    executed_at: Optional[str] = None
 
 @app.get("/")
 async def root():
@@ -137,8 +109,6 @@ async def root():
             "analyses": "/api/v1/analyses",
             "insights": "/api/v1/insights",
             "plans": "/api/v1/plans",
-            "cases": "/api/v1/cases",
-            "governance": "/api/v1/governance",
             "metrics": "/api/v1/metrics",
             "health": "/api/v1/health"
         }
@@ -578,145 +548,6 @@ async def execute_plan(plan_id: str, request: ExecutionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to execute plan: {str(e)}")
 
-# ===============================================
-# CASE MANAGEMENT ENDPOINTS - 5 endpoints
-# ===============================================
-
-@app.get("/api/v1/cases")
-async def list_cases(
-    limit: Optional[int] = Query(None),
-    status: Optional[str] = Query(None),
-    priority: Optional[str] = Query(None),
-    customer: Optional[str] = Query(None)
-):
-    """List all cases - proxies to case service."""
-    try:
-        if any([status, priority, customer]):
-            search_params = {}
-            if status:
-                search_params["status"] = status
-            if priority:
-                search_params["priority"] = priority
-            if customer:
-                search_params["customer"] = customer
-            return await case_service.search(search_params)
-        else:
-            return await case_service.list_all(limit=limit)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list cases: {str(e)}")
-
-@app.get("/api/v1/cases/{case_id}")
-async def get_case(case_id: str):
-    """Get case by ID - proxies to case service."""
-    try:
-        result = await case_service.get_by_id(case_id)
-        if not result:
-            raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
-        return result
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get case: {str(e)}")
-
-@app.get("/api/v1/cases/{case_id}/transcripts")
-async def get_case_transcripts(case_id: str):
-    """Get case transcripts - proxies to case service."""
-    try:
-        return await case_service.get_transcripts(case_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get case transcripts: {str(e)}")
-
-@app.get("/api/v1/cases/{case_id}/analyses")
-async def get_case_analyses(case_id: str):
-    """Get case analyses - proxies to case service."""
-    try:
-        return await case_service.get_analyses(case_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get case analyses: {str(e)}")
-
-@app.get("/api/v1/cases/{case_id}/plans")
-async def get_case_plans(case_id: str):
-    """Get case action plans - proxies to case service."""
-    try:
-        return await case_service.get_plans(case_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get case plans: {str(e)}")
-
-# ===============================================
-# GOVERNANCE ENDPOINTS - 6 endpoints
-# ===============================================
-
-@app.post("/api/v1/governance/submissions")
-async def submit_for_governance(request: GovernanceSubmissionRequest):
-    """Submit for governance review - proxies to governance service."""
-    try:
-        return await governance_service.submit(request.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to submit for governance: {str(e)}")
-
-@app.get("/api/v1/governance/submissions/{governance_id}")
-async def get_governance_status(governance_id: str):
-    """Get governance submission status - proxies to governance service."""
-    try:
-        result = await governance_service.get_status(governance_id)
-        if not result:
-            raise HTTPException(status_code=404, detail=f"Governance submission {governance_id} not found")
-        return result
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get governance status: {str(e)}")
-
-@app.get("/api/v1/governance/queue")
-async def get_governance_queue(status: Optional[str] = Query(None)):
-    """Get governance approval queue - proxies to governance service."""
-    try:
-        return await governance_service.get_queue(status_filter=status)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get governance queue: {str(e)}")
-
-@app.post("/api/v1/governance/approvals")
-async def process_governance_approval(request: GovernanceApprovalRequest):
-    """Process governance approval - proxies to governance service."""
-    try:
-        return await governance_service.process_approval(request.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process approval: {str(e)}")
-
-@app.get("/api/v1/governance/audit")
-async def get_governance_audit_trail(
-    user_id: Optional[str] = Query(None),
-    event_type: Optional[str] = Query(None),
-    start_date: Optional[str] = Query(None),
-    limit: Optional[int] = Query(50)
-):
-    """Get governance audit trail - proxies to governance service."""
-    try:
-        audit_filters = {
-            "user_id": user_id,
-            "event_type": event_type,
-            "start_date": start_date,
-            "limit": limit
-        }
-        return await governance_service.get_audit_trail(audit_filters)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get audit trail: {str(e)}")
-
-@app.get("/api/v1/governance/metrics")
-async def get_governance_metrics():
-    """Get governance metrics - proxies to governance service."""
-    try:
-        return await governance_service.get_metrics()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get governance metrics: {str(e)}")
-
-@app.post("/api/v1/governance/emergency-override")
-async def emergency_override(request: EmergencyOverrideRequest):
-    """Process emergency governance override - proxies to governance service."""
-    try:
-        return await governance_service.emergency_override(request.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to process emergency override: {str(e)}")
 
 # ===============================================
 # LEGACY ENDPOINTS (for backward compatibility)
@@ -746,19 +577,6 @@ async def legacy_api_metrics():
     """Legacy endpoint - redirects to /api/v1/metrics."""
     return await get_dashboard_metrics()
 
-@app.get("/api/cases")
-async def legacy_api_cases(priority: Optional[int] = None, status: Optional[str] = None, search: Optional[str] = None):
-    """Legacy endpoint - redirects to /api/v1/cases."""
-    # Convert legacy parameters
-    priority_str = None
-    if priority == 1:
-        priority_str = "high"
-    elif priority == 2:
-        priority_str = "medium"
-    elif priority == 3:
-        priority_str = "low"
-    
-    return await list_cases(status=status, priority=priority_str, customer=search)
 
 # ===============================================
 # MAIN ENTRY POINT
@@ -768,7 +586,7 @@ if __name__ == "__main__":
     print("🚀 Starting Customer Call Center Analytics API Server")
     print("📚 API Documentation: http://localhost:8000/docs")
     print("🌐 Server URL: http://0.0.0.0:8000")
-    print("✅ All 43 standardized /api/v1/* endpoints available")
+    print("✅ All 30 standardized /api/v1/* endpoints available")
     
     uvicorn.run(
         app,

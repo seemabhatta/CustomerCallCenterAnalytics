@@ -3,7 +3,7 @@
 Customer Call Center Analytics CLI - Consolidated Resource-Based Commands
 Direct REST API client following industry best practices
 No fallback logic - fail fast with clear error messages
-Resource-aligned commands: transcript, analysis, plan, case, governance, system
+Resource-aligned commands: transcript, analysis, plan, system
 """
 import json
 import requests
@@ -172,8 +172,8 @@ class CLIRestClient:
         """Get customer recommendations via GET /api/v1/insights/recommendations/{customer_id}."""
         return self._make_request('GET', f'/api/v1/insights/recommendations/{customer_id}')
     
-    def find_similar_cases(self, analysis_id: str, limit: int = 5) -> List[Dict[str, Any]]:
-        """Find similar cases via GET /api/v1/insights/similar/{analysis_id}."""
+    def find_similar_analyses(self, analysis_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Find similar analyses via GET /api/v1/insights/similar/{analysis_id}."""
         params = {'limit': limit}
         return self._make_request('GET', f'/api/v1/insights/similar/{analysis_id}', params=params)
     
@@ -260,23 +260,6 @@ class CLIRestClient:
         """Delete all plans via DELETE /api/v1/plans."""
         return self._make_request('DELETE', '/api/v1/plans')
     
-    # Case operations
-    def list_cases(self) -> List[Dict[str, Any]]:
-        """List cases via GET /api/v1/cases."""
-        return self._make_request('GET', '/api/v1/cases')
-    
-    def get_case(self, case_id: str) -> Dict[str, Any]:
-        """Get case by ID via GET /api/v1/cases/{id}."""
-        return self._make_request('GET', f'/api/v1/cases/{case_id}')
-    
-    # Governance operations  
-    def get_approval_queue(self) -> List[Dict[str, Any]]:
-        """Get approval queue via GET /api/v1/governance/queue."""
-        return self._make_request('GET', '/api/v1/governance/queue')
-    
-    def approve_action(self, action_id: str, **kwargs) -> Dict[str, Any]:
-        """Approve action via POST /api/v1/governance/approvals."""
-        return self._make_request('POST', '/api/v1/governance/approvals', json_data={'action_id': action_id, **kwargs})
     
     # System operations
     def get_health(self) -> Dict[str, Any]:
@@ -336,8 +319,6 @@ transcript_app = typer.Typer(name="transcript", help="Transcript operations")
 analysis_app = typer.Typer(name="analysis", help="Analysis operations") 
 insights_app = typer.Typer(name="insights", help="Insights operations")
 plan_app = typer.Typer(name="plan", help="Plan operations")
-case_app = typer.Typer(name="case", help="Case operations")
-governance_app = typer.Typer(name="governance", help="Governance operations")
 system_app = typer.Typer(name="system", help="System operations")
 
 # Add subapps to main app
@@ -345,8 +326,6 @@ app.add_typer(transcript_app)
 app.add_typer(analysis_app)
 app.add_typer(insights_app)
 app.add_typer(plan_app)
-app.add_typer(case_app)
-app.add_typer(governance_app)
 app.add_typer(system_app)
 
 
@@ -847,47 +826,47 @@ def analysis_recommend(
 
 @insights_app.command("similar")
 def analysis_similar(
-    analysis_id: str = typer.Argument(..., help="Analysis ID to find similar cases for"),
-    limit: int = typer.Option(5, "--limit", "-l", help="Maximum similar cases to return")
+    analysis_id: str = typer.Argument(..., help="Analysis ID to find similar analyses for"),
+    limit: int = typer.Option(5, "--limit", "-l", help="Maximum similar analyses to return")
 ):
-    """Find similar cases using knowledge graph pattern matching."""
+    """Find similar analyses using knowledge graph pattern matching."""
     try:
         if limit <= 0 or limit > 50:
             print_error("Limit must be between 1 and 50")
             raise typer.Exit(1)
         
         client = get_client()
-        console.print(f"🔎 [bold cyan]Finding similar cases for {analysis_id} (limit: {limit})...[/bold cyan]")
+        console.print(f"🔎 [bold cyan]Finding similar analyses for {analysis_id} (limit: {limit})...[/bold cyan]")
         
-        similar_cases = client.find_similar_cases(analysis_id, limit)
+        similar_analyses = client.find_similar_analyses(analysis_id, limit)
         
-        if not similar_cases:
-            console.print(f"🔍 No similar cases found for analysis {analysis_id}")
+        if not similar_analyses:
+            console.print(f"🔍 No similar analyses found for analysis {analysis_id}")
             return
         
-        # Display similar cases
-        table = Table(title=f"Similar Cases for {analysis_id}")
+        # Display similar analyses
+        table = Table(title=f"Similar Analyses for {analysis_id}")
         table.add_column("Similar Analysis", style="blue")
         table.add_column("Shared Pattern", style="yellow")
         table.add_column("Risk Score", style="red")
         table.add_column("Confidence", style="green") 
         table.add_column("Learning Opportunity", style="white")
         
-        for case in similar_cases:
-            similarity = case.get('similarity', {})
+        for analysis in similar_analyses:
+            similarity = analysis.get('similarity', {})
             table.add_row(
-                case.get('similar_analysis_id', 'Unknown'),
+                analysis.get('similar_analysis_id', 'Unknown'),
                 similarity.get('shared_pattern', 'Unknown'),
                 f"{similarity.get('risk_score', 0):.2f}",
                 f"{similarity.get('confidence', 0):.2f}",
-                case.get('learning_opportunity', 'None')[:40] + "..." if len(case.get('learning_opportunity', '')) > 40 else case.get('learning_opportunity', '')
+                analysis.get('learning_opportunity', 'None')[:40] + "..." if len(analysis.get('learning_opportunity', '')) > 40 else analysis.get('learning_opportunity', '')
             )
         
         console.print(table)
-        print_success(f"Found {len(similar_cases)} similar cases")
+        print_success(f"Found {len(similar_analyses)} similar analyses")
         
     except CLIError as e:
-        print_error(f"Similar case search failed: {str(e)}")
+        print_error(f"Similar analysis search failed: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -1470,68 +1449,6 @@ def plan_delete_all(
         raise typer.Exit(1)
 
 
-# ====================================================================
-# CASE COMMANDS
-# ====================================================================
-
-@case_app.command("list")
-def case_list():
-    """List all cases."""
-    try:
-        client = get_client()
-        
-        console.print("📁 [bold magenta]Listing cases...[/bold magenta]")
-        cases = client.list_cases()
-        
-        if not cases:
-            console.print("📭 No cases found")
-            return
-        
-        console.print(f"\n📊 Found {len(cases)} case(s):")
-        
-        for case in cases:
-            case_id = case.get('case_id', 'N/A')
-            status = case.get('status', 'N/A')
-            
-            console.print(f"\n[cyan]Case ID:[/cyan] {case_id}")
-            console.print(f"[cyan]Status:[/cyan] {status}")
-            console.print("─" * 40)
-            
-    except CLIError as e:
-        print_error(f"List cases failed: {str(e)}")
-        raise typer.Exit(1)
-
-
-# ====================================================================
-# GOVERNANCE COMMANDS
-# ====================================================================
-
-@governance_app.command("queue")
-def governance_queue():
-    """Show approval queue."""
-    try:
-        client = get_client()
-        
-        console.print("🎯 [bold magenta]Getting approval queue...[/bold magenta]")
-        queue = client.get_approval_queue()
-        
-        if not queue:
-            console.print("📭 No pending approvals")
-            return
-        
-        console.print(f"\n📊 Found {len(queue)} pending approval(s):")
-        
-        for item in queue:
-            action_id = item.get('action_id', 'N/A')
-            status = item.get('status', 'N/A')
-            
-            console.print(f"\n[cyan]Action ID:[/cyan] {action_id}")
-            console.print(f"[cyan]Status:[/cyan] {status}")
-            console.print("─" * 40)
-            
-    except CLIError as e:
-        print_error(f"Get approval queue failed: {str(e)}")
-        raise typer.Exit(1)
 
 
 # ====================================================================
