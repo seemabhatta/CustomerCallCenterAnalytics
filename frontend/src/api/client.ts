@@ -88,6 +88,11 @@ export const transcriptApi = {
       api.delete(`/api/v1/transcripts/${id}`)
     ),
 
+  deleteAll: () => 
+    apiCall<{ message: string }>(() => 
+      api.delete('/api/v1/transcripts')
+    ),
+
   search: (params: SearchParams) => 
     apiCall<Transcript[]>(() => 
       api.get('/api/v1/transcripts/search', { params })
