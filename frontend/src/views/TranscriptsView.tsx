@@ -75,7 +75,7 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
 
   const handleOpenTranscriptInternal = (transcriptId: string) => {
     setSelectedTranscriptId(transcriptId);
-    onOpenTranscript(transcriptId);
+    // onOpenTranscript(transcriptId); // Removed to prevent popup dialog
   };
 
   const handleCloseLiveView = () => {
