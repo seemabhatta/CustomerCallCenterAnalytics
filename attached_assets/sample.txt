@@ -1,0 +1,900 @@
+import React, { useMemo, useState, useEffect } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Legend, Sankey } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertTriangle, Settings2, Rocket, LineChart, CheckCircle2, Download, Activity, Info, Settings, ArrowRight, ShieldCheck, MessageSquare, ClipboardList, Workflow as WorkflowIcon, PlayCircle, Lightbulb, Clock } from "lucide-react";
+
+/**
+ * Innovative UI Shell for Customer CallCenter Analytics — Linear Flow Tables
+ * ------------------------------------------------------------------------
+ * Linear flow with per-row actions:
+ * Transcript ➜ Analysis ➜ Plan ➜ Workflow ➜ Execution
+ *
+ * Wire to your APIs as:
+ *  - POST /analyses   { transcriptId }
+ *  - POST /plans      { analysisId }
+ *  - POST /workflows  { planId }
+ */
+
+// ---- Mock data --------------------------------------------------------------
+const mockRun = {
+  id: "RUN_CALL_27FF315B",
+  startedAt: "2025-09-12T16:41:34Z",
+  durations: [
+    { stage: "analysis", seconds: 9.7 },
+    { stage: "plan", seconds: 24.4 },
+    { stage: "workflows", seconds: 110.4 },
+    { stage: "approval", seconds: 0.0 },
+    { stage: "execution", seconds: 0.0 },
+  ],
+  funnel: { generated: 10, approved: 0, executed: 0, failed: 0 },
+};
+
+const mockTranscripts = [
+  { id: "CALL_27FF315B", customer: "John Doe", advisor: "Amy R.", startedAt: "2025-09-12T16:41:00Z", durationSec: 300, messageCount: 18, status: "Complete" },
+  { id: "CALL_ABCD1234", customer: "Mary Lee", advisor: "Sam K.", startedAt: "2025-09-12T15:10:00Z", durationSec: 420, messageCount: 22, status: "Complete" },
+  { id: "CALL_EFGH5678", customer: "Nate P.", advisor: "Isha T.", startedAt: "2025-09-12T14:02:00Z", durationSec: 265, messageCount: 16, status: "Processing" },
+];
+
+const mockTranscriptDetail = {
+  id: "CALL_27FF315B",
+  customer: "John Doe",
+  advisor: "Amy R.",
+  startedAt: "2025-09-12T16:41:00Z",
+  durationSec: 300,
+  segments: [
+    { t: 5, speaker: "Borrower", text: "I'm confused about the fees I saw." },
+    { t: 22, speaker: "Advisor", text: "I'll resend the preliminary disclosure now." },
+    { t: 65, speaker: "Borrower", text: "Will that change my monthly payment?" },
+    { t: 120, speaker: "Advisor", text: "Your APR changes slightly; I'll summarize via email." },
+  ],
+};
+
+const seedAnalyses = [
+  { id: "ANALYSIS_CALL_27FF31", transcriptId: "CALL_27FF315B", summary: "18 messages; high-risk items found", high: 9, medium: 1, low: 0, status: "Done" },
+];
+
+const seedPlans = [
+  { id: "PLAN_ANALYSIS_CALL_2", analysisId: "ANALYSIS_CALL_27FF31", title: "Borrower remediation plan", owner: "Advisor", status: "Ready" },
+];
+
+const mockRiskByPersona = [
+  { persona: "BORROWER", HIGH: 1, MEDIUM: 1, LOW: 0 },
+  { persona: "ADVISOR", HIGH: 2, MEDIUM: 0, LOW: 0 },
+  { persona: "SUPERVISOR", HIGH: 3, MEDIUM: 0, LOW: 0 },
+  { persona: "LEADERSHIP", HIGH: 3, MEDIUM: 0, LOW: 0 },
+];
+
+const mockEvents = [
+  { t: "16:41:34", msg: "analysis started", type: "info" },
+  { t: "16:41:44", msg: "plan completed (id=PLAN_ANALYSIS_CALL_2)", type: "success" },
+  { t: "16:42:26", msg: "risk assessed HIGH for BORROWER action", type: "warn" },
+  { t: "16:43:58", msg: "workflows extracted (10) — queued for approval", type: "info" },
+  { t: "16:43:58", msg: "pipeline complete — executed 0 (autoApprove=false)", type: "warn" },
+];
+
+const mockWorkflowsSeed = [
+  { id: "WF-1001", persona: "BORROWER", risk: "HIGH", status: "PENDING_APPROVAL", action: "Resend preliminary disclosure" },
+  { id: "WF-1002", persona: "SUPERVISOR", risk: "HIGH", status: "PENDING_APPROVAL", action: "Audit recent calls" },
+  { id: "WF-1003", persona: "BORROWER", risk: "MEDIUM", status: "PENDING_APPROVAL", action: "Confirm receipt and understanding" },
+  { id: "WF-1004", persona: "ADVISOR", risk: "LOW", status: "AUTO_APPROVED", action: "Send summary email" },
+  { id: "WF-1005", persona: "LEADERSHIP", risk: "HIGH", status: "REJECTED", action: "Expand proactive outreach" },
+];
+
+const mockApprovalsSeed = {
+  "WF-1001": [ { role: "ADVISOR", status: "APPROVED" }, { role: "SUPERVISOR", status: "PENDING" } ],
+  "WF-1002": [ { role: "SUPERVISOR", status: "PENDING" }, { role: "LEADERSHIP", status: "PENDING" } ],
+};
+
+const mockExecutions = [
+  { id: "JOB-1", type: "email", status: "COMPLETED", startedAt: "2025-09-12T16:45:00Z", durationSec: 2, logs: ["Queued SMTP", "Sent 200 OK"] },
+  { id: "JOB-2", type: "crm-note", status: "FAILED", startedAt: "2025-09-12T16:46:10Z", durationSec: 1, logs: ["CRM timeout", "Retry failed"] },
+];
+
+const mockInsights = {
+  borrowerPain: ["Fee confusion on refinance", "APR vs monthly mismatch"],
+  advisorCoaching: ["Proactive fee explanation", "Use disclosure template"],
+  complianceAlerts: ["Late disclosure mention", "Missing APR explanation"],
+};
+
+// --- Helpers -----------------------------------------------------------------
+function pct(n, total) { return total ? Math.round((n / total) * 100) : 0; }
+
+// --- Reusable bits -----------------------------------------------------------
+function KPI({ title, value, icon, sub }) {
+  return (
+    <Card className="rounded-2xl shadow-sm">
+      <CardHeader className="pb-1 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm text-slate-500 flex items-center gap-2">{title} {sub && (<span className="text-[11px] text-slate-400">{sub}</span>)}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent className="text-2xl font-semibold">{value}</CardContent>
+    </Card>
+  );
+}
+
+function StageDurationChart({ data }) {
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Pipeline Stage Durations (s)</CardTitle></CardHeader>
+      <CardContent className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <XAxis dataKey="stage" />
+            <YAxis />
+            <RTooltip />
+            <Bar dataKey="seconds" />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RiskByPersonaChart({ data }) {
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Risk by Persona</CardTitle></CardHeader>
+      <CardContent className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <XAxis dataKey="persona" />
+            <YAxis allowDecimals={false} />
+            <Legend />
+            <RTooltip />
+            <Bar dataKey="HIGH" stackId="a" />
+            <Bar dataKey="MEDIUM" stackId="a" />
+            <Bar dataKey="LOW" stackId="a" />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LiveEvents({ items }) {
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Live Events</CardTitle></CardHeader>
+      <CardContent className="space-y-2">
+        {items.map((e, i) => (
+          <div key={i} className="flex items-center gap-3 text-sm">
+            <span className="w-14 text-slate-400">{e.t}</span>
+            {e.type === "warn" ? (
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            ) : e.type === "success" ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            ) : (
+              <LineChart className="h-4 w-4 text-slate-400" />
+            )}
+            <span>{e.msg}</span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FunnelSankey({ run, riskByPersona }) {
+  const totals = useMemo(() => {
+    const HIGH = riskByPersona.reduce((a, b) => a + (b.HIGH || 0), 0);
+    const MED = riskByPersona.reduce((a, b) => a + (b.MEDIUM || 0), 0);
+    const LOW = riskByPersona.reduce((a, b) => a + (b.LOW || 0), 0);
+    return { HIGH, MED, LOW };
+  }, [riskByPersona]);
+
+  const nodes = [
+    { name: `Generated ${run.funnel.generated}` },
+    { name: `High ${totals.HIGH}` },
+    { name: `Medium ${totals.MED}` },
+    { name: `Low ${totals.LOW}` },
+    { name: `Approved ${run.funnel.approved}` },
+    { name: `Executed ${run.funnel.executed}` },
+  ];
+  const links = [
+    { source: 0, target: 1, value: totals.HIGH },
+    { source: 0, target: 2, value: totals.MED },
+    { source: 0, target: 3, value: totals.LOW },
+    { source: 2, target: 4, value: 0 }, // placeholder: approval off
+    { source: 4, target: 5, value: run.funnel.executed },
+  ];
+
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Workflow Funnel</CardTitle></CardHeader>
+      <CardContent className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <Sankey width={600} height={240} data={{ nodes, links }} nodePadding={24} margin={{ left: 10, right: 10, top: 10, bottom: 10 }} />
+        </ResponsiveContainer>
+        <div className="mt-2 text-xs text-slate-500">Tip: Toggle auto-approval rules in Governance to change this funnel.</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---- Approval chips for Workflow cards -------------------------------------
+function ApprovalChips({ wfId, approvals }) {
+  const items = approvals[wfId] || [];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((a, i) => (
+        <Badge key={i} variant={a.status === "APPROVED" ? "default" : "secondary"} className={a.status === "APPROVED" ? "bg-emerald-600" : ""}>
+          {a.status === "APPROVED" ? <CheckCircle2 className="h-3.5 w-3.5 mr-1"/> : <Clock className="h-3.5 w-3.5 mr-1"/>}
+          {a.role} {a.status === "APPROVED" ? "✓" : "…"}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+// ---- DASHBOARD --------------------------------------------------------------
+function Dashboard() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <KPI title="Workflows Generated" value={mockRun.funnel.generated} icon={<Rocket className="h-4 w-4 text-indigo-500" />} />
+        <KPI title="Approved" value={mockRun.funnel.approved} icon={<Settings2 className="h-4 w-4 text-slate-500" />} />
+        <KPI title="Executed" value={mockRun.funnel.executed} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} />
+        <KPI title="Failed" value={mockRun.funnel.failed} icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} />
+        <KPI title="Risk ≥ High" value={mockRiskByPersona.reduce((a, b) => a + (b.HIGH || 0), 0)} icon={<ShieldCheck className="h-4 w-4 text-rose-600" />} />
+        <KPI title="SLA Hot" value={2} sub="(near due)" icon={<Activity className="h-4 w-4 text-sky-600" />} />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <StageDurationChart data={mockRun.durations} />
+          <RiskByPersonaChart data={mockRiskByPersona} />
+          <FunnelSankey run={mockRun} riskByPersona={mockRiskByPersona} />
+        </div>
+        <div className="space-y-4">
+          <LiveEvents items={mockEvents} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- TRANSCRIPTS (table + Start Analysis) ----------------------------------
+function TranscriptsView({ rows, analyses, onStartAnalysis, onOpenTranscript, goAnalysis }) {
+  const [q, setQ] = useState("");
+  const filtered = rows.filter(r => !q || r.id.toLowerCase().includes(q.toLowerCase()) || r.customer.toLowerCase().includes(q.toLowerCase()));
+
+  const hasAnalysis = (id) => analyses.some(a => a.transcriptId === id);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Input className="w-96" placeholder="Search by ID or customer" value={q} onChange={e => setQ(e.target.value)} />
+        <Badge variant="secondary">{filtered.length} item(s)</Badge>
+      </div>
+      <div className="overflow-hidden rounded-2xl border">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b">
+            <tr>
+              <th className="text-left py-2 px-3">Transcript</th>
+              <th className="text-left py-2 px-3">Customer</th>
+              <th className="text-left py-2 px-3">Advisor</th>
+              <th className="text-left py-2 px-3">Started</th>
+              <th className="text-left py-2 px-3">Duration</th>
+              <th className="text-left py-2 px-3">Msgs</th>
+              <th className="text-left py-2 px-3">Status</th>
+              <th className="text-right py-2 px-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(r => (
+              <tr key={r.id} className="border-b">
+                <td className="py-2 px-3 font-medium text-slate-900">
+                  <button className="underline" onClick={() => onOpenTranscript(r.id)}>{r.id}</button>
+                </td>
+                <td className="py-2 px-3">{r.customer}</td>
+                <td className="py-2 px-3">{r.advisor}</td>
+                <td className="py-2 px-3">{new Date(r.startedAt).toLocaleString()}</td>
+                <td className="py-2 px-3">{r.durationSec}s</td>
+                <td className="py-2 px-3">{r.messageCount}</td>
+                <td className="py-2 px-3">{r.status}</td>
+                <td className="py-2 px-3 text-right">
+                  <Button size="sm" disabled={hasAnalysis(r.id)} onClick={() => { onStartAnalysis(r.id); goAnalysis(); }}>
+                    {hasAnalysis(r.id) ? "Analysis Exists" : "Start Analysis"}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ---- ANALYSIS (table + Trigger Plan) ---------------------------------------
+function AnalysisView({ rows, onTriggerPlan, goPlan }) {
+  const [q, setQ] = useState("");
+  const filtered = rows.filter(r => !q || r.id.toLowerCase().includes(q.toLowerCase()) || r.transcriptId.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Input className="w-96" placeholder="Search by analysis or transcript id" value={q} onChange={e => setQ(e.target.value)} />
+        <Badge variant="secondary">{filtered.length} item(s)</Badge>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b">
+            <tr>
+              <th className="text-left py-2 px-3">Analysis</th>
+              <th className="text-left py-2 px-3">Transcript</th>
+              <th className="text-left py-2 px-3">Summary</th>
+              <th className="text-left py-2 px-3">High</th>
+              <th className="text-left py-2 px-3">Med</th>
+              <th className="text-left py-2 px-3">Low</th>
+              <th className="text-left py-2 px-3">Status</th>
+              <th className="text-right py-2 px-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(r => (
+              <tr key={r.id} className="border-b">
+                <td className="py-2 px-3 font-medium text-slate-900">{r.id}</td>
+                <td className="py-2 px-3">{r.transcriptId}</td>
+                <td className="py-2 px-3">{r.summary}</td>
+                <td className="py-2 px-3">{r.high}</td>
+                <td className="py-2 px-3">{r.medium}</td>
+                <td className="py-2 px-3">{r.low}</td>
+                <td className="py-2 px-3">{r.status}</td>
+                <td className="py-2 px-3 text-right">
+                  <Button size="sm" onClick={() => { onTriggerPlan(r.id); goPlan(); }}>Trigger Plan</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ---- PLAN (table + Trigger Workflow) --------------------------------------
+function PlanView({ rows, planToWorkflow, onTriggerWorkflow, goWorkflow }) {
+  const [q, setQ] = useState("");
+  const filtered = rows.filter(r => !q || r.id.toLowerCase().includes(q.toLowerCase()) || r.analysisId.toLowerCase().includes(q.toLowerCase()));
+
+  const hasWorkflow = (planId) => !!planToWorkflow[planId];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Input className="w-96" placeholder="Search by plan or analysis id" value={q} onChange={e => setQ(e.target.value)} />
+        <Badge variant="secondary">{filtered.length} item(s)</Badge>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b">
+            <tr>
+              <th className="text-left py-2 px-3">Plan</th>
+              <th className="text-left py-2 px-3">Analysis</th>
+              <th className="text-left py-2 px-3">Title</th>
+              <th className="text-left py-2 px-3">Owner</th>
+              <th className="text-left py-2 px-3">Status</th>
+              <th className="text-right py-2 px-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(r => (
+              <tr key={r.id} className="border-b">
+                <td className="py-2 px-3 font-medium text-slate-900">{r.id}</td>
+                <td className="py-2 px-3">{r.analysisId}</td>
+                <td className="py-2 px-3">{r.title}</td>
+                <td className="py-2 px-3">{r.owner}</td>
+                <td className="py-2 px-3">{r.status}</td>
+                <td className="py-2 px-3 text-right">
+                  <Button size="sm" disabled={hasWorkflow(r.id)} onClick={() => { onTriggerWorkflow(r.id); goWorkflow(); }}>
+                    {hasWorkflow(r.id) ? "Workflow Created" : "Trigger Workflow"}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ---- WORKFLOW (kanban retained; shows approvals) ---------------------------
+function WorkflowBoard({ workflows, approvals }) {
+  const columns = [
+    { key: "PENDING_APPROVAL", title: "Pending Approval" },
+    { key: "AUTO_APPROVED", title: "Auto-Approved" },
+    { key: "EXECUTED", title: "Executed" },
+    { key: "REJECTED", title: "Rejected" },
+  ];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {columns.map(col => (
+        <Card key={col.key} className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><WorkflowIcon className="h-4 w-4"/>{col.title}</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {workflows.filter(w => w.status === col.key).map(w => (
+              <div key={w.id} className="border rounded-xl p-3 text-sm">
+                <div className="font-medium">{w.id}</div>
+                <div className="text-slate-600">{w.action}</div>
+                <div className="text-xs text-slate-500 mt-1">{w.persona} • Risk {w.risk}</div>
+                <div className="mt-2 flex gap-2">
+                  <Button size="sm">Approve</Button>
+                  <Button size="sm" variant="outline">Reject</Button>
+                </div>
+                <div className="mt-2"><ApprovalChips wfId={w.id} approvals={approvals} /></div>
+              </div>
+            ))}
+            {workflows.filter(w => w.status === col.key).length === 0 && (
+              <div className="text-sm text-slate-400">No items</div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// ---- EXECUTION -------------------------------------------------------------
+function ExecutionView() {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(null);
+  return (
+    <div className="space-y-4">
+      <div className="overflow-hidden rounded-2xl border">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b">
+            <tr>
+              <th className="text-left py-2 px-3">Job</th>
+              <th className="text-left py-2 px-3">Type</th>
+              <th className="text-left py-2 px-3">Status</th>
+              <th className="text-left py-2 px-3">Started</th>
+              <th className="text-left py-2 px-3">Duration</th>
+              <th className="text-right py-2 px-3">Logs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mockExecutions.map(j => (
+              <tr key={j.id} className="border-b">
+                <td className="py-2 px-3 font-medium text-slate-900">{j.id}</td>
+                <td className="py-2 px-3">{j.type}</td>
+                <td className="py-2 px-3">{j.status}</td>
+                <td className="py-2 px-3">{new Date(j.startedAt).toLocaleString()}</td>
+                <td className="py-2 px-3">{j.durationSec}s</td>
+                <td className="py-2 px-3 text-right"><Button size="sm" variant="outline" onClick={()=>{setActive(j); setOpen(true);}}>View</Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl">
+          {active && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Logs • {active.id}</DialogTitle>
+                <DialogDescription>{active.type} • {active.status}</DialogDescription>
+              </DialogHeader>
+              <div className="rounded-xl bg-slate-50 border p-3 text-xs overflow-auto max-h-[60vh]">
+                {(active.logs || []).map((l,i)=> (<div key={i}>{l}</div>))}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ---- INSIGHTS --------------------------------------------------------------
+function InsightsView() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Lightbulb className="h-4 w-4"/>Borrower Pain Points</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-1">
+            {mockInsights.borrowerPain.map((i, idx) => (<div key={idx}>• {i}</div>))}
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Lightbulb className="h-4 w-4"/>Advisor Coaching</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-1">
+            {mockInsights.advisorCoaching.map((i, idx) => (<div key={idx}>• {i}</div>))}
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Lightbulb className="h-4 w-4"/>Compliance Alerts</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-1">
+            {mockInsights.complianceAlerts.map((i, idx) => (<div key={idx}>• {i}</div>))}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <RiskByPersonaChart data={mockRiskByPersona} />
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Actionable Next Steps</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-1">
+            <div>• Enable MEDIUM auto-approval for Borrower confirmations.</div>
+            <div>• Add advisor checklist on fee explanation.</div>
+            <div>• Launch supervisor audit batch for 20 calls.</div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ---- RUNS EXPLORER ---------------------------------------------------------
+function RunsExplorer() {
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(null);
+  const runs = [mockRun];
+  const filtered = runs.filter(r => (!q ? true : r.id.toLowerCase().includes(q.toLowerCase())));
+  const openRun = (r) => { setActive(r); setOpen(true); };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Input placeholder="Search run id" className="w-80" value={q} onChange={e => setQ(e.target.value)} />
+        <Badge variant="secondary">{filtered.length} run(s)</Badge>
+        <Button variant="outline" className="ml-auto gap-2"><Download className="h-4 w-4" />Export CSV</Button>
+      </div>
+      <div className="overflow-hidden rounded-2xl border">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 border-b">
+            <tr>
+              <th className="text-left py-2 px-3">Run</th>
+              <th className="text-left py-2 px-3">Started</th>
+              <th className="text-left py-2 px-3">Durations</th>
+              <th className="text-left py-2 px-3">Funnel</th>
+              <th className="text-right py-2 px-3">Trace</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(r => (
+              <tr key={r.id} className="border-b">
+                <td className="py-2 px-3 font-medium text-slate-900">{r.id}</td>
+                <td className="py-2 px-3">{new Date(r.startedAt).toLocaleString()}</td>
+                <td className="py-2 px-3">
+                  {r.durations.map(d => (
+                    <div key={d.stage} className="text-xs">{d.stage}: <span className="font-medium">{d.seconds}s</span></div>
+                  ))}
+                </td>
+                <td className="py-2 px-3 text-xs">
+                  <div>Generated: <span className="font-medium">{r.funnel.generated}</span></div>
+                  <div>Approved: <span className="font-medium">{r.funnel.approved}</span></div>
+                  <div>Executed: <span className="font-medium">{r.funnel.executed}</span></div>
+                </td>
+                <td className="py-2 px-3 text-right"><Button size="sm" variant="outline" onClick={() => openRun(r)} className="gap-1">Open <ArrowRight className="h-4 w-4" /></Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="w-[820px] max-w-[92vw]">
+          {active && (
+            <div className="space-y-4">
+              <SheetHeader>
+                <SheetTitle>Run Trace • {active.id}</SheetTitle>
+              </SheetHeader>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <StageDurationChart data={active.durations} />
+                <FunnelSankey run={active} riskByPersona={mockRiskByPersona} />
+                <LiveEvents items={mockEvents} />
+              </div>
+              <Card className="rounded-2xl">
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Artifacts</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <div className="flex items-center gap-2"><Info className="h-4 w-4 text-slate-500" />Plan ID: <span className="font-medium">PLAN_ANALYSIS_CALL_2</span></div>
+                  <div className="flex items-center gap-2"><Info className="h-4 w-4 text-slate-500" />Transcript ID: <span className="font-medium">CALL_27FF315B</span></div>
+                  <div className="flex items-center gap-2"><Info className="h-4 w-4 text-slate-500" />Analysis Risk: <span className="font-medium">High-heavy</span></div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+// ---- GOVERNANCE ------------------------------------------------------------
+function GovernanceSimulator() {
+  const [autoLow, setAutoLow] = useState(true);
+  const [autoMediumBorrower, setAutoMediumBorrower] = useState(false);
+  const [autoMediumAdvisor, setAutoMediumAdvisor] = useState(false);
+  const [requireTwoPersonHigh, setRequireTwoPersonHigh] = useState(true);
+
+  const projected = useMemo(() => {
+    let exec = mockRun.funnel.executed;
+    if (autoLow) exec += mockRiskByPersona.reduce((acc, p) => acc + (p.LOW || 0), 0);
+    if (autoMediumBorrower) exec += (mockRiskByPersona.find(p => p.persona === "BORROWER")?.MEDIUM || 0);
+    if (autoMediumAdvisor) exec += (mockRiskByPersona.find(p => p.persona === "ADVISOR")?.MEDIUM || 0);
+    return exec;
+  }, [autoLow, autoMediumBorrower, autoMediumAdvisor]);
+
+  const policyJson = useMemo(() => ({
+    rules: {
+      autoApprove: {
+        LOW: autoLow,
+        MEDIUM: { BORROWER: autoMediumBorrower, ADVISOR: autoMediumAdvisor, SUPERVISOR: false, LEADERSHIP: false },
+      },
+      approvals: { HIGH: requireTwoPersonHigh ? 2 : 1 },
+    },
+  }), [autoLow, autoMediumBorrower, autoMediumAdvisor, requireTwoPersonHigh]);
+
+  return (
+    <div className="space-y-6">
+      <Card className="rounded-2xl">
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Approval Policy – What‑if Simulator</CardTitle></CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex items-center gap-2"><Checkbox checked={autoLow} onCheckedChange={v => setAutoLow(!!v)} /> Auto-approve <b>LOW</b> risk for all personas</label>
+            <label className="flex items-center gap-2"><Checkbox checked={requireTwoPersonHigh} onCheckedChange={v => setRequireTwoPersonHigh(!!v)} /> Require <b>two-person</b> approval for HIGH</label>
+            <label className="flex items-center gap-2"><Checkbox checked={autoMediumBorrower} onCheckedChange={v => setAutoMediumBorrower(!!v)} /> Auto-approve <b>MEDIUM</b> for BORROWER</label>
+            <label className="flex items-center gap-2"><Checkbox checked={autoMediumAdvisor} onCheckedChange={v => setAutoMediumAdvisor(!!v)} /> Auto-approve <b>MEDIUM</b> for ADVISOR</label>
+          </div>
+          <Separator className="my-2" />
+          <div className="text-sm">Projected <b>Executed</b>: <span className="font-semibold">{projected}</span></div>
+          <div className="text-xs text-slate-500">Baseline executed: {mockRun.funnel.executed}</div>
+          <div className="flex gap-2 mt-2">
+            <Button variant="secondary" onClick={() => alert(JSON.stringify(policyJson, null, 2))}>Preview Policy JSON</Button>
+            <Button onClick={() => alert("POST /policy → saved (stub)")}>Save Policy</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ---- SELF TESTS (manual) ---------------------------------------------------
+function SelfTests({ startAnalysis, triggerPlan, triggerWorkflow, getState }) {
+  const [results, setResults] = useState([]);
+  const push = (name, passed, note="") => setResults(prev => [...prev, { name, passed, note }]);
+
+  async function run() {
+    setResults([]);
+    // Test 1: Start Analysis creates exactly one analysis for a transcript (1:1)
+    const before = getState();
+    const baseCount = before.analyses.length;
+    startAnalysis("CALL_ABCD1234");
+    await new Promise(r => setTimeout(r, 0));
+    const after1 = getState();
+    push("Start Analysis adds one row", after1.analyses.length === baseCount + 1);
+    startAnalysis("CALL_ABCD1234");
+    await new Promise(r => setTimeout(r, 0));
+    const after2 = getState();
+    push("Start Analysis is idempotent for same transcript", after2.analyses.length === after1.analyses.length);
+
+    // Test 2: Trigger Plan increases plan count (1:n allowed)
+    const aId = after1.analyses[after1.analyses.length - 1].id;
+    const plansBefore = after2.plans.length;
+    triggerPlan(aId);
+    await new Promise(r => setTimeout(r, 0));
+    const afterPlan = getState();
+    push("Trigger Plan creates plan", afterPlan.plans.length === plansBefore + 1);
+
+    // Test 3: Trigger Workflow creates mapping plan→workflow (1:1 enforced)
+    const pId = afterPlan.plans[afterPlan.plans.length - 1].id;
+    const had = !!afterPlan.planToWorkflow[pId];
+    triggerWorkflow(pId);
+    await new Promise(r => setTimeout(r, 0));
+    const afterWf = getState();
+    push("Trigger Workflow maps plan→workflow", !!afterWf.planToWorkflow[pId] && !had);
+    const wfId = afterWf.planToWorkflow[pId];
+    triggerWorkflow(pId);
+    await new Promise(r => setTimeout(r, 0));
+    const afterWf2 = getState();
+    push("Trigger Workflow is idempotent per plan", afterWf2.planToWorkflow[pId] === wfId);
+  }
+
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-2"><CardTitle className="text-sm">Dev • Self‑Tests</CardTitle></CardHeader>
+      <CardContent className="text-sm space-y-2">
+        <Button size="sm" variant="outline" onClick={run}>Run Smoke Tests</Button>
+        <div className="space-y-1">
+          {results.map((r,i)=>(
+            <div key={i} className={r.passed ? "text-emerald-700" : "text-rose-700"}>
+              {r.passed ? "✓" : "✗"} {r.name}{r.note ? ` — ${r.note}` : ""}
+            </div>
+          ))}
+          {results.length === 0 && <div className="text-slate-500">No results yet.</div>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---- APP SHELL -------------------------------------------------------------
+export default function InnovativeUIAppShell() {
+  const [tab, setTab] = useState("transcripts");
+  const [env, setEnv] = useState("dev");
+
+  // Linear flow state
+  const [transcripts, setTranscripts] = useState(mockTranscripts);
+  const [analyses, setAnalyses] = useState(seedAnalyses);
+  const [plans, setPlans] = useState(seedPlans);
+  const [workflows, setWorkflows] = useState(mockWorkflowsSeed);
+  const [approvals, setApprovals] = useState(mockApprovalsSeed);
+  const [planToWorkflow, setPlanToWorkflow] = useState({});
+
+  // Transcript dialog state (rename to avoid collision)
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [activeTranscriptId, setActiveTranscriptId] = useState(null);
+
+  useEffect(() => { /* load initial data for env */ }, [env]);
+
+  // Actions (simulate API calls)
+  const startAnalysis = (transcriptId) => {
+    if (analyses.some(a => a.transcriptId === transcriptId)) return; // enforce 1:1
+    const n = analyses.length;
+    const newId = `ANALYSIS_${transcriptId}_${String(n+1).padStart(2,"0")}`;
+    const newRow = { id: newId, transcriptId, summary: "Auto-scan complete", high: 2, medium: 1, low: 0, status: "Done" };
+    setAnalyses(prev => [...prev, newRow]);
+  };
+
+  const triggerPlan = (analysisId) => {
+    const count = plans.filter(p => p.analysisId === analysisId).length;
+    const newId = `PLAN_${analysisId}_${String(count+1).padStart(2,"0")}`;
+    const newRow = { id: newId, analysisId, title: "Generated remediation plan", owner: "Advisor", status: "Draft" };
+    setPlans(prev => [...prev, newRow]);
+  };
+
+  const triggerWorkflow = (planId) => {
+    if (planToWorkflow[planId]) return; // enforce 1:1
+    const newWfId = `WF-${1000 + workflows.length + 1}`;
+    const newWf = { id: newWfId, persona: "ADVISOR", risk: "MEDIUM", status: "PENDING_APPROVAL", action: `Execute ${planId}` };
+    setWorkflows(prev => [...prev, newWf]);
+    setPlanToWorkflow(prev => ({ ...prev, [planId]: newWfId }));
+    setApprovals(prev => ({ ...prev, [newWfId]: [ { role: "ADVISOR", status: "PENDING" }, { role: "SUPERVISOR", status: "PENDING" } ] }));
+  };
+
+  const handleOpenTranscript = (id) => { setActiveTranscriptId(id); setIsTranscriptOpen(true); };
+  const go = (val) => setTab(val);
+
+  // state getter for self-tests
+  const getState = () => ({ analyses, plans, planToWorkflow });
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Customer CallCenter Analytics</h1>
+          <p className="text-sm text-slate-500">Linear Tables: Transcript ➜ Analysis ➜ Plan ➜ Workflow ➜ Execution</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={env} onValueChange={setEnv}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dev">Dev</SelectItem>
+              <SelectItem value="staging">Staging</SelectItem>
+              <SelectItem value="prod">Prod</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={tab} onValueChange={setTab}>
+            <SelectTrigger className="w-[19rem]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="transcripts">Transcripts</SelectItem>
+              <SelectItem value="analysis">Analysis</SelectItem>
+              <SelectItem value="plan">Plan</SelectItem>
+              <SelectItem value="workflow">Workflow</SelectItem>
+              <SelectItem value="execution">Execution</SelectItem>
+              <SelectItem value="dashboard">Dashboard</SelectItem>
+              <SelectItem value="insights">Insights</SelectItem>
+              <SelectItem value="runs">Runs</SelectItem>
+              <SelectItem value="governance">Governance</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="hidden xl:inline-flex flex-wrap gap-2">
+          <TabsTrigger value="transcripts"><MessageSquare className="h-3.5 w-3.5 mr-1"/>Transcripts</TabsTrigger>
+          <TabsTrigger value="analysis"><ClipboardList className="h-3.5 w-3.5 mr-1"/>Analysis</TabsTrigger>
+          <TabsTrigger value="plan"><Settings className="h-3.5 w-3.5 mr-1"/>Plan</TabsTrigger>
+          <TabsTrigger value="workflow"><WorkflowIcon className="h-3.5 w-3.5 mr-1"/>Workflow</TabsTrigger>
+          <TabsTrigger value="execution"><PlayCircle className="h-3.5 w-3.5 mr-1"/>Execution</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="insights"><Lightbulb className="h-3.5 w-3.5 mr-1"/>Insights</TabsTrigger>
+          <TabsTrigger value="runs">Runs</TabsTrigger>
+          <TabsTrigger value="governance">Governance</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="transcripts">
+          <TranscriptsView
+            rows={transcripts}
+            analyses={analyses}
+            onStartAnalysis={startAnalysis}
+            onOpenTranscript={handleOpenTranscript}
+            goAnalysis={() => go("analysis")}
+          />
+        </TabsContent>
+
+        <TabsContent value="analysis">
+          <AnalysisView
+            rows={analyses}
+            onTriggerPlan={triggerPlan}
+            goPlan={() => go("plan")}
+          />
+        </TabsContent>
+
+        <TabsContent value="plan">
+          <PlanView
+            rows={plans}
+            planToWorkflow={planToWorkflow}
+            onTriggerWorkflow={triggerWorkflow}
+            goWorkflow={() => go("workflow")}
+          />
+        </TabsContent>
+
+        <TabsContent value="workflow"><WorkflowBoard workflows={workflows} approvals={approvals} /></TabsContent>
+        <TabsContent value="execution"><ExecutionView /></TabsContent>
+        <TabsContent value="dashboard"><Dashboard /></TabsContent>
+        <TabsContent value="insights"><InsightsView /></TabsContent>
+        <TabsContent value="runs"><RunsExplorer /></TabsContent>
+        <TabsContent value="governance"><GovernanceSimulator /></TabsContent>
+      </Tabs>
+
+      {/* Transcript detail dialog */}
+      <Dialog open={isTranscriptOpen} onOpenChange={setIsTranscriptOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Transcript • {activeTranscriptId}</DialogTitle>
+            <DialogDescription>
+              {activeTranscriptId === mockTranscriptDetail.id ? (
+                <>Customer: {mockTranscriptDetail.customer} • Advisor: {mockTranscriptDetail.advisor}</>
+              ) : (
+                <span className="text-slate-500">No mock detail for this transcript</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {activeTranscriptId === mockTranscriptDetail.id ? (
+            <div className="max-h-[70vh] overflow-auto rounded-xl border">
+              <table className="w-full text-sm">
+                <tbody>
+                  {mockTranscriptDetail.segments.map((s, i) => (
+                    <tr key={i} className="border-b align-top">
+                      <td className="py-2 px-3 w-24 text-slate-500">t+{s.t}s</td>
+                      <td className="py-2 px-3 w-32 text-slate-500">{s.speaker}</td>
+                      <td className="py-2 px-3">{s.text}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-sm text-slate-600">Hook this to <code>GET /transcripts/:id</code> for live segments.</div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dev self-tests */}
+      <SelfTests
+        startAnalysis={startAnalysis}
+        triggerPlan={triggerPlan}
+        triggerWorkflow={triggerWorkflow}
+        getState={getState}
+      />
+    </div>
+  );
+}
