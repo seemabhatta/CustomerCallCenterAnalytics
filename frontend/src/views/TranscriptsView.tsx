@@ -73,7 +73,13 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
 
   // Delete all transcripts mutation
   const deleteAllTranscriptsMutation = useMutation({
-    mutationFn: () => transcriptApi.deleteAll(),
+    mutationFn: async () => {
+      // Delete all transcripts by calling individual delete for each
+      const deletePromises = transcripts.map(transcript => 
+        transcriptApi.delete(transcript.id)
+      );
+      return Promise.all(deletePromises);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transcripts'] });
       queryClient.invalidateQueries({ queryKey: ['analyses'] });
