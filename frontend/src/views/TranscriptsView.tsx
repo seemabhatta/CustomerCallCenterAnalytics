@@ -29,12 +29,12 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
     queryFn: () => analysisApi.list(),
   });
 
-  // Live transcript data for CALL_38533297
+  // Live transcript data for any selected transcript
   const { data: liveTranscriptData, isLoading: isLoadingLive } = useQuery({
-    queryKey: ['liveTranscript', 'CALL_38533297'],
-    queryFn: () => transcriptApi.getLiveSegments('CALL_38533297'),
+    queryKey: ['liveTranscript', selectedTranscriptId],
+    queryFn: () => transcriptApi.getLiveSegments(selectedTranscriptId!),
     refetchInterval: 3000, // Poll every 3 seconds for live updates
-    enabled: selectedTranscriptId === 'CALL_38533297',
+    enabled: !!selectedTranscriptId,
   });
 
   // Selected transcript details
@@ -103,8 +103,8 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
     );
   }
 
-  // Render live transcript view for CALL_38533297
-  if (selectedTranscriptId === 'CALL_38533297' && selectedTranscript) {
+  // Render live transcript view for any selected transcript
+  if (selectedTranscriptId && selectedTranscript) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
