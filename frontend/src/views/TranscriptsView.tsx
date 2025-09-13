@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { transcriptApi, analysisApi } from "@/api/client";
 import { Transcript } from "@/types";
+import { Trash2 } from "lucide-react";
 
 interface TranscriptsViewProps {
   onOpenTranscript: (id: string) => void;
@@ -15,6 +17,8 @@ interface TranscriptsViewProps {
 export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTranscriptId, setSelectedTranscriptId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch transcripts
@@ -54,6 +58,33 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
     },
   });
 
+  // Delete transcript mutation
+  const deleteTranscriptMutation = useMutation({
+    mutationFn: (transcriptId: string) => transcriptApi.delete(transcriptId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transcripts'] });
+      queryClient.invalidateQueries({ queryKey: ['analyses'] });
+      setDeleteConfirmId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete transcript:', error);
+    },
+  });
+
+  // Delete all transcripts mutation
+  const deleteAllTranscriptsMutation = useMutation({
+    mutationFn: () => transcriptApi.deleteAll(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transcripts'] });
+      queryClient.invalidateQueries({ queryKey: ['analyses'] });
+      setShowDeleteAllConfirm(false);
+      setSelectedTranscriptId(null); // Clear live view if open
+    },
+    onError: (error) => {
+      console.error('Failed to delete all transcripts:', error);
+    },
+  });
+
   // Filter transcripts based on search query
   const filteredTranscripts = transcripts.filter((transcript: Transcript) => {
     if (!searchQuery) return true;
@@ -71,6 +102,24 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
 
   const handleStartAnalysis = (transcriptId: string) => {
     createAnalysisMutation.mutate(transcriptId);
+  };
+
+  const handleDeleteTranscript = (transcriptId: string) => {
+    setDeleteConfirmId(transcriptId);
+  };
+
+  const confirmDeleteTranscript = () => {
+    if (deleteConfirmId) {
+      deleteTranscriptMutation.mutate(deleteConfirmId);
+    }
+  };
+
+  const handleDeleteAll = () => {
+    setShowDeleteAllConfirm(true);
+  };
+
+  const confirmDeleteAll = () => {
+    deleteAllTranscriptsMutation.mutate();
   };
 
   const handleOpenTranscriptInternal = (transcriptId: string) => {
@@ -190,14 +239,24 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Input 
-          className="w-96" 
-          placeholder="Search by ID, customer, or advisor" 
-          value={searchQuery} 
-          onChange={(e) => setSearchQuery(e.target.value)} 
-        />
-        <Badge variant="secondary">{filteredTranscripts.length} item(s)</Badge>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Input 
+            className="w-96" 
+            placeholder="Search by ID, customer, or advisor" 
+            value={searchQuery} 
+            onChange={(e) => setSearchQuery(e.target.value)} 
+          />
+          <Badge variant="secondary">{filteredTranscripts.length} item(s)</Badge>
+        </div>
+        <Button 
+          variant="destructive"
+          onClick={handleDeleteAll}
+          disabled={transcripts.length === 0 || deleteAllTranscriptsMutation.isPending}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          {deleteAllTranscriptsMutation.isPending ? 'Deleting...' : 'Delete All Transcripts'}
+        </Button>
       </div>
 
       <div className="overflow-hidden rounded-2xl border">
@@ -240,18 +299,28 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
                   </Badge>
                 </td>
                 <td className="py-2 px-3 text-right">
-                  <Button 
-                    size="sm" 
-                    disabled={hasAnalysis(transcript.id) || createAnalysisMutation.isPending}
-                    onClick={() => handleStartAnalysis(transcript.id)}
-                  >
-                    {createAnalysisMutation.isPending ? 
-                      "Creating..." : 
-                      hasAnalysis(transcript.id) ? 
-                        "Analysis Exists" : 
-                        "Start Analysis"
-                    }
-                  </Button>
+                  <div className="flex gap-2 justify-end">
+                    <Button 
+                      size="sm" 
+                      disabled={hasAnalysis(transcript.id) || createAnalysisMutation.isPending}
+                      onClick={() => handleStartAnalysis(transcript.id)}
+                    >
+                      {createAnalysisMutation.isPending ? 
+                        "Creating..." : 
+                        hasAnalysis(transcript.id) ? 
+                          "Analysis Exists" : 
+                          "Start Analysis"
+                      }
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      disabled={deleteTranscriptMutation.isPending}
+                      onClick={() => handleDeleteTranscript(transcript.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -264,6 +333,54 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
           </div>
         )}
       </div>
+
+      {/* Delete Transcript Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete transcript "{deleteConfirmId}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteTranscript}
+              disabled={deleteTranscriptMutation.isPending}
+            >
+              {deleteTranscriptMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete All Transcripts Confirmation Dialog */}
+      <Dialog open={showDeleteAllConfirm} onOpenChange={setShowDeleteAllConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete All Transcripts</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete ALL {transcripts.length} transcripts in the system? This will delete every transcript regardless of current filters. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteAllConfirm(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteAll}
+              disabled={deleteAllTranscriptsMutation.isPending}
+            >
+              {deleteAllTranscriptsMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
