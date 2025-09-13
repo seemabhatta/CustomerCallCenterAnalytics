@@ -271,7 +271,8 @@ export type TabValue =
   | 'dashboard' 
   | 'insights' 
   | 'runs' 
-  | 'governance';
+  | 'governance'
+  | 'generator';
 
 export type Environment = 'dev' | 'staging' | 'prod';
 
