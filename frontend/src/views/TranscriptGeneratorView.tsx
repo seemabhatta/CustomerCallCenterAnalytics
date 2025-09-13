@@ -3,10 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import { transcriptApi } from '@/api/client';
 import { TranscriptCreateRequest } from '@/types';
@@ -73,14 +70,14 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
 
         <Card>
           <CardContent className="pt-6">
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
+            <div className="border border-green-200 bg-green-50 p-4 rounded-lg flex items-start gap-3">
+              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+              <div className="text-green-800">
                 <strong>Transcript created successfully!</strong>
                 <br />
                 New transcript ID: <code className="font-mono">{createdTranscriptId}</code>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
 
             <div className="flex gap-3 mt-6">
               <Button onClick={handleViewTranscript} className="flex-1">
@@ -127,17 +124,17 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {createTranscriptMutation.error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
+              <div className="border border-red-200 bg-red-50 p-4 rounded-lg flex items-start gap-3">
+                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                <div className="text-red-800">
                   Failed to create transcript. Please try again.
-                </AlertDescription>
-              </Alert>
+                </div>
+              </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="topic">Topic</Label>
+                <label htmlFor="topic" className="text-sm font-medium">Topic</label>
                 <Select
                   value={formData.topic}
                   onValueChange={(value) => handleInputChange('topic', value)}
@@ -157,7 +154,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="urgency">Urgency Level</Label>
+                <label htmlFor="urgency" className="text-sm font-medium">Urgency Level</label>
                 <Select
                   value={formData.urgency}
                   onValueChange={(value) => handleInputChange('urgency', value)}
@@ -175,7 +172,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customer_sentiment">Customer Sentiment</Label>
+                <label htmlFor="customer_sentiment" className="text-sm font-medium">Customer Sentiment</label>
                 <Select
                   value={formData.customer_sentiment}
                   onValueChange={(value) => handleInputChange('customer_sentiment', value)}
@@ -193,7 +190,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customer_id">Customer ID</Label>
+                <label htmlFor="customer_id" className="text-sm font-medium">Customer ID</label>
                 <Input
                   id="customer_id"
                   value={formData.customer_id}
@@ -204,25 +201,29 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
             </div>
 
             <div className="flex items-center space-x-2">
-              <Switch
+              <input
+                type="checkbox"
                 id="financial_impact"
                 checked={formData.financial_impact}
-                onCheckedChange={(checked) => handleInputChange('financial_impact', checked)}
+                onChange={(e) => handleInputChange('financial_impact', e.target.checked)}
+                className="rounded border-gray-300"
               />
-              <Label htmlFor="financial_impact">Financial Impact</Label>
-              <span className="text-sm text-muted-foreground">
+              <label htmlFor="financial_impact" className="text-sm font-medium">Financial Impact</label>
+              <span className="text-sm text-gray-500">
                 Indicates if this transcript involves financial matters
               </span>
             </div>
 
             <div className="flex items-center space-x-2">
-              <Switch
+              <input
+                type="checkbox"
                 id="store"
                 checked={formData.store}
-                onCheckedChange={(checked) => handleInputChange('store', checked)}
+                onChange={(e) => handleInputChange('store', e.target.checked)}
+                className="rounded border-gray-300"
               />
-              <Label htmlFor="store">Store Transcript</Label>
-              <span className="text-sm text-muted-foreground">
+              <label htmlFor="store" className="text-sm font-medium">Store Transcript</label>
+              <span className="text-sm text-gray-500">
                 Save the generated transcript to the database
               </span>
             </div>
