@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
+  Plus,
 } from "lucide-react";
 
 import { TranscriptsView } from "@/views/TranscriptsView";
@@ -28,6 +29,7 @@ import { Dashboard } from "@/views/Dashboard";
 import { InsightsView } from "@/views/InsightsView";
 import { RunsExplorer } from "@/views/RunsExplorer";
 import { GovernanceSimulator } from "@/views/GovernanceSimulator";
+import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 
 import { TabValue, Environment } from "@/types";
 
@@ -98,6 +100,10 @@ export default function App() {
             <Activity className="h-3.5 w-3.5 mr-1" />
             Dashboard
           </TabsTrigger>
+          <TabsTrigger value="generator">
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Generator
+          </TabsTrigger>
           <TabsTrigger value="transcripts">
             <MessageSquare className="h-3.5 w-3.5 mr-1" />
             Transcripts
@@ -128,6 +134,12 @@ export default function App() {
 
         <TabsContent value="dashboard">
           <Dashboard />
+        </TabsContent>
+
+        <TabsContent value="generator">
+          <TranscriptGeneratorView 
+            goToTranscripts={() => navigateToTab("transcripts")}
+          />
         </TabsContent>
 
         <TabsContent value="transcripts">
