@@ -86,6 +86,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
 
   const handleDeleteClick = (analysisId: string) => {
     console.log('Delete button clicked for analysis:', analysisId);
+    console.log('Available analyses:', analyses);
     setAnalysisToDelete(analysisId);
     setShowDeleteConfirm(true);
     console.log('Delete confirmation dialog should show now');
