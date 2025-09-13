@@ -22,6 +22,8 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
     store: true,
   });
 
+  const [bulkCount, setBulkCount] = useState<number>(5);
+
   const queryClient = useQueryClient();
 
   const createTranscriptMutation = useMutation({
@@ -30,19 +32,50 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
       queryClient.invalidateQueries({ queryKey: ['transcripts'] });
       setShowSuccess(true);
       setCreatedTranscriptId(newTranscript.id);
+      setCreatedTranscripts(null);
+      setBulkCreatedCount(0);
     },
     onError: (error) => {
       console.error('Failed to create transcript:', error);
     },
   });
 
+  const createBulkTranscriptsMutation = useMutation({
+    mutationFn: (requests: TranscriptCreateRequest[]) => transcriptApi.createBulk(requests),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['transcripts'] });
+      setShowSuccess(true);
+      setCreatedTranscripts(result.transcripts);
+      setBulkCreatedCount(result.count);
+      setCreatedTranscriptId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to create bulk transcripts:', error);
+    },
+  });
+
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdTranscriptId, setCreatedTranscriptId] = useState<string | null>(null);
+  const [createdTranscripts, setCreatedTranscripts] = useState<any[] | null>(null);
+  const [bulkCreatedCount, setBulkCreatedCount] = useState<number>(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setShowSuccess(false);
     createTranscriptMutation.mutate(formData);
+  };
+
+  const handleBulkSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowSuccess(false);
+    
+    // Create multiple requests with unique customer IDs
+    const requests = Array.from({ length: bulkCount }, (_, index) => ({
+      ...formData,
+      customer_id: `${formData.customer_id}_${index + 1}`,
+    }));
+    
+    createBulkTranscriptsMutation.mutate(requests);
   };
 
   const handleInputChange = (field: keyof TranscriptCreateRequest, value: string | boolean) => {
@@ -56,7 +89,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
     goToTranscripts();
   };
 
-  if (showSuccess && createdTranscriptId) {
+  if (showSuccess && (createdTranscriptId || createdTranscripts)) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -73,9 +106,30 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
             <div className="border border-green-200 bg-green-50 p-4 rounded-lg flex items-start gap-3">
               <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
               <div className="text-green-800">
-                <strong>Transcript created successfully!</strong>
-                <br />
-                New transcript ID: <code className="font-mono">{createdTranscriptId}</code>
+                {createdTranscriptId ? (
+                  <>
+                    <strong>Transcript created successfully!</strong>
+                    <br />
+                    New transcript ID: <code className="font-mono">{createdTranscriptId}</code>
+                  </>
+                ) : (
+                  <>
+                    <strong>Bulk transcripts created successfully!</strong>
+                    <br />
+                    Created {bulkCreatedCount} new transcripts
+                    {createdTranscripts && createdTranscripts.length > 0 && (
+                      <div className="mt-2 max-h-32 overflow-y-auto">
+                        <div className="text-sm">
+                          {createdTranscripts.map((transcript, index) => (
+                            <div key={index} className="font-mono text-xs">
+                              {transcript.id}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 
@@ -88,10 +142,12 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                 onClick={() => {
                   setShowSuccess(false);
                   setCreatedTranscriptId(null);
+                  setCreatedTranscripts(null);
+                  setBulkCreatedCount(0);
                 }}
                 className="flex-1"
               >
-                Create Another
+                Create More
               </Button>
             </div>
           </CardContent>
@@ -111,26 +167,27 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Create New Transcript
-          </CardTitle>
-          <CardDescription>
-            Configure the parameters for generating a new customer service transcript
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {createTranscriptMutation.error && (
-              <div className="border border-red-200 bg-red-50 p-4 rounded-lg flex items-start gap-3">
-                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
-                <div className="text-red-800">
-                  Failed to create transcript. Please try again.
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Create Single Transcript
+            </CardTitle>
+            <CardDescription>
+              Generate one customer service transcript with specific parameters
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {createTranscriptMutation.error && (
+                <div className="border border-red-200 bg-red-50 p-4 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                  <div className="text-red-800">
+                    Failed to create transcript. Please try again.
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -233,11 +290,89 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               className="w-full" 
               disabled={createTranscriptMutation.isPending}
             >
-              {createTranscriptMutation.isPending ? 'Generating...' : 'Generate Transcript'}
+              {createTranscriptMutation.isPending ? 'Generating...' : 'Generate Single Transcript'}
             </Button>
           </form>
         </CardContent>
       </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Bulk Generate Transcripts
+            </CardTitle>
+            <CardDescription>
+              Generate multiple transcripts with the same parameters but unique customer IDs
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleBulkSubmit} className="space-y-6">
+              {createBulkTranscriptsMutation.error && (
+                <div className="border border-red-200 bg-red-50 p-4 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                  <div className="text-red-800">
+                    Failed to create bulk transcripts. Please try again.
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label htmlFor="bulk_count" className="text-sm font-medium">Number of Transcripts</label>
+                <Input
+                  id="bulk_count"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={bulkCount}
+                  onChange={(e) => setBulkCount(parseInt(e.target.value) || 1)}
+                  placeholder="Enter number of transcripts to generate"
+                />
+                <p className="text-xs text-gray-500">
+                  Will generate {bulkCount} transcripts with customer IDs: {formData.customer_id}_1, {formData.customer_id}_2, etc.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                <h4 className="text-sm font-medium">Template Configuration</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="font-medium">Topic:</span> {formData.topic?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Urgency:</span> {formData.urgency ? formData.urgency.charAt(0).toUpperCase() + formData.urgency.slice(1) : 'N/A'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Sentiment:</span> {formData.customer_sentiment ? formData.customer_sentiment.charAt(0).toUpperCase() + formData.customer_sentiment.slice(1) : 'N/A'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Base Customer ID:</span> {formData.customer_id}
+                  </div>
+                  <div>
+                    <span className="font-medium">Financial Impact:</span> {formData.financial_impact ? 'Yes' : 'No'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Store:</span> {formData.store ? 'Yes' : 'No'}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Modify these settings using the form on the left, then generate bulk transcripts here.
+                </p>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={createBulkTranscriptsMutation.isPending}
+              >
+                {createBulkTranscriptsMutation.isPending 
+                  ? `Generating ${bulkCount} Transcripts...` 
+                  : `Generate ${bulkCount} Transcripts`}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
