@@ -166,12 +166,37 @@ class AnalysisStore:
             List of analysis data
         """
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute(
-                'SELECT analysis_data FROM analysis ORDER BY created_at DESC LIMIT ?',
-                (limit,)
-            )
+            cursor = conn.execute('''
+                SELECT id, transcript_id, analysis_data, primary_intent, urgency_level, 
+                       borrower_sentiment, delinquency_risk, churn_risk, complaint_risk,
+                       empathy_score, compliance_adherence, solution_effectiveness,
+                       compliance_issues, escalation_needed, issue_resolved, 
+                       first_call_resolution, confidence_score, created_at
+                FROM analysis ORDER BY created_at DESC LIMIT ?
+            ''', (limit,))
             
-            return [json.loads(row[0]) for row in cursor.fetchall()]
+            results = []
+            for row in cursor.fetchall():
+                # Parse the stored JSON analysis data
+                analysis_data = json.loads(row[2]) if row[2] else {}
+                
+                # Create a response that combines database fields with mapped analysis data
+                result = {
+                    'id': row[0],
+                    'transcript_id': row[1],
+                    'summary': analysis_data.get('call_summary', ''),
+                    'high': int(analysis_data.get('borrower_risks', {}).get('delinquency_risk', 0) * 10),
+                    'medium': int(analysis_data.get('borrower_risks', {}).get('churn_risk', 0) * 10),
+                    'low': int(analysis_data.get('borrower_risks', {}).get('complaint_risk', 0) * 10),
+                    'status': 'Done' if row[15] else 'Pending',  # issue_resolved
+                    'analysis_type': 'comprehensive',
+                    'urgency': row[4] or 'medium',
+                    'customer_tier': 'standard',
+                    'created_at': row[17]
+                }
+                results.append(result)
+            
+            return results
     
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get aggregate metrics summary.
