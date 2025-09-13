@@ -88,28 +88,12 @@ export default function App() {
               <SelectItem value="prod">Prod</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={tab} onValueChange={(value: TabValue) => setTab(value)}>
-            <SelectTrigger className="w-[19rem]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="dashboard">Dashboard</SelectItem>
-              <SelectItem value="transcripts">Transcripts</SelectItem>
-              <SelectItem value="analysis">Analysis</SelectItem>
-              <SelectItem value="plan">Plan</SelectItem>
-              <SelectItem value="workflow">Workflow</SelectItem>
-              <SelectItem value="execution">Execution</SelectItem>
-              <SelectItem value="insights">Insights</SelectItem>
-              <SelectItem value="runs">Runs</SelectItem>
-              <SelectItem value="governance">Governance</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
       {/* Main Content */}
       <Tabs value={tab} onValueChange={(value: TabValue) => setTab(value)}>
-        <TabsList className="hidden xl:inline-flex flex-wrap gap-2">
+        <TabsList className="inline-flex flex-wrap gap-2">
           <TabsTrigger value="dashboard">
             <Activity className="h-3.5 w-3.5 mr-1" />
             Dashboard
