@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { transcriptApi, analysisApi } from "@/api/client";
 import { Transcript } from "@/types";
 
@@ -13,6 +14,7 @@ interface TranscriptsViewProps {
 
 export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTranscriptId, setSelectedTranscriptId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch transcripts
@@ -25,6 +27,21 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
   const { data: analyses = [] } = useQuery({
     queryKey: ['analyses'],
     queryFn: () => analysisApi.list(),
+  });
+
+  // Live transcript data for CALL_38533297
+  const { data: liveTranscriptData, isLoading: isLoadingLive } = useQuery({
+    queryKey: ['liveTranscript', 'CALL_38533297'],
+    queryFn: () => transcriptApi.getLiveSegments('CALL_38533297'),
+    refetchInterval: 3000, // Poll every 3 seconds for live updates
+    enabled: selectedTranscriptId === 'CALL_38533297',
+  });
+
+  // Selected transcript details
+  const { data: selectedTranscript, isLoading: isLoadingSelected } = useQuery({
+    queryKey: ['transcript', selectedTranscriptId],
+    queryFn: () => transcriptApi.getById(selectedTranscriptId!),
+    enabled: !!selectedTranscriptId,
   });
 
   // Create analysis mutation
@@ -56,6 +73,15 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
     createAnalysisMutation.mutate(transcriptId);
   };
 
+  const handleOpenTranscriptInternal = (transcriptId: string) => {
+    setSelectedTranscriptId(transcriptId);
+    onOpenTranscript(transcriptId);
+  };
+
+  const handleCloseLiveView = () => {
+    setSelectedTranscriptId(null);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -73,6 +99,94 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
         <div className="text-red-600">
           Error loading transcripts: {(error as any)?.detail || 'Unknown error'}
         </div>
+      </div>
+    );
+  }
+
+  // Render live transcript view for CALL_38533297
+  if (selectedTranscriptId === 'CALL_38533297' && selectedTranscript) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Live Transcript • {selectedTranscriptId}</h2>
+            <p className="text-slate-600">Customer transcript details and conversation flow</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              🔴 Live
+            </Badge>
+            <Button onClick={handleCloseLiveView} variant="outline">
+              Back to List
+            </Button>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Transcript Details</span>
+              <Badge variant="secondary">
+                Connected to GET /api/v1/transcripts/{selectedTranscriptId}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <div className="text-sm text-slate-600">Customer</div>
+                <div className="font-medium">{selectedTranscript.customer || selectedTranscript.customer_id || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-600">Advisor</div>
+                <div className="font-medium">{selectedTranscript.advisor || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-600">Topic</div>
+                <div className="font-medium">{selectedTranscript.topic || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-600">Status</div>
+                <Badge variant={selectedTranscript.status === 'Complete' ? 'default' : 'secondary'}>
+                  {selectedTranscript.status}
+                </Badge>
+              </div>
+            </div>
+            
+            {isLoadingLive && (
+              <div className="text-center py-4">
+                <div className="animate-pulse text-slate-500">Loading live segments...</div>
+              </div>
+            )}
+            
+            {liveTranscriptData && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-slate-700">Live Conversation Segments:</div>
+                <div className="bg-slate-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                  <div className="space-y-3">
+                    <div className="text-sm text-slate-600">
+                      Duration: {liveTranscriptData.duration_sec || 0}s | 
+                      Messages: {liveTranscriptData.message_count || 0} | 
+                      Last Updated: {new Date().toLocaleTimeString()}
+                    </div>
+                    {liveTranscriptData.messages && liveTranscriptData.messages.length > 0 ? (
+                      liveTranscriptData.messages.map((message: any, index: number) => (
+                        <div key={index} className="border-l-2 border-blue-200 pl-3">
+                          <div className="text-xs text-slate-500">
+                            {message.speaker || 'Unknown'} • {message.timestamp || 'No timestamp'}
+                          </div>
+                          <div className="text-sm">{message.content || message.text || 'No content'}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-slate-500 text-sm">No conversation segments available yet.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -110,9 +224,14 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
                 <td className="py-2 px-3 font-medium text-slate-900">
                   <button 
                     className="underline hover:text-blue-600" 
-                    onClick={() => onOpenTranscript(transcript.id)}
+                    onClick={() => handleOpenTranscriptInternal(transcript.id)}
                   >
                     {transcript.id}
+                    {transcript.id === 'CALL_38533297' && (
+                      <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 border-green-200">
+                        Live
+                      </Badge>
+                    )}
                   </button>
                 </td>
                 <td className="py-2 px-3">{transcript.customer || transcript.customer_id}</td>

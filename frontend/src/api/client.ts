@@ -107,6 +107,11 @@ export const transcriptApi = {
     apiCall<any[]>(() => 
       api.get(`/api/v1/transcripts/${id}/messages`)
     ),
+
+  getLiveSegments: (id: string) => 
+    apiCall<any>(() => 
+      api.get(`/api/v1/transcripts/${id}`)
+    ),
 };
 
 // Analysis API
