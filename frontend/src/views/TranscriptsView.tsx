@@ -113,9 +113,6 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
             <p className="text-slate-600">Customer transcript details and conversation flow</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              🔴 Live
-            </Badge>
             <Button onClick={handleCloseLiveView} variant="outline">
               Back to List
             </Button>
@@ -227,11 +224,6 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
                     onClick={() => handleOpenTranscriptInternal(transcript.id)}
                   >
                     {transcript.id}
-                    {transcript.id === 'CALL_38533297' && (
-                      <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-700 border-green-200">
-                        Live
-                      </Badge>
-                    )}
                   </button>
                 </td>
                 <td className="py-2 px-3">{transcript.customer || transcript.customer_id}</td>
