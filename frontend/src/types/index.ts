@@ -331,7 +331,6 @@ export type TabValue =
   | 'analysis' 
   | 'plan' 
   | 'workflow' 
-  | 'workflow_1'
   | 'execution' 
   | 'dashboard' 
   | 'insights' 
