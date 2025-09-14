@@ -4,9 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Trash2, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
 import { executionApi } from "@/api/client";
-import { Execution, ExecutionDetails } from "@/types";
+import { Execution } from "@/types";
 
 export function ExecutionView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,6 +43,10 @@ export function ExecutionView() {
       queryClient.invalidateQueries({ queryKey: ['executions'] });
       setShowDeleteConfirm(false);
       setExecutionToDelete(null);
+      // Clear selected execution if it was deleted
+      if (executionToDelete === selectedExecutionId) {
+        setSelectedExecutionId(null);
+      }
     },
     onError: (error) => {
       console.error('Failed to delete execution:', error);
@@ -145,7 +151,7 @@ export function ExecutionView() {
 
   // Show execution details if selected
   if (selectedExecutionId && selectedExecution) {
-    const details = selectedExecution as ExecutionDetails;
+    const details = selectedExecution;
     const execution = details.execution_record;
 
     return (
@@ -269,30 +275,32 @@ export function ExecutionView() {
           />
           
           {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-8 text-xs border border-input bg-background px-2 rounded-md"
-          >
-            <option value="">All Status</option>
-            <option value="success">Success</option>
-            <option value="failed">Failed</option>
-            <option value="pending">Pending</option>
-            <option value="running">Running</option>
-          </select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 text-xs min-w-[120px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="success">Success</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="running">Running</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Executor Type Filter */}
-          <select
-            value={executorTypeFilter}
-            onChange={(e) => setExecutorTypeFilter(e.target.value)}
-            className="h-8 text-xs border border-input bg-background px-2 rounded-md"
-          >
-            <option value="">All Types</option>
-            <option value="email">Email</option>
-            <option value="crm">CRM</option>
-            <option value="task">Task</option>
-            <option value="notification">Notification</option>
-          </select>
+          <Select value={executorTypeFilter} onValueChange={setExecutorTypeFilter}>
+            <SelectTrigger className="h-8 text-xs min-w-[120px]">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="crm">CRM</SelectItem>
+              <SelectItem value="task">Task</SelectItem>
+              <SelectItem value="notification">Notification</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-1">
@@ -388,74 +396,74 @@ export function ExecutionView() {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
-            <div className="flex items-center gap-2 mb-3">
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              <h3 className="text-sm font-medium">Delete Execution</h3>
-            </div>
-            <p className="text-xs text-gray-600 mb-4">
+              Delete Execution
+            </DialogTitle>
+            <DialogDescription className="text-xs">
               Are you sure you want to delete execution {executionToDelete}? This action cannot be undone.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="text-xs"
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                className="text-xs"
-                onClick={handleDeleteConfirm}
-                disabled={deleteExecutionMutation.isPending}
-              >
-                {deleteExecutionMutation.isPending ? 'Deleting...' : 'Delete'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="text-xs"
+              onClick={() => setShowDeleteConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              className="text-xs"
+              onClick={handleDeleteConfirm}
+              disabled={deleteExecutionMutation.isPending}
+            >
+              {deleteExecutionMutation.isPending ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete All Confirmation Dialog */}
-      {showDeleteAllConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
-            <div className="flex items-center gap-2 mb-3">
+      <Dialog open={showDeleteAllConfirm} onOpenChange={setShowDeleteAllConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              <h3 className="text-sm font-medium">Delete All Executions</h3>
-            </div>
-            <p className="text-xs text-gray-600 mb-4">
+              Delete All Executions
+            </DialogTitle>
+            <DialogDescription className="text-xs">
               Are you sure you want to delete all {filteredExecutions.length} executions? 
               {(statusFilter || executorTypeFilter) && " (with current filters applied)"} 
               This action cannot be undone.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="text-xs"
-                onClick={() => setShowDeleteAllConfirm(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                className="text-xs"
-                onClick={handleDeleteAllConfirm}
-                disabled={deleteAllExecutionsMutation.isPending}
-              >
-                {deleteAllExecutionsMutation.isPending ? 'Deleting...' : 'Delete All'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="text-xs"
+              onClick={() => setShowDeleteAllConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              className="text-xs"
+              onClick={handleDeleteAllConfirm}
+              disabled={deleteAllExecutionsMutation.isPending}
+            >
+              {deleteAllExecutionsMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

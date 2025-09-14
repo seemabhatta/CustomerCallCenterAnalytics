@@ -5,6 +5,7 @@ import {
   Plan, 
   Workflow, 
   Execution,
+  ExecutionDetails,
   TranscriptCreateRequest,
   AnalysisCreateRequest,
   PlanCreateRequest,
@@ -278,14 +279,15 @@ export const workflowApi = {
     ),
 };
 
+// Execution API
 export const executionApi = {
   list: (params?: { limit?: number; status?: string; executor_type?: string }) => 
-    apiCall<any[]>(() => 
+    apiCall<Execution[]>(() => 
       api.get('/api/v1/executions', { params })
     ),
 
   getById: (id: string) => 
-    apiCall<any>(() => 
+    apiCall<ExecutionDetails>(() => 
       api.get(`/api/v1/executions/${id}`)
     ),
 
@@ -297,14 +299,6 @@ export const executionApi = {
   deleteAll: (params?: { status?: string; executor_type?: string }) => 
     apiCall<{ message: string; deleted_count: number }>(() => 
       api.delete('/api/v1/executions', { params })
-    ),
-};
-
-// Execution API
-export const executionApi = {
-  getStatus: (id: string) => 
-    apiCall<any>(() => 
-      api.get(`/api/v1/executions/${id}`)
     ),
 
   getWorkflowExecutions: (workflowId: string) => 
