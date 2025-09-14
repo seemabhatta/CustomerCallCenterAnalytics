@@ -13,7 +13,7 @@ interface AnalysisViewProps {
 
 export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [analysisId, setSelectedAnalysisId] = useState<string | null>(null);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [analysisToDelete, setAnalysisToDelete] = useState<string | null>(null);
@@ -26,10 +26,10 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   });
 
   // Selected analysis details
-  const { data: analysis } = useQuery({
-    queryKey: ['analysis', analysisId],
-    queryFn: () => analysisApi.getById(analysisId!),
-    enabled: !!analysisId,
+  const { data: selectedAnalysis } = useQuery({
+    queryKey: ['analysis', selectedAnalysisId],
+    queryFn: () => analysisApi.getById(selectedAnalysisId!),
+    enabled: !!selectedAnalysisId,
   });
 
   // Fetch plans to check which analyses have plans
@@ -143,13 +143,13 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   }
 
   // Render analysis details view for any selected analysis
-  if (analysisId && analysis) {
-    const analysis = analysis as any; // Cast to any for comprehensive API fields
+  if (selectedAnalysisId && selectedAnalysis) {
+    const analysis = selectedAnalysis as any; // Cast to any for comprehensive API fields
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">Analysis Details • {analysisId}</h2>
+            <h2 className="text-sm font-bold">Analysis Details • {selectedAnalysisId}</h2>
             <p className="text-xs text-slate-600">Comprehensive call intelligence and analysis insights</p>
           </div>
           <div className="flex items-center gap-1">
