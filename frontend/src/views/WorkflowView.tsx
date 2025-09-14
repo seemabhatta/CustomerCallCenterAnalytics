@@ -507,116 +507,6 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
           </div>
         </div>
 
-        {/* Human-in-the-Loop Approval Section */}
-        {(workflow.status === 'AWAITING_APPROVAL' || workflow.status === 'REJECTED') && (
-          <Card className="border-2 border-blue-200 bg-blue-50/30">
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-medium text-blue-900 flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Human Approval Required
-                <Badge className={`text-xs h-5 ${getRiskLevelColor(workflow.risk_level)}`}>
-                  {workflow.risk_level} Risk
-                </Badge>
-              </CardTitle>
-              <CardDescription className="text-xs text-blue-700">
-                {workflow.status === 'REJECTED' ? 'This workflow was rejected and needs re-review' : 'This workflow requires human approval before execution'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="py-3 px-4">
-              {/* Workflow Context */}
-              <div className="mb-4 p-3 bg-white rounded border">
-                <div className="text-xs font-medium text-gray-700 mb-2">Workflow to Review:</div>
-                <div className="space-y-1 text-xs">
-                  <div><span className="text-gray-600">Type:</span> <span className="font-medium">{workflow.workflow_type}</span></div>
-                  <div><span className="text-gray-600">Actions:</span> <span className="font-medium">{workflow.workflow_data?.actions?.join(', ') || 'See details below'}</span></div>
-                  {workflow.workflow_data?.priority && (
-                    <div><span className="text-gray-600">Priority:</span> <span className="font-medium">{workflow.workflow_data.priority}</span></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Approval Form */}
-              <div className="space-y-3">
-                {/* Role Selection */}
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">
-                    Your Role <span className="text-red-500">*</span>
-                  </label>
-                  <Select value={approverRole} onValueChange={setApproverRole}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="advisor">Advisor</SelectItem>
-                      <SelectItem value="supervisor">Supervisor</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Reasoning Input */}
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">
-                    Approval Reasoning 
-                    {(workflow.risk_level === 'MEDIUM' || workflow.risk_level === 'HIGH') && <span className="text-red-500">*</span>}
-                    {workflow.risk_level === 'MEDIUM' && <span className="text-gray-500">(min 50 chars)</span>}
-                    {workflow.risk_level === 'HIGH' && <span className="text-gray-500">(min 100 chars)</span>}
-                  </label>
-                  <textarea
-                    value={approvalReasoning}
-                    onChange={(e) => setApprovalReasoning(e.target.value)}
-                    placeholder="Provide detailed reasoning for your approval decision..."
-                    className="text-xs min-h-20 w-full border border-gray-300 rounded px-2 py-1 resize-none"
-                    rows={3}
-                  />
-                  <div className="text-xs text-gray-500 mt-1">
-                    {approvalReasoning.length} characters
-                  </div>
-                </div>
-
-                {/* Rejection Reason (if status is rejected) */}
-                {workflow.status === 'REJECTED' && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 block">
-                      Rejection Reason <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      placeholder="Provide reason for rejection..."
-                      className="text-xs min-h-16 w-full border border-gray-300 rounded px-2 py-1 resize-none"
-                      rows={2}
-                    />
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={() => handleApproveWorkflow(workflow)}
-                    disabled={approveWorkflowMutation.isPending}
-                    size="sm"
-                    className="text-xs bg-green-600 hover:bg-green-700"
-                  >
-                    <Check className="h-3 w-3 mr-1" />
-                    {approveWorkflowMutation.isPending ? 'Approving...' : 'Approve'}
-                  </Button>
-                  <Button
-                    onClick={() => handleRejectWorkflow(workflow)}
-                    disabled={rejectWorkflowMutation.isPending}
-                    variant="destructive"
-                    size="sm"
-                    className="text-xs"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    {rejectWorkflowMutation.isPending ? 'Rejecting...' : 'Reject'}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Conditional rendering based on workflow type */}
         {isGranularWorkflow(workflow) ? (
           /* Granular Workflow Layout */
@@ -985,6 +875,104 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             </Card>
           )}
         </div>
+        )}
+
+        {/* Human-in-the-Loop Approval Section - MOVED TO BOTTOM */}
+        {(workflow.status === 'AWAITING_APPROVAL' || workflow.status === 'REJECTED') && (
+          <Card className="border-2 border-blue-200 bg-blue-50/30">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-sm font-medium text-blue-900 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Human Approval Required
+                <Badge className={`text-xs h-5 ${getRiskLevelColor(workflow.risk_level)}`}>
+                  {workflow.risk_level} Risk
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-xs text-blue-700">
+                {workflow.status === 'REJECTED' ? 'This workflow was rejected and needs re-review' : 'This workflow requires human approval before execution'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="py-3 px-4">
+              {/* Approval Form */}
+              <div className="space-y-3">
+                {/* Role Selection */}
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Your Role <span className="text-red-500">*</span>
+                  </label>
+                  <Select value={approverRole} onValueChange={setApproverRole}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="advisor">Advisor</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Reasoning Input */}
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Approval Reasoning 
+                    {(workflow.risk_level === 'MEDIUM' || workflow.risk_level === 'HIGH') && <span className="text-red-500">*</span>}
+                    {workflow.risk_level === 'MEDIUM' && <span className="text-gray-500">(min 50 chars)</span>}
+                    {workflow.risk_level === 'HIGH' && <span className="text-gray-500">(min 100 chars)</span>}
+                  </label>
+                  <textarea
+                    value={approvalReasoning}
+                    onChange={(e) => setApprovalReasoning(e.target.value)}
+                    placeholder="Provide detailed reasoning for your approval decision..."
+                    className="text-xs min-h-20 w-full border border-gray-300 rounded px-2 py-1 resize-none"
+                    rows={3}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {approvalReasoning.length} characters
+                  </div>
+                </div>
+
+                {/* Rejection Reason (if status is rejected) */}
+                {workflow.status === 'REJECTED' && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">
+                      Rejection Reason <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Provide reason for rejection..."
+                      className="text-xs min-h-16 w-full border border-gray-300 rounded px-2 py-1 resize-none"
+                      rows={2}
+                    />
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => handleApproveWorkflow(workflow)}
+                    disabled={approveWorkflowMutation.isPending}
+                    size="sm"
+                    className="text-xs bg-green-600 hover:bg-green-700"
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    {approveWorkflowMutation.isPending ? 'Approving...' : 'Approve'}
+                  </Button>
+                  <Button
+                    onClick={() => handleRejectWorkflow(workflow)}
+                    disabled={rejectWorkflowMutation.isPending}
+                    variant="destructive"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    {rejectWorkflowMutation.isPending ? 'Rejecting...' : 'Reject'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     );
