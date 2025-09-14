@@ -120,6 +120,10 @@ export default function App() {
             <WorkflowIcon className="h-3.5 w-3.5 mr-1" />
             Workflow
           </TabsTrigger>
+          <TabsTrigger value="workflow_1">
+            <Settings2 className="h-3.5 w-3.5 mr-1" />
+            workflow_1
+          </TabsTrigger>
           <TabsTrigger value="execution">
             <PlayCircle className="h-3.5 w-3.5 mr-1" />
             Execution
@@ -163,6 +167,10 @@ export default function App() {
 
         <TabsContent value="workflow">
           <WorkflowView />
+        </TabsContent>
+
+        <TabsContent value="workflow_1">
+          <WorkflowView goToPlan={(planId) => navigateToTab("plan")} />
         </TabsContent>
 
         <TabsContent value="execution">

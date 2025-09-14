@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/api/client';
-import { Workflow, WorkflowFilterParams } from '@/types';
+import { WorkflowFilterParams } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, RefreshCw, Filter, Clock, Users } from 'lucide-react';
+import { RefreshCw, Filter, Clock, Users } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -24,7 +24,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   const [riskLevelFilter, setRiskLevelFilter] = useState<string>("");
   const [limitFilter, setLimitFilter] = useState<string>("50");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient(); // Future use for mutations
 
   // Build filter parameters
   const filterParams: WorkflowFilterParams = {};
@@ -51,16 +51,17 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     enabled: !!selectedWorkflowId,
   });
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'EXECUTED': return 'default';
-      case 'AUTO_APPROVED': return 'secondary';
-      case 'AWAITING_APPROVAL': return 'secondary';
-      case 'REJECTED': return 'destructive';
-      case 'PENDING_ASSESSMENT': return 'outline';
-      default: return 'secondary';
-    }
-  };
+  // Badge variant utility (future use)
+  // const getStatusBadgeVariant = (status: string) => {
+  //   switch (status) {
+  //     case 'EXECUTED': return 'default';
+  //     case 'AUTO_APPROVED': return 'secondary';
+  //     case 'AWAITING_APPROVAL': return 'secondary';
+  //     case 'REJECTED': return 'destructive';
+  //     case 'PENDING_ASSESSMENT': return 'outline';
+  //     default: return 'secondary';
+  //   }
+  // };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
