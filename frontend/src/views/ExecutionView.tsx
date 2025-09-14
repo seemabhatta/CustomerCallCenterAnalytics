@@ -10,128 +10,6 @@ import { Trash2, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
 import { executionApi } from "@/api/client";
 import { Execution, ExecutionDetails } from "@/types";
 
-// Mock data for when backend endpoints are not yet implemented
-const mockExecutions: Execution[] = [
-  {
-    id: "exec_a1b2c3d4e5f6",
-    workflow_id: "WF_123_456",
-    executor_type: "email",
-    execution_status: "success",
-    execution_payload: {
-      to: "customer@example.com",
-      subject: "Payment Confirmation",
-      body: "Your payment has been processed successfully."
-    },
-    executed_at: "2024-01-15T10:35:00Z",
-    executed_by: "system_executor",
-    execution_duration_ms: 1250,
-    mock_execution: true,
-    error_message: null,
-    metadata: {
-      agent_version: "1.0",
-      confidence: 0.95
-    },
-    created_at: "2024-01-15T10:35:00Z"
-  },
-  {
-    id: "exec_b2c3d4e5f6a7",
-    workflow_id: "WF_789_012",
-    executor_type: "crm",
-    execution_status: "failed",
-    execution_payload: {
-      customer_id: "CUST_123",
-      update_type: "payment_arrangement",
-      notes: "Payment plan modified"
-    },
-    executed_at: "2024-01-15T10:36:00Z",
-    executed_by: "advisor_john",
-    execution_duration_ms: 5000,
-    mock_execution: true,
-    error_message: "CRM timeout error",
-    metadata: {},
-    created_at: "2024-01-15T10:36:00Z"
-  },
-  {
-    id: "exec_c3d4e5f6a7b8",
-    workflow_id: "WF_345_678",
-    executor_type: "task",
-    execution_status: "pending",
-    execution_payload: {
-      task_type: "document_generation",
-      template: "payment_notice",
-      customer_id: "CUST_456"
-    },
-    executed_at: "2024-01-15T10:37:00Z",
-    executed_by: "system_executor",
-    execution_duration_ms: 0,
-    mock_execution: true,
-    error_message: null,
-    metadata: {
-      queue_position: 3
-    },
-    created_at: "2024-01-15T10:37:00Z"
-  },
-  {
-    id: "exec_d4e5f6a7b8c9",
-    workflow_id: "WF_901_234",
-    executor_type: "notification",
-    execution_status: "running",
-    execution_payload: {
-      notification_type: "sms",
-      phone: "+1234567890",
-      message: "Payment reminder sent"
-    },
-    executed_at: "2024-01-15T10:38:00Z",
-    executed_by: "system_executor",
-    execution_duration_ms: 2000,
-    mock_execution: true,
-    error_message: null,
-    metadata: {
-      provider: "twilio"
-    },
-    created_at: "2024-01-15T10:38:00Z"
-  }
-];
-
-const mockExecutionDetails: Record<string, ExecutionDetails> = {
-  "exec_a1b2c3d4e5f6": {
-    execution_record: mockExecutions[0],
-    audit_trail: [
-      {
-        id: 1,
-        execution_id: "exec_a1b2c3d4e5f6",
-        event_type: "execution_created",
-        event_description: "Workflow execution record created for WF_123_456",
-        event_timestamp: "2024-01-15T10:35:00Z",
-        event_data: {
-          workflow_id: "WF_123_456",
-          executor_type: "email"
-        }
-      },
-      {
-        id: 2,
-        execution_id: "exec_a1b2c3d4e5f6",
-        event_type: "executor_selected",
-        event_description: "Email executor selected by LLM agent",
-        event_timestamp: "2024-01-15T10:35:01Z",
-        event_data: null
-      },
-      {
-        id: 3,
-        execution_id: "exec_a1b2c3d4e5f6",
-        event_type: "execution_completed",
-        event_description: "Email sent successfully",
-        event_timestamp: "2024-01-15T10:35:02Z",
-        event_data: {
-          status: "success",
-          duration_ms: 1250
-        }
-      }
-    ],
-    retrieved_at: "2024-01-15T11:00:00Z"
-  }
-};
-
 export function ExecutionView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
@@ -142,62 +20,19 @@ export function ExecutionView() {
   const [executorTypeFilter, setExecutorTypeFilter] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetch executions with fallback to mock data
+  // Fetch executions
   const { data: executions = [], isLoading, error, refetch } = useQuery({
     queryKey: ['executions', statusFilter, executorTypeFilter],
-    queryFn: async () => {
-      try {
-        return await executionApi.list({
-          status: statusFilter || undefined,
-          executor_type: executorTypeFilter || undefined,
-        });
-      } catch (error: any) {
-        // If backend endpoint doesn't exist, fallback to mock data
-        if (error?.detail === "Not Found") {
-          console.log("Backend execution endpoints not implemented, using mock data");
-          let filtered = mockExecutions;
-          
-          // Apply filters to mock data
-          if (statusFilter) {
-            filtered = filtered.filter(exec => exec.execution_status === statusFilter);
-          }
-          if (executorTypeFilter) {
-            filtered = filtered.filter(exec => exec.executor_type === executorTypeFilter);
-          }
-          
-          return filtered;
-        }
-        throw error;
-      }
-    },
+    queryFn: () => executionApi.list({
+      status: statusFilter || undefined,
+      executor_type: executorTypeFilter || undefined,
+    }),
   });
 
-  // Selected execution details with fallback to mock data
+  // Selected execution details
   const { data: selectedExecution } = useQuery({
     queryKey: ['execution', selectedExecutionId],
-    queryFn: async () => {
-      try {
-        return await executionApi.getById(selectedExecutionId!);
-      } catch (error: any) {
-        // If backend endpoint doesn't exist, fallback to mock data
-        if (error?.detail === "Not Found") {
-          const mockDetail = mockExecutionDetails[selectedExecutionId!];
-          if (mockDetail) {
-            return mockDetail;
-          }
-          // Create basic mock detail if not found
-          const execution = mockExecutions.find(e => e.id === selectedExecutionId!);
-          if (execution) {
-            return {
-              execution_record: execution,
-              audit_trail: [],
-              retrieved_at: new Date().toISOString()
-            };
-          }
-        }
-        throw error;
-      }
-    },
+    queryFn: () => executionApi.getById(selectedExecutionId!),
     enabled: !!selectedExecutionId,
   });
 
