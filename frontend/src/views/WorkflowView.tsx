@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/api/client';
-import { WorkflowFilterParams, GranularWorkflow } from '@/types';
+import { WorkflowFilterParams, GranularWorkflow, Workflow } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -160,8 +160,8 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
       case 'LOW':
         return {
           ...baseData,
-          approved_by: "operational_user",
-          approver_role: "operations_staff",
+          approved_by: "user",
+          approver_role: "staff",
           reasoning: `Standard approval for low-risk ${workflow.workflow_type.toLowerCase()} workflow. Actions: ${actionContext}. Priority: ${priority}. Minimal compliance requirements met. Approved per operational guidelines.`
         };
       
@@ -170,15 +170,15 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
           ...baseData,
           approved_by: "supervisor_user",
           approver_role: "supervisor",
-          reasoning: `Supervisory approval for medium-risk ${workflow.workflow_type.toLowerCase()} workflow. Reviewed actions: ${actionContext}. Priority: ${priority}. Customer situation qualifies for assistance based on documented case details. Compliance requirements verified. Approval granted per policy guidelines and risk management protocols.`
+          reasoning: `Supervisory approval for medium-risk ${workflow.workflow_type.toLowerCase()} workflow. Reviewed actions: ${actionContext}. Priority: ${priority}. Customer situation qualifies for assistance based on documented case details. Compliance requirements verified. Risk assessment completed. Approval granted per policy guidelines and regulatory compliance requirements.`
         };
       
       case 'HIGH':
         return {
           ...baseData,
-          approved_by: "manager_user",
+          approved_by: "manager_user", 
           approver_role: "senior_manager",
-          reasoning: `Executive approval for high-risk ${workflow.workflow_type.toLowerCase()} workflow. Critical actions: ${actionContext}. Priority: ${priority}. Comprehensive compliance review completed. Customer situation warrants exceptional handling per escalation protocol and risk management guidelines. Senior authority authorization provided with full accountability.`
+          reasoning: `Executive approval for high-risk ${workflow.workflow_type.toLowerCase()} workflow. Critical actions: ${actionContext}. Priority: ${priority}. Comprehensive compliance review completed. Customer situation warrants exceptional handling per escalation protocol and risk management guidelines. Senior management authorization provided with full accountability and regulatory oversight.`
         };
       
       default:
