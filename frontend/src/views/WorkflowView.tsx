@@ -983,46 +983,8 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                       </td>
                       <td className="py-1 px-2">
                         <div className="flex items-center gap-1">
-                          {/* Status-based execution buttons */}
-                          {workflow.status === 'AWAITING_APPROVAL' && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                onClick={() => approveWorkflowMutation.mutate({ id: workflow.id, workflow })}
-                                disabled={approveWorkflowMutation.isPending}
-                                title="Approve"
-                              >
-                                <Check className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => rejectWorkflowMutation.mutate(workflow.id)}
-                                disabled={rejectWorkflowMutation.isPending}
-                                title="Reject"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </>
-                          )}
-                          
-                          {workflow.status === 'AUTO_APPROVED' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => executeWorkflowMutation.mutate(workflow.id)}
-                              disabled={executeWorkflowMutation.isPending}
-                              title="Execute"
-                            >
-                              <Play className="h-3 w-3" />
-                            </Button>
-                          )}
-                          
-                          {workflow.status === 'APPROVED' && (
+                          {/* Status-based execution buttons - approval moved to detailed view */}
+                          {(workflow.status === 'AUTO_APPROVED' || workflow.status === 'APPROVED') && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1041,17 +1003,11 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                             </Badge>
                           )}
                           
-                          {workflow.status === 'REJECTED' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-gray-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => approveWorkflowMutation.mutate({ id: workflow.id, workflow })}
-                              disabled={approveWorkflowMutation.isPending}
-                              title="Retry (Approve)"
-                            >
-                              <RotateCcw className="h-3 w-3" />
-                            </Button>
+                          {/* Click workflow ID to approve/reject in detailed view */}
+                          {(workflow.status === 'AWAITING_APPROVAL' || workflow.status === 'REJECTED') && (
+                            <Badge className="text-xs h-5 bg-blue-50 text-blue-700 border-blue-200">
+                              Click ID to review
+                            </Badge>
                           )}
                           
                           {/* Always show delete button (unless executing) */}
