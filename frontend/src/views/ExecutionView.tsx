@@ -1,112 +1,131 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Trash2, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
 import { executionApi } from "@/api/client";
-import { Execution } from "@/types";
-import { 
-  Play, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  AlertTriangle,
-  FileText 
-} from "lucide-react";
-
-// Mock execution data until real API is connected
-const mockExecutions: Execution[] = [
-  { 
-    id: "JOB-1", 
-    type: "email", 
-    status: "COMPLETED", 
-    started_at: "2025-09-12T16:45:00Z", 
-    completed_at: "2025-09-12T16:45:02Z",
-    duration_sec: 2, 
-    logs: ["Queued SMTP", "Sent 200 OK"],
-    workflow_id: "WF-1001"
-  },
-  { 
-    id: "JOB-2", 
-    type: "crm-note", 
-    status: "FAILED", 
-    started_at: "2025-09-12T16:46:10Z", 
-    completed_at: "2025-09-12T16:46:11Z",
-    duration_sec: 1, 
-    logs: ["CRM timeout", "Retry failed"],
-    workflow_id: "WF-1002",
-    error: "Connection timeout after 30s"
-  },
-  { 
-    id: "JOB-3", 
-    type: "notification", 
-    status: "RUNNING", 
-    started_at: "2025-09-12T16:47:00Z", 
-    duration_sec: 0, 
-    logs: ["Started notification job", "Processing recipients..."],
-    workflow_id: "WF-1003"
-  },
-  { 
-    id: "JOB-4", 
-    type: "audit", 
-    status: "PENDING", 
-    started_at: "2025-09-12T16:48:00Z", 
-    duration_sec: 0, 
-    logs: ["Queued for execution"],
-    workflow_id: "WF-1004"
-  },
-];
+import { Execution, ExecutionDetails } from "@/types";
 
 export function ExecutionView() {
-  const [logDialog, setLogDialog] = useState<{ open: boolean; execution: Execution | null }>({
-    open: false,
-    execution: null,
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [executionToDelete, setExecutionToDelete] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [executorTypeFilter, setExecutorTypeFilter] = useState("");
+  const queryClient = useQueryClient();
+
+  // Fetch executions
+  const { data: executions = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['executions', statusFilter, executorTypeFilter],
+    queryFn: () => executionApi.list({
+      status: statusFilter || undefined,
+      executor_type: executorTypeFilter || undefined,
+    }),
   });
 
-  // In a real implementation, this would fetch from the API
-  // const { data: executions = [], isLoading, error } = useQuery({
-  //   queryKey: ['executions'],
-  //   queryFn: () => executionApi.getStatistics(),
-  // });
+  // Selected execution details
+  const { data: selectedExecution } = useQuery({
+    queryKey: ['execution', selectedExecutionId],
+    queryFn: () => executionApi.getById(selectedExecutionId!),
+    enabled: !!selectedExecutionId,
+  });
 
-  // Using mock data for now
-  const executions = mockExecutions;
-  const isLoading = false;
-  const error = null;
+  // Delete execution mutation
+  const deleteExecutionMutation = useMutation({
+    mutationFn: (id: string) => executionApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['executions'] });
+      setShowDeleteConfirm(false);
+      setExecutionToDelete(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete execution:', error);
+    },
+  });
 
-  const getStatusIcon = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'completed':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'running':
-        return <Play className="h-4 w-4 text-blue-600" />;
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
+  // Delete all executions mutation
+  const deleteAllExecutionsMutation = useMutation({
+    mutationFn: () => executionApi.deleteAll({
+      status: statusFilter || undefined,
+      executor_type: executorTypeFilter || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['executions'] });
+      setShowDeleteAllConfirm(false);
+    },
+    onError: (error) => {
+      console.error('Failed to delete all executions:', error);
+    },
+  });
+
+  // Filter executions based on search query
+  const filteredExecutions = executions.filter((execution: Execution) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      execution.id?.toLowerCase().includes(query) ||
+      execution.workflow_id?.toLowerCase().includes(query) ||
+      execution.executor_type?.toLowerCase().includes(query) ||
+      execution.executed_by?.toLowerCase().includes(query)
+    );
+  });
+
+  const handleDeleteClick = (executionId: string) => {
+    setExecutionToDelete(executionId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteAll = () => {
+    setShowDeleteAllConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (executionToDelete) {
+      deleteExecutionMutation.mutate(executionToDelete);
     }
+  };
+
+  const handleDeleteAllConfirm = () => {
+    deleteAllExecutionsMutation.mutate();
+  };
+
+  const handleExecutionClick = (executionId: string) => {
+    setSelectedExecutionId(executionId);
+  };
+
+  const handleCloseExecutionView = () => {
+    setSelectedExecutionId(null);
   };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'completed': return 'default';
+      case 'success': return 'default';
       case 'failed': return 'destructive';
-      case 'running': return 'default';
       case 'pending': return 'secondary';
-      default: return 'secondary';
+      case 'running': return 'secondary';
+      default: return 'outline';
     }
   };
 
-  const handleViewLogs = (execution: Execution) => {
-    setLogDialog({ open: true, execution });
+  const getExecutorTypeBadge = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'email': return 'default';
+      case 'crm': return 'secondary';
+      case 'task': return 'outline';
+      case 'notification': return 'secondary';
+      default: return 'outline';
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="animate-pulse">
+          <div className="h-10 bg-gray-200 rounded mb-4"></div>
           <div className="h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
@@ -115,171 +134,328 @@ export function ExecutionView() {
 
   if (error) {
     return (
+      <div className="text-center py-8">
+        <p className="text-red-500 text-sm mb-4">Failed to load executions</p>
+        <Button onClick={() => refetch()} variant="outline" size="sm">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // Show execution details if selected
+  if (selectedExecutionId && selectedExecution) {
+    const details = selectedExecution as ExecutionDetails;
+    const execution = details.execution_record;
+
+    return (
       <div className="space-y-4">
-        <div className="text-red-600">
-          Error loading executions: {(error as any)?.detail || 'Unknown error'}
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleCloseExecutionView}
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+          >
+            <ArrowLeft className="h-3 w-3" />
+          </Button>
+          <h3 className="text-sm font-medium">Execution Details: {execution.id}</h3>
         </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Execution Record</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xs space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Workflow ID</div>
+                <div className="font-mono">{execution.workflow_id}</div>
+              </div>
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Executor Type</div>
+                <Badge variant={getExecutorTypeBadge(execution.executor_type)} className="text-xs">
+                  {execution.executor_type}
+                </Badge>
+              </div>
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Status</div>
+                <Badge variant={getStatusBadgeVariant(execution.execution_status)} className="text-xs">
+                  {execution.execution_status}
+                </Badge>
+              </div>
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Executed By</div>
+                <div>{execution.executed_by}</div>
+              </div>
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Duration</div>
+                <div>{execution.execution_duration_ms}ms</div>
+              </div>
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Mock Execution</div>
+                <div>{execution.mock_execution ? 'Yes' : 'No'}</div>
+              </div>
+            </div>
+
+            {execution.error_message && (
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Error Message</div>
+                <div className="text-red-600 bg-red-50 p-2 rounded text-xs">
+                  {execution.error_message}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="font-medium text-slate-600 mb-1">Execution Payload</div>
+              <pre className="bg-slate-50 p-2 rounded text-xs overflow-x-auto">
+                {JSON.stringify(execution.execution_payload, null, 2)}
+              </pre>
+            </div>
+
+            {Object.keys(execution.metadata).length > 0 && (
+              <div>
+                <div className="font-medium text-slate-600 mb-1">Metadata</div>
+                <pre className="bg-slate-50 p-2 rounded text-xs overflow-x-auto">
+                  {JSON.stringify(execution.metadata, null, 2)}
+                </pre>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {details.audit_trail && details.audit_trail.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Audit Trail</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs">
+              <div className="space-y-2">
+                {details.audit_trail.map((event) => (
+                  <div key={event.id} className="border-l-2 border-slate-200 pl-3 py-1">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-medium">{event.event_type}</span>
+                      <span className="text-slate-500">
+                        {new Date(event.event_timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-slate-600 mb-1">{event.event_description}</div>
+                    {event.event_data && (
+                      <pre className="bg-slate-50 p-1 rounded text-xs">
+                        {JSON.stringify(event.event_data, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Execution History</h2>
-        <Badge variant="secondary">{executions.length} execution(s)</Badge>
-      </div>
+      {/* Header with search and actions */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 flex-1">
+          <Input
+            placeholder="Search executions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 text-xs max-w-xs"
+          />
+          
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-8 text-xs border border-input bg-background px-2 rounded-md"
+          >
+            <option value="">All Status</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
+            <option value="pending">Pending</option>
+            <option value="running">Running</option>
+          </select>
 
-      <div className="overflow-hidden rounded-2xl border">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="text-left py-2 px-3">Job</th>
-              <th className="text-left py-2 px-3">Type</th>
-              <th className="text-left py-2 px-3">Status</th>
-              <th className="text-left py-2 px-3">Workflow</th>
-              <th className="text-left py-2 px-3">Started</th>
-              <th className="text-left py-2 px-3">Duration</th>
-              <th className="text-left py-2 px-3">Error</th>
-              <th className="text-right py-2 px-3">Logs</th>
-            </tr>
-          </thead>
-          <tbody>
-            {executions.map((execution: Execution) => (
-              <tr key={execution.id} className="border-b hover:bg-slate-50">
-                <td className="py-2 px-3 font-medium text-slate-900">
-                  {execution.id}
-                </td>
-                <td className="py-2 px-3">
-                  <Badge variant="outline" className="text-xs">
-                    {execution.type}
-                  </Badge>
-                </td>
-                <td className="py-2 px-3">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(execution.status)}
-                    <Badge variant={getStatusBadgeVariant(execution.status)}>
-                      {execution.status}
-                    </Badge>
-                  </div>
-                </td>
-                <td className="py-2 px-3">
-                  {execution.workflow_id || '-'}
-                </td>
-                <td className="py-2 px-3">
-                  {new Date(execution.started_at).toLocaleString()}
-                </td>
-                <td className="py-2 px-3">
-                  {execution.duration_sec ? `${execution.duration_sec}s` : '-'}
-                </td>
-                <td className="py-2 px-3">
-                  {execution.error ? (
-                    <div className="text-red-600 text-xs max-w-xs truncate" title={execution.error}>
-                      {execution.error}
-                    </div>
-                  ) : '-'}
-                </td>
-                <td className="py-2 px-3 text-right">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => handleViewLogs(execution)}
-                    className="gap-1"
-                  >
-                    <FileText className="h-3 w-3" />
-                    View
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        
-        {executions.length === 0 && (
-          <div className="p-8 text-center text-slate-500">
-            No executions found.
-          </div>
-        )}
-      </div>
+          {/* Executor Type Filter */}
+          <select
+            value={executorTypeFilter}
+            onChange={(e) => setExecutorTypeFilter(e.target.value)}
+            className="h-8 text-xs border border-input bg-background px-2 rounded-md"
+          >
+            <option value="">All Types</option>
+            <option value="email">Email</option>
+            <option value="crm">CRM</option>
+            <option value="task">Task</option>
+            <option value="notification">Notification</option>
+          </select>
+        </div>
 
-      {/* Logs Dialog */}
-      <Dialog open={logDialog.open} onOpenChange={(open) => setLogDialog({ open, execution: null })}>
-        <DialogContent className="max-w-2xl">
-          {logDialog.execution && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Logs • {logDialog.execution.id}
-                </DialogTitle>
-                <DialogDescription className="flex items-center gap-4">
-                  <span>{logDialog.execution.type}</span>
-                  <div className="flex items-center gap-1">
-                    {getStatusIcon(logDialog.execution.status)}
-                    <span>{logDialog.execution.status}</span>
-                  </div>
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4">
-                {/* Execution Details */}
-                <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg">
-                  <div>
-                    <div className="text-xs text-slate-500">Started</div>
-                    <div className="text-sm">
-                      {new Date(logDialog.execution.started_at).toLocaleString()}
-                    </div>
-                  </div>
-                  {logDialog.execution.completed_at && (
-                    <div>
-                      <div className="text-xs text-slate-500">Completed</div>
-                      <div className="text-sm">
-                        {new Date(logDialog.execution.completed_at).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-xs text-slate-500">Duration</div>
-                    <div className="text-sm">
-                      {logDialog.execution.duration_sec ? 
-                        `${logDialog.execution.duration_sec}s` : 
-                        'In progress...'
-                      }
-                    </div>
-                  </div>
-                  {logDialog.execution.workflow_id && (
-                    <div>
-                      <div className="text-xs text-slate-500">Workflow</div>
-                      <div className="text-sm">{logDialog.execution.workflow_id}</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Error Details */}
-                {logDialog.execution.error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="text-xs text-red-600 font-medium mb-1">Error</div>
-                    <div className="text-sm text-red-800">{logDialog.execution.error}</div>
-                  </div>
-                )}
-
-                {/* Logs */}
-                <div className="rounded-xl bg-slate-50 border p-3 text-xs overflow-auto max-h-[60vh]">
-                  <div className="text-xs text-slate-500 font-medium mb-2">Execution Logs</div>
-                  {logDialog.execution.logs.map((log, i) => (
-                    <div key={i} className="py-1 border-l-2 border-slate-300 pl-2 mb-1">
-                      <span className="text-slate-400">[{i + 1}]</span> {log}
-                    </div>
-                  ))}
-                  {logDialog.execution.logs.length === 0 && (
-                    <div className="text-slate-400">No logs available</div>
-                  )}
-                </div>
-              </div>
-            </>
+        <div className="flex items-center gap-1">
+          <Button onClick={() => refetch()} variant="outline" size="sm" className="h-7 text-xs px-2">
+            <RefreshCw className="h-3 w-3" />
+            Refresh
+          </Button>
+          {executions.length > 0 && (
+            <Button
+              onClick={handleDeleteAll}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+              disabled={deleteAllExecutionsMutation.isPending}
+            >
+              {deleteAllExecutionsMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </Button>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
+
+      {/* Executions Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="border-b bg-slate-50">
+                <tr>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">ID</th>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">Workflow</th>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">Type</th>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">Status</th>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">Executed By</th>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">Duration</th>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">Created</th>
+                  <th className="text-left py-2 px-3 font-medium text-slate-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredExecutions.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-8 text-slate-500">
+                      {searchQuery ? 'No executions match your search.' : 'No executions found.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredExecutions.map((execution: Execution) => (
+                    <tr key={execution.id} className="border-b hover:bg-slate-50">
+                      <td className="py-2 px-3">
+                        <button
+                          onClick={() => handleExecutionClick(execution.id)}
+                          className="font-mono text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {execution.id}
+                        </button>
+                      </td>
+                      <td className="py-2 px-3">
+                        <span className="font-mono text-xs">{execution.workflow_id}</span>
+                      </td>
+                      <td className="py-2 px-3">
+                        <Badge variant={getExecutorTypeBadge(execution.executor_type)} className="text-xs">
+                          {execution.executor_type}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-3">
+                        <Badge variant={getStatusBadgeVariant(execution.execution_status)} className="text-xs">
+                          {execution.execution_status}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-3">{execution.executed_by}</td>
+                      <td className="py-2 px-3">{execution.execution_duration_ms}ms</td>
+                      <td className="py-2 px-3">
+                        {new Date(execution.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="py-2 px-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                          onClick={() => handleDeleteClick(execution.id)}
+                          disabled={deleteExecutionMutation.isPending}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete Execution</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete execution {executionToDelete}? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={handleDeleteConfirm}
+                disabled={deleteExecutionMutation.isPending}
+              >
+                {deleteExecutionMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Dialog */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete All Executions</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete all {filteredExecutions.length} executions? 
+              {(statusFilter || executorTypeFilter) && " (with current filters applied)"} 
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowDeleteAllConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={handleDeleteAllConfirm}
+                disabled={deleteAllExecutionsMutation.isPending}
+              >
+                {deleteAllExecutionsMutation.isPending ? 'Deleting...' : 'Delete All'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

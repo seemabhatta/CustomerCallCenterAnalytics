@@ -278,6 +278,28 @@ export const workflowApi = {
     ),
 };
 
+export const executionApi = {
+  list: (params?: { limit?: number; status?: string; executor_type?: string }) => 
+    apiCall<any[]>(() => 
+      api.get('/api/v1/executions', { params })
+    ),
+
+  getById: (id: string) => 
+    apiCall<any>(() => 
+      api.get(`/api/v1/executions/${id}`)
+    ),
+
+  delete: (id: string) => 
+    apiCall<{ message: string; deleted: boolean }>(() => 
+      api.delete(`/api/v1/executions/${id}`)
+    ),
+
+  deleteAll: (params?: { status?: string; executor_type?: string }) => 
+    apiCall<{ message: string; deleted_count: number }>(() => 
+      api.delete('/api/v1/executions', { params })
+    ),
+};
+
 // Execution API
 export const executionApi = {
   getStatus: (id: string) => 

@@ -185,17 +185,33 @@ export interface WorkflowExecutionRequest {
   executed_by: string;
 }
 
-// Execution Types
+// Execution Types (Updated to match API contract)
 export interface Execution {
   id: string;
-  type: string;
-  status: string;
-  started_at: string;
-  completed_at?: string;
-  duration_sec?: number;
-  logs: string[];
-  workflow_id?: string;
-  error?: string;
+  workflow_id: string;
+  executor_type: string;
+  execution_status: string;
+  execution_payload: Record<string, any>;
+  executed_at: string;
+  executed_by: string;
+  execution_duration_ms: number;
+  mock_execution: boolean;
+  error_message: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
+export interface ExecutionDetails {
+  execution_record: Execution;
+  audit_trail: Array<{
+    id: number;
+    execution_id: string;
+    event_type: string;
+    event_description: string;
+    event_timestamp: string;
+    event_data: Record<string, any> | null;
+  }>;
+  retrieved_at: string;
 }
 
 // Dashboard & Metrics Types
