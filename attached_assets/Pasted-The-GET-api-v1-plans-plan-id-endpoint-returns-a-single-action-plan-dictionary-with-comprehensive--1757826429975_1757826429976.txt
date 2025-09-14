@@ -1,0 +1,145 @@
+The GET /api/v1/plans/{plan_id} endpoint returns a single action plan dictionary with comprehensive details. Here's what it returns:
+
+  API Flow:
+
+  1. Endpoint: GET /api/v1/plans/{plan_id}
+  2. Server: Calls plan_service.get_by_id(plan_id)
+  3. Service: Gets plan from store by ID
+  4. Store: Retrieves from SQLite and merges plan_data JSON with metadata
+
+  The complete plan response contains:
+
+  Core Identifiers:
+  - plan_id: Unique plan identifier (e.g., "PLAN_ANALYSIS_123")
+  - analysis_id: Associated analysis ID
+  - transcript_id: Associated transcript ID
+
+  Risk Assessment & Routing:
+  - risk_level: "high", "medium", or "low"
+  - approval_route: "supervisor_approval", "advisor_approval", or "auto_approved"
+  - queue_status: "pending_supervisor", "pending_advisor", "approved", or "rejected"
+  - auto_executable: Boolean - whether plan can be auto-executed
+  - routing_reason: Text explanation of why this routing was chosen
+
+  The Four-Layer Action Plan Structure:
+
+  1. borrower_plan:
+
+  - Actions the borrower/customer should take
+  - Payment arrangements, documentation requirements
+  - Deadlines and commitments
+
+  2. advisor_plan:
+
+  - Actions for the customer service advisor
+  - Follow-up tasks, documentation
+  - Customer communication steps
+
+  3. supervisor_plan:
+
+  - Escalated actions requiring supervisor attention
+  - Approval requirements
+  - Risk mitigation steps
+
+  4. leadership_plan:
+
+  - Strategic actions for leadership team
+  - Policy considerations
+  - Systemic issues to address
+
+  Metadata:
+  - generator_version: Version of the plan generator used
+  - created_at: Timestamp when created
+  - approved_at: Timestamp when approved (null if pending)
+  - approved_by: Who approved it (null if pending)
+
+  Additional Context (from generation):
+  - Full conversation context
+  - Analysis results embedded
+  - Customer concerns and promises made
+  - Compliance flags and risk scores
+
+  Example detailed response:
+
+  {
+    "plan_id": "PLAN_ANALYSIS_CALL_123",
+    "analysis_id": "ANALYSIS_CALL_123",
+    "transcript_id": "CALL_123",
+    "risk_level": "high",
+    "approval_route": "supervisor_approval",
+    "queue_status": "pending_supervisor",
+    "auto_executable": false,
+    "routing_reason": "High delinquency risk (0.85) and churn risk (0.75) require supervisor review",
+
+    "borrower_plan": {
+      "actions": [
+        "Make minimum payment of $500 by January 20th",
+        "Provide proof of income documentation within 5 business days",
+        "Set up automatic payment plan for future payments"
+      ],
+      "priority": "critical",
+      "timeline": "immediate",
+      "consequences": "Account will move to collections if payment not received"
+    },
+
+    "advisor_plan": {
+      "actions": [
+        "Schedule follow-up call for January 21st",
+        "Document payment arrangement in CRM",
+        "Send confirmation email with payment details",
+        "Monitor account for payment receipt"
+      ],
+      "priority": "high",
+      "timeline": "within 24 hours",
+      "escalation_trigger": "Payment not received by deadline"
+    },
+
+    "supervisor_plan": {
+      "actions": [
+        "Review account for potential settlement options",
+        "Approve payment plan modification if requested",
+        "Consider account for hardship program"
+      ],
+      "priority": "high",
+      "timeline": "within 48 hours",
+      "risk_indicators": ["90+ days delinquent", "Multiple broken promises", "High churn risk"]
+    },
+
+    "leadership_plan": {
+      "actions": [
+        "Review similar high-risk accounts in portfolio",
+        "Consider policy adjustments for hardship cases",
+        "Analyze advisor training needs based on call handling"
+      ],
+      "priority": "medium",
+      "timeline": "weekly review",
+      "strategic_considerations": ["Portfolio risk concentration", "Compliance adherence patterns"]
+    },
+
+    "generator_version": "1.0",
+    "created_at": "2024-01-15T10:30:00",
+    "approved_at": null,
+    "approved_by": null,
+
+    "context_data": {
+      "full_conversation": [...],
+      "analysis": {...},
+      "customer_concerns": [...],
+      "promises_made": [...],
+      "compliance_flags": [...],
+      "borrower_risks": {
+        "delinquency_risk": 0.85,
+        "churn_risk": 0.75,
+        "complaint_risk": 0.60,
+        "refinance_likelihood": 0.20
+      },
+      "advisor_metrics": {
+        "empathy_score": 0.70,
+        "compliance_adherence": 0.95,
+        "solution_effectiveness": 0.65
+      }
+    }
+  }
+
+  The plan details response provides a comprehensive view of all four planning layers plus full context, risk assessment, and routing decisions - everything needed for
+  supervisors to review and approve the recommended actions.

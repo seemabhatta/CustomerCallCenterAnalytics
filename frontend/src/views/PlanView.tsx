@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { planApi, workflowApi } from "@/api/client";
 
@@ -12,6 +13,7 @@ interface PlanViewProps {
 
 export function PlanView({ goToWorkflow }: PlanViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
@@ -27,6 +29,13 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   const { data: workflows = [] } = useQuery({
     queryKey: ['workflows'],
     queryFn: () => workflowApi.list(),
+  });
+
+  // Selected plan details
+  const { data: selectedPlan } = useQuery({
+    queryKey: ['plan', selectedPlanId],
+    queryFn: () => planApi.getById(selectedPlanId!),
+    enabled: !!selectedPlanId,
   });
 
   // Create workflow mutation
@@ -98,6 +107,14 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
     deleteAllPlansMutation.mutate();
   };
 
+  const handlePlanClick = (planId: string) => {
+    setSelectedPlanId(planId);
+  };
+
+  const handleClosePlanView = () => {
+    setSelectedPlanId(null);
+  };
+
   const getStatusBadgeVariant = (queueStatus: string) => {
     switch (queueStatus?.toLowerCase()) {
       case 'approved': return 'default';
@@ -125,6 +142,358 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
         <div className="text-red-600">
           Error loading plans: {(error as any)?.detail || 'Unknown error'}
         </div>
+      </div>
+    );
+  }
+
+  // Render plan details view for any selected plan
+  if (selectedPlanId && selectedPlan) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold">Plan Details • {selectedPlanId}</h2>
+            <p className="text-xs text-slate-600">Action plan structure and implementation details</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button 
+              onClick={handleClosePlanView} 
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2"
+            >
+              Back to List
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          {/* Plan Overview */}
+          <Card>
+            <CardHeader className="py-2 px-3">
+              <CardTitle className="text-xs font-medium">Plan Overview</CardTitle>
+            </CardHeader>
+            <CardContent className="py-2 px-3">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <div className="text-slate-600">Plan ID</div>
+                  <div className="font-medium">{selectedPlan.plan_id}</div>
+                </div>
+                <div>
+                  <div className="text-slate-600">Analysis ID</div>
+                  <div className="font-medium">{selectedPlan.analysis_id}</div>
+                </div>
+                <div>
+                  <div className="text-slate-600">Transcript ID</div>
+                  <div className="font-medium">{selectedPlan.transcript_id}</div>
+                </div>
+                <div>
+                  <div className="text-slate-600">Risk Level</div>
+                  <Badge 
+                    variant={selectedPlan.risk_level === 'high' ? 'destructive' : selectedPlan.risk_level === 'medium' ? 'default' : 'secondary'}
+                    className="text-xs px-1 py-0"
+                  >
+                    {selectedPlan.risk_level || 'Unknown'}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-slate-600">Approval Route</div>
+                  <div className="font-medium">{selectedPlan.approval_route?.replace('_', ' ') || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-600">Queue Status</div>
+                  <Badge variant={getStatusBadgeVariant(selectedPlan.queue_status)} className="text-xs px-1 py-0">
+                    {selectedPlan.queue_status?.replace('_', ' ') || 'Unknown'}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-slate-600">Auto Executable</div>
+                  <div className="font-medium">{selectedPlan.auto_executable ? 'Yes' : 'No'}</div>
+                </div>
+                <div>
+                  <div className="text-slate-600">Created At</div>
+                  <div className="font-medium">{selectedPlan.created_at ? new Date(selectedPlan.created_at).toLocaleString() : 'N/A'}</div>
+                </div>
+              </div>
+              {selectedPlan.routing_reason && (
+                <div className="mt-2 pt-2 border-t">
+                  <div className="text-slate-600 text-xs">Routing Reason</div>
+                  <div className="text-xs">{selectedPlan.routing_reason}</div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Approval Status */}
+          <Card>
+            <CardHeader className="py-2 px-3">
+              <CardTitle className="text-xs font-medium">Approval Status</CardTitle>
+            </CardHeader>
+            <CardContent className="py-2 px-3">
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Generator Version</span>
+                  <span className="font-medium">{selectedPlan.generator_version || 'N/A'}</span>
+                </div>
+                {selectedPlan.approved_at && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Approved At</span>
+                    <span className="font-medium">{new Date(selectedPlan.approved_at).toLocaleString()}</span>
+                  </div>
+                )}
+                {selectedPlan.approved_by && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Approved By</span>
+                    <span className="font-medium">{selectedPlan.approved_by}</span>
+                  </div>
+                )}
+                {!selectedPlan.approved_at && (
+                  <div className="text-slate-500 text-xs">Plan not yet approved</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Four-Layer Plan Structure */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          {/* Borrower Plan */}
+          {selectedPlan.borrower_plan && (
+            <Card>
+              <CardHeader className="py-2 px-3">
+                <CardTitle className="flex items-center justify-between text-xs font-medium">
+                  <span>Borrower Plan</span>
+                  <Badge variant="destructive" className="text-xs px-1 py-0">
+                    {selectedPlan.borrower_plan.priority || 'Normal'}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-2 px-3">
+                <div className="space-y-2">
+                  <div className="text-xs">
+                    <span className="text-slate-600">Timeline: </span>
+                    <span className="font-medium">{selectedPlan.borrower_plan.timeline || 'Not specified'}</span>
+                  </div>
+                  {selectedPlan.borrower_plan.consequences && (
+                    <div className="text-xs bg-red-50 p-2 rounded">
+                      <span className="text-slate-600 font-medium">Consequences: </span>
+                      <span className="text-red-700">{selectedPlan.borrower_plan.consequences}</span>
+                    </div>
+                  )}
+                  {selectedPlan.borrower_plan.actions && selectedPlan.borrower_plan.actions.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.borrower_plan.actions.map((action: any, index: number) => (
+                          <li key={index} className="flex items-start gap-1">
+                            <span className="text-slate-400">•</span>
+                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Advisor Plan */}
+          {selectedPlan.advisor_plan && (
+            <Card>
+              <CardHeader className="py-2 px-3">
+                <CardTitle className="flex items-center justify-between text-xs font-medium">
+                  <span>Advisor Plan</span>
+                  <Badge variant="default" className="text-xs px-1 py-0">
+                    {selectedPlan.advisor_plan.priority || 'Normal'}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-2 px-3">
+                <div className="space-y-2">
+                  <div className="text-xs">
+                    <span className="text-slate-600">Timeline: </span>
+                    <span className="font-medium">{selectedPlan.advisor_plan.timeline || 'Not specified'}</span>
+                  </div>
+                  {selectedPlan.advisor_plan.escalation_trigger && (
+                    <div className="text-xs bg-orange-50 p-2 rounded">
+                      <span className="text-slate-600 font-medium">Escalation Trigger: </span>
+                      <span className="text-orange-700">{selectedPlan.advisor_plan.escalation_trigger}</span>
+                    </div>
+                  )}
+                  {selectedPlan.advisor_plan.actions && selectedPlan.advisor_plan.actions.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.advisor_plan.actions.map((action: any, index: number) => (
+                          <li key={index} className="flex items-start gap-1">
+                            <span className="text-slate-400">•</span>
+                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Supervisor Plan */}
+          {selectedPlan.supervisor_plan && (
+            <Card>
+              <CardHeader className="py-2 px-3">
+                <CardTitle className="flex items-center justify-between text-xs font-medium">
+                  <span>Supervisor Plan</span>
+                  <Badge variant="secondary" className="text-xs px-1 py-0">
+                    {selectedPlan.supervisor_plan.priority || 'Normal'}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-2 px-3">
+                <div className="space-y-2">
+                  <div className="text-xs">
+                    <span className="text-slate-600">Timeline: </span>
+                    <span className="font-medium">{selectedPlan.supervisor_plan.timeline || 'Not specified'}</span>
+                  </div>
+                  {selectedPlan.supervisor_plan.risk_indicators && selectedPlan.supervisor_plan.risk_indicators.length > 0 && (
+                    <div className="text-xs bg-yellow-50 p-2 rounded">
+                      <div className="text-slate-600 font-medium mb-1">Risk Indicators:</div>
+                      <ul className="space-y-1">
+                        {selectedPlan.supervisor_plan.risk_indicators.map((indicator: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 text-yellow-800">
+                            <span>⚠</span>
+                            <span>{indicator}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.supervisor_plan.actions && selectedPlan.supervisor_plan.actions.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.supervisor_plan.actions.map((action: any, index: number) => (
+                          <li key={index} className="flex items-start gap-1">
+                            <span className="text-slate-400">•</span>
+                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Leadership Plan */}
+          {selectedPlan.leadership_plan && (
+            <Card>
+              <CardHeader className="py-2 px-3">
+                <CardTitle className="flex items-center justify-between text-xs font-medium">
+                  <span>Leadership Plan</span>
+                  <Badge variant="outline" className="text-xs px-1 py-0">
+                    {selectedPlan.leadership_plan.priority || 'Normal'}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="py-2 px-3">
+                <div className="space-y-2">
+                  <div className="text-xs">
+                    <span className="text-slate-600">Timeline: </span>
+                    <span className="font-medium">{selectedPlan.leadership_plan.timeline || 'Not specified'}</span>
+                  </div>
+                  {selectedPlan.leadership_plan.strategic_considerations && selectedPlan.leadership_plan.strategic_considerations.length > 0 && (
+                    <div className="text-xs bg-blue-50 p-2 rounded">
+                      <div className="text-slate-600 font-medium mb-1">Strategic Considerations:</div>
+                      <ul className="space-y-1">
+                        {selectedPlan.leadership_plan.strategic_considerations.map((consideration: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 text-blue-800">
+                            <span>📊</span>
+                            <span>{consideration}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.leadership_plan.actions && selectedPlan.leadership_plan.actions.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.leadership_plan.actions.map((action: any, index: number) => (
+                          <li key={index} className="flex items-start gap-1">
+                            <span className="text-slate-400">•</span>
+                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Context Data Section */}
+        {selectedPlan.context_data && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 mt-2">
+            {/* Borrower Risk Metrics */}
+            {selectedPlan.context_data.borrower_risks && (
+              <Card>
+                <CardHeader className="py-2 px-3">
+                  <CardTitle className="text-xs font-medium">Borrower Risk Assessment</CardTitle>
+                </CardHeader>
+                <CardContent className="py-2 px-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <div className="text-slate-600">Delinquency Risk</div>
+                      <div className="font-medium text-red-600">{(selectedPlan.context_data.borrower_risks.delinquency_risk * 100).toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-600">Churn Risk</div>
+                      <div className="font-medium text-orange-600">{(selectedPlan.context_data.borrower_risks.churn_risk * 100).toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-600">Complaint Risk</div>
+                      <div className="font-medium text-yellow-600">{(selectedPlan.context_data.borrower_risks.complaint_risk * 100).toFixed(1)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-600">Refinance Likelihood</div>
+                      <div className="font-medium text-blue-600">{(selectedPlan.context_data.borrower_risks.refinance_likelihood * 100).toFixed(1)}%</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Advisor Performance Metrics */}
+            {selectedPlan.context_data.advisor_metrics && (
+              <Card>
+                <CardHeader className="py-2 px-3">
+                  <CardTitle className="text-xs font-medium">Advisor Performance</CardTitle>
+                </CardHeader>
+                <CardContent className="py-2 px-3">
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Empathy Score</span>
+                      <span className="font-medium">{(selectedPlan.context_data.advisor_metrics.empathy_score * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Compliance Adherence</span>
+                      <span className="font-medium text-green-600">{(selectedPlan.context_data.advisor_metrics.compliance_adherence * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Solution Effectiveness</span>
+                      <span className="font-medium">{(selectedPlan.context_data.advisor_metrics.solution_effectiveness * 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -171,7 +540,12 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
             {filteredPlans.map((plan: any) => (
               <tr key={plan.plan_id} className="border-b hover:bg-slate-50">
                 <td className="py-1 px-2 text-xs font-medium text-slate-900">
-                  {plan.plan_id}
+                  <button 
+                    className="underline hover:text-blue-600 text-xs" 
+                    onClick={() => handlePlanClick(plan.plan_id)}
+                  >
+                    {plan.plan_id}
+                  </button>
                 </td>
                 <td className="py-1 px-2 text-xs">{plan.analysis_id}</td>
                 <td className="py-1 px-2 text-xs max-w-xs truncate" title={plan.routing_reason}>
