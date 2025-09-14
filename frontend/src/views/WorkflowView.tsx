@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle, Shield, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -28,6 +28,49 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Helper function to safely parse risk reasoning
+  const parseRiskFactor = (reasoning: any, factor: string): string => {
+    if (!reasoning) return '';
+    
+    // If reasoning is an object, try to access the property directly
+    if (typeof reasoning === 'object') {
+      return reasoning[factor] || '';
+    }
+    
+    // If reasoning is a string, try JSON parsing first
+    if (typeof reasoning === 'string') {
+      try {
+        const parsed = JSON.parse(reasoning);
+        if (parsed && typeof parsed === 'object' && parsed[factor]) {
+          return parsed[factor];
+        }
+      } catch (e) {
+        // Not valid JSON, continue with string parsing
+      }
+      
+      // Fallback to regex and string extraction
+      const regexMatch = reasoning.match(new RegExp(`"${factor}":\\s*"([^"]*)"`));
+      if (regexMatch) return regexMatch[1];
+      
+      // Final fallback: basic string splitting
+      if (reasoning.includes(factor)) {
+        return reasoning.split(factor).slice(1, 2).join('').replace(/[":\,]/g, '').trim().substring(0, 200);
+      }
+    }
+    
+    return '';
+  };
+  
+  // Helper function to get risk level icon with fallback
+  const getRiskLevelIcon = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'HIGH': return <AlertCircle className="h-4 w-4 text-red-600" />;
+      case 'MEDIUM': return <AlertTriangle className="h-4 w-4 text-orange-600" />;
+      case 'LOW': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      default: return <Info className="h-4 w-4 text-gray-600" />;
+    }
+  };
 
   // Build filter parameters
   const filterParams: WorkflowFilterParams = {};
@@ -263,7 +306,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                   <div>
                     <div className="text-slate-600">Status</div>
                     <Badge className={`text-xs h-5 ${getStatusBadgeColor(workflow.status)}`}>
-                      {workflow.status.replace('_', ' ')}
+                      {workflow.status.replace(/_/g, ' ')}
                     </Badge>
                   </div>
                   <div>
@@ -273,23 +316,126 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                     </Badge>
                   </div>
                 </div>
-                <div>
-                  <div className="text-slate-600">Requires Human Approval</div>
-                  <div className="font-medium">{workflow.requires_human_approval ? 'Yes' : 'No'}</div>
-                </div>
                 {workflow.risk_reasoning && (
-                  <div>
-                    <div className="text-slate-600">Risk Reasoning</div>
-                    <div className="text-slate-700 bg-slate-50 rounded p-2 border text-xs">
-                      {workflow.risk_reasoning}
+                  <div className="border-t pt-2">
+                    <div className="flex items-center gap-1 text-slate-600 mb-2">
+                      <Shield className="h-3 w-3" />
+                      <span className="font-medium">Risk Assessment</span>
+                    </div>
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-3 space-y-2">
+                      {/* Risk Level Indicator */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {getRiskLevelIcon(workflow.risk_level)}
+                        <Badge className={`text-xs h-5 ${getRiskLevelColor(workflow.risk_level)}`}>
+                          {workflow.risk_level || 'UNKNOWN'} RISK
+                        </Badge>
+                      </div>
+                      
+                      {/* Parse and display risk factors with robust parsing */}
+                      {(() => {
+                        const operationalComplexity = parseRiskFactor(workflow.risk_reasoning, 'operational_complexity');
+                        const customerImpact = parseRiskFactor(workflow.risk_reasoning, 'customer_impact');
+                        const regulatoryCompliance = parseRiskFactor(workflow.risk_reasoning, 'regulatory_compliance');
+                        const executionDifficulty = parseRiskFactor(workflow.risk_reasoning, 'execution_difficulty');
+                        
+                        const hasStructuredData = operationalComplexity || customerImpact || regulatoryCompliance || executionDifficulty;
+                        
+                        return (
+                          <>
+                            {operationalComplexity && (
+                              <div className="bg-white rounded p-2 border-l-2 border-red-300">
+                                <div className="flex items-center gap-1 text-red-700 font-medium text-xs mb-1">
+                                  <Info className="h-3 w-3" />
+                                  Operational Complexity
+                                </div>
+                                <p className="text-xs text-slate-700 leading-relaxed">
+                                  {operationalComplexity}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {customerImpact && (
+                              <div className="bg-white rounded p-2 border-l-2 border-orange-300">
+                                <div className="flex items-center gap-1 text-orange-700 font-medium text-xs mb-1">
+                                  <Users className="h-3 w-3" />
+                                  Customer Impact
+                                </div>
+                                <p className="text-xs text-slate-700 leading-relaxed">
+                                  {customerImpact}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {regulatoryCompliance && (
+                              <div className="bg-white rounded p-2 border-l-2 border-blue-300">
+                                <div className="flex items-center gap-1 text-blue-700 font-medium text-xs mb-1">
+                                  <Shield className="h-3 w-3" />
+                                  Regulatory Compliance
+                                </div>
+                                <p className="text-xs text-slate-700 leading-relaxed">
+                                  {regulatoryCompliance}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {executionDifficulty && (
+                              <div className="bg-white rounded p-2 border-l-2 border-purple-300">
+                                <div className="flex items-center gap-1 text-purple-700 font-medium text-xs mb-1">
+                                  <Clock className="h-3 w-3" />
+                                  Execution Difficulty
+                                </div>
+                                <p className="text-xs text-slate-700 leading-relaxed">
+                                  {executionDifficulty}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Fallback for unstructured content */}
+                            {!hasStructuredData && (
+                              <div className="bg-white rounded p-2 border-l-2 border-gray-300">
+                                <p className="text-xs text-slate-700 leading-relaxed">
+                                  {typeof workflow.risk_reasoning === 'string' ? workflow.risk_reasoning : JSON.stringify(workflow.risk_reasoning, null, 2)}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
+                
                 {workflow.approval_reasoning && (
-                  <div>
-                    <div className="text-slate-600">Approval Reasoning</div>
-                    <div className="text-slate-700 bg-slate-50 rounded p-2 border text-xs">
-                      {workflow.approval_reasoning}
+                  <div className="border-t pt-2">
+                    <div className="flex items-center gap-1 text-slate-600 mb-2">
+                      <CheckCircle className="h-3 w-3" />
+                      <span className="font-medium">Approval Assessment</span>
+                    </div>
+                    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-3">
+                      <div className="bg-white rounded p-2 border-l-2 border-green-300">
+                        <div className="flex items-center gap-1 text-green-700 font-medium text-xs mb-1">
+                          <Info className="h-3 w-3" />
+                          Decision Rationale
+                        </div>
+                        <p className="text-xs text-slate-700 leading-relaxed">
+                          {workflow.approval_reasoning}
+                        </p>
+                      </div>
+                      
+                      {/* Approval indicators */}
+                      <div className="mt-2 flex items-center gap-2">
+                        {workflow.requires_human_approval ? (
+                          <div className="flex items-center gap-1 text-orange-600">
+                            <AlertTriangle className="h-3 w-3" />
+                            <span className="text-xs font-medium">Human Review Required</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <CheckCircle className="h-3 w-3" />
+                            <span className="text-xs font-medium">Auto-approval Eligible</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -457,6 +603,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     );
   }
 
+
   return (
     <div className="space-y-3">
       {/* Header with filters */}
@@ -602,7 +749,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                       </td>
                       <td className="py-1 px-2">
                         <Badge className={`text-xs h-5 ${getStatusBadgeColor(workflow.status)}`}>
-                          {workflow.status.replace('_', ' ')}
+                          {workflow.status.replace(/_/g, ' ')}
                         </Badge>
                       </td>
                       <td className="py-1 px-2">
