@@ -1,0 +1,255 @@
+API Contract: Workflow List Endpoint
+
+  Endpoint
+
+  GET /api/v1/workflows
+
+  Description
+
+  List workflows with optional filters. Returns granular workflows extracted from action plans.
+
+  Request
+
+  Query Parameters
+
+  | Parameter  | Type    | Required | Description                         | Valid Values                                                             |
+  |------------|---------|----------|-------------------------------------|--------------------------------------------------------------------------|
+  | status     | string  | No       | Filter by workflow status           | PENDING_ASSESSMENT, AWAITING_APPROVAL, AUTO_APPROVED, REJECTED, EXECUTED |
+  | risk_level | string  | No       | Filter by risk level                | LOW, MEDIUM, HIGH                                                        |
+  | limit      | integer | No       | Maximum number of results to return | Any positive integer                                                     |
+
+  Request Constraints
+
+  - Cannot filter by both status AND risk_level simultaneously (returns 400 error)
+  - Only one filter type allowed at a time
+
+  Example Requests
+
+  # Get all workflows
+  GET /api/v1/workflows
+
+  # Get workflows awaiting approval
+  GET /api/v1/workflows?status=AWAITING_APPROVAL
+
+  # Get high-risk workflows
+  GET /api/v1/workflows?risk_level=HIGH
+
+  # Get first 10 workflows
+  GET /api/v1/workflows?limit=10
+
+  # Get first 5 high-risk workflows
+  GET /api/v1/workflows?risk_level=HIGH&limit=5
+
+  Response
+
+  Success Response (200 OK)
+
+  Returns array of workflow objects, ordered by created_at DESC
+
+  Response Schema
+
+  interface WorkflowResponse {
+    workflows: Workflow[]
+  }
+
+  interface Workflow {
+    // Core Identifiers
+    id: string                    // Unique workflow ID (e.g., "WF_123_456")
+    plan_id: string               // Associated action plan ID
+    analysis_id: string           // Associated analysis ID
+    transcript_id: string         // Associated transcript ID
+
+    // Workflow Classification
+    workflow_type: "BORROWER" | "ADVISOR" | "SUPERVISOR" | "LEADERSHIP"
+
+    // Workflow Content
+    workflow_data: {
+      actions: string[]           // List of actions to take
+      priority: string            // Priority level
+      estimated_time?: string     // Time estimate
+      dependencies?: string[]     // Other workflow dependencies
+    }
+
+    // Risk Assessment (LLM Agent Decisions)
+    risk_level: "LOW" | "MEDIUM" | "HIGH"
+    status: "PENDING_ASSESSMENT" | "AWAITING_APPROVAL" | "AUTO_APPROVED" | "REJECTED" | "EXECUTED"
+
+    // Context & Reasoning
+    context_data: {
+      customer_risk_score?: number
+      delinquency_days?: number
+      full_transcript?: string
+      analysis_results?: object
+      [key: string]: any          // Additional context
+    }
+    risk_reasoning: string | null
+    approval_reasoning: string | null
+
+    // Approval Workflow
+    requires_human_approval: boolean
+    assigned_approver: string | null
+    approved_by: string | null
+    approved_at: string | null      // ISO 8601 timestamp
+    rejected_by: string | null
+    rejected_at: string | null      // ISO 8601 timestamp
+    rejection_reason: string | null
+
+    // Execution Tracking
+    executed_at: string | null      // ISO 8601 timestamp
+    execution_results: object | null
+
+    // Timestamps
+    created_at: string              // ISO 8601 timestamp
+    updated_at: string              // ISO 8601 timestamp
+  }
+
+  Example Response
+
+  [
+    {
+      "id": "WF_PLAN_123_SUPERVISOR_001",
+      "plan_id": "PLAN_ANALYSIS_CALL_123",
+      "analysis_id": "ANALYSIS_CALL_123",
+      "transcript_id": "CALL_123",
+      "workflow_type": "SUPERVISOR",
+      "workflow_data": {
+        "actions": [
+          "Review customer account for hardship program eligibility",
+          "Approve payment plan modification request",
+          "Escalate to legal team if documentation not received"
+        ],
+        "priority": "high",
+        "estimated_time": "30 minutes",
+        "dependencies": ["WF_PLAN_123_BORROWER_001"]
+      },
+      "risk_level": "HIGH",
+      "status": "AWAITING_APPROVAL",
+      "context_data": {
+        "customer_risk_score": 0.85,
+        "delinquency_days": 90,
+        "hardship_type": "job_loss",
+        "previous_modifications": 0,
+        "full_transcript": "...",
+        "analysis_results": {
+          "delinquency_risk": 0.90,
+          "churn_risk": 0.70
+        }
+      },
+      "risk_reasoning": "Customer has 90+ day delinquency with job loss hardship. High risk of foreclosure without intervention.",
+      "approval_reasoning": null,
+      "requires_human_approval": true,
+      "assigned_approver": "senior_supervisor",
+      "approved_by": null,
+      "approved_at": null,
+      "rejected_by": null,
+      "rejected_at": null,
+      "rejection_reason": null,
+      "executed_at": null,
+      "execution_results": null,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": "WF_PLAN_123_ADVISOR_001",
+      "plan_id": "PLAN_ANALYSIS_CALL_123",
+      "analysis_id": "ANALYSIS_CALL_123",
+      "transcript_id": "CALL_123",
+      "workflow_type": "ADVISOR",
+      "workflow_data": {
+        "actions": [
+          "Send hardship documentation package to customer",
+          "Schedule follow-up call for January 21st",
+          "Update CRM with payment arrangement details"
+        ],
+        "priority": "high",
+        "estimated_time": "15 minutes"
+      },
+      "risk_level": "MEDIUM",
+      "status": "AUTO_APPROVED",
+      "context_data": {
+        "customer_email": "customer@example.com",
+        "follow_up_date": "2024-01-21"
+      },
+      "risk_reasoning": "Standard advisor actions with no compliance concerns",
+      "approval_reasoning": "Auto-approved due to low risk advisor actions",
+      "requires_human_approval": false,
+      "assigned_approver": null,
+      "approved_by": "SYSTEM",
+      "approved_at": "2024-01-15T10:31:00Z",
+      "rejected_by": null,
+      "rejected_at": null,
+      "rejection_reason": null,
+      "executed_at": "2024-01-15T10:32:00Z",
+      "execution_results": {
+        "email_sent": true,
+        "crm_updated": true,
+        "call_scheduled": true
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:32:00Z"
+    }
+  ]
+
+  Error Responses
+
+  400 Bad Request
+
+  {
+    "detail": "Cannot filter by both status and risk_level simultaneously"
+  }
+
+  500 Internal Server Error
+
+  {
+    "detail": "Failed to list workflows: {error_message}"
+  }
+
+  Implementation Notes
+
+  1. Filtering Logic:
+    - No filters: Returns all workflows
+    - Status filter: Returns workflows matching status
+    - Risk level filter: Returns workflows matching risk level
+    - Cannot use both filters together
+  2. Ordering: Always ordered by created_at DESC (newest first)
+  3. Workflow Types: Each workflow represents a specific actor's tasks extracted from the full action plan
+  4. Status Flow:
+    - PENDING_ASSESSMENT → Initial state
+    - AWAITING_APPROVAL → Requires human approval
+    - AUTO_APPROVED → Approved by system
+    - REJECTED → Rejected by approver
+    - EXECUTED → Workflow completed
+  5. Context Preservation: Full context from transcript and analysis preserved for audit trail
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+> 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ plan mode on (shift+tab to cycle)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
