@@ -155,6 +155,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow', selectedWorkflowId] }); // Refresh the detailed view
     },
     onError: (error: any) => {
       console.error('Error approving workflow:', error);
