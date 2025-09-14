@@ -142,59 +142,9 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     },
   });
 
-  // Helper function to generate approval data based on workflow risk and context
-  const generateApprovalData = (workflow: Workflow) => {
-    const baseData = {
-      approval_timestamp: new Date().toISOString(),
-      workflow_type: workflow.workflow_type,
-      risk_level: workflow.risk_level,
-      workflow_id: workflow.id,
-      plan_id: workflow.plan_id
-    };
-
-    // Get action context from workflow data
-    const actionContext = workflow.workflow_data?.actions?.join(', ') || 'action items';
-    const priority = workflow.workflow_data?.priority || 'standard';
-
-    switch (workflow.risk_level) {
-      case 'LOW':
-        return {
-          ...baseData,
-          approved_by: "user",
-          approver_role: "staff",
-          reasoning: `Standard approval for low-risk ${workflow.workflow_type.toLowerCase()} workflow. Actions: ${actionContext}. Priority: ${priority}. Minimal compliance requirements met. Approved per operational guidelines.`
-        };
-      
-      case 'MEDIUM':
-        return {
-          ...baseData,
-          approved_by: "supervisor_user",
-          approver_role: "supervisor",
-          reasoning: `Supervisory approval for medium-risk ${workflow.workflow_type.toLowerCase()} workflow. Reviewed actions: ${actionContext}. Priority: ${priority}. Customer situation qualifies for assistance based on documented case details. Compliance requirements verified. Risk assessment completed. Approval granted per policy guidelines and regulatory compliance requirements.`
-        };
-      
-      case 'HIGH':
-        return {
-          ...baseData,
-          approved_by: "manager_user", 
-          approver_role: "senior_manager",
-          reasoning: `Executive approval for high-risk ${workflow.workflow_type.toLowerCase()} workflow. Critical actions: ${actionContext}. Priority: ${priority}. Comprehensive compliance review completed. Customer situation warrants exceptional handling per escalation protocol and risk management guidelines. Senior management authorization provided with full accountability and regulatory oversight.`
-        };
-      
-      default:
-        return {
-          ...baseData,
-          approved_by: "user",
-          approver_role: "staff",
-          reasoning: `Standard approval for ${workflow.workflow_type.toLowerCase()} workflow. Actions: ${actionContext}. Approved per operational guidelines.`
-        };
-    }
-  };
-
-  // Approve workflow mutation
+  // Approve workflow mutation - now expects human input
   const approveWorkflowMutation = useMutation({
-    mutationFn: ({ id, workflow }: { id: string; workflow: Workflow }) => {
-      const approvalData = generateApprovalData(workflow);
+    mutationFn: ({ id, approvalData }: { id: string; approvalData: any }) => {
       return workflowApi.approve(id, approvalData);
     },
     onSuccess: () => {
