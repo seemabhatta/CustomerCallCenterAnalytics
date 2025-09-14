@@ -219,6 +219,119 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     deleteAllWorkflowsMutation.mutate();
   };
 
+  // Granular Workflow Components
+  const GranularWorkflowHeader = ({ workflow }: { workflow: GranularWorkflow }) => (
+    <Card>
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-xs font-medium flex items-center gap-2">
+          <Badge className={`text-xs h-5 ${getPriorityColor(workflow.priority)}`}>
+            {workflow.priority.toUpperCase()}
+          </Badge>
+          Action Details
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="py-2 px-3">
+        <div className="space-y-2">
+          <div>
+            <div className="text-slate-600 text-xs">Action Item</div>
+            <div className="font-medium text-sm">{workflow.action_item}</div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div>
+              <div className="text-slate-600">Timeline</div>
+              <div className="font-medium">{workflow.timeline}</div>
+            </div>
+            <div>
+              <div className="text-slate-600">Type</div>
+              <Badge className="text-xs h-5">{workflow.workflow_type}</Badge>
+            </div>
+            <div>
+              <div className="text-slate-600">Duration</div>
+              <div className="font-medium">{workflow.estimated_duration || 'TBD'}</div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const ActionDescription = ({ workflow }: { workflow: GranularWorkflow }) => (
+    <Card>
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-xs font-medium flex items-center gap-1">
+          <Info className="h-3 w-3" />
+          Description & Context
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="py-2 px-3">
+        <p className="text-xs text-slate-700 leading-relaxed">
+          {workflow.description}
+        </p>
+      </CardContent>
+    </Card>
+  );
+
+  const ExecutionSteps = ({ workflow }: { workflow: GranularWorkflow }) => (
+    <Card>
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-xs font-medium flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          Execution Steps
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="py-2 px-3">
+        {workflow.steps && workflow.steps.length > 0 ? (
+          <div className="space-y-1">
+            {workflow.steps.map((step, index) => (
+              <div key={index} className="flex items-center gap-2 text-xs">
+                <div className="w-4 h-4 border border-slate-300 rounded flex items-center justify-center text-xs">
+                  {index + 1}
+                </div>
+                <span className="text-slate-700">{step}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-slate-500 italic">
+            No specific steps defined. Follow standard procedures for: {workflow.action_item}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const AssignmentDetails = ({ workflow }: { workflow: GranularWorkflow }) => (
+    <Card>
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-xs font-medium flex items-center gap-1">
+          <Users className="h-3 w-3" />
+          Assignment & Dependencies
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="py-2 px-3">
+        <div className="space-y-2 text-xs">
+          <div>
+            <div className="text-slate-600">Assigned To</div>
+            <div className="font-medium">{workflow.assigned_to || 'Unassigned'}</div>
+          </div>
+          {workflow.dependencies && workflow.dependencies.length > 0 && (
+            <div>
+              <div className="text-slate-600 mb-1">Dependencies</div>
+              <div className="space-y-1">
+                {workflow.dependencies.map((dep, index) => (
+                  <div key={index} className="flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-orange-500" />
+                    <span className="text-slate-700">{dep}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-3">
