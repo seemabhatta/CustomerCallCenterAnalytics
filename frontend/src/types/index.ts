@@ -224,6 +224,44 @@ export interface Workflow {
   updated_at: string;               // ISO 8601 timestamp
 }
 
+// Granular Workflow Types (New extract-all endpoint format)
+export interface GranularWorkflow {
+  // Core Identifiers
+  id: string;                      // Unique workflow ID
+  plan_id: string;                 // Associated action plan ID
+  analysis_id: string;             // Associated analysis ID
+  transcript_id: string;           // Associated transcript ID
+
+  // Granular Action Details (Key differentiator from meta-workflow)
+  action_item: string;             // Specific action to be taken (e.g., "Escalate PMI removal request")
+  description: string;             // Detailed description of what to do
+  priority: "high" | "medium" | "low"; // Priority level
+  timeline: string;                // When to complete (e.g., "Within 24 hours")
+  
+  // Workflow Classification
+  workflow_type: "BORROWER" | "ADVISOR" | "SUPERVISOR" | "LEADERSHIP";
+
+  // Optional Execution Details
+  steps?: string[];                // Specific execution steps
+  dependencies?: string[];         // Prerequisites or dependencies
+  assigned_to?: string;           // Who should execute this
+  estimated_duration?: string;    // How long it should take
+
+  // Risk Assessment
+  risk_level: "LOW" | "MEDIUM" | "HIGH";
+  risk_reasoning?: string;         // Risk assessment for this specific action
+  
+  // Status & Approval
+  status: "PENDING_ASSESSMENT" | "AWAITING_APPROVAL" | "AUTO_APPROVED" | "REJECTED" | "EXECUTED";
+  requires_human_approval: boolean;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+}
+
 // Workflow Response from API
 export interface WorkflowResponse {
   workflows: Workflow[];

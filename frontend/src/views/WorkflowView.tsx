@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/api/client';
-import { WorkflowFilterParams } from '@/types';
+import { WorkflowFilterParams, GranularWorkflow } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,6 +69,26 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
       case 'MEDIUM': return <AlertTriangle className="h-4 w-4 text-orange-600" />;
       case 'LOW': return <CheckCircle className="h-4 w-4 text-green-600" />;
       default: return <Info className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  // Helper function to detect workflow type
+  const getWorkflowDisplayType = (workflow: any) => {
+    if (workflow.action_item) return 'GRANULAR'; // New granular format
+    if (workflow.risk_reasoning) return 'META';   // Old meta format  
+    return 'UNKNOWN';
+  };
+
+  const isGranularWorkflow = (workflow: any): workflow is GranularWorkflow => 
+    getWorkflowDisplayType(workflow) === 'GRANULAR';
+
+  // Helper function for priority colors
+  const getPriorityColor = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'high': return 'bg-red-100 text-red-700 border-red-200';
+      case 'medium': return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'low': return 'bg-green-100 text-green-700 border-green-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
