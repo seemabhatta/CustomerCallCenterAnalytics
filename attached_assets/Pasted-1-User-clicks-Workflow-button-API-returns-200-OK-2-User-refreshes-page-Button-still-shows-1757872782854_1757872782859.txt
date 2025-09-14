@@ -1,0 +1,104 @@
+1. User clicks "Workflow" button → API returns 200 OK
+  2. User refreshes page → Button still shows "Workflow" (not "✓")
+  3. User navigates to Workflow tab → No workflow visible
+  4. Backend API /api/v1/workflows shows a workflow exists for "PLAN_ANALYSIS_CALL_4"
+  5. But the UI can't see it even after full page refresh
+
+  Possible Root Causes
+
+  1. Data Structure Mismatch (Most Likely)
+
+  The API might be returning workflows in a format the frontend doesn't expect:
+  - Check if workflowApi.list() is parsing the response correctly
+  - Verify the response structure matches what WorkflowView expects
+  - Look for nested data that might not be unpacked
+
+  2. Filter Mismatch
+
+  The WorkflowView might be filtering out the workflows:
+  - Check if there are default filters hiding certain workflow types
+  - Verify status filters aren't excluding newly created workflows
+  - Check if the workflow type "BORROWER" is being filtered
+
+  3. Silent API Failure
+
+  The create API might return 200 but not actually store the workflow:
+  - Check if there's a transaction rollback
+  - Verify the workflow is persisted to the database
+  - Look for validation errors that don't throw exceptions
+
+  Immediate Debugging Steps for UI Team
+
+  1. Check the actual API response:
+  // In PlanView.tsx, add logging to see what's returned
+  const { data: workflows = [] } = useQuery({
+    queryKey: ['workflows'],
+    queryFn: async () => {
+      const result = await workflowApi.list();
+      console.log('Workflows from API:', result);  // ADD THIS
+      return result;
+    }
+  });
+
+  2. Check the WorkflowView display logic:
+  // In WorkflowView.tsx, check what data it receives
+  console.log('Workflows in WorkflowView:', workflows);
+
+  3. Verify the create mutation response:
+  onSuccess: (data) => {
+    console.log('Created workflow response:', data);  // ADD THIS
+    queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    goToWorkflow();
+  }
+
+  The Real Issue
+
+  Based on the investigation:
+  - The backend HAS a workflow for "PLAN_ANALYSIS_CALL_4"
+  - But the frontend CAN'T see it even after refresh
+  - This means there's a data contract mismatch between backend and frontend
+
+  Next Steps for UI Team
+
+  1. Compare the API response structure with what the UI expects
+  2. Check if WorkflowView has filters that hide certain workflows
+  3. Verify the workflow list endpoint returns ALL workflows, not filtered
+  4. Test the API directly with curl/Postman to see raw responses
+  5. Check for console errors in the browser developer tools
+
+  Quick Test
+
+  Have the UI team run this in the browser console:
+  // This will show what the API actually returns
+  fetch('/api/v1/workflows')
+    .then(r => r.json())
+    .then(data => console.log('Raw API response:', data));
+
+  Then compare that structure with what the WorkflowView component expects to receive.
+
+  This is not a caching issue - it's a data flow/structure issue that needs backend + frontend alignment.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+> 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ plan mode on (shift+tab to cycle)  · python server.py return await plan_s… ·? for shortcuts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

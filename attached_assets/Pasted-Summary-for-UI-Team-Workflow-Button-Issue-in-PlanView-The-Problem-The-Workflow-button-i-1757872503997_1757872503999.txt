@@ -1,0 +1,91 @@
+Summary for UI Team: Workflow Button Issue in PlanView
+
+  The Problem
+
+  The "Workflow" button in the Plan tab has a critical state management bug:
+  - Expected behavior: When a workflow exists for a plan, the button should show "✓" and be disabled
+  - Actual behavior: Button remains clickable showing "Workflow" even when a workflow already exists
+  - User impact: Clicking does nothing visible, causing confusion
+
+  Technical Root Cause
+
+  The hasWorkflow() function (line 92-93 in PlanView.tsx) is checking against stale cached data. When a workflow is created:
+  1. Backend successfully creates the workflow ✓
+  2. The mutation's onSuccess calls queryClient.invalidateQueries() ✓
+  3. BUT the workflows array doesn't refresh immediately ✗
+  4. So hasWorkflow() still returns false ✗
+  5. Button stays enabled when it should be disabled ✗
+
+  Confirmed Data Flow
+
+  - Backend API works correctly - returns workflows with proper plan_id
+  - The workflow for "PLAN_ANALYSIS_CALL_4" exists in the database
+  - API endpoint /api/v1/workflows returns the correct data structure
+  - The issue is purely frontend cache synchronization
+
+  Fix Direction for UI Team
+
+  Immediate Fix (Priority: HIGH)
+
+  In frontend/src/views/PlanView.tsx:
+
+  1. Fix the workflows query (around line 70):
+  const { data: workflows = [] } = useQuery({
+    queryKey: ['workflows'],
+    queryFn: () => workflowApi.list(),
+    refetchOnMount: true,  // Add this
+    staleTime: 0           // Add this to always get fresh data
+  });
+
+  2. Fix the mutation's onSuccess (around line 88-91):
+  const createWorkflowMutation = useMutation({
+    mutationFn: (planId: string) => workflowApi.extractFromPlan(planId),
+    onSuccess: async () => {  // Make it async
+      // Use refetchQueries instead of invalidateQueries for immediate update
+      await queryClient.refetchQueries({ queryKey: ['workflows'] });
+      goToWorkflow();
+    },
+    onError: (error: any) => {
+      console.error('Failed to create workflow:', error);
+      // Add user-visible error notification here
+    },
+  });
+
+  3. Improve button UX (around line 688-693):
+  // Better button text
+  {createWorkflowMutation.isPending ?
+    "Creating..." :  // Better loading text
+    hasWorkflow(plan.plan_id) ?
+      "✓ Created" :  // Clearer success state
+      "Create Workflow"  // Clearer action
+  }
+
+  Additional Improvements (Priority: MEDIUM)
+
+  4. Add error toast notifications when workflow creation fails
+  5. Add success toast when workflow is created successfully
+  6. Consider adding a "View Workflow" action for plans that already have workflows
+  7. Add aria-labels for accessibility
+
+  Testing Checklist
+
+  After implementing the fix, verify:
+  - Button shows "✓ Created" for plans with existing workflows
+  - Button is disabled when workflow exists
+  - After creating a workflow, button immediately updates to disabled state
+  - Navigation to workflow tab works after creation
+  - Error messages appear if creation fails
+  - No duplicate workflows can be created
+
+  Why This Happened
+
+  React Query's invalidateQueries marks data as stale but doesn't immediately refetch. The component doesn't re-render with fresh data until the next query execution.
+  Using refetchQueries with await ensures the data is fetched before proceeding.
+
+  Questions for UI Team
+
+  1. Do you want to add toast notifications for success/error feedback?
+  2. Should we add a "View Workflow" button for existing workflows?
+  3. Should the button navigate immediately or show a success state first?
+
+  This is a common React Query pitfall - the fix is straightforward once you understand the caching behavior.

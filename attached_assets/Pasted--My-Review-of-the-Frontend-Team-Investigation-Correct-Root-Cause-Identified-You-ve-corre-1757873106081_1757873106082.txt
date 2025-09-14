@@ -1,0 +1,96 @@
+ My Review of the Frontend Team Investigation
+
+  ✅ Correct Root Cause Identified
+
+  You've correctly identified that the workflow DOES exist in the backend with:
+  - plan_id: "PLAN_ANALYSIS_CALL_4"
+  - status: "AWAITING_APPROVAL"
+  - workflow_type: "BORROWER"
+  - risk_level: "HIGH"
+
+  ⚠️ Critical Issues to Check FIRST
+
+  Before the frontend team starts debugging filters, they should verify TWO separate issues:
+
+  1. PlanView Button State Issue (Why button doesn't disable)
+
+  The hasWorkflow() function in PlanView.tsx needs to work with the data structure. Have them check:
+
+  // In PlanView.tsx - Check if workflows array is even populated
+  console.log('Raw workflows data:', workflows);
+  console.log('Type of workflows:', typeof workflows);
+  console.log('Is array?:', Array.isArray(workflows));
+
+  // Then check the hasWorkflow logic
+  const hasWorkflow = (planId: string) => {
+    console.log(`Checking for planId: ${planId}`);
+    const found = workflows.some((workflow: any) => {
+      console.log(`Comparing ${workflow.plan_id} === ${planId}`);
+      return workflow.plan_id === planId;
+    });
+    console.log(`hasWorkflow result: ${found}`);
+    return found;
+  };
+
+  2. WorkflowView Display Issue (Why workflow doesn't show)
+
+  This is likely the filter issue you identified, but they should check the data flow first:
+
+  // In WorkflowView.tsx - At the very top of the component
+  console.log('WorkflowView received workflows:', workflows);
+  console.log('Number of workflows:', workflows?.length);
+
+  // After any filtering
+  console.log('Workflows after filtering:', filteredWorkflows);
+
+  🔍 Order of Investigation
+
+  1. First: Confirm PlanView receives the workflow data
+  2. Second: Fix the button state issue (hasWorkflow function)
+  3. Third: Check WorkflowView filters
+  4. Fourth: Fix any display filters
+
+  📋 Checklist for Frontend Team
+
+  Before changing any code, have them answer:
+
+  - Does workflowApi.list() return the full array including "AWAITING_APPROVAL" workflows?
+  - Does PlanView's workflows variable contain the data?
+  - Does hasWorkflow('PLAN_ANALYSIS_CALL_4') return true or false?
+  - Does WorkflowView receive all workflows or already filtered data?
+  - Are there any default filters in WorkflowView state initialization?
+
+  🚨 Common Pitfalls to Avoid
+
+  1. Don't assume the API client is working - Log the raw response
+  2. Check for silent errors - Look for try/catch blocks swallowing errors
+  3. Verify array vs object - Make sure workflows is an array, not wrapped in an object
+  4. Check for case sensitivity - "PLAN_ANALYSIS_CALL_4" vs "plan_analysis_call_4"
+
+  💡 My Recommendation
+
+  Have the frontend team run this diagnostic code first in the browser console:
+
+  // Full diagnostic check
+  (async () => {
+    // 1. Check raw API
+    const rawResponse = await fetch('/api/v1/workflows');
+    const rawData = await rawResponse.json();
+    console.log('1. Raw API response:', rawData);
+
+    // 2. Check if it's an array
+    console.log('2. Is array?:', Array.isArray(rawData));
+
+    // 3. Check for our specific workflow
+    const hasOurWorkflow = rawData.some(w => w.plan_id === 'PLAN_ANALYSIS_CALL_4');
+    console.log('3. Has PLAN_ANALYSIS_CALL_4?:', hasOurWorkflow);
+
+    // 4. Check the status of our workflow
+    const ourWorkflow = rawData.find(w => w.plan_id === 'PLAN_ANALYSIS_CALL_4');
+    console.log('4. Our workflow status:', ourWorkflow?.status);
+    console.log('5. Our workflow type:', ourWorkflow?.workflow_type);
+  })();
+
+  This will immediately tell them if the issue is API parsing or UI filtering.
+
+  Your analysis is solid, but make sure they check the data flow path first before jumping to filter fixes!

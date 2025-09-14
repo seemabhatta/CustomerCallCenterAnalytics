@@ -28,7 +28,13 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   // Fetch workflows to check which plans have workflows
   const { data: workflows = [] } = useQuery({
     queryKey: ['workflows'],
-    queryFn: () => workflowApi.list(),
+    queryFn: async () => {
+      const result = await workflowApi.list();
+      console.log('🔍 DEBUG - Workflows from API:', result);
+      console.log('🔍 DEBUG - Is array?:', Array.isArray(result));
+      console.log('🔍 DEBUG - Length:', result?.length);
+      return result;
+    },
   });
 
   // Selected plan details
@@ -47,8 +53,10 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
       goToWorkflow();
     },
     onError: (error: any) => {
-      console.error('Failed to create workflow:', error);
-      // You could add a toast notification here if you have a toast system
+      console.error('❌ Workflow creation failed:', error);
+      console.error('❌ Backend error details:', error?.detail || error?.message);
+      // The backend workflow extraction is failing - this is a backend issue
+      alert(`Workflow creation failed: ${error?.detail || error?.message || 'Unknown error'}`);
     },
   });
 
@@ -89,8 +97,16 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   });
 
   // Check if plan has workflow
-  const hasWorkflow = (planId: string) => 
-    workflows.some((workflow: any) => workflow.plan_id === planId);
+  const hasWorkflow = (planId: string) => {
+    console.log(`🔍 DEBUG - Checking hasWorkflow for: ${planId}`);
+    console.log('🔍 DEBUG - Available workflows:', workflows?.map(w => w.plan_id));
+    const found = workflows.some((workflow: any) => {
+      console.log(`🔍 DEBUG - Comparing ${workflow.plan_id} === ${planId}`);
+      return workflow.plan_id === planId;
+    });
+    console.log(`🔍 DEBUG - hasWorkflow result: ${found}`);
+    return found;
+  };
 
   const handleTriggerWorkflow = (planId: string) => {
     createWorkflowMutation.mutate(planId);
