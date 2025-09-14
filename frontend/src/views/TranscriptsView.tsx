@@ -159,77 +159,82 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
   // Render live transcript view for any selected transcript
   if (selectedTranscriptId && selectedTranscript) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Live Transcript • {selectedTranscriptId}</h2>
-            <p className="text-slate-600">Customer transcript details and conversation flow</p>
+            <h2 className="text-sm font-bold">Live Transcript • {selectedTranscriptId}</h2>
+            <p className="text-xs text-slate-600">Customer transcript details and conversation flow</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleCloseLiveView} variant="outline">
+          <div className="flex items-center gap-1">
+            <Button 
+              onClick={handleCloseLiveView} 
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2"
+            >
               Back to List
             </Button>
           </div>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="flex items-center justify-between text-xs">
               <span>Transcript Details</span>
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="text-xs px-1 py-0">
                 Connected to GET /api/v1/transcripts/{selectedTranscriptId}
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+          <CardContent className="py-2 px-3">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
-                <div className="text-sm text-slate-600">Customer</div>
-                <div className="font-medium">{selectedTranscript.customer || selectedTranscript.customer_id || 'N/A'}</div>
+                <div className="text-xs text-slate-600">Customer</div>
+                <div className="text-xs font-medium">{selectedTranscript.customer || selectedTranscript.customer_id || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-sm text-slate-600">Advisor</div>
-                <div className="font-medium">{selectedTranscript.advisor || 'N/A'}</div>
+                <div className="text-xs text-slate-600">Advisor</div>
+                <div className="text-xs font-medium">{selectedTranscript.advisor || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-sm text-slate-600">Topic</div>
-                <div className="font-medium">{selectedTranscript.topic || 'N/A'}</div>
+                <div className="text-xs text-slate-600">Topic</div>
+                <div className="text-xs font-medium">{selectedTranscript.topic || 'N/A'}</div>
               </div>
               <div>
-                <div className="text-sm text-slate-600">Status</div>
-                <Badge variant={selectedTranscript.status === 'Complete' ? 'default' : 'secondary'}>
+                <div className="text-xs text-slate-600">Status</div>
+                <Badge variant={selectedTranscript.status === 'Complete' ? 'default' : 'secondary'} className="text-xs px-1 py-0">
                   {selectedTranscript.status}
                 </Badge>
               </div>
             </div>
             
             {isLoadingLive && (
-              <div className="text-center py-4">
-                <div className="animate-pulse text-slate-500">Loading live segments...</div>
+              <div className="text-center py-2">
+                <div className="animate-pulse text-xs text-slate-500">Loading live segments...</div>
               </div>
             )}
             
             {liveTranscriptData && (
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-slate-700">Live Conversation Segments:</div>
-                <div className="bg-slate-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                  <div className="space-y-3">
-                    <div className="text-sm text-slate-600">
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-slate-700">Live Conversation Segments:</div>
+                <div className="bg-slate-50 rounded-lg p-2 max-h-80 overflow-y-auto">
+                  <div className="space-y-2">
+                    <div className="text-xs text-slate-600">
                       Duration: {liveTranscriptData.duration_sec || 0}s | 
                       Messages: {liveTranscriptData.message_count || 0} | 
                       Last Updated: {new Date().toLocaleTimeString()}
                     </div>
                     {liveTranscriptData.messages && liveTranscriptData.messages.length > 0 ? (
                       liveTranscriptData.messages.map((message: any, index: number) => (
-                        <div key={index} className="border-l-2 border-blue-200 pl-3">
+                        <div key={index} className="border-l-2 border-blue-200 pl-2">
                           <div className="text-xs text-slate-500">
                             {message.speaker || 'Unknown'} • {message.timestamp || 'No timestamp'}
                           </div>
-                          <div className="text-sm">{message.content || message.text || 'No content'}</div>
+                          <div className="text-xs">{message.content || message.text || 'No content'}</div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-slate-500 text-sm">No conversation segments available yet.</div>
+                      <div className="text-slate-500 text-xs">No conversation segments available yet.</div>
                     )}
                   </div>
                 </div>

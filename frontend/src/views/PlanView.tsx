@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { planApi, workflowApi } from "@/api/client";
-import { Plan } from "@/types";
 
 interface PlanViewProps {
   goToWorkflow: () => void;
