@@ -143,47 +143,57 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   });
 
   // Helper function to generate approval data based on workflow risk and context
-  const generateApprovalData = (workflow: GranularWorkflow) => {
+  const generateApprovalData = (workflow: Workflow) => {
     const baseData = {
       approval_timestamp: new Date().toISOString(),
       workflow_type: workflow.workflow_type,
-      risk_level: workflow.risk_level
+      risk_level: workflow.risk_level,
+      workflow_id: workflow.id,
+      plan_id: workflow.plan_id
     };
+
+    // Get action context from workflow data
+    const actionContext = workflow.workflow_data?.actions?.join(', ') || 'action items';
+    const priority = workflow.workflow_data?.priority || 'standard';
 
     switch (workflow.risk_level) {
       case 'LOW':
         return {
           ...baseData,
-          approved_by: "user",
-          reasoning: "Standard approval for low-risk action item per operational guidelines. Minimal compliance requirements met."
+          approved_by: "operational_user",
+          approver_role: "operations_staff",
+          reasoning: `Standard approval for low-risk ${workflow.workflow_type.toLowerCase()} workflow. Actions: ${actionContext}. Priority: ${priority}. Minimal compliance requirements met. Approved per operational guidelines.`
         };
       
       case 'MEDIUM':
         return {
           ...baseData,
           approved_by: "supervisor_user",
-          reasoning: `Reviewed ${workflow.workflow_type.toLowerCase()} action item. Customer situation qualifies for assistance based on documented case details. Approval granted per policy guidelines and compliance requirements. Risk assessment completed.`
+          approver_role: "supervisor",
+          reasoning: `Supervisory approval for medium-risk ${workflow.workflow_type.toLowerCase()} workflow. Reviewed actions: ${actionContext}. Priority: ${priority}. Customer situation qualifies for assistance based on documented case details. Compliance requirements verified. Approval granted per policy guidelines and risk management protocols.`
         };
       
       case 'HIGH':
         return {
           ...baseData,
           approved_by: "manager_user",
-          reasoning: `Executive approval for high-risk ${workflow.workflow_type.toLowerCase()} action. Compliance review completed. Customer situation warrants exceptional handling per escalation protocol and risk management guidelines. Senior authority authorization provided.`
+          approver_role: "senior_manager",
+          reasoning: `Executive approval for high-risk ${workflow.workflow_type.toLowerCase()} workflow. Critical actions: ${actionContext}. Priority: ${priority}. Comprehensive compliance review completed. Customer situation warrants exceptional handling per escalation protocol and risk management guidelines. Senior authority authorization provided with full accountability.`
         };
       
       default:
         return {
           ...baseData,
           approved_by: "user",
-          reasoning: "Standard approval for action item per operational guidelines."
+          approver_role: "staff",
+          reasoning: `Standard approval for ${workflow.workflow_type.toLowerCase()} workflow. Actions: ${actionContext}. Approved per operational guidelines.`
         };
     }
   };
 
   // Approve workflow mutation
   const approveWorkflowMutation = useMutation({
-    mutationFn: ({ id, workflow }: { id: string; workflow: GranularWorkflow }) => {
+    mutationFn: ({ id, workflow }: { id: string; workflow: Workflow }) => {
       const approvalData = generateApprovalData(workflow);
       return workflowApi.approve(id, approvalData);
     },
