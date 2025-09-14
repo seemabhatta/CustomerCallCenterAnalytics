@@ -1,0 +1,92 @@
+ Bash(curl -v http://localhost:8000/api/v1/workflows 2>&1 | head -30)
+  ⎿ * Host localhost:8000 was resolved.
+    * IPv6: ::1
+    * IPv4: 127.0.0.1
+      % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                     Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8000...
+    * connect to ::1 port 8000 from ::1 port 52036 failed: Connection refused
+    *   Trying 127.0.0.1:8000...
+    * Connected to localhost (127.0.0.1) port 8000
+    > GET /api/v1/workflows HTTP/1.1
+    > Host: localhost:8000
+    > User-Agent: curl/8.5.0
+    > Accept: */*
+    >
+    < HTTP/1.1 200 OK
+    < date: Sun, 14 Sep 2025 18:11:25 GMT
+    < server: uvicorn
+    < content-length: 10431
+    < content-type: application/json
+    <
+    { [10431 bytes data]
+    [{"id":"0555f164-efc1-4cfb-9e1d-b2ae57c577cc","plan_id":"PLAN_ANALYSIS_CALL_4","analysis_id":"ANALYSIS_CALL_49B3FC","transcript_id":"CALL_49B3FC52","workflow_data"
+    :{"workflow_steps":[{"step":"Escalate PMI removal request to senior representative.","timeline":"Within 24 hours","priority":"high","description":"Ensure a senior
+    representative contacts the customer and expedites the PMI removal process as promised."},{"step":"Provide status update to customer.","timeline":"Within 24
+    hours","priority":"high","description":"Send a clear update on the status of the PMI removal and expected next steps."},{"step":"Confirm PMI removal completion and
+     notify customer.","due_date":"Within 3 business days","owner":"Senior representative","trigger_condition":"Once PMI removal is processed"},{"step":"Offer formal
+    complaint process if resolution is delayed.","due_date":"If not resolved within 3 business days","owner":"Customer service team","trigger_condition":"Continued
+    delay or customer dissatisfaction"},{"step":"Monitor account for signs of churn or refinance inquiries.","description":"Proactively reach out if further delays
+    occur to prevent escalation to a formal complaint."},{"step":"Acknowledge and apologize for delays more explicitly.","description":"Increase customer trust and
+    reduce frustration."},{"step":"Inform customer of formal complaint process proactively.","description":"Ensure transparency regarding escalation and complaint
+    options."},{"step":"Follow up with customer after escalation to confirm satisfaction.","description":"Ensure customer feels supported and
+    informed."},{"step":"Direct intervention to expedite PMI removal process.","description":"Review for possible compensation due to delays."},{"step":"Audit recent
+    PMI removal requests for regulatory timeline compliance.","description":"Ensure all escalated cases are informed of formal complaint process."},{"step":"Streamline
+     appraisal process for PMI removal.","description":"Implement process improvements to reduce delays."},{"step":"Implement automated alerts for cases exceeding
+    standard processing time.","description":"Enhance monitoring of PMI removal requests."}],"complexity_assessment":"The workflow involves multiple stakeholders
+    including senior representatives, customer service teams, and compliance auditors. It requires coordination across different teams and adherence to regulatory
+    timelines, making it moderately complex.","dependencies":["Senior representative availability for escalation.","Customer service team for follow-up and complaint
+    handling.","Compliance team for auditing and regulatory checks.","Systems for tracking PMI removal requests and customer
+    communications."],"execution_risks":["Delays in escalation may lead to customer dissatisfaction.","Failure to communicate effectively with the customer could
+    result in complaints.","Inadequate monitoring of timelines may lead to regulatory non-compliance.","Resource constraints during peak periods may hinder timely
+    processing."],"estimated_duration":"Approximately 5 business days for full resolution and
+    follow-up.","extraction_metadata":{"agent_id":"f3e462c7-5d40-47a8-810f-f8bca051e3b9","agent_version":"v2.0","model_used":"gpt-4o-mini","extracted_at":"2025-09-14T1
+    7:36:09.497580"}},"risk_level":"HIGH","status":"AWAITING_APPROVAL","context_data":{"transcript_id":"CALL_49B3FC52","analysis_id":"ANALYSIS_CALL_49B3FC","plan_id":"
+    PLAN_ANALYSIS_CALL_4","plan_data":{"borrower_plan":{"immediate_actions":[{"action":"Escalate PMI removal request to senior representative.","timeline":"Within 24
+    hours","priority":"high","auto_executable":false,"description":"Ensure a senior representative contacts the customer and expedites the PMI removal process as
+    promised."},{"action":"Provide status update to customer.","timeline":"Within 24 hours","priority":"high","auto_executable":false,"description":"Send a clear
+    update on the status of the PMI removal and expected next steps."}],"follow_ups":[{"action":"Confirm PMI removal completion and notify
+    customer.","due_date":"Within 3 business days","owner":"Senior representative","trigger_condition":"Once PMI removal is processed"},{"action":"Offer formal
+    complaint process if resolution is delayed.","due_date":"If not resolved within 3 business days","owner":"Customer service team","trigger_condition":"Continued
+    delay or customer dissatisfaction"}],"personalized_offers":["Waive or refund PMI charges accrued during the delay period, if applicable.","Offer a one-time
+    goodwill credit due to inconvenience."],"risk_mitigation":["Monitor account for signs of churn or refinance inquiries.","Proactively reach out if further delays
+    occur to prevent escalation to a formal complaint."]},"advisor_plan":{"coaching_items":[{"action":"Acknowledge and apologize for delays more
+    explicitly.","coaching_point":"Empathy and ownership of the issue.","expected_improvement":"Increase customer trust and reduce
+    frustration.","priority":"high"},{"action":"Inform customer of formal complaint process proactively.","coaching_point":"Transparency regarding escalation and
+    complaint options.","expected_improvement":"Reduce regulatory risk and improve customer
+    satisfaction.","priority":"medium"}],"performance_feedback":{"strengths":["Promptly identified the delay source.","Escalated issue as requested.","Reassured
+    customer and set clear expectation for follow-up."],"improvements":["Missed opportunity to inform customer about the formal complaint process.","Could have offered
+     more concrete compensation or goodwill gesture."],"score_explanations":["Advisor handled escalation well but must ensure regulatory disclosures are
+    made."]},"training_recommendations":["Refresher on PMI removal regulatory timelines and complaint handling procedures.","Roleplay scenarios for handling
+    high-frustration calls."],"next_actions":["Follow up with customer after escalation to confirm
+    satisfaction."]},"supervisor_plan":{"escalation_items":[{"item":"Delay in PMI removal due to appraisal process.","reason":"Customer financial strain and high
+    complaint risk.","priority":"high","action_required":"Direct intervention to expedite process and review for possible compensation."}],"team_patterns":["Recurring
+    delays in PMI removal process due to appraisal bottlenecks."],"compliance_review":["Audit recent PMI removal requests for regulatory timeline compliance.","Ensure
+    all escalated cases are informed of formal complaint process."],"approval_required":true,"process_improvements":["Streamline appraisal process for PMI
+    removal.","Implement automated alerts for cases exceeding standard processing time."]},"leadership_plan":{"portfolio_insights":["Increased customer sensitivity to
+    PMI removal timelines and associated financial strain."],"strategic_opportunities":["Enhance digital self-service for PMI removal status tracking.","Develop
+    proactive communication campaigns for customers nearing 20% equity."],"risk_indicators":["Elevated complaint and churn risk linked to PMI removal
+    delays."],"trend_analysis":["Pattern of delays in PMI removal requests; potential process or staffing bottleneck."],"resource_allocation":["Allocate additional
+    resources to appraisal and PMI processing teams during peak periods."]},"plan_id":"PLAN_ANALYSIS_CALL_4","analysis_id":"ANALYSIS_CALL_49B3FC","transcript_id":"CALL
+    _49B3FC52","generator_version":"1.0","risk_level":null,"approval_route":null,"queue_status":null,"auto_executable":0,"routing_reason":null,"created_at":"2025-09-14
+     17:17:42","approved_at":null,"approved_by":null},"extraction_timestamp":"2025-09-14T17:36:00.223404","pipeline_stage":"workflow_extraction"},"risk_reasoning":"{\"
+    operational_complexity\": \"The workflow involves multiple stakeholders, including senior representatives, customer service teams, and compliance auditors. This
+    coordination across different teams adds to the complexity, as it requires effective communication and collaboration to ensure timely processing of PMI removal
+    requests.\", \"customer_impact\": \"The potential for significant customer dissatisfaction is high, especially if delays occur in the PMI removal process.
+100 10431  100 10431    0     0  2316k      0 --:--:-- --:--:-- --:--:--ich can lead to com
+    2546k
+    * Connection #0 to host localhost left intact
+    plaints and a loss of trust in the service. The workflow includes steps to address customer concerns, but the risk of negative impact remains substantial.\",
+    \"regulatory_compliance\": \"There are clear regulatory implications tied to the PMI removal process, particularly regarding timelines and customer communication.
+    Failure to adhere to these regulations could result in compliance issues, leading to potential penalties or reputational damage for the organization. The workflow
+    includes auditing steps to ensure compliance, but the inherent risks remain high.\", \"execution_difficulty\": \"The execution of this workflow is challenging due
+    to the need for timely escalation, effective communication, and monitoring of multiple timelines. Delays in any part of the process can lead to customer
+    dissatisfaction and regulatory non-compliance, increasing the likelihood of errors.\", \"resource_requirements\": \"The workflow requires adequate resources,
+    particularly during peak periods, to ensure timely processing of requests. Resource constraints could hinder the ability to meet customer expectations and
+    regulatory timelines, further elevating the risk level.\"}","approval_reasoning":"The workflow is assessed as HIGH risk due to its operational complexity,
+    potential customer impact, and regulatory compliance requirements. It involves multiple stakeholders, including senior representatives and customer service teams,
+    which necessitates careful coordination and communication to avoid delays that could lead to customer dissatisfaction and compliance issues. Given the urgency of
+    the PMI removal request and the potential financial strain on the customer, human approval is required to ensure that the escalation and resolution processes are
+    handled appropriately. The workflow's complexity and the need for oversight in managing customer expectations and regulatory timelines further justify the need for
+     supervisor approval.","requires_human_approval":true,"assigned_approver":null,"approved_by":null,"approved_at":null,"rejected_by":null,"rejected_at":null,"rejecti
+    on_reason":null,"executed_at":null,"execution_results":null,"created_at":"2025-09-14 17:36:17","updated_at":"2025-09-14 17:36:17","workflow_type":"BORROWER"}]

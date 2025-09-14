@@ -28,7 +28,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   // Fetch workflows to check which plans have workflows
   const { data: workflows = [] } = useQuery({
     queryKey: ['workflows'],
-    queryFn: () => workflowApi.list(),
+    queryFn: () => workflowApi.list({ limit: 50 }), // Add limit parameter like WorkflowView
   });
 
   // Selected plan details
