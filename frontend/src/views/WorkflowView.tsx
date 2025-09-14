@@ -74,7 +74,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
 
   // Helper function to detect workflow type
   const getWorkflowDisplayType = (workflow: any) => {
-    if (workflow.action_item) return 'GRANULAR'; // New granular format
+    if (workflow.workflow_data?.action_item) return 'GRANULAR'; // New granular format
     if (workflow.risk_reasoning) return 'META';   // Old meta format  
     return 'UNKNOWN';
   };
@@ -224,8 +224,8 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     <Card>
       <CardHeader className="py-2 px-3">
         <CardTitle className="text-xs font-medium flex items-center gap-2">
-          <Badge className={`text-xs h-5 ${getPriorityColor(workflow.priority)}`}>
-            {workflow.priority.toUpperCase()}
+          <Badge className={`text-xs h-5 ${getPriorityColor(workflow.workflow_data?.priority || 'normal')}`}>
+            {(workflow.workflow_data?.priority || 'normal').toUpperCase()}
           </Badge>
           Action Details
         </CardTitle>
@@ -234,12 +234,12 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
         <div className="space-y-2">
           <div>
             <div className="text-slate-600 text-xs">Action Item</div>
-            <div className="font-medium text-sm">{workflow.action_item}</div>
+            <div className="font-medium text-sm">{workflow.workflow_data?.action_item || 'No action item specified'}</div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div>
               <div className="text-slate-600">Timeline</div>
-              <div className="font-medium">{workflow.timeline}</div>
+              <div className="font-medium">{workflow.workflow_data?.timeline || 'TBD'}</div>
             </div>
             <div>
               <div className="text-slate-600">Type</div>
@@ -247,7 +247,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             </div>
             <div>
               <div className="text-slate-600">Duration</div>
-              <div className="font-medium">{workflow.estimated_duration || 'TBD'}</div>
+              <div className="font-medium">{workflow.workflow_data?.estimated_duration || 'TBD'}</div>
             </div>
           </div>
         </div>
@@ -265,7 +265,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
       </CardHeader>
       <CardContent className="py-2 px-3">
         <p className="text-xs text-slate-700 leading-relaxed">
-          {workflow.description}
+          {workflow.workflow_data?.description || 'No description provided'}
         </p>
       </CardContent>
     </Card>
@@ -280,9 +280,9 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="py-2 px-3">
-        {workflow.steps && workflow.steps.length > 0 ? (
+        {workflow.workflow_data?.steps && workflow.workflow_data.steps.length > 0 ? (
           <div className="space-y-1">
-            {workflow.steps.map((step, index) => (
+            {workflow.workflow_data.steps.map((step, index) => (
               <div key={index} className="flex items-center gap-2 text-xs">
                 <div className="w-4 h-4 border border-slate-300 rounded flex items-center justify-center text-xs">
                   {index + 1}
@@ -293,7 +293,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
           </div>
         ) : (
           <div className="text-xs text-slate-500 italic">
-            No specific steps defined. Follow standard procedures for: {workflow.action_item}
+            No specific steps defined. Follow standard procedures for: {workflow.workflow_data?.action_item || 'this task'}
           </div>
         )}
       </CardContent>
@@ -312,13 +312,13 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
         <div className="space-y-2 text-xs">
           <div>
             <div className="text-slate-600">Assigned To</div>
-            <div className="font-medium">{workflow.assigned_to || 'Unassigned'}</div>
+            <div className="font-medium">{workflow.workflow_data?.assigned_to || 'Unassigned'}</div>
           </div>
-          {workflow.dependencies && workflow.dependencies.length > 0 && (
+          {workflow.workflow_data?.dependencies && workflow.workflow_data.dependencies.length > 0 && (
             <div>
               <div className="text-slate-600 mb-1">Dependencies</div>
               <div className="space-y-1">
-                {workflow.dependencies.map((dep, index) => (
+                {workflow.workflow_data.dependencies.map((dep, index) => (
                   <div key={index} className="flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3 text-orange-500" />
                     <span className="text-slate-700">{dep}</span>

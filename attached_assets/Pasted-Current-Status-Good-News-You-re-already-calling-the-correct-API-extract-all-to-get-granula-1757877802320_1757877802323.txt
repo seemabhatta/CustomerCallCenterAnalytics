@@ -1,0 +1,63 @@
+Current Status
+
+  ✅ Good News: You're already calling the correct API (extract-all) to get granular action workflows❌ Issue: The action details aren't displaying because of a data
+  structure mismatch
+
+  Immediate Fix Required
+
+  Problem: UI expects flat structure but API returns nested structure
+
+  Fix in WorkflowView.tsx:
+  // 1. Fix type detection (line ~155)
+  const getWorkflowDisplayType = (workflow: any) => {
+    if (workflow.workflow_data?.action_item) return 'GRANULAR'; // ← Add .workflow_data
+    if (workflow.risk_reasoning) return 'META';
+    return 'UNKNOWN';
+  };
+
+  // 2. Update ALL component data access
+  // Change from:                    → To:
+  {workflow.action_item}            → {workflow.workflow_data?.action_item}
+  {workflow.description}            → {workflow.workflow_data?.description}
+  {workflow.priority}               → {workflow.workflow_data?.priority}
+  {workflow.timeline}               → {workflow.workflow_data?.timeline}
+
+  Understanding the Two APIs
+
+  API #1: /api/v1/workflows/extract (Meta/Risk Workflow)
+
+  - Frontend Method: workflowApi.extractFromPlan(planId)
+  - Purpose: Supervisor risk assessment view
+  - Returns: ONE workflow with overall risk analysis
+  - Content: Complexity assessment, dependencies, approval reasoning
+  - When to use: Manager needs to review plan before approval
+
+  API #2: /api/v1/workflows/extract-all (Action Workflows) ✅ CURRENTLY USING
+
+  - Frontend Method: workflowApi.extractAllFromPlan(planId)
+  - Purpose: Create executable tasks from plan
+  - Returns: MULTIPLE workflows (one per action item)
+  - Content: Specific actions like "Escalate PMI removal", "Update customer"
+  - When to use: Creating tasks for execution (current use case)
+
+  Key Points
+
+  1. PlanView is correct - Uses extractAllFromPlan for the workflow button
+  2. Data is being created - Multiple granular workflows exist
+  3. Only display is broken - Due to nested data structure
+  4. Both APIs are valid - They serve different business purposes
+
+  Optional Enhancement
+
+  Consider adding a toggle in the UI:
+  - "View as Tasks" → uses /extract-all (current)
+  - "View Risk Assessment" → uses /extract (for supervisors)
+
+  Action Items
+
+  1. Immediate: Fix the nested data access (5 min fix)
+  2. Test: Verify action text now displays
+  3. Document: Note that both APIs exist for different purposes
+  4. Future: Consider UI toggle for meta vs granular view
+
+  The system is working correctly - just needs the UI to look one level deeper in the data structure!
