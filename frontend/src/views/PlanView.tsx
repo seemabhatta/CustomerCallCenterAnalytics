@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Trash2, AlertTriangle } from "lucide-react";
 import { planApi, workflowApi } from "@/api/client";
 import { Plan } from "@/types";
 
@@ -12,6 +13,9 @@ interface PlanViewProps {
 
 export function PlanView({ goToWorkflow }: PlanViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch plans
@@ -36,6 +40,31 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
     },
   });
 
+  // Delete plan mutation
+  const deletePlanMutation = useMutation({
+    mutationFn: (id: string) => planApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      setShowDeleteConfirm(false);
+      setPlanToDelete(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete plan:', error);
+    },
+  });
+
+  // Delete all plans mutation
+  const deleteAllPlansMutation = useMutation({
+    mutationFn: () => planApi.deleteAll(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] });
+      setShowDeleteAllConfirm(false);
+    },
+    onError: (error) => {
+      console.error('Failed to delete all plans:', error);
+    },
+  });
+
   // Filter plans based on search query
   const filteredPlans = plans.filter((plan: Plan) => {
     if (!searchQuery) return true;
@@ -53,6 +82,21 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
 
   const handleTriggerWorkflow = (planId: string) => {
     createWorkflowMutation.mutate(planId);
+  };
+
+  const handleDeleteClick = (planId: string) => {
+    setPlanToDelete(planId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (planToDelete) {
+      deletePlanMutation.mutate(planToDelete);
+    }
+  };
+
+  const handleDeleteAllConfirm = () => {
+    deleteAllPlansMutation.mutate();
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -87,77 +131,101 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Input 
-          className="w-96" 
+          className="w-64 h-7 text-xs" 
           placeholder="Search by plan or analysis ID" 
           value={searchQuery} 
           onChange={(e) => setSearchQuery(e.target.value)} 
         />
-        <Badge variant="secondary">{filteredPlans.length} item(s)</Badge>
+        <Badge variant="secondary" className="text-xs px-1 py-0">{filteredPlans.length} item(s)</Badge>
+        {filteredPlans.length > 0 && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="h-7 text-xs px-2 text-gray-600 hover:text-red-600"
+            onClick={() => setShowDeleteAllConfirm(true)}
+            disabled={deleteAllPlansMutation.isPending}
+          >
+            {deleteAllPlansMutation.isPending ? 'Deleting...' : 'Delete All'}
+          </Button>
+        )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border">
-        <table className="w-full text-sm">
+      <div className="overflow-hidden rounded-lg border">
+        <table className="w-full text-xs">
           <thead className="bg-slate-50 border-b">
             <tr>
-              <th className="text-left py-2 px-3">Plan</th>
-              <th className="text-left py-2 px-3">Analysis</th>
-              <th className="text-left py-2 px-3">Title</th>
-              <th className="text-left py-2 px-3">Owner</th>
-              <th className="text-left py-2 px-3">Type</th>
-              <th className="text-left py-2 px-3">Urgency</th>
-              <th className="text-left py-2 px-3">Status</th>
-              <th className="text-left py-2 px-3">Created</th>
-              <th className="text-right py-2 px-3">Action</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Plan</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Analysis</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Title</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Owner</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Type</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Urgency</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Status</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Created</th>
+              <th className="text-right py-1 px-2 text-xs font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredPlans.map((plan: Plan) => (
               <tr key={plan.id} className="border-b hover:bg-slate-50">
-                <td className="py-2 px-3 font-medium text-slate-900">
+                <td className="py-1 px-2 text-xs font-medium text-slate-900">
                   {plan.id}
                 </td>
-                <td className="py-2 px-3">{plan.analysis_id}</td>
-                <td className="py-2 px-3 max-w-xs truncate" title={plan.title}>
+                <td className="py-1 px-2 text-xs">{plan.analysis_id}</td>
+                <td className="py-1 px-2 text-xs max-w-xs truncate" title={plan.title}>
                   {plan.title}
                 </td>
-                <td className="py-2 px-3">{plan.owner}</td>
-                <td className="py-2 px-3">
-                  <Badge variant="outline" className="text-xs">
+                <td className="py-1 px-2 text-xs">{plan.owner}</td>
+                <td className="py-1 px-2">
+                  <Badge variant="outline" className="text-xs px-1 py-0">
                     {plan.plan_type}
                   </Badge>
                 </td>
-                <td className="py-2 px-3">
+                <td className="py-1 px-2">
                   <Badge 
                     variant={plan.urgency === 'high' ? 'destructive' : 'secondary'} 
-                    className="text-xs"
+                    className="text-xs px-1 py-0"
                   >
                     {plan.urgency}
                   </Badge>
                 </td>
-                <td className="py-2 px-3">
-                  <Badge variant={getStatusBadgeVariant(plan.status)}>
+                <td className="py-1 px-2">
+                  <Badge variant={getStatusBadgeVariant(plan.status)} className="text-xs px-1 py-0">
                     {plan.status}
                   </Badge>
                 </td>
-                <td className="py-2 px-3">
-                  {new Date(plan.created_at).toLocaleString()}
+                <td className="py-1 px-2 text-xs">
+                  {new Date(plan.created_at).toLocaleDateString()}
                 </td>
-                <td className="py-2 px-3 text-right">
-                  <Button 
-                    size="sm" 
-                    disabled={hasWorkflow(plan.id) || createWorkflowMutation.isPending}
-                    onClick={() => handleTriggerWorkflow(plan.id)}
-                  >
-                    {createWorkflowMutation.isPending ? 
-                      "Creating..." : 
-                      hasWorkflow(plan.id) ? 
-                        "Workflow Created" : 
-                        "Trigger Workflow"
-                    }
-                  </Button>
+                <td className="py-1 px-2 text-right">
+                  <div className="flex gap-1 justify-end">
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                      onClick={() => handleDeleteClick(plan.id)}
+                      disabled={deletePlanMutation.isPending}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="h-6 text-xs px-2 text-gray-600"
+                      disabled={hasWorkflow(plan.id) || createWorkflowMutation.isPending}
+                      onClick={() => handleTriggerWorkflow(plan.id)}
+                    >
+                      {createWorkflowMutation.isPending ? 
+                        "..." : 
+                        hasWorkflow(plan.id) ? 
+                          "✓" : 
+                          "Workflow"
+                      }
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -165,11 +233,79 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
         </table>
         
         {filteredPlans.length === 0 && (
-          <div className="p-8 text-center text-slate-500">
+          <div className="p-4 text-center text-slate-500 text-xs">
             {searchQuery ? 'No plans match your search.' : 'No plans found.'}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete Plan</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete plan <code className="font-mono">{planToDelete}</code>? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={handleDeleteConfirm}
+                disabled={deletePlanMutation.isPending}
+              >
+                {deletePlanMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Dialog */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete All Plans</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete all <strong>{filteredPlans.length}</strong> plans? This will permanently remove all plan data and cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowDeleteAllConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={handleDeleteAllConfirm}
+                disabled={deleteAllPlansMutation.isPending}
+              >
+                {deleteAllPlansMutation.isPending ? 'Deleting...' : 'Delete All'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

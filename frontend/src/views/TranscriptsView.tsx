@@ -1,20 +1,18 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { transcriptApi, analysisApi } from "@/api/client";
 import { Transcript } from "@/types";
 import { Trash2 } from "lucide-react";
 
 interface TranscriptsViewProps {
-  onOpenTranscript: (id: string) => void;
   goToAnalysis: () => void;
 }
 
-export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsViewProps) {
+export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTranscriptId, setSelectedTranscriptId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -42,7 +40,7 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
   });
 
   // Selected transcript details
-  const { data: selectedTranscript, isLoading: isLoadingSelected } = useQuery({
+  const { data: selectedTranscript } = useQuery({
     queryKey: ['transcript', selectedTranscriptId],
     queryFn: () => transcriptApi.getById(selectedTranscriptId!),
     enabled: !!selectedTranscriptId,
