@@ -244,87 +244,91 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Input 
-            className="w-96" 
-            placeholder="Search by ID, customer, or advisor" 
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
-          />
-          <Badge variant="secondary">{filteredTranscripts.length} item(s)</Badge>
-        </div>
-        <Button 
-          variant="destructive"
-          onClick={handleDeleteAll}
-          disabled={transcripts.length === 0 || deleteAllTranscriptsMutation.isPending}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          {deleteAllTranscriptsMutation.isPending ? 'Deleting...' : 'Delete All Transcripts'}
-        </Button>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Input 
+          className="w-64 h-7 text-xs" 
+          placeholder="Search by ID, customer, or advisor" 
+          value={searchQuery} 
+          onChange={(e) => setSearchQuery(e.target.value)} 
+        />
+        <Badge variant="secondary" className="text-xs px-1 py-0">{filteredTranscripts.length} item(s)</Badge>
+        {filteredTranscripts.length > 0 && (
+          <Button 
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs px-2 text-gray-600 hover:text-red-600"
+            onClick={handleDeleteAll}
+            disabled={transcripts.length === 0 || deleteAllTranscriptsMutation.isPending}
+          >
+            {deleteAllTranscriptsMutation.isPending ? 'Deleting...' : 'Delete All'}
+          </Button>
+        )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border">
-        <table className="w-full text-sm">
+      <div className="overflow-hidden rounded-lg border">
+        <table className="w-full text-xs">
           <thead className="bg-slate-50 border-b">
             <tr>
-              <th className="text-left py-2 px-3">Transcript</th>
-              <th className="text-left py-2 px-3">Customer</th>
-              <th className="text-left py-2 px-3">Advisor</th>
-              <th className="text-left py-2 px-3">Topic</th>
-              <th className="text-left py-2 px-3">Created</th>
-              <th className="text-left py-2 px-3">Duration</th>
-              <th className="text-left py-2 px-3">Messages</th>
-              <th className="text-left py-2 px-3">Status</th>
-              <th className="text-right py-2 px-3">Action</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Transcript</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Customer</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Advisor</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Topic</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Created</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Duration</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Messages</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Status</th>
+              <th className="text-right py-1 px-2 text-xs font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredTranscripts.map((transcript: Transcript) => (
               <tr key={transcript.id} className="border-b hover:bg-slate-50">
-                <td className="py-2 px-3 font-medium text-slate-900">
+                <td className="py-1 px-2 text-xs font-medium text-slate-900">
                   <button 
-                    className="underline hover:text-blue-600" 
+                    className="underline hover:text-blue-600 text-xs" 
                     onClick={() => handleOpenTranscriptInternal(transcript.id)}
                   >
                     {transcript.id}
                   </button>
                 </td>
-                <td className="py-2 px-3">{transcript.customer || transcript.customer_id}</td>
-                <td className="py-2 px-3">{transcript.advisor || '-'}</td>
-                <td className="py-2 px-3">{transcript.topic}</td>
-                <td className="py-2 px-3">
-                  {new Date(transcript.created_at).toLocaleString()}
+                <td className="py-1 px-2 text-xs">{transcript.customer || transcript.customer_id}</td>
+                <td className="py-1 px-2 text-xs">{transcript.advisor || '-'}</td>
+                <td className="py-1 px-2 text-xs">{transcript.topic}</td>
+                <td className="py-1 px-2 text-xs">
+                  {new Date(transcript.created_at).toLocaleDateString()}
                 </td>
-                <td className="py-2 px-3">{transcript.duration_sec || '-'}s</td>
-                <td className="py-2 px-3">{transcript.message_count || '-'}</td>
-                <td className="py-2 px-3">
-                  <Badge variant={transcript.status === 'Complete' ? 'default' : 'secondary'}>
+                <td className="py-1 px-2 text-xs">{transcript.duration_sec || '-'}s</td>
+                <td className="py-1 px-2 text-xs">{transcript.message_count || '-'}</td>
+                <td className="py-1 px-2">
+                  <Badge variant={transcript.status === 'Complete' ? 'default' : 'secondary'} className="text-xs px-1 py-0">
                     {transcript.status}
                   </Badge>
                 </td>
-                <td className="py-2 px-3 text-right">
-                  <div className="flex gap-2 justify-end">
+                <td className="py-1 px-2 text-right">
+                  <div className="flex gap-1 justify-end">
+                    <Button 
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                      onClick={() => handleDeleteTranscript(transcript.id)}
+                      disabled={deleteTranscriptMutation.isPending}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                     <Button 
                       size="sm" 
+                      variant="outline"
+                      className="h-6 text-xs px-2 text-gray-600"
                       disabled={hasAnalysis(transcript.id) || createAnalysisMutation.isPending}
                       onClick={() => handleStartAnalysis(transcript.id)}
                     >
                       {createAnalysisMutation.isPending ? 
-                        "Creating..." : 
+                        "..." : 
                         hasAnalysis(transcript.id) ? 
-                          "Analysis Exists" : 
-                          "Start Analysis"
+                          "✓" : 
+                          "Start"
                       }
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="destructive"
-                      disabled={deleteTranscriptMutation.isPending}
-                      onClick={() => handleDeleteTranscript(transcript.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </td>
@@ -334,59 +338,79 @@ export function TranscriptsView({ onOpenTranscript, goToAnalysis }: TranscriptsV
         </table>
         
         {filteredTranscripts.length === 0 && (
-          <div className="p-8 text-center text-slate-500">
+          <div className="p-4 text-center text-slate-500 text-xs">
             {searchQuery ? 'No transcripts match your search.' : 'No transcripts found.'}
           </div>
         )}
       </div>
 
       {/* Delete Transcript Confirmation Dialog */}
-      <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete transcript "{deleteConfirmId}"? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDeleteTranscript}
-              disabled={deleteTranscriptMutation.isPending}
-            >
-              {deleteTranscriptMutation.isPending ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Trash2 className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete Transcript</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete transcript <code className="font-mono">{deleteConfirmId}</code>? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setDeleteConfirmId(null)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={confirmDeleteTranscript}
+                disabled={deleteTranscriptMutation.isPending}
+              >
+                {deleteTranscriptMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete All Transcripts Confirmation Dialog */}
-      <Dialog open={showDeleteAllConfirm} onOpenChange={setShowDeleteAllConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Delete All Transcripts</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete ALL {transcripts.length} transcripts in the system? This will delete every transcript regardless of current filters. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteAllConfirm(false)}>
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDeleteAll}
-              disabled={deleteAllTranscriptsMutation.isPending}
-            >
-              {deleteAllTranscriptsMutation.isPending ? 'Deleting...' : 'Delete All'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Trash2 className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete All Transcripts</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete all <strong>{transcripts.length}</strong> transcripts? This will permanently remove all transcript data and cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowDeleteAllConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={confirmDeleteAll}
+                disabled={deleteAllTranscriptsMutation.isPending}
+              >
+                {deleteAllTranscriptsMutation.isPending ? 'Deleting...' : 'Delete All'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
