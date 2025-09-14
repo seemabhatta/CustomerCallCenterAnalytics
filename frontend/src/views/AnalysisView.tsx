@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { analysisApi, planApi } from "@/api/client";
-import { Analysis } from "@/types";
 
 interface AnalysisViewProps {
   goToPlan: () => void;
@@ -65,14 +64,15 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
     },
   });
 
-  // Filter analyses based on search query
-  const filteredAnalyses = analyses.filter((analysis: Analysis) => {
+  // Filter analyses based on search query with backend field mapping
+  const filteredAnalyses = analyses.filter((analysis: any) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      analysis.id?.toLowerCase().includes(query) ||
+      analysis.analysis_id?.toLowerCase().includes(query) ||
       analysis.transcript_id?.toLowerCase().includes(query) ||
-      analysis.summary?.toLowerCase().includes(query)
+      analysis.call_summary?.toLowerCase().includes(query) ||
+      analysis.primary_intent?.toLowerCase().includes(query)
     );
   });
 
@@ -85,11 +85,8 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   };
 
   const handleDeleteClick = (analysisId: string) => {
-    console.log('Delete button clicked for analysis:', analysisId);
-    console.log('Available analyses:', analyses);
     setAnalysisToDelete(analysisId);
     setShowDeleteConfirm(true);
-    console.log('Delete confirmation dialog should show now');
   };
 
   const handleDeleteConfirm = () => {
@@ -162,67 +159,72 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
             </tr>
           </thead>
           <tbody>
-            {filteredAnalyses.map((analysis: Analysis) => (
-              <tr key={analysis.id} className="border-b hover:bg-slate-50">
-                <td className="py-1 px-2 text-xs font-medium text-slate-900">
-                  {analysis.id}
-                </td>
-                <td className="py-1 px-2 text-xs">{analysis.transcript_id}</td>
-                <td className="py-1 px-2 text-xs max-w-xs truncate" title={analysis.summary}>
-                  {analysis.summary}
-                </td>
-                <td className="py-1 px-2">
-                  <Badge variant="destructive" className="text-xs px-1 py-0">
-                    {analysis.high || 0}
-                  </Badge>
-                </td>
-                <td className="py-1 px-2">
-                  <Badge variant="default" className="text-xs px-1 py-0">
-                    {analysis.medium || 0}
-                  </Badge>
-                </td>
-                <td className="py-1 px-2">
-                  <Badge variant="secondary" className="text-xs px-1 py-0">
-                    {analysis.low || 0}
-                  </Badge>
-                </td>
-                <td className="py-1 px-2">
-                  <Badge variant={analysis.status === 'Done' ? 'default' : 'secondary'} className="text-xs px-1 py-0">
-                    {analysis.status}
-                  </Badge>
-                </td>
-                <td className="py-1 px-2 text-xs">
-                  {new Date(analysis.created_at).toLocaleDateString()}
-                </td>
-                <td className="py-1 px-2 text-right">
-                  <div className="flex gap-1 justify-end">
-                    <Button 
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                      onClick={() => handleDeleteClick(analysis.id)}
-                      disabled={deleteAnalysisMutation.isPending}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="h-6 text-xs px-2 text-gray-600"
-                      disabled={hasPlan(analysis.id) || createPlanMutation.isPending}
-                      onClick={() => handleTriggerPlan(analysis.id)}
-                    >
-                      {createPlanMutation.isPending ? 
-                        "..." : 
-                        hasPlan(analysis.id) ? 
-                          "✓" : 
-                          "Plan"
-                      }
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filteredAnalyses.map((analysis: any) => {
+              // Map backend data to frontend display format
+              const borrowerRisks = analysis.borrower_risks || {};
+              
+              return (
+                <tr key={analysis.analysis_id} className="border-b hover:bg-slate-50">
+                  <td className="py-1 px-2 text-xs font-medium text-slate-900">
+                    {analysis.analysis_id}
+                  </td>
+                  <td className="py-1 px-2 text-xs">{analysis.transcript_id}</td>
+                  <td className="py-1 px-2 text-xs max-w-xs truncate" title={analysis.call_summary}>
+                    {analysis.call_summary || analysis.primary_intent || 'No summary'}
+                  </td>
+                  <td className="py-1 px-2">
+                    <Badge variant="destructive" className="text-xs px-1 py-0">
+                      {Math.round((borrowerRisks.delinquency_risk || 0) * 10)}
+                    </Badge>
+                  </td>
+                  <td className="py-1 px-2">
+                    <Badge variant="default" className="text-xs px-1 py-0">
+                      {Math.round((borrowerRisks.churn_risk || 0) * 10)}
+                    </Badge>
+                  </td>
+                  <td className="py-1 px-2">
+                    <Badge variant="secondary" className="text-xs px-1 py-0">
+                      {Math.round((borrowerRisks.complaint_risk || 0) * 10)}
+                    </Badge>
+                  </td>
+                  <td className="py-1 px-2">
+                    <Badge variant={analysis.issue_resolved ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                      {analysis.issue_resolved ? 'Done' : 'Pending'}
+                    </Badge>
+                  </td>
+                  <td className="py-1 px-2 text-xs">
+                    {analysis.created_at ? new Date(analysis.created_at).toLocaleDateString() : 'N/A'}
+                  </td>
+                  <td className="py-1 px-2 text-right">
+                    <div className="flex gap-1 justify-end">
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                        onClick={() => handleDeleteClick(analysis.analysis_id)}
+                        disabled={deleteAnalysisMutation.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="h-6 text-xs px-2 text-gray-600"
+                        disabled={hasPlan(analysis.analysis_id) || createPlanMutation.isPending}
+                        onClick={() => handleTriggerPlan(analysis.analysis_id)}
+                      >
+                        {createPlanMutation.isPending ? 
+                          "..." : 
+                          hasPlan(analysis.analysis_id) ? 
+                            "✓" : 
+                            "Plan"
+                        }
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         
