@@ -129,19 +129,23 @@ class CallAnalyzer:
         
         # Create analysis prompt
         prompt = f"""
+        IMPORTANT: This MUST be analyzed as a mortgage servicing customer care call.
+
         Analyze this mortgage servicing call transcript and provide comprehensive insights.
-        
+
         Focus on:
-        - Borrower's primary intent and emotional journey
-        - Risk indicators (delinquency, churn, complaints)
-        - Advisor's performance and coaching opportunities
-        - Compliance requirements and potential issues
-        - Mortgage-specific topics (PMI, escrow, refinancing, hardship)
-        - Resolution effectiveness and next steps needed
-        
+        - Borrower's primary intent and emotional journey (related to their mortgage loan)
+        - Risk indicators (delinquency, churn, complaints) specific to mortgage servicing
+        - Advisor's performance and coaching opportunities for mortgage conversations
+        - Compliance requirements and potential issues in mortgage servicing
+        - Mortgage-specific topics: payment issues, escrow analysis, PMI removal, refinancing, hardship assistance, payoff requests, insurance claims, property tax matters
+        - Resolution effectiveness and next steps for mortgage-related concerns
+
+        Expected mortgage context: loan numbers, payment amounts, escrow accounts, property addresses, mortgage terms, interest rates, etc.
+
         Transcript:
         {transcript_text}
-        
+
         Customer ID: {getattr(transcript, 'customer_id', 'N/A')}
         Advisor ID: {getattr(transcript, 'advisor_id', 'N/A')}
         Call Duration: {getattr(transcript, 'duration', 'N/A')} seconds

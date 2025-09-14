@@ -14,7 +14,7 @@ interface TranscriptGeneratorViewProps {
 
 export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGeneratorViewProps) {
   const [formData, setFormData] = useState<TranscriptCreateRequest>({
-    topic: 'payment_inquiry',
+    topic: 'payment_issues',
     urgency: 'medium',
     financial_impact: false,
     customer_sentiment: 'neutral',
@@ -200,12 +200,14 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                     <SelectValue placeholder="Select topic" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="payment_inquiry">Payment Inquiry</SelectItem>
-                    <SelectItem value="billing_dispute">Billing Dispute</SelectItem>
-                    <SelectItem value="account_access">Account Access</SelectItem>
-                    <SelectItem value="product_support">Product Support</SelectItem>
-                    <SelectItem value="refund_request">Refund Request</SelectItem>
-                    <SelectItem value="general_inquiry">General Inquiry</SelectItem>
+                    <SelectItem value="payment_issues">Payment Issues</SelectItem>
+                    <SelectItem value="escrow_analysis">Escrow Analysis</SelectItem>
+                    <SelectItem value="pmi_removal">PMI Removal</SelectItem>
+                    <SelectItem value="refinancing_inquiry">Refinancing Inquiry</SelectItem>
+                    <SelectItem value="hardship_request">Hardship Request</SelectItem>
+                    <SelectItem value="payoff_request">Payoff Request</SelectItem>
+                    <SelectItem value="insurance_claims">Insurance Claims</SelectItem>
+                    <SelectItem value="property_tax_issues">Property Tax Issues</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

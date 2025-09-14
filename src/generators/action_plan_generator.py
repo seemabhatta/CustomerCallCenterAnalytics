@@ -212,14 +212,22 @@ Timeline Commitments: {', '.join(context['timeline_commitments'])}
 Next Steps: {', '.join(context['next_steps_mentioned'])}
 
 === INSTRUCTION ===
-Based on the COMPLETE conversation and analysis above, generate four comprehensive action plans:
+IMPORTANT: Generate mortgage servicing action plans based on this customer care call.
 
-1. BORROWER PLAN: What actions should be taken for the customer?
-2. ADVISOR PLAN: What coaching or feedback for the advisor?
-3. SUPERVISOR PLAN: What needs supervisor attention or approval?
-4. LEADERSHIP PLAN: What strategic insights or patterns emerged?
+Based on the COMPLETE mortgage servicing conversation and analysis above, generate four comprehensive action plans:
 
-Use the actual conversation details. Be specific and actionable.
+1. BORROWER PLAN: What mortgage-specific actions should be taken for the borrower?
+   - Examples: escrow adjustments, payment plan setup, PMI removal processing, refinancing guidance, hardship assistance
+2. ADVISOR PLAN: What coaching or feedback for the mortgage servicing advisor?
+   - Examples: mortgage compliance training, customer communication improvements, technical knowledge updates
+3. SUPERVISOR PLAN: What mortgage servicing items need supervisor attention or approval?
+   - Examples: loan modification approvals, escalated hardship cases, compliance violations
+4. LEADERSHIP PLAN: What strategic insights or patterns emerged from this mortgage call?
+   - Examples: portfolio risk patterns, process improvements, training needs, customer satisfaction trends
+
+Focus on mortgage servicing specifics: loan servicing, payment processing, escrow management, insurance requirements, regulatory compliance.
+
+Use the actual conversation details. Be specific and actionable for mortgage operations.
 '''
     
     def _get_action_plan_schema(self) -> Dict[str, Any]:
