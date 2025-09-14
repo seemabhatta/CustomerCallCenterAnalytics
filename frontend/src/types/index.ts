@@ -71,31 +71,96 @@ export interface AnalysisCreateRequest {
   store?: boolean;
 }
 
-// Plan Types
+// Plan Types - Updated to match actual API response
 export interface Plan {
-  id: string;
+  // Core identifiers
+  plan_id: string;
   analysis_id: string;
-  title: string;
-  owner: string;
-  status: string;
-  plan_type: string;
-  urgency: string;
-  customer_tier: string;
-  constraints: string[];
+  transcript_id: string;
+  generator_version: string;
+  
+  // Status and routing
+  risk_level: string | null;
+  approval_route: string | null;
+  queue_status: string | null;
+  auto_executable: number;
+  routing_reason: string | null;
+  
+  // Timestamps
   created_at: string;
-  approved_by?: string;
-  approved_at?: string;
-  executed_by?: string;
-  executed_at?: string;
-  actions?: PlanAction[];
+  approved_at: string | null;
+  approved_by: string | null;
+  
+  // Four-layer plan structure
+  borrower_plan: BorrowerPlan;
+  advisor_plan: AdvisorPlan;
+  supervisor_plan: SupervisorPlan;
+  leadership_plan: LeadershipPlan;
+}
+
+export interface BorrowerPlan {
+  immediate_actions: PlanAction[];
+  follow_ups: FollowUpAction[];
+  personalized_offers: string[];
+  risk_mitigation: string[];
+}
+
+export interface AdvisorPlan {
+  coaching_items: CoachingItem[];
+  performance_feedback: PerformanceFeedback;
+  training_recommendations: string[];
+  next_actions: string[];
+}
+
+export interface SupervisorPlan {
+  escalation_items: EscalationItem[];
+  team_patterns: string[];
+  compliance_review: string[];
+  approval_required: boolean;
+  process_improvements: string[];
+}
+
+export interface LeadershipPlan {
+  portfolio_insights: string[];
+  strategic_opportunities: string[];
+  risk_indicators: string[];
+  trend_analysis: string[];
+  resource_allocation: string[];
 }
 
 export interface PlanAction {
-  id: string;
-  description: string;
-  persona: string;
+  action: string;
+  timeline: string;
   priority: string;
-  estimated_duration: number;
+  auto_executable: boolean;
+  description: string;
+}
+
+export interface FollowUpAction {
+  action: string;
+  due_date: string;
+  owner: string;
+  trigger_condition: string;
+}
+
+export interface CoachingItem {
+  action: string;
+  coaching_point: string;
+  expected_improvement: string;
+  priority: string;
+}
+
+export interface PerformanceFeedback {
+  strengths: string[];
+  improvements: string[];
+  score_explanations: string[];
+}
+
+export interface EscalationItem {
+  item: string;
+  reason: string;
+  priority: string;
+  action_required: string;
 }
 
 export interface PlanCreateRequest {

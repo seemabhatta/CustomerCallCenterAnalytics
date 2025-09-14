@@ -197,7 +197,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
                     variant={selectedPlan.risk_level === 'high' ? 'destructive' : selectedPlan.risk_level === 'medium' ? 'default' : 'secondary'}
                     className="text-xs px-1 py-0"
                   >
-                    {selectedPlan.risk_level || 'Unknown'}
+                    {selectedPlan.risk_level || 'Not set'}
                   </Badge>
                 </div>
                 <div>
@@ -206,7 +206,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
                 </div>
                 <div>
                   <div className="text-slate-600">Queue Status</div>
-                  <Badge variant={getStatusBadgeVariant(selectedPlan.queue_status)} className="text-xs px-1 py-0">
+                  <Badge variant={getStatusBadgeVariant(selectedPlan.queue_status || '')} className="text-xs px-1 py-0">
                     {selectedPlan.queue_status?.replace('_', ' ') || 'Unknown'}
                   </Badge>
                 </div>
@@ -265,33 +265,65 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
           {selectedPlan.borrower_plan && (
             <Card>
               <CardHeader className="py-2 px-3">
-                <CardTitle className="flex items-center justify-between text-xs font-medium">
-                  <span>Borrower Plan</span>
-                  <Badge variant="destructive" className="text-xs px-1 py-0">
-                    {selectedPlan.borrower_plan.priority || 'Normal'}
-                  </Badge>
-                </CardTitle>
+                <CardTitle className="text-xs font-medium">Borrower Plan</CardTitle>
               </CardHeader>
               <CardContent className="py-2 px-3">
                 <div className="space-y-2">
-                  <div className="text-xs">
-                    <span className="text-slate-600">Timeline: </span>
-                    <span className="font-medium">{selectedPlan.borrower_plan.timeline || 'Not specified'}</span>
-                  </div>
-                  {selectedPlan.borrower_plan.consequences && (
-                    <div className="text-xs bg-red-50 p-2 rounded">
-                      <span className="text-slate-600 font-medium">Consequences: </span>
-                      <span className="text-red-700">{selectedPlan.borrower_plan.consequences}</span>
+                  {selectedPlan.borrower_plan.immediate_actions && selectedPlan.borrower_plan.immediate_actions.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Immediate Actions:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.borrower_plan.immediate_actions.map((action: any, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-red-50 p-2 rounded">
+                            <span className="text-red-500">⚡</span>
+                            <div>
+                              <div className="font-medium">{action.action}</div>
+                              <div className="text-xs text-slate-600">{action.timeline} • {action.priority} priority</div>
+                              {action.description && <div className="text-xs text-slate-500 mt-1">{action.description}</div>}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
-                  {selectedPlan.borrower_plan.actions && selectedPlan.borrower_plan.actions.length > 0 && (
+                  {selectedPlan.borrower_plan.follow_ups && selectedPlan.borrower_plan.follow_ups.length > 0 && (
                     <div>
-                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Follow-ups:</div>
                       <ul className="space-y-1 text-xs">
-                        {selectedPlan.borrower_plan.actions.map((action: any, index: number) => (
-                          <li key={index} className="flex items-start gap-1">
-                            <span className="text-slate-400">•</span>
-                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                        {selectedPlan.borrower_plan.follow_ups.map((followUp: any, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-orange-50 p-2 rounded">
+                            <span className="text-orange-500">📅</span>
+                            <div>
+                              <div className="font-medium">{followUp.action}</div>
+                              <div className="text-xs text-slate-600">{followUp.due_date} • {followUp.owner}</div>
+                              {followUp.trigger_condition && <div className="text-xs text-slate-500 mt-1">Trigger: {followUp.trigger_condition}</div>}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.borrower_plan.personalized_offers && selectedPlan.borrower_plan.personalized_offers.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Personalized Offers:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.borrower_plan.personalized_offers.map((offer: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-green-50 p-2 rounded">
+                            <span className="text-green-500">💡</span>
+                            <span>{offer}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.borrower_plan.risk_mitigation && selectedPlan.borrower_plan.risk_mitigation.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Risk Mitigation:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.borrower_plan.risk_mitigation.map((risk: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-yellow-50 p-2 rounded">
+                            <span className="text-yellow-600">🛡️</span>
+                            <span>{risk}</span>
                           </li>
                         ))}
                       </ul>
@@ -306,33 +338,84 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
           {selectedPlan.advisor_plan && (
             <Card>
               <CardHeader className="py-2 px-3">
-                <CardTitle className="flex items-center justify-between text-xs font-medium">
-                  <span>Advisor Plan</span>
-                  <Badge variant="default" className="text-xs px-1 py-0">
-                    {selectedPlan.advisor_plan.priority || 'Normal'}
-                  </Badge>
-                </CardTitle>
+                <CardTitle className="text-xs font-medium">Advisor Plan</CardTitle>
               </CardHeader>
               <CardContent className="py-2 px-3">
                 <div className="space-y-2">
-                  <div className="text-xs">
-                    <span className="text-slate-600">Timeline: </span>
-                    <span className="font-medium">{selectedPlan.advisor_plan.timeline || 'Not specified'}</span>
-                  </div>
-                  {selectedPlan.advisor_plan.escalation_trigger && (
-                    <div className="text-xs bg-orange-50 p-2 rounded">
-                      <span className="text-slate-600 font-medium">Escalation Trigger: </span>
-                      <span className="text-orange-700">{selectedPlan.advisor_plan.escalation_trigger}</span>
+                  {selectedPlan.advisor_plan.coaching_items && selectedPlan.advisor_plan.coaching_items.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Coaching Items:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.advisor_plan.coaching_items.map((item: any, index: number) => (
+                          <li key={index} className="bg-blue-50 p-2 rounded">
+                            <div className="flex items-start gap-1">
+                              <span className="text-blue-500">🎯</span>
+                              <div>
+                                <div className="font-medium">{item.action}</div>
+                                <div className="text-xs text-slate-600">{item.coaching_point}</div>
+                                <div className="text-xs text-blue-600 mt-1">Expected: {item.expected_improvement}</div>
+                                <div className="text-xs text-slate-500">Priority: {item.priority}</div>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
-                  {selectedPlan.advisor_plan.actions && selectedPlan.advisor_plan.actions.length > 0 && (
+                  {selectedPlan.advisor_plan.performance_feedback && (
                     <div>
-                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Performance Feedback:</div>
+                      <div className="bg-green-50 p-2 rounded text-xs space-y-1">
+                        {selectedPlan.advisor_plan.performance_feedback.strengths && selectedPlan.advisor_plan.performance_feedback.strengths.length > 0 && (
+                          <div>
+                            <div className="font-medium text-green-700">Strengths:</div>
+                            <ul className="ml-2">
+                              {selectedPlan.advisor_plan.performance_feedback.strengths.map((strength: string, index: number) => (
+                                <li key={index} className="flex items-start gap-1">
+                                  <span className="text-green-500">✓</span>
+                                  <span>{strength}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {selectedPlan.advisor_plan.performance_feedback.improvements && selectedPlan.advisor_plan.performance_feedback.improvements.length > 0 && (
+                          <div>
+                            <div className="font-medium text-orange-700">Areas for Improvement:</div>
+                            <ul className="ml-2">
+                              {selectedPlan.advisor_plan.performance_feedback.improvements.map((improvement: string, index: number) => (
+                                <li key={index} className="flex items-start gap-1">
+                                  <span className="text-orange-500">→</span>
+                                  <span>{improvement}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {selectedPlan.advisor_plan.training_recommendations && selectedPlan.advisor_plan.training_recommendations.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Training Recommendations:</div>
                       <ul className="space-y-1 text-xs">
-                        {selectedPlan.advisor_plan.actions.map((action: any, index: number) => (
+                        {selectedPlan.advisor_plan.training_recommendations.map((training: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-purple-50 p-2 rounded">
+                            <span className="text-purple-500">📚</span>
+                            <span>{training}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.advisor_plan.next_actions && selectedPlan.advisor_plan.next_actions.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Next Actions:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.advisor_plan.next_actions.map((action: string, index: number) => (
                           <li key={index} className="flex items-start gap-1">
-                            <span className="text-slate-400">•</span>
-                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                            <span className="text-slate-400">▶</span>
+                            <span>{action}</span>
                           </li>
                         ))}
                       </ul>
@@ -349,38 +432,69 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
               <CardHeader className="py-2 px-3">
                 <CardTitle className="flex items-center justify-between text-xs font-medium">
                   <span>Supervisor Plan</span>
-                  <Badge variant="secondary" className="text-xs px-1 py-0">
-                    {selectedPlan.supervisor_plan.priority || 'Normal'}
-                  </Badge>
+                  {selectedPlan.supervisor_plan.approval_required && (
+                    <Badge variant="destructive" className="text-xs px-1 py-0">
+                      Approval Required
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="py-2 px-3">
                 <div className="space-y-2">
-                  <div className="text-xs">
-                    <span className="text-slate-600">Timeline: </span>
-                    <span className="font-medium">{selectedPlan.supervisor_plan.timeline || 'Not specified'}</span>
-                  </div>
-                  {selectedPlan.supervisor_plan.risk_indicators && selectedPlan.supervisor_plan.risk_indicators.length > 0 && (
-                    <div className="text-xs bg-yellow-50 p-2 rounded">
-                      <div className="text-slate-600 font-medium mb-1">Risk Indicators:</div>
-                      <ul className="space-y-1">
-                        {selectedPlan.supervisor_plan.risk_indicators.map((indicator: string, index: number) => (
-                          <li key={index} className="flex items-start gap-1 text-yellow-800">
-                            <span>⚠</span>
-                            <span>{indicator}</span>
+                  {selectedPlan.supervisor_plan.escalation_items && selectedPlan.supervisor_plan.escalation_items.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Escalation Items:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.supervisor_plan.escalation_items.map((item: any, index: number) => (
+                          <li key={index} className="bg-red-50 p-2 rounded">
+                            <div className="flex items-start gap-1">
+                              <span className="text-red-500">🚨</span>
+                              <div>
+                                <div className="font-medium">{item.item}</div>
+                                <div className="text-xs text-slate-600">Reason: {item.reason}</div>
+                                <div className="text-xs text-red-600 mt-1">{item.action_required}</div>
+                                <div className="text-xs text-slate-500">Priority: {item.priority}</div>
+                              </div>
+                            </div>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
-                  {selectedPlan.supervisor_plan.actions && selectedPlan.supervisor_plan.actions.length > 0 && (
+                  {selectedPlan.supervisor_plan.team_patterns && selectedPlan.supervisor_plan.team_patterns.length > 0 && (
                     <div>
-                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Team Patterns:</div>
                       <ul className="space-y-1 text-xs">
-                        {selectedPlan.supervisor_plan.actions.map((action: any, index: number) => (
-                          <li key={index} className="flex items-start gap-1">
-                            <span className="text-slate-400">•</span>
-                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                        {selectedPlan.supervisor_plan.team_patterns.map((pattern: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-orange-50 p-2 rounded">
+                            <span className="text-orange-500">📊</span>
+                            <span>{pattern}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.supervisor_plan.compliance_review && selectedPlan.supervisor_plan.compliance_review.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Compliance Review:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.supervisor_plan.compliance_review.map((review: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-yellow-50 p-2 rounded">
+                            <span className="text-yellow-600">📋</span>
+                            <span>{review}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.supervisor_plan.process_improvements && selectedPlan.supervisor_plan.process_improvements.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Process Improvements:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.supervisor_plan.process_improvements.map((improvement: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-blue-50 p-2 rounded">
+                            <span className="text-blue-500">🔧</span>
+                            <span>{improvement}</span>
                           </li>
                         ))}
                       </ul>
@@ -395,40 +509,70 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
           {selectedPlan.leadership_plan && (
             <Card>
               <CardHeader className="py-2 px-3">
-                <CardTitle className="flex items-center justify-between text-xs font-medium">
-                  <span>Leadership Plan</span>
-                  <Badge variant="outline" className="text-xs px-1 py-0">
-                    {selectedPlan.leadership_plan.priority || 'Normal'}
-                  </Badge>
-                </CardTitle>
+                <CardTitle className="text-xs font-medium">Leadership Plan</CardTitle>
               </CardHeader>
               <CardContent className="py-2 px-3">
                 <div className="space-y-2">
-                  <div className="text-xs">
-                    <span className="text-slate-600">Timeline: </span>
-                    <span className="font-medium">{selectedPlan.leadership_plan.timeline || 'Not specified'}</span>
-                  </div>
-                  {selectedPlan.leadership_plan.strategic_considerations && selectedPlan.leadership_plan.strategic_considerations.length > 0 && (
-                    <div className="text-xs bg-blue-50 p-2 rounded">
-                      <div className="text-slate-600 font-medium mb-1">Strategic Considerations:</div>
-                      <ul className="space-y-1">
-                        {selectedPlan.leadership_plan.strategic_considerations.map((consideration: string, index: number) => (
-                          <li key={index} className="flex items-start gap-1 text-blue-800">
-                            <span>📊</span>
-                            <span>{consideration}</span>
+                  {selectedPlan.leadership_plan.portfolio_insights && selectedPlan.leadership_plan.portfolio_insights.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Portfolio Insights:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.leadership_plan.portfolio_insights.map((insight: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-blue-50 p-2 rounded">
+                            <span className="text-blue-500">📈</span>
+                            <span>{insight}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
-                  {selectedPlan.leadership_plan.actions && selectedPlan.leadership_plan.actions.length > 0 && (
+                  {selectedPlan.leadership_plan.strategic_opportunities && selectedPlan.leadership_plan.strategic_opportunities.length > 0 && (
                     <div>
-                      <div className="text-xs font-medium text-slate-700 mb-1">Actions:</div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Strategic Opportunities:</div>
                       <ul className="space-y-1 text-xs">
-                        {selectedPlan.leadership_plan.actions.map((action: any, index: number) => (
-                          <li key={index} className="flex items-start gap-1">
-                            <span className="text-slate-400">•</span>
-                            <span>{typeof action === 'string' ? action : action.description || action.action || 'No description'}</span>
+                        {selectedPlan.leadership_plan.strategic_opportunities.map((opportunity: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-green-50 p-2 rounded">
+                            <span className="text-green-500">🚀</span>
+                            <span>{opportunity}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.leadership_plan.risk_indicators && selectedPlan.leadership_plan.risk_indicators.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Risk Indicators:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.leadership_plan.risk_indicators.map((risk: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-red-50 p-2 rounded">
+                            <span className="text-red-500">⚠</span>
+                            <span>{risk}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.leadership_plan.trend_analysis && selectedPlan.leadership_plan.trend_analysis.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Trend Analysis:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.leadership_plan.trend_analysis.map((trend: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-purple-50 p-2 rounded">
+                            <span className="text-purple-500">📊</span>
+                            <span>{trend}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedPlan.leadership_plan.resource_allocation && selectedPlan.leadership_plan.resource_allocation.length > 0 && (
+                    <div>
+                      <div className="text-xs font-medium text-slate-700 mb-1">Resource Allocation:</div>
+                      <ul className="space-y-1 text-xs">
+                        {selectedPlan.leadership_plan.resource_allocation.map((allocation: string, index: number) => (
+                          <li key={index} className="flex items-start gap-1 bg-orange-50 p-2 rounded">
+                            <span className="text-orange-500">💼</span>
+                            <span>{allocation}</span>
                           </li>
                         ))}
                       </ul>
@@ -440,64 +584,6 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
           )}
         </div>
 
-        {/* Context Data Section */}
-        {selectedPlan.context_data && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 mt-2">
-            {/* Borrower Risk Metrics */}
-            {selectedPlan.context_data.borrower_risks && (
-              <Card>
-                <CardHeader className="py-2 px-3">
-                  <CardTitle className="text-xs font-medium">Borrower Risk Assessment</CardTitle>
-                </CardHeader>
-                <CardContent className="py-2 px-3">
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <div className="text-slate-600">Delinquency Risk</div>
-                      <div className="font-medium text-red-600">{(selectedPlan.context_data.borrower_risks.delinquency_risk * 100).toFixed(1)}%</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-600">Churn Risk</div>
-                      <div className="font-medium text-orange-600">{(selectedPlan.context_data.borrower_risks.churn_risk * 100).toFixed(1)}%</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-600">Complaint Risk</div>
-                      <div className="font-medium text-yellow-600">{(selectedPlan.context_data.borrower_risks.complaint_risk * 100).toFixed(1)}%</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-600">Refinance Likelihood</div>
-                      <div className="font-medium text-blue-600">{(selectedPlan.context_data.borrower_risks.refinance_likelihood * 100).toFixed(1)}%</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Advisor Performance Metrics */}
-            {selectedPlan.context_data.advisor_metrics && (
-              <Card>
-                <CardHeader className="py-2 px-3">
-                  <CardTitle className="text-xs font-medium">Advisor Performance</CardTitle>
-                </CardHeader>
-                <CardContent className="py-2 px-3">
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Empathy Score</span>
-                      <span className="font-medium">{(selectedPlan.context_data.advisor_metrics.empathy_score * 100).toFixed(1)}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Compliance Adherence</span>
-                      <span className="font-medium text-green-600">{(selectedPlan.context_data.advisor_metrics.compliance_adherence * 100).toFixed(1)}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Solution Effectiveness</span>
-                      <span className="font-medium">{(selectedPlan.context_data.advisor_metrics.solution_effectiveness * 100).toFixed(1)}%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
       </div>
     );
   }
