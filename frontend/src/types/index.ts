@@ -107,23 +107,68 @@ export interface PlanCreateRequest {
   store?: boolean;
 }
 
-// Workflow Types
+// Workflow Types (Updated to match comprehensive API contract)
 export interface Workflow {
-  id: string;
-  plan_id: string;
-  persona: string;
-  risk: string;
-  status: string;
-  action: string;
-  workflow_type: string;
-  risk_level: string;
-  created_at: string;
-  approved_by?: string;
-  approved_at?: string;
-  rejected_by?: string;
-  rejection_reason?: string;
-  executed_by?: string;
-  executed_at?: string;
+  // Core Identifiers
+  id: string;                      // Unique workflow ID (e.g., "WF_123_456")
+  plan_id: string;                 // Associated action plan ID
+  analysis_id: string;             // Associated analysis ID
+  transcript_id: string;           // Associated transcript ID
+
+  // Workflow Classification
+  workflow_type: "BORROWER" | "ADVISOR" | "SUPERVISOR" | "LEADERSHIP";
+
+  // Workflow Content
+  workflow_data: {
+    actions: string[];              // List of actions to take
+    priority: string;               // Priority level
+    estimated_time?: string;        // Time estimate
+    dependencies?: string[];        // Other workflow dependencies
+  };
+
+  // Risk Assessment (LLM Agent Decisions)
+  risk_level: "LOW" | "MEDIUM" | "HIGH";
+  status: "PENDING_ASSESSMENT" | "AWAITING_APPROVAL" | "AUTO_APPROVED" | "REJECTED" | "EXECUTED";
+
+  // Context & Reasoning
+  context_data: {
+    customer_risk_score?: number;
+    delinquency_days?: number;
+    full_transcript?: string;
+    analysis_results?: object;
+    [key: string]: any;             // Additional context
+  };
+  risk_reasoning: string | null;
+  approval_reasoning: string | null;
+
+  // Approval Workflow
+  requires_human_approval: boolean;
+  assigned_approver: string | null;
+  approved_by: string | null;
+  approved_at: string | null;       // ISO 8601 timestamp
+  rejected_by: string | null;
+  rejected_at: string | null;       // ISO 8601 timestamp
+  rejection_reason: string | null;
+
+  // Execution Tracking
+  executed_at: string | null;       // ISO 8601 timestamp
+  execution_results: object | null;
+
+  // Timestamps
+  created_at: string;               // ISO 8601 timestamp
+  updated_at: string;               // ISO 8601 timestamp
+}
+
+// Workflow Response from API
+export interface WorkflowResponse {
+  workflows: Workflow[];
+}
+
+// Workflow Filter Parameters
+export interface WorkflowFilterParams {
+  status?: "PENDING_ASSESSMENT" | "AWAITING_APPROVAL" | "AUTO_APPROVED" | "REJECTED" | "EXECUTED";
+  risk_level?: "LOW" | "MEDIUM" | "HIGH";
+  limit?: number;
 }
 
 export interface WorkflowApprovalRequest {
@@ -259,6 +304,25 @@ export interface FilterParams {
   status?: string;
   risk_level?: string;
   workflow_type?: string;
+}
+
+// Legacy workflow types for backward compatibility
+export interface LegacyWorkflow {
+  id: string;
+  plan_id: string;
+  persona: string;
+  risk: string;
+  status: string;
+  action: string;
+  workflow_type: string;
+  risk_level: string;
+  created_at: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejected_by?: string;
+  rejection_reason?: string;
+  executed_by?: string;
+  executed_at?: string;
 }
 
 // UI State Types
