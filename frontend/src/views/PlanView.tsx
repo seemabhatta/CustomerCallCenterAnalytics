@@ -65,14 +65,14 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
     },
   });
 
-  // Filter plans based on search query
-  const filteredPlans = plans.filter((plan: Plan) => {
+  // Filter plans based on search query with backend field mapping
+  const filteredPlans = plans.filter((plan: any) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      plan.id.toLowerCase().includes(query) ||
-      plan.analysis_id.toLowerCase().includes(query) ||
-      plan.title?.toLowerCase().includes(query)
+      plan.plan_id?.toLowerCase().includes(query) ||
+      plan.analysis_id?.toLowerCase().includes(query) ||
+      plan.routing_reason?.toLowerCase().includes(query)
     );
   });
 
@@ -99,12 +99,12 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
     deleteAllPlansMutation.mutate();
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status?.toLowerCase()) {
+  const getStatusBadgeVariant = (queueStatus: string) => {
+    switch (queueStatus?.toLowerCase()) {
       case 'approved': return 'default';
-      case 'executed': return 'default';
-      case 'draft': return 'secondary';
-      case 'ready': return 'outline';
+      case 'pending_supervisor': return 'destructive';
+      case 'pending_advisor': return 'secondary';
+      case 'rejected': return 'outline';
       default: return 'secondary';
     }
   };
@@ -159,46 +159,50 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
             <tr>
               <th className="text-left py-1 px-2 text-xs font-medium">Plan</th>
               <th className="text-left py-1 px-2 text-xs font-medium">Analysis</th>
-              <th className="text-left py-1 px-2 text-xs font-medium">Title</th>
-              <th className="text-left py-1 px-2 text-xs font-medium">Owner</th>
-              <th className="text-left py-1 px-2 text-xs font-medium">Type</th>
-              <th className="text-left py-1 px-2 text-xs font-medium">Urgency</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Routing Reason</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Risk Level</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Route</th>
+              <th className="text-left py-1 px-2 text-xs font-medium">Auto Exec</th>
               <th className="text-left py-1 px-2 text-xs font-medium">Status</th>
               <th className="text-left py-1 px-2 text-xs font-medium">Created</th>
               <th className="text-right py-1 px-2 text-xs font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredPlans.map((plan: Plan) => (
-              <tr key={plan.id} className="border-b hover:bg-slate-50">
+            {filteredPlans.map((plan: any) => (
+              <tr key={plan.plan_id} className="border-b hover:bg-slate-50">
                 <td className="py-1 px-2 text-xs font-medium text-slate-900">
-                  {plan.id}
+                  {plan.plan_id}
                 </td>
                 <td className="py-1 px-2 text-xs">{plan.analysis_id}</td>
-                <td className="py-1 px-2 text-xs max-w-xs truncate" title={plan.title}>
-                  {plan.title}
-                </td>
-                <td className="py-1 px-2 text-xs">{plan.owner}</td>
-                <td className="py-1 px-2">
-                  <Badge variant="outline" className="text-xs px-1 py-0">
-                    {plan.plan_type}
-                  </Badge>
+                <td className="py-1 px-2 text-xs max-w-xs truncate" title={plan.routing_reason}>
+                  {plan.routing_reason || 'No reason provided'}
                 </td>
                 <td className="py-1 px-2">
                   <Badge 
-                    variant={plan.urgency === 'high' ? 'destructive' : 'secondary'} 
+                    variant={plan.risk_level === 'high' ? 'destructive' : plan.risk_level === 'medium' ? 'default' : 'secondary'} 
                     className="text-xs px-1 py-0"
                   >
-                    {plan.urgency}
+                    {plan.risk_level || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="py-1 px-2">
-                  <Badge variant={getStatusBadgeVariant(plan.status)} className="text-xs px-1 py-0">
-                    {plan.status}
+                  <Badge variant="outline" className="text-xs px-1 py-0">
+                    {plan.approval_route?.replace('_', ' ') || 'N/A'}
+                  </Badge>
+                </td>
+                <td className="py-1 px-2">
+                  <Badge variant={plan.auto_executable ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                    {plan.auto_executable ? 'Yes' : 'No'}
+                  </Badge>
+                </td>
+                <td className="py-1 px-2">
+                  <Badge variant={getStatusBadgeVariant(plan.queue_status)} className="text-xs px-1 py-0">
+                    {plan.queue_status?.replace('_', ' ') || 'Unknown'}
                   </Badge>
                 </td>
                 <td className="py-1 px-2 text-xs">
-                  {new Date(plan.created_at).toLocaleDateString()}
+                  {plan.created_at ? new Date(plan.created_at).toLocaleDateString() : 'N/A'}
                 </td>
                 <td className="py-1 px-2 text-right">
                   <div className="flex gap-1 justify-end">
@@ -206,7 +210,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
                       variant="ghost"
                       size="sm"
                       className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                      onClick={() => handleDeleteClick(plan.id)}
+                      onClick={() => handleDeleteClick(plan.plan_id)}
                       disabled={deletePlanMutation.isPending}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -215,12 +219,12 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
                       size="sm" 
                       variant="outline"
                       className="h-6 text-xs px-2 text-gray-600"
-                      disabled={hasWorkflow(plan.id) || createWorkflowMutation.isPending}
-                      onClick={() => handleTriggerWorkflow(plan.id)}
+                      disabled={hasWorkflow(plan.plan_id) || createWorkflowMutation.isPending}
+                      onClick={() => handleTriggerWorkflow(plan.plan_id)}
                     >
                       {createWorkflowMutation.isPending ? 
                         "..." : 
-                        hasWorkflow(plan.id) ? 
+                        hasWorkflow(plan.plan_id) ? 
                           "✓" : 
                           "Workflow"
                       }

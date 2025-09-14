@@ -1,0 +1,70 @@
+The GET /api/v1/plans endpoint returns a list of action plan dictionaries. Here's what it returns:
+
+  API Flow:
+
+  1. Endpoint: GET /api/v1/plans?limit={optional_limit}
+  2. Server: Calls plan_service.list_all(limit=limit)
+  3. Service: Gets all plans from the store (up to limit)
+  4. Store: Retrieves from SQLite, ordered by created_at DESC
+
+  Each action plan dictionary contains:
+
+  Core Identifiers:
+  - plan_id: Unique plan identifier
+  - analysis_id: Associated analysis ID
+  - transcript_id: Associated transcript ID
+
+  Risk & Routing:
+  - risk_level: "high", "medium", or "low"
+  - approval_route: "supervisor_approval", "advisor_approval", or "auto_approved"
+  - queue_status: "pending_supervisor", "pending_advisor", "approved", or "rejected"
+  - auto_executable: Boolean flag
+  - routing_reason: Text explanation of routing decision
+
+  The Four-Layer Plan Structure:
+  - immediate_plan: Actions for immediate implementation
+  - advisor_plan: Actions for advisor to take
+  - supervisor_plan: Actions requiring supervisor attention
+  - system_plan: System-level actions and automations
+
+  Each plan layer contains:
+  - actions: List of specific action items
+  - priority: Priority level
+  - timeline: When to complete
+  - Additional context fields
+
+  Metadata:
+  - generator_version: Version of the plan generator
+  - created_at: Timestamp when created
+  - approved_at: Timestamp when approved (if applicable)
+  - approved_by: Who approved it (if applicable)
+
+  Example response structure:
+
+  [
+    {
+      "plan_id": "PLAN_ANALYSIS_123",
+      "analysis_id": "ANALYSIS_CALL_123",
+      "transcript_id": "CALL_123",
+      "risk_level": "high",
+      "approval_route": "supervisor_approval",
+      "queue_status": "pending_supervisor",
+      "auto_executable": false,
+      "routing_reason": "High churn risk requires supervisor review",
+      "immediate_plan": {
+        "actions": [...],
+        "priority": "critical",
+        "timeline": "within 24 hours"
+      },
+      "advisor_plan": {...},
+      "supervisor_plan": {...},
+      "system_plan": {...},
+      "generator_version": "1.0",
+      "created_at": "2024-01-15T10:30:00",
+      "approved_at": null,
+      "approved_by": null
+    },
+    ...
+  ]
+
+  The endpoint returns the complete action plan data including all four planning layers plus metadata for routing and approval workflows.
