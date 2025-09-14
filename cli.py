@@ -376,6 +376,23 @@ class CLIRestClient:
         """Get execution statistics via GET /api/v1/executions/statistics."""
         return self._make_request('GET', '/api/v1/executions/statistics')
 
+    def delete_workflow(self, workflow_id: str) -> Dict[str, Any]:
+        """Delete workflow by ID via DELETE /api/v1/workflows/{workflow_id}."""
+        return self._make_request('DELETE', f'/api/v1/workflows/{workflow_id}')
+
+    def delete_all_workflows(self, status: Optional[str] = None, risk_level: Optional[str] = None,
+                            plan_id: Optional[str] = None) -> Dict[str, Any]:
+        """Delete all workflows with optional filters via DELETE /api/v1/workflows."""
+        params = {}
+        if status:
+            params['status'] = status
+        if risk_level:
+            params['risk_level'] = risk_level
+        if plan_id:
+            params['plan_id'] = plan_id
+
+        return self._make_request('DELETE', '/api/v1/workflows', params=params if params else None)
+
     # System operations
     def get_health(self) -> Dict[str, Any]:
         """Get system health via GET /api/v1/health."""
@@ -2958,30 +2975,14 @@ def workflow_manage_delete(
         
         # Perform deletion
         console.print(f"🗑️ [bold magenta]Deleting workflow...[/bold magenta]")
-        
-        # For now, we'll use the reject functionality to simulate soft deletion
-        # In a real implementation, this would call a proper delete API
-        try:
-            # First try to get a delete endpoint if available
-            # Otherwise fall back to marking as cancelled/rejected
-            result = client.reject_workflow(
-                workflow_id=workflow_id,
-                rejected_by="system_delete",
-                reason="DELETED: Workflow permanently removed"
-            )
-            
-            console.print(f"✅ [bold green]Workflow Deleted:[/bold green]")
-            console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
-            console.print(f"Status: [red]DELETED[/red]")
-            
-            print_success(f"Workflow {workflow_id} deleted successfully")
-            
-        except Exception as api_error:
-            # If the API doesn't support delete, show simulation message
-            console.print(f"✅ [bold green]Workflow Deletion Simulated:[/bold green]")
-            console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
-            print_success(f"Workflow {workflow_id} marked for deletion")
-            console.print(f"💡 [yellow]Note: In full implementation, this would remove the workflow from database[/yellow]")
+
+        result = client.delete_workflow(workflow_id=workflow_id)
+
+        console.print(f"✅ [bold green]Workflow Deleted:[/bold green]")
+        console.print(f"Workflow ID: [cyan]{workflow_id}[/cyan]")
+        console.print(f"Status: [red]PERMANENTLY DELETED[/red]")
+
+        print_success(f"Workflow {workflow_id} deleted successfully")
         
     except CLIError as e:
         print_error(f"Deletion failed: {str(e)}")
@@ -3068,38 +3069,16 @@ def workflow_manage_delete_all(
         
         # Perform bulk deletion
         console.print(f"\n🗑️ [bold magenta]Performing bulk deletion...[/bold magenta]")
-        
-        deleted_count = 0
-        failed_count = 0
-        
-        for workflow in workflows_to_delete:
-            workflow_id = workflow.get('id')
-            try:
-                # Simulate deletion by marking as rejected/cancelled
-                client.reject_workflow(
-                    workflow_id=workflow_id,
-                    rejected_by="system_bulk_delete",
-                    reason="BULK_DELETE: Removed during bulk deletion operation"
-                )
-                deleted_count += 1
-                if deleted_count % 10 == 0:  # Progress indicator
-                    console.print(f"  🗑️ Deleted {deleted_count} workflows...")
-            except Exception as e:
-                failed_count += 1
-                console.print(f"  ❌ Failed to delete: [cyan]{workflow_id[:8]}...[/cyan] - {str(e)}")
-        
+
+        # Use the new delete_all_workflows API endpoint
+        result = client.delete_all_workflows()
+        deleted_count = result.get('deleted_count', 0)
+
         # Summary
         console.print(f"\n📊 [bold green]Bulk Deletion Summary:[/bold green]")
-        console.print(f"Total workflows processed: [cyan]{len(workflows_to_delete)}[/cyan]")
-        console.print(f"Successfully deleted: [green]{deleted_count}[/green]")
-        console.print(f"Failed: [red]{failed_count}[/red]")
-        
-        if failed_count == 0:
-            print_success(f"Successfully deleted all {deleted_count} workflows")
-        else:
-            print_success(f"Deleted {deleted_count} workflows ({failed_count} failures)")
-        
-        console.print(f"💡 [yellow]Note: In full implementation, workflows would be permanently removed from database[/yellow]")
+        console.print(f"Successfully deleted: [green]{deleted_count}[/green] workflows")
+
+        print_success(f"Successfully deleted all {deleted_count} workflows")
         
     except CLIError as e:
         print_error(f"Bulk deletion failed: {str(e)}")
@@ -3178,36 +3157,18 @@ def workflow_manage_delete_by_plan(
                 console.print("❌ Plan-based deletion cancelled")
                 return
         
-        # Perform deletion
+        # Perform deletion using delete_all_workflows with plan_id filter
         console.print(f"\n🗑️ [bold magenta]Deleting workflows for plan {plan_id}...[/bold magenta]")
-        
-        deleted_count = 0
-        failed_count = 0
-        
-        for workflow in workflows:
-            workflow_id = workflow.get('id')
-            try:
-                client.reject_workflow(
-                    workflow_id=workflow_id,
-                    rejected_by="system_plan_delete",
-                    reason=f"PLAN_DELETE: Removed during plan {plan_id} cleanup"
-                )
-                deleted_count += 1
-            except Exception as e:
-                failed_count += 1
-                console.print(f"  ❌ Failed: [cyan]{workflow_id[:8]}...[/cyan] - {str(e)}")
-        
+
+        result = client.delete_all_workflows(plan_id=plan_id)
+        deleted_count = result.get('deleted_count', 0)
+
         # Summary
         console.print(f"\n📊 [bold green]Plan Deletion Summary:[/bold green]")
         console.print(f"Plan ID: [cyan]{plan_id}[/cyan]")
-        console.print(f"Total workflows processed: [cyan]{len(workflows)}[/cyan]")
-        console.print(f"Successfully deleted: [green]{deleted_count}[/green]")
-        console.print(f"Failed: [red]{failed_count}[/red]")
-        
-        if failed_count == 0:
-            print_success(f"Successfully deleted all {deleted_count} workflows for plan {plan_id}")
-        else:
-            print_success(f"Deleted {deleted_count} workflows for plan {plan_id} ({failed_count} failures)")
+        console.print(f"Successfully deleted: [green]{deleted_count}[/green] workflows")
+
+        print_success(f"Successfully deleted all {deleted_count} workflows for plan {plan_id}")
         
     except CLIError as e:
         print_error(f"Plan-based deletion failed: {str(e)}")

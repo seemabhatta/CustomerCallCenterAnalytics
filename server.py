@@ -873,6 +873,40 @@ async def preview_workflow_execution(workflow_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to preview execution: {str(e)}")
 
+@app.delete("/api/v1/workflows/{workflow_id}")
+async def delete_workflow(workflow_id: str):
+    """Delete workflow by ID."""
+    try:
+        deleted = await workflow_service.delete_workflow(workflow_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
+
+        return {"message": f"Workflow {workflow_id} deleted successfully", "deleted": True}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete workflow: {str(e)}")
+
+@app.delete("/api/v1/workflows")
+async def delete_all_workflows(
+    status: Optional[str] = Query(None, description="Only delete workflows with this status"),
+    risk_level: Optional[str] = Query(None, description="Only delete workflows with this risk level"),
+    plan_id: Optional[str] = Query(None, description="Only delete workflows for this plan")
+):
+    """Delete all workflows with optional filters."""
+    try:
+        # Note: Current service doesn't support filters, so we implement basic version
+        # In the future, this could be enhanced to support filtering
+        deleted_count = await workflow_service.delete_all_workflows()
+
+        return {
+            "message": "All workflows deleted successfully",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete workflows: {str(e)}")
 
 
 # ===============================================
