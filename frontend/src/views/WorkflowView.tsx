@@ -975,6 +975,68 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             </CardContent>
           </Card>
         )}
+
+        {/* Approval Status Section - Show approval details when available */}
+        {(workflow.status === 'APPROVED' || workflow.status === 'EXECUTED') && (workflow.approved_by || workflow.approval_reasoning) && (
+          <Card className="border-2 border-green-200 bg-green-50/30">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-sm font-medium text-green-900 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Workflow Approved
+                <Badge className="text-xs h-5 bg-green-100 text-green-700 border-green-200">
+                  {workflow.status}
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-xs text-green-700">
+                This workflow has been reviewed and approved for execution
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="py-3 px-4">
+              <div className="space-y-3">
+                {/* Approval Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {workflow.approved_by && (
+                    <div className="p-3 bg-white rounded border">
+                      <div className="text-xs font-medium text-gray-700 mb-1">Approved By</div>
+                      <div className="text-xs text-gray-900">{workflow.approved_by}</div>
+                    </div>
+                  )}
+                  {workflow.approved_at && (
+                    <div className="p-3 bg-white rounded border">
+                      <div className="text-xs font-medium text-gray-700 mb-1">Approved At</div>
+                      <div className="text-xs text-gray-900">{new Date(workflow.approved_at).toLocaleString()}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Approval Reasoning */}
+                {workflow.approval_reasoning && (
+                  <div className="p-3 bg-white rounded border">
+                    <div className="text-xs font-medium text-gray-700 mb-2">Approval Reasoning</div>
+                    <div className="text-xs text-gray-800 leading-relaxed">
+                      {workflow.approval_reasoning}
+                    </div>
+                  </div>
+                )}
+
+                {/* Execute Button for Approved Workflows */}
+                {workflow.status === 'APPROVED' && (
+                  <div className="pt-2">
+                    <Button
+                      onClick={() => executeWorkflowMutation.mutate(workflow.id)}
+                      disabled={executeWorkflowMutation.isPending}
+                      size="sm"
+                      className="text-xs bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      {executeWorkflowMutation.isPending ? 'Executing...' : 'Execute Workflow'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
