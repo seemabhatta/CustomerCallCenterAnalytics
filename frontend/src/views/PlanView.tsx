@@ -40,11 +40,15 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
 
   // Create workflow mutation
   const createWorkflowMutation = useMutation({
-    mutationFn: (planId: string) => 
+    mutationFn: (planId: string) =>
       workflowApi.extractFromPlan(planId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
       goToWorkflow();
+    },
+    onError: (error: any) => {
+      console.error('Failed to create workflow:', error);
+      // You could add a toast notification here if you have a toast system
     },
   });
 

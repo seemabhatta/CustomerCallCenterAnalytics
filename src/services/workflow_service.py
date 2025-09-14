@@ -113,6 +113,7 @@ class WorkflowService:
             'analysis_id': plan_data['analysis_id'],
             'transcript_id': plan_data['transcript_id'],
             'workflow_data': workflow_extraction,
+            'workflow_type': 'BORROWER',  # Default to BORROWER type
             'risk_level': risk_assessment['risk_level'],
             'status': approval_routing['initial_status'],
             'context_data': context_data,
