@@ -266,6 +266,16 @@ export const workflowApi = {
     apiCall<any>(() => 
       api.post(`/api/v1/workflows/${id}/preview-execution`)
     ),
+
+  delete: (id: string) => 
+    apiCall<{ message: string }>(() => 
+      api.delete(`/api/v1/workflows/${id}`)
+    ),
+
+  deleteAll: () => 
+    apiCall<{ message: string; deleted_count: number }>(() => 
+      api.delete('/api/v1/workflows')
+    ),
 };
 
 // Execution API

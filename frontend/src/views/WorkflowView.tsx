@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/api/client';
 import { WorkflowFilterParams } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Filter, Clock, Users } from 'lucide-react';
+import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -24,7 +24,10 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   const [riskLevelFilter, setRiskLevelFilter] = useState<string>("");
   const [limitFilter, setLimitFilter] = useState<string>("50");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
-  // const queryClient = useQueryClient(); // Future use for mutations
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Build filter parameters
   const filterParams: WorkflowFilterParams = {};
@@ -49,6 +52,31 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     queryKey: ['workflow', selectedWorkflowId],
     queryFn: () => workflowApi.getById(selectedWorkflowId!),
     enabled: !!selectedWorkflowId,
+  });
+
+  // Delete workflow mutation
+  const deleteWorkflowMutation = useMutation({
+    mutationFn: (id: string) => workflowApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      setShowDeleteConfirm(false);
+      setWorkflowToDelete(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete workflow:', error);
+    },
+  });
+
+  // Delete all workflows mutation
+  const deleteAllWorkflowsMutation = useMutation({
+    mutationFn: () => workflowApi.deleteAll(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      setShowDeleteAllConfirm(false);
+    },
+    onError: (error) => {
+      console.error('Failed to delete all workflows:', error);
+    },
   });
 
   // Badge variant utility (future use)
@@ -107,6 +135,25 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
         setStatusFilter("");
       }
     }
+  };
+
+  const handleDeleteClick = (workflowId: string) => {
+    setWorkflowToDelete(workflowId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteAll = () => {
+    setShowDeleteAllConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (workflowToDelete) {
+      deleteWorkflowMutation.mutate(workflowToDelete);
+    }
+  };
+
+  const handleDeleteAllConfirm = () => {
+    deleteAllWorkflowsMutation.mutate();
   };
 
   if (isLoading) {
@@ -423,6 +470,17 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             <RefreshCw className="h-3 w-3" />
             Refresh
           </Button>
+          {workflows.length > 0 && (
+            <Button
+              onClick={handleDeleteAll}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+              disabled={deleteAllWorkflowsMutation.isPending}
+            >
+              {deleteAllWorkflowsMutation.isPending ? 'Deleting...' : 'Delete All'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -516,12 +574,13 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                   <th className="text-left py-1 px-2 font-medium text-slate-600">Actions</th>
                   <th className="text-left py-1 px-2 font-medium text-slate-600">Time Est</th>
                   <th className="text-left py-1 px-2 font-medium text-slate-600">Created</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {workflows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-slate-500">
+                    <td colSpan={9} className="text-center py-8 text-slate-500">
                       No workflows found matching current filters
                     </td>
                   </tr>
@@ -568,6 +627,17 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                       <td className="py-1 px-2">
                         {new Date(workflow.created_at).toLocaleDateString()}
                       </td>
+                      <td className="py-1 px-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
+                          onClick={() => handleDeleteClick(workflow.id)}
+                          disabled={deleteWorkflowMutation.isPending}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -576,6 +646,74 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete Workflow</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete workflow {workflowToDelete}? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={handleDeleteConfirm}
+                disabled={deleteWorkflowMutation.isPending}
+              >
+                {deleteWorkflowMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Confirmation Dialog */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg max-w-md mx-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <h3 className="text-sm font-medium">Delete All Workflows</h3>
+            </div>
+            <p className="text-xs text-gray-600 mb-4">
+              Are you sure you want to delete all workflows? This will permanently remove all {workflows.length} workflows and cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+                onClick={() => setShowDeleteAllConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                className="text-xs"
+                onClick={handleDeleteAllConfirm}
+                disabled={deleteAllWorkflowsMutation.isPending}
+              >
+                {deleteAllWorkflowsMutation.isPending ? 'Deleting...' : 'Delete All'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
