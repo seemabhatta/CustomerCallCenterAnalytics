@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+// import { Textarea } from '@/components/ui/textarea'; // Component doesn't exist
 import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle, Shield, AlertCircle, CheckCircle, Info, Play, Check, X, RotateCcw } from 'lucide-react';
 import {
   Select,
@@ -562,11 +562,11 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                     {workflow.risk_level === 'MEDIUM' && <span className="text-gray-500">(min 50 chars)</span>}
                     {workflow.risk_level === 'HIGH' && <span className="text-gray-500">(min 100 chars)</span>}
                   </label>
-                  <Textarea
+                  <textarea
                     value={approvalReasoning}
                     onChange={(e) => setApprovalReasoning(e.target.value)}
                     placeholder="Provide detailed reasoning for your approval decision..."
-                    className="text-xs min-h-20"
+                    className="text-xs min-h-20 w-full border border-gray-300 rounded px-2 py-1 resize-none"
                     rows={3}
                   />
                   <div className="text-xs text-gray-500 mt-1">
@@ -580,11 +580,11 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                     <label className="text-xs font-medium text-gray-700 mb-1 block">
                       Rejection Reason <span className="text-red-500">*</span>
                     </label>
-                    <Textarea
+                    <textarea
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}
                       placeholder="Provide reason for rejection..."
-                      className="text-xs min-h-16"
+                      className="text-xs min-h-16 w-full border border-gray-300 rounded px-2 py-1 resize-none"
                       rows={2}
                     />
                   </div>
