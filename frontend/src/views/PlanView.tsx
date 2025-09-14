@@ -28,13 +28,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   // Fetch workflows to check which plans have workflows
   const { data: workflows = [] } = useQuery({
     queryKey: ['workflows'],
-    queryFn: async () => {
-      const result = await workflowApi.list();
-      console.log('🔍 DEBUG - Workflows from API:', result);
-      console.log('🔍 DEBUG - Is array?:', Array.isArray(result));
-      console.log('🔍 DEBUG - Length:', result?.length);
-      return result;
-    },
+    queryFn: () => workflowApi.list(),
   });
 
   // Selected plan details
@@ -97,16 +91,8 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   });
 
   // Check if plan has workflow
-  const hasWorkflow = (planId: string) => {
-    console.log(`🔍 DEBUG - Checking hasWorkflow for: ${planId}`);
-    console.log('🔍 DEBUG - Available workflows:', workflows?.map(w => w.plan_id));
-    const found = workflows.some((workflow: any) => {
-      console.log(`🔍 DEBUG - Comparing ${workflow.plan_id} === ${planId}`);
-      return workflow.plan_id === planId;
-    });
-    console.log(`🔍 DEBUG - hasWorkflow result: ${found}`);
-    return found;
-  };
+  const hasWorkflow = (planId: string) => 
+    workflows.some((workflow: any) => workflow.plan_id === planId);
 
   const handleTriggerWorkflow = (planId: string) => {
     createWorkflowMutation.mutate(planId);
