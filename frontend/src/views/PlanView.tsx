@@ -41,7 +41,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   // Create workflow mutation
   const createWorkflowMutation = useMutation({
     mutationFn: (planId: string) =>
-      workflowApi.extractFromPlan(planId),
+      workflowApi.extractAllFromPlan(planId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
       goToWorkflow();
