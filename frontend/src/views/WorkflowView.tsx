@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle, Shield, AlertCircle, CheckCircle, Info, Play, Check, X, RotateCcw } from 'lucide-react';
 import {
   Select,
@@ -27,6 +28,11 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
+  
+  // Approval form state
+  const [approverRole, setApproverRole] = useState<string>('');
+  const [approvalReasoning, setApprovalReasoning] = useState<string>('');
+  const [rejectionReason, setRejectionReason] = useState<string>('');
   const queryClient = useQueryClient();
 
   // Helper function to safely parse risk reasoning
@@ -191,6 +197,82 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
       alert('Failed to execute all workflows: ' + (error?.detail || 'Unknown error'));
     },
   });
+
+  // Approval form handlers
+  const validateApprovalForm = (workflow: any) => {
+    const errors: string[] = [];
+    
+    if (!approverRole) {
+      errors.push('Please select your role');
+    }
+    
+    // Risk-based validation
+    const riskLevel = workflow.risk_level;
+    if (riskLevel === 'MEDIUM' || riskLevel === 'HIGH') {
+      if (!approvalReasoning.trim()) {
+        errors.push(`${riskLevel} risk workflows require detailed reasoning`);
+      } else if (riskLevel === 'MEDIUM' && approvalReasoning.trim().length < 50) {
+        errors.push('Medium risk workflows require at least 50 characters of reasoning');
+      } else if (riskLevel === 'HIGH' && approvalReasoning.trim().length < 100) {
+        errors.push('High risk workflows require at least 100 characters of detailed reasoning');
+      }
+    }
+    
+    // Role validation based on risk level
+    if (riskLevel === 'MEDIUM' && !['supervisor', 'manager'].includes(approverRole)) {
+      errors.push('Medium risk workflows require supervisor or manager approval');
+    }
+    if (riskLevel === 'HIGH' && approverRole !== 'manager') {
+      errors.push('High risk workflows require manager approval');
+    }
+    
+    return errors;
+  };
+
+  const handleApproveWorkflow = (workflow: any) => {
+    const errors = validateApprovalForm(workflow);
+    if (errors.length > 0) {
+      alert('Validation errors:\n' + errors.join('\n'));
+      return;
+    }
+
+    const approvalData = {
+      approved_by: `${approverRole}@company.com`, // Real user context
+      approver_role: approverRole,
+      reasoning: approvalReasoning.trim(),
+      approval_timestamp: new Date().toISOString(),
+      workflow_type: workflow.workflow_type,
+      risk_level: workflow.risk_level,
+      workflow_id: workflow.id,
+      plan_id: workflow.plan_id
+    };
+
+    approveWorkflowMutation.mutate({ id: workflow.id, approvalData });
+    
+    // Reset form
+    setApproverRole('');
+    setApprovalReasoning('');
+  };
+
+  const handleRejectWorkflow = (workflow: any) => {
+    if (!rejectionReason.trim()) {
+      alert('Please provide a reason for rejection');
+      return;
+    }
+
+    const rejectionData = {
+      rejected_by: `${approverRole || 'user'}@company.com`,
+      reason: rejectionReason.trim(),
+      rejection_timestamp: new Date().toISOString(),
+      workflow_id: workflow.id
+    };
+
+    workflowApi.reject(workflow.id, rejectionData);
+    
+    // Reset form
+    setApproverRole('');
+    setRejectionReason('');
+  };
 
   // Badge variant utility (future use)
   // const getStatusBadgeVariant = (status: string) => {
@@ -424,6 +506,116 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             </Button>
           </div>
         </div>
+
+        {/* Human-in-the-Loop Approval Section */}
+        {(workflow.status === 'AWAITING_APPROVAL' || workflow.status === 'REJECTED') && (
+          <Card className="border-2 border-blue-200 bg-blue-50/30">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-sm font-medium text-blue-900 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Human Approval Required
+                <Badge className={`text-xs h-5 ${getRiskLevelColor(workflow.risk_level)}`}>
+                  {workflow.risk_level} Risk
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-xs text-blue-700">
+                {workflow.status === 'REJECTED' ? 'This workflow was rejected and needs re-review' : 'This workflow requires human approval before execution'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="py-3 px-4">
+              {/* Workflow Context */}
+              <div className="mb-4 p-3 bg-white rounded border">
+                <div className="text-xs font-medium text-gray-700 mb-2">Workflow to Review:</div>
+                <div className="space-y-1 text-xs">
+                  <div><span className="text-gray-600">Type:</span> <span className="font-medium">{workflow.workflow_type}</span></div>
+                  <div><span className="text-gray-600">Actions:</span> <span className="font-medium">{workflow.workflow_data?.actions?.join(', ') || 'See details below'}</span></div>
+                  {workflow.workflow_data?.priority && (
+                    <div><span className="text-gray-600">Priority:</span> <span className="font-medium">{workflow.workflow_data.priority}</span></div>
+                  )}
+                </div>
+              </div>
+
+              {/* Approval Form */}
+              <div className="space-y-3">
+                {/* Role Selection */}
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Your Role <span className="text-red-500">*</span>
+                  </label>
+                  <Select value={approverRole} onValueChange={setApproverRole}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="advisor">Advisor</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Reasoning Input */}
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Approval Reasoning 
+                    {(workflow.risk_level === 'MEDIUM' || workflow.risk_level === 'HIGH') && <span className="text-red-500">*</span>}
+                    {workflow.risk_level === 'MEDIUM' && <span className="text-gray-500">(min 50 chars)</span>}
+                    {workflow.risk_level === 'HIGH' && <span className="text-gray-500">(min 100 chars)</span>}
+                  </label>
+                  <Textarea
+                    value={approvalReasoning}
+                    onChange={(e) => setApprovalReasoning(e.target.value)}
+                    placeholder="Provide detailed reasoning for your approval decision..."
+                    className="text-xs min-h-20"
+                    rows={3}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {approvalReasoning.length} characters
+                  </div>
+                </div>
+
+                {/* Rejection Reason (if status is rejected) */}
+                {workflow.status === 'REJECTED' && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 block">
+                      Rejection Reason <span className="text-red-500">*</span>
+                    </label>
+                    <Textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Provide reason for rejection..."
+                      className="text-xs min-h-16"
+                      rows={2}
+                    />
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={() => handleApproveWorkflow(workflow)}
+                    disabled={approveWorkflowMutation.isPending}
+                    size="sm"
+                    className="text-xs bg-green-600 hover:bg-green-700"
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    {approveWorkflowMutation.isPending ? 'Approving...' : 'Approve'}
+                  </Button>
+                  <Button
+                    onClick={() => handleRejectWorkflow(workflow)}
+                    disabled={rejectWorkflowMutation.isPending}
+                    variant="destructive"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    {rejectWorkflowMutation.isPending ? 'Rejecting...' : 'Reject'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Conditional rendering based on workflow type */}
         {isGranularWorkflow(workflow) ? (
