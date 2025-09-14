@@ -16,16 +16,16 @@ export function ExecutionView() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [executionToDelete, setExecutionToDelete] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [executorTypeFilter, setExecutorTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [executorTypeFilter, setExecutorTypeFilter] = useState("all");
   const queryClient = useQueryClient();
 
   // Fetch executions
   const { data: executions = [], isLoading, error, refetch } = useQuery({
     queryKey: ['executions', statusFilter, executorTypeFilter],
     queryFn: () => executionApi.list({
-      status: statusFilter || undefined,
-      executor_type: executorTypeFilter || undefined,
+      status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
+      executor_type: executorTypeFilter && executorTypeFilter !== 'all' ? executorTypeFilter : undefined,
     }),
   });
 
@@ -56,8 +56,8 @@ export function ExecutionView() {
   // Delete all executions mutation
   const deleteAllExecutionsMutation = useMutation({
     mutationFn: () => executionApi.deleteAll({
-      status: statusFilter || undefined,
-      executor_type: executorTypeFilter || undefined,
+      status: statusFilter && statusFilter !== 'all' ? statusFilter : undefined,
+      executor_type: executorTypeFilter && executorTypeFilter !== 'all' ? executorTypeFilter : undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['executions'] });
@@ -280,7 +280,7 @@ export function ExecutionView() {
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="success">Success</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
@@ -294,7 +294,7 @@ export function ExecutionView() {
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="crm">CRM</SelectItem>
               <SelectItem value="task">Task</SelectItem>
@@ -439,7 +439,7 @@ export function ExecutionView() {
             </DialogTitle>
             <DialogDescription className="text-xs">
               Are you sure you want to delete all {filteredExecutions.length} executions? 
-              {(statusFilter || executorTypeFilter) && " (with current filters applied)"} 
+              {(statusFilter !== 'all' || executorTypeFilter !== 'all') && " (with current filters applied)"} 
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
