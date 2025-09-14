@@ -5,7 +5,7 @@ NO FALLBACK LOGIC - fails fast on any execution issues.
 """
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from src.agents.workflow_execution_agent import WorkflowExecutionAgent
 from src.executors.workflow_mock_executors import (
@@ -389,7 +389,76 @@ class WorkflowExecutionEngine:
             
         except Exception as e:
             raise Exception(f"Failed to get execution statistics: {e}")
-    
+
+    async def list_all_executions(self, limit: Optional[int] = None,
+                                status: Optional[str] = None,
+                                executor_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all executions with optional filters.
+
+        Args:
+            limit: Optional limit on number of results
+            status: Optional filter by execution status
+            executor_type: Optional filter by executor type
+
+        Returns:
+            List of execution records
+
+        Raises:
+            ValueError: Invalid filter parameters (NO FALLBACK)
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        try:
+            return await self.execution_store.get_all(
+                limit=limit,
+                status=status,
+                executor_type=executor_type
+            )
+        except Exception as e:
+            raise Exception(f"Failed to list executions: {e}")
+
+    async def delete_execution(self, execution_id: str) -> bool:
+        """Delete execution record by ID.
+
+        Args:
+            execution_id: Execution record ID to delete
+
+        Returns:
+            True if execution was deleted, False if not found
+
+        Raises:
+            ValueError: Invalid execution_id (NO FALLBACK)
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        if not execution_id or not isinstance(execution_id, str):
+            raise ValueError("execution_id must be a non-empty string")
+
+        try:
+            return await self.execution_store.delete(execution_id)
+        except Exception as e:
+            raise Exception(f"Failed to delete execution: {e}")
+
+    async def delete_all_executions(self, status: Optional[str] = None,
+                                  executor_type: Optional[str] = None) -> int:
+        """Delete all executions with optional filters.
+
+        Args:
+            status: Optional filter - only delete executions with this status
+            executor_type: Optional filter - only delete executions of this type
+
+        Returns:
+            Number of executions deleted
+
+        Raises:
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        try:
+            return await self.execution_store.delete_all(
+                status=status,
+                executor_type=executor_type
+            )
+        except Exception as e:
+            raise Exception(f"Failed to delete all executions: {e}")
+
     def validate_workflow_for_execution(self, workflow: Dict[str, Any]) -> bool:
         """Validate that workflow can be executed.
         

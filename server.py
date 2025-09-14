@@ -756,19 +756,82 @@ async def execute_all_approved_workflows(request: Optional[Dict] = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to execute all workflows: {str(e)}")
 
+@app.get("/api/v1/executions")
+async def list_executions(
+    limit: Optional[int] = Query(None, description="Maximum number of results"),
+    status: Optional[str] = Query(None, description="Filter by execution status"),
+    executor_type: Optional[str] = Query(None, description="Filter by executor type")
+):
+    """List all executions with optional filters."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+
+        result = await execution_engine.list_all_executions(
+            limit=limit,
+            status=status,
+            executor_type=executor_type
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list executions: {str(e)}")
+
 @app.get("/api/v1/executions/{execution_id}")
 async def get_execution_status(execution_id: str):
     """Get detailed execution status and results."""
     try:
         from src.services.workflow_execution_engine import WorkflowExecutionEngine
         execution_engine = WorkflowExecutionEngine()
-        
+
         result = await execution_engine.get_execution_status(execution_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get execution status: {str(e)}")
+
+@app.delete("/api/v1/executions/{execution_id}")
+async def delete_execution(execution_id: str):
+    """Delete execution record by ID."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+
+        deleted = await execution_engine.delete_execution(execution_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Execution {execution_id} not found")
+
+        return {"message": f"Execution {execution_id} deleted successfully", "deleted": True}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete execution: {str(e)}")
+
+@app.delete("/api/v1/executions")
+async def delete_all_executions(
+    status: Optional[str] = Query(None, description="Only delete executions with this status"),
+    executor_type: Optional[str] = Query(None, description="Only delete executions of this type")
+):
+    """Delete all executions with optional filters."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+
+        deleted_count = await execution_engine.delete_all_executions(
+            status=status,
+            executor_type=executor_type
+        )
+
+        return {
+            "message": f"All executions deleted successfully",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete executions: {str(e)}")
 
 @app.get("/api/v1/workflows/{workflow_id}/executions")
 async def get_workflow_executions(workflow_id: str):

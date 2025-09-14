@@ -619,37 +619,179 @@ class WorkflowExecutionStore:
             datetime.now(timezone.utc).isoformat()
         ))
     
+    async def get_all(self, limit: Optional[int] = None, status: Optional[str] = None,
+                     executor_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get all execution records with optional filters.
+
+        Args:
+            limit: Optional limit on number of records to return
+            status: Optional filter by execution status
+            executor_type: Optional filter by executor type
+
+        Returns:
+            List of execution records ordered by execution time (newest first)
+
+        Raises:
+            ValueError: Invalid filter parameters (NO FALLBACK)
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        if limit is not None and (not isinstance(limit, int) or limit <= 0):
+            raise ValueError("limit must be a positive integer")
+
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build query with filters
+            query = '''
+                SELECT id, workflow_id, executor_type, execution_status,
+                       execution_payload, executed_at, executed_by,
+                       execution_duration_ms, mock_execution, error_message,
+                       metadata, created_at
+                FROM workflow_executions
+            '''
+
+            conditions = []
+            params = []
+
+            if status:
+                conditions.append('execution_status = ?')
+                params.append(status)
+
+            if executor_type:
+                conditions.append('executor_type = ?')
+                params.append(executor_type)
+
+            if conditions:
+                query += ' WHERE ' + ' AND '.join(conditions)
+
+            query += ' ORDER BY executed_at DESC'
+
+            if limit:
+                query += ' LIMIT ?'
+                params.append(limit)
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            return [self._row_to_dict(row) for row in rows]
+
+        except Exception as e:
+            raise Exception(f"Failed to retrieve all executions: {e}")
+        finally:
+            if not self._persistent_conn:
+                conn.close()
+
+    async def delete(self, execution_id: str) -> bool:
+        """Delete execution record by ID.
+
+        Args:
+            execution_id: Execution record ID to delete
+
+        Returns:
+            True if execution was deleted, False if not found
+
+        Raises:
+            ValueError: Invalid execution_id (NO FALLBACK)
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        if not execution_id or not isinstance(execution_id, str):
+            raise ValueError("execution_id must be a non-empty string")
+
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Delete execution record (cascading deletes handle related tables)
+            cursor.execute('DELETE FROM workflow_executions WHERE id = ?', (execution_id,))
+            deleted_count = cursor.rowcount
+
+            conn.commit()
+            return deleted_count > 0
+
+        except Exception as e:
+            raise Exception(f"Failed to delete execution record: {e}")
+        finally:
+            if not self._persistent_conn:
+                conn.close()
+
+    async def delete_all(self, status: Optional[str] = None,
+                        executor_type: Optional[str] = None) -> int:
+        """Delete all execution records with optional filters.
+
+        Args:
+            status: Optional filter - only delete executions with this status
+            executor_type: Optional filter - only delete executions of this type
+
+        Returns:
+            Number of execution records deleted
+
+        Raises:
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build delete query with filters
+            query = 'DELETE FROM workflow_executions'
+            conditions = []
+            params = []
+
+            if status:
+                conditions.append('execution_status = ?')
+                params.append(status)
+
+            if executor_type:
+                conditions.append('executor_type = ?')
+                params.append(executor_type)
+
+            if conditions:
+                query += ' WHERE ' + ' AND '.join(conditions)
+
+            cursor.execute(query, params)
+            deleted_count = cursor.rowcount
+
+            conn.commit()
+            return deleted_count
+
+        except Exception as e:
+            raise Exception(f"Failed to delete execution records: {e}")
+        finally:
+            if not self._persistent_conn:
+                conn.close()
+
     async def cleanup_old_executions(self, days_to_keep: int = 90) -> int:
         """Clean up old execution records.
-        
+
         Args:
             days_to_keep: Number of days of records to retain
-            
+
         Returns:
             Number of records deleted
-            
+
         Raises:
             ValueError: Invalid days_to_keep (NO FALLBACK)
             Exception: Database operation failure (NO FALLBACK)
         """
         if not isinstance(days_to_keep, int) or days_to_keep <= 0:
             raise ValueError("days_to_keep must be a positive integer")
-        
+
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             # Delete old execution records (cascading deletes will handle related tables)
             cursor.execute('''
-                DELETE FROM workflow_executions 
+                DELETE FROM workflow_executions
                 WHERE executed_at < datetime('now', '-{} days')
             '''.format(days_to_keep))
-            
+
             deleted_count = cursor.rowcount
             conn.commit()
-            
+
             return deleted_count
-            
+
         except Exception as e:
             raise Exception(f"Failed to cleanup old executions: {e}")
         finally:

@@ -336,7 +336,46 @@ class CLIRestClient:
     def get_workflows_by_plan_and_type(self, plan_id: str, workflow_type: str) -> List[Dict[str, Any]]:
         """Get workflows by plan and type via GET /api/v1/workflows/plan/{plan_id}/type/{workflow_type}."""
         return self._make_request('GET', f'/api/v1/workflows/plan/{plan_id}/type/{workflow_type}')
-    
+
+    # Execution operations
+    def list_executions(self, limit: Optional[int] = None, status: Optional[str] = None,
+                       executor_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all executions via GET /api/v1/executions."""
+        params = {}
+        if limit is not None:
+            params['limit'] = limit
+        if status:
+            params['status'] = status
+        if executor_type:
+            params['executor_type'] = executor_type
+        return self._make_request('GET', '/api/v1/executions', params=params)
+
+    def get_execution(self, execution_id: str) -> Dict[str, Any]:
+        """Get execution details via GET /api/v1/executions/{execution_id}."""
+        return self._make_request('GET', f'/api/v1/executions/{execution_id}')
+
+    def delete_execution(self, execution_id: str) -> Dict[str, Any]:
+        """Delete execution via DELETE /api/v1/executions/{execution_id}."""
+        return self._make_request('DELETE', f'/api/v1/executions/{execution_id}')
+
+    def delete_all_executions(self, status: Optional[str] = None,
+                             executor_type: Optional[str] = None) -> Dict[str, Any]:
+        """Delete all executions via DELETE /api/v1/executions."""
+        params = {}
+        if status:
+            params['status'] = status
+        if executor_type:
+            params['executor_type'] = executor_type
+        return self._make_request('DELETE', '/api/v1/executions', params=params)
+
+    def get_workflow_executions(self, workflow_id: str) -> Dict[str, Any]:
+        """Get execution history for workflow via GET /api/v1/workflows/{workflow_id}/executions."""
+        return self._make_request('GET', f'/api/v1/workflows/{workflow_id}/executions')
+
+    def get_execution_statistics(self) -> Dict[str, Any]:
+        """Get execution statistics via GET /api/v1/executions/statistics."""
+        return self._make_request('GET', '/api/v1/executions/statistics')
+
     # System operations
     def get_health(self) -> Dict[str, Any]:
         """Get system health via GET /api/v1/health."""
@@ -408,6 +447,7 @@ workflow_app.add_typer(workflow_process_app, name="process")
 workflow_app.add_typer(workflow_manage_app, name="manage")
 workflow_app.add_typer(workflow_view_app, name="view")
 
+execution_app = typer.Typer(name="execution", help="Execution management operations")
 system_app = typer.Typer(name="system", help="System operations")
 orchestrate_app = typer.Typer(name="orchestrate", help="Pipeline orchestration operations")
 approvals_app = typer.Typer(name="approvals", help="Approval queue management operations")
@@ -418,6 +458,7 @@ app.add_typer(analysis_app)
 app.add_typer(insights_app)
 app.add_typer(plan_app)
 app.add_typer(workflow_app)
+app.add_typer(execution_app)
 app.add_typer(orchestrate_app)
 app.add_typer(approvals_app)
 app.add_typer(system_app)
@@ -3808,9 +3849,192 @@ def approvals_my_tasks(
         
         console.print(f"💡 [dim]Use 'python cli.py workflow process approve <id>' to approve individual tasks[/dim]")
         console.print(f"💡 [dim]Use 'python cli.py approvals process --approve <id1>,<id2>' for bulk approval[/dim]")
-        
+
     except Exception as e:
         print_error(f"Failed to fetch tasks for {approver}: {str(e)}")
+        raise typer.Exit(1)
+
+
+# ====================================================================
+# EXECUTION COMMANDS
+# ====================================================================
+
+@execution_app.command("list")
+def execution_list(
+    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Maximum number of results"),
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by execution status"),
+    executor_type: Optional[str] = typer.Option(None, "--type", "-t", help="Filter by executor type")
+):
+    """List all workflow executions."""
+    try:
+        client = get_client()
+
+        console.print("📋 [bold magenta]Listing workflow executions...[/bold magenta]")
+
+        executions = client.list_executions(limit=limit, status=status, executor_type=executor_type)
+
+        if not executions:
+            console.print("📭 No executions found")
+            return
+
+        console.print(f"\n📊 Found {len(executions)} executions:")
+
+        for i, execution in enumerate(executions, 1):
+            execution_id = execution.get('id', 'Unknown')[:12]
+            workflow_id = execution.get('workflow_id', 'Unknown')[:12]
+            executor_type = execution.get('executor_type', 'Unknown')
+            status = execution.get('execution_status', 'Unknown')
+            executed_at = execution.get('executed_at', 'Unknown')
+
+            status_color = "green" if status == "success" else "red" if status == "failed" else "yellow"
+
+            console.print(f"\n[bold cyan]{i}. {execution_id}[/bold cyan]")
+            console.print(f"   Workflow: [blue]{workflow_id}[/blue]")
+            console.print(f"   Executor: [magenta]{executor_type}[/magenta]")
+            console.print(f"   Status: [{status_color}]{status}[/{status_color}]")
+            console.print(f"   Executed: [dim]{executed_at}[/dim]")
+
+        print_success(f"Listed {len(executions)} executions")
+
+    except Exception as e:
+        print_error(f"Failed to list executions: {str(e)}")
+        raise typer.Exit(1)
+
+@execution_app.command("get")
+def execution_get(execution_id: str):
+    """Get detailed execution information."""
+    try:
+        client = get_client()
+
+        console.print(f"🔍 [bold magenta]Getting execution details for {execution_id}...[/bold magenta]")
+
+        execution = client.get_execution(execution_id)
+
+        console.print(f"\n📋 [bold blue]Execution Details[/bold blue]:")
+        console.print(f"ID: [cyan]{execution['execution_record']['id']}[/cyan]")
+        console.print(f"Workflow ID: [blue]{execution['execution_record']['workflow_id']}[/blue]")
+        console.print(f"Executor Type: [magenta]{execution['execution_record']['executor_type']}[/magenta]")
+        console.print(f"Status: [green]{execution['execution_record']['execution_status']}[/green]")
+        console.print(f"Executed By: [yellow]{execution['execution_record']['executed_by']}[/yellow]")
+        console.print(f"Duration: [cyan]{execution['execution_record']['execution_duration_ms']}ms[/cyan]")
+
+        if execution['execution_record'].get('error_message'):
+            console.print(f"Error: [red]{execution['execution_record']['error_message']}[/red]")
+
+        console.print(f"\n📦 [bold yellow]Payload:[/bold yellow]")
+        console.print(json.dumps(execution['execution_record']['execution_payload'], indent=2))
+
+        print_success(f"Retrieved execution details: {execution_id}")
+
+    except Exception as e:
+        print_error(f"Failed to get execution: {str(e)}")
+        raise typer.Exit(1)
+
+@execution_app.command("delete")
+def execution_delete(
+    execution_id: str,
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt")
+):
+    """Delete a specific execution."""
+    try:
+        client = get_client()
+
+        console.print(f"🗑️ [bold red]Deleting execution {execution_id}...[/bold red]")
+
+        if not force:
+            confirm = typer.confirm(f"Delete execution {execution_id}?", default=False)
+            if not confirm:
+                console.print("❌ Operation cancelled")
+                return
+
+        result = client.delete_execution(execution_id)
+
+        console.print(f"✅ [bold green]Execution Deleted:[/bold green]")
+        console.print(f"Execution ID: [cyan]{execution_id}[/cyan]")
+        console.print(f"Status: [red]DELETED[/red]")
+
+        print_success(f"Execution {execution_id} deleted successfully")
+
+    except Exception as e:
+        print_error(f"Failed to delete execution: {str(e)}")
+        raise typer.Exit(1)
+
+@execution_app.command("delete-all")
+def execution_delete_all(
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt"),
+    status: Optional[str] = typer.Option(None, "--status", "-s", help="Only delete executions with this status"),
+    executor_type: Optional[str] = typer.Option(None, "--type", "-t", help="Only delete executions of this type")
+):
+    """Delete all executions with optional filters."""
+    try:
+        client = get_client()
+
+        console.print("🗑️ [bold red]Bulk Execution Deletion...[/bold red]")
+
+        # Preview what will be deleted
+        executions = client.list_executions(status=status, executor_type=executor_type)
+
+        if not executions:
+            console.print("📭 No executions found matching criteria")
+            return
+
+        console.print(f"Found [yellow]{len(executions)}[/yellow] executions to delete")
+
+        if status:
+            console.print(f"Status filter: [blue]{status}[/blue]")
+        if executor_type:
+            console.print(f"Executor type filter: [magenta]{executor_type}[/magenta]")
+
+        if not force:
+            confirm = typer.confirm(f"Delete {len(executions)} executions?", default=False)
+            if not confirm:
+                console.print("❌ Operation cancelled")
+                return
+
+        result = client.delete_all_executions(status=status, executor_type=executor_type)
+
+        console.print(f"✅ [bold green]Bulk Deletion Complete:[/bold green]")
+        console.print(f"Deleted: [red]{result['deleted_count']}[/red] executions")
+
+        print_success(f"Deleted {result['deleted_count']} executions")
+
+    except Exception as e:
+        print_error(f"Failed to delete executions: {str(e)}")
+        raise typer.Exit(1)
+
+@execution_app.command("statistics")
+def execution_statistics():
+    """Get execution statistics and metrics."""
+    try:
+        client = get_client()
+
+        console.print("📊 [bold magenta]Generating execution statistics...[/bold magenta]")
+
+        stats = client.get_execution_statistics()
+        store_stats = stats['store_statistics']
+        engine_stats = stats['engine_statistics']
+
+        console.print(f"\n📈 [bold blue]Execution Statistics[/bold blue]:")
+        console.print(f"Total executions: [cyan]{store_stats['total_executions']}[/cyan]")
+        console.print(f"Average duration: [yellow]{store_stats['average_execution_duration_ms']:.1f}ms[/yellow]")
+
+        console.print(f"\n📊 [bold yellow]By Status:[/bold yellow]")
+        for status, count in store_stats['executions_by_status'].items():
+            status_color = "green" if status == "success" else "red" if status == "failed" else "yellow"
+            console.print(f"  [{status_color}]{status}[/{status_color}]: {count}")
+
+        console.print(f"\n🔧 [bold magenta]By Executor Type:[/bold magenta]")
+        for executor_type, count in store_stats['executions_by_executor_type'].items():
+            console.print(f"  [blue]{executor_type}[/blue]: {count}")
+
+        console.print(f"\n⚙️ [bold green]Engine Info:[/bold green]")
+        console.print(f"Available executors: [cyan]{len(engine_stats['available_executors'])}[/cyan]")
+        console.print(f"Types: [dim]{', '.join(engine_stats['available_executors'])}[/dim]")
+
+        print_success("Generated execution statistics")
+
+    except Exception as e:
+        print_error(f"Failed to get execution statistics: {str(e)}")
         raise typer.Exit(1)
 
 
