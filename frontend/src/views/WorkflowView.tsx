@@ -375,9 +375,20 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-          {/* Core Information */}
-          <Card>
+        {/* Conditional rendering based on workflow type */}
+        {isGranularWorkflow(workflow) ? (
+          /* Granular Workflow Layout */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <GranularWorkflowHeader workflow={workflow} />
+            <ActionDescription workflow={workflow} />
+            <ExecutionSteps workflow={workflow} />
+            <AssignmentDetails workflow={workflow} />
+          </div>
+        ) : (
+          /* Meta Workflow Layout (Existing) */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {/* Core Information */}
+            <Card>
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Core Information</CardTitle>
             </CardHeader>
@@ -732,6 +743,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             </Card>
           )}
         </div>
+        )}
       </div>
     );
   }
