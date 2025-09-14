@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle, Shield, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle, Shield, AlertCircle, CheckCircle, Info, Play, Check, X, RotateCcw } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -139,6 +139,54 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     },
     onError: (error) => {
       console.error('Failed to delete all workflows:', error);
+    },
+  });
+
+  // Approve workflow mutation
+  const approveWorkflowMutation = useMutation({
+    mutationFn: (id: string) => workflowApi.approve(id, { approved_by: "user" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+    onError: (error: any) => {
+      console.error('Error approving workflow:', error);
+      alert('Failed to approve workflow: ' + (error?.detail || 'Unknown error'));
+    },
+  });
+
+  // Reject workflow mutation
+  const rejectWorkflowMutation = useMutation({
+    mutationFn: (id: string) => workflowApi.reject(id, { rejected_by: "user", reason: "Manual rejection" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+    onError: (error: any) => {
+      console.error('Error rejecting workflow:', error);
+      alert('Failed to reject workflow: ' + (error?.detail || 'Unknown error'));
+    },
+  });
+
+  // Execute workflow mutation
+  const executeWorkflowMutation = useMutation({
+    mutationFn: (id: string) => workflowApi.execute(id, { executed_by: "user" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+    onError: (error: any) => {
+      console.error('Error executing workflow:', error);
+      alert('Failed to execute workflow: ' + (error?.detail || 'Unknown error'));
+    },
+  });
+
+  // Execute all workflows mutation
+  const executeAllWorkflowsMutation = useMutation({
+    mutationFn: (data?: { workflow_type?: string }) => workflowApi.executeAll({ executed_by: "user", ...data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+    onError: (error: any) => {
+      console.error('Error executing all workflows:', error);
+      alert('Failed to execute all workflows: ' + (error?.detail || 'Unknown error'));
     },
   });
 
@@ -762,6 +810,18 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             <RefreshCw className="h-3 w-3" />
             Refresh
           </Button>
+          {workflows.filter(w => w.status === 'AUTO_APPROVED' || w.status === 'APPROVED').length > 0 && (
+            <Button
+              onClick={() => executeAllWorkflowsMutation.mutate()}
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              disabled={executeAllWorkflowsMutation.isPending}
+            >
+              <Play className="h-3 w-3 mr-1" />
+              {executeAllWorkflowsMutation.isPending ? 'Executing...' : 'Execute All Approved'}
+            </Button>
+          )}
           {workflows.length > 0 && (
             <Button
               onClick={handleDeleteAll}
@@ -920,15 +980,92 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                         {new Date(workflow.created_at).toLocaleDateString()}
                       </td>
                       <td className="py-1 px-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-600"
-                          onClick={() => handleDeleteClick(workflow.id)}
-                          disabled={deleteWorkflowMutation.isPending}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          {/* Status-based execution buttons */}
+                          {workflow.status === 'AWAITING_APPROVAL' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => approveWorkflowMutation.mutate(workflow.id)}
+                                disabled={approveWorkflowMutation.isPending}
+                                title="Approve"
+                              >
+                                <Check className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => rejectWorkflowMutation.mutate(workflow.id)}
+                                disabled={rejectWorkflowMutation.isPending}
+                                title="Reject"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                          
+                          {workflow.status === 'AUTO_APPROVED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => executeWorkflowMutation.mutate(workflow.id)}
+                              disabled={executeWorkflowMutation.isPending}
+                              title="Execute"
+                            >
+                              <Play className="h-3 w-3" />
+                            </Button>
+                          )}
+                          
+                          {workflow.status === 'APPROVED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => executeWorkflowMutation.mutate(workflow.id)}
+                              disabled={executeWorkflowMutation.isPending}
+                              title="Execute"
+                            >
+                              <Play className="h-3 w-3" />
+                            </Button>
+                          )}
+                          
+                          {workflow.status === 'EXECUTED' && (
+                            <Badge className="text-xs h-5 bg-green-100 text-green-700 border-green-200">
+                              ✓ Done
+                            </Badge>
+                          )}
+                          
+                          {workflow.status === 'REJECTED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-gray-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => approveWorkflowMutation.mutate(workflow.id)}
+                              disabled={approveWorkflowMutation.isPending}
+                              title="Retry (Approve)"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </Button>
+                          )}
+                          
+                          {/* Always show delete button (unless executing) */}
+                          {workflow.status !== 'EXECUTED' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-red-600 ml-1"
+                              onClick={() => handleDeleteClick(workflow.id)}
+                              disabled={deleteWorkflowMutation.isPending}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
