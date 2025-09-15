@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 // import { Textarea } from '@/components/ui/textarea'; // Component doesn't exist
-import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle, Shield, AlertCircle, CheckCircle, Info, Play, Check, X, RotateCcw } from 'lucide-react';
+import { RefreshCw, Filter, Clock, Users, Trash2, AlertTriangle, Shield, AlertCircle, CheckCircle, Info, Play, Check, X, Monitor, Settings, MapPin } from 'lucide-react';
 import {
   Select,
   SelectContent,
