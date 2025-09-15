@@ -696,15 +696,20 @@ Each step should be clear enough for someone to follow without additional guidan
                     if risk_assessment and 'risk_level' in risk_assessment:
                         risk_assessment['risk_level'] = str(risk_assessment['risk_level']).upper()
 
+                    # Normalize workflow_type to uppercase for database compatibility
+                    normalized_workflow_type = workflow_type.upper()
+                    if normalized_workflow_type not in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
+                        raise ValueError(f"Invalid workflow_type: {workflow_type} -> {normalized_workflow_type}")
+
                     return {
                         'plan_id': plan_id,
                         'analysis_id': plan_data['analysis_id'],
                         'transcript_id': plan_data['transcript_id'],
                         'workflow_data': enhanced_item,
-                        'workflow_type': workflow_type,
+                        'workflow_type': normalized_workflow_type,
                         'context_data': {
                             **context_data,
-                            'workflow_type': workflow_type,
+                            'workflow_type': normalized_workflow_type,
                             'action_item_context': item.get('context', {})
                         },
                         'risk_assessment': risk_assessment,

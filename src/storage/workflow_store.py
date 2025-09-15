@@ -666,8 +666,14 @@ class WorkflowStore:
                 workflow_ids.append(workflow_id)
                 
                 # NO FALLBACK: Require all essential fields
-                if not all(key in workflow_data for key in ['plan_id', 'analysis_id', 'transcript_id', 'workflow_data', 'workflow_type']):
+                required_fields = ['plan_id', 'analysis_id', 'transcript_id', 'workflow_data', 'workflow_type']
+                if not all(key in workflow_data for key in required_fields):
                     raise ValueError(f"Missing required fields in workflow data: {workflow_data}")
+
+                # Validate workflow_type
+                workflow_type = workflow_data.get('workflow_type', '').upper()
+                if workflow_type not in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
+                    raise ValueError(f"Invalid workflow_type: {workflow_data.get('workflow_type')} -> {workflow_type}")
                 
                 # Serialize dict fields to JSON
                 workflow_data_json = json.dumps(workflow_data['workflow_data']) if isinstance(workflow_data['workflow_data'], dict) else workflow_data['workflow_data']
@@ -702,27 +708,32 @@ class WorkflowStore:
                 elif assigned_approver is None:
                     assigned_approver = ''
                 
-                cursor.execute('''
-                    INSERT INTO workflows (
-                        id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status, 
-                        context_data, risk_reasoning, approval_reasoning, requires_human_approval,
-                        assigned_approver, workflow_type
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    workflow_id,
-                    str(workflow_data['plan_id']),
-                    str(workflow_data['analysis_id']), 
-                    str(workflow_data['transcript_id']),
-                    workflow_data_json,
-                    str(risk_level),
-                    str(status),
-                    context_data_json,
-                    str(risk_reasoning),
-                    str(approval_reasoning),
-                    bool(requires_approval),
-                    str(assigned_approver),
-                    str(workflow_data['workflow_type'])
-                ))
+                try:
+                    cursor.execute('''
+                        INSERT INTO workflows (
+                            id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
+                            context_data, risk_reasoning, approval_reasoning, requires_human_approval,
+                            assigned_approver, workflow_type
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        workflow_id,
+                        str(workflow_data['plan_id']),
+                        str(workflow_data['analysis_id']),
+                        str(workflow_data['transcript_id']),
+                        workflow_data_json,
+                        str(risk_level),
+                        str(status),
+                        context_data_json,
+                        str(risk_reasoning),
+                        str(approval_reasoning),
+                        bool(requires_approval),
+                        str(assigned_approver),
+                        str(workflow_data['workflow_type'])
+                    ))
+                except sqlite3.IntegrityError as e:
+                    print(f"Database constraint violation for workflow {workflow_id}: {e}")
+                    print(f"Workflow data: {workflow_data}")
+                    raise
                 
                 # Log initial state
                 self._log_state_transition(cursor, workflow_id, None, status, 
