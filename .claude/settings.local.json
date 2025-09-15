@@ -42,7 +42,8 @@
       "Bash(tree:*)",
       "Read(//home/ujjal/code/**)",
       "Bash(xargs:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": [],
     "ask": []
