@@ -63,7 +63,7 @@ class WorkflowStore:
                     
                     -- LLM agent decisions (no hardcoded logic)
                     risk_level TEXT NOT NULL CHECK (risk_level IN ('LOW', 'MEDIUM', 'HIGH')),
-                    status TEXT NOT NULL CHECK (status IN ('PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED')),
+                    status TEXT NOT NULL CHECK (status IN ('PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'APPROVED', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED')),
                     
                     -- Context preservation for agent decisions
                     context_data TEXT NOT NULL,
@@ -154,7 +154,7 @@ class WorkflowStore:
         if workflow_data['risk_level'] not in ['LOW', 'MEDIUM', 'HIGH']:
             raise ValueError(f"Invalid risk_level: {workflow_data['risk_level']}")
         
-        valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED']
+        valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'APPROVED', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED']
         if workflow_data['status'] not in valid_statuses:
             raise ValueError(f"Invalid status: {workflow_data['status']}")
         
@@ -280,7 +280,7 @@ class WorkflowStore:
         Raises:
             ValueError: Invalid status (NO FALLBACK)
         """
-        valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED']
+        valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'APPROVED', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED']
         if status not in valid_statuses:
             raise ValueError(f"Invalid status: {status}")
         
@@ -404,7 +404,7 @@ class WorkflowStore:
         if not transitioned_by or not isinstance(transitioned_by, str):
             raise ValueError("transitioned_by must be a non-empty string")
         
-        valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED']
+        valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'APPROVED', 'AUTO_APPROVED', 'REJECTED', 'EXECUTED']
         if new_status not in valid_statuses:
             raise ValueError(f"Invalid new_status: {new_status}")
         

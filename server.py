@@ -683,7 +683,7 @@ async def get_workflow(workflow_id: str):
 async def approve_workflow(workflow_id: str, request: WorkflowApprovalRequest):
     """Approve a workflow."""
     try:
-        result = await workflow_service.approve_workflow(
+        result = await workflow_service.approve_action_item_workflow(
             workflow_id=workflow_id,
             approved_by=request.approved_by,
             reasoning=request.reasoning

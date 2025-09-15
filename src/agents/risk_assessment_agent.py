@@ -1186,8 +1186,10 @@ Return validation decision with analysis as valid JSON format."""
 Your role is to determine the appropriate next status for individual action items after human approval.
 
 CRITICAL INSTRUCTIONS:
-- Determine next status: AUTO_APPROVED or EXECUTED
-- Consider if action item can be immediately executed or needs additional preparation
+- Determine next status: APPROVED or AUTO_APPROVED only
+- NEVER use EXECUTED status - that is reserved for after actual execution
+- APPROVED = requires manual execution trigger
+- AUTO_APPROVED = can be automatically scheduled for execution
 - Evaluate {workflow_type}-specific execution requirements
 - Provide reasoning for status decision
 - NO HARDCODED LOGIC - base decisions on action item specifics and context
@@ -1272,8 +1274,10 @@ Return next status decision (AUTO_APPROVED or EXECUTED) with reasoning as valid 
 Your role is to determine the appropriate next status for workflows after human approval.
 
 CRITICAL INSTRUCTIONS:
-- Determine next status: AUTO_APPROVED or EXECUTED
-- Consider if workflow can be immediately executed or needs additional preparation
+- Determine next status: APPROVED or AUTO_APPROVED only
+- NEVER use EXECUTED status - that is reserved for after actual execution
+- APPROVED = requires manual execution trigger
+- AUTO_APPROVED = can be automatically scheduled for execution
 - Provide reasoning for status decision
 - NO HARDCODED LOGIC - base decisions on workflow specifics and context
 - Return your decision as valid JSON format"""

@@ -422,7 +422,7 @@ Human Executor Step:
         )
         
         new_status = next_status_decision.get('next_status', 'AUTO_APPROVED')
-        if new_status not in ['AUTO_APPROVED', 'EXECUTED']:
+        if new_status not in ['APPROVED', 'AUTO_APPROVED']:
             raise ValueError(f"Invalid next status from LLM agent: {new_status}")
         
         # Update workflow
@@ -1008,7 +1008,7 @@ Human Executor Step:
         )
         
         new_status = next_status_decision.get('next_status', 'AUTO_APPROVED')
-        if new_status not in ['AUTO_APPROVED', 'EXECUTED']:
+        if new_status not in ['APPROVED', 'AUTO_APPROVED']:
             raise ValueError(f"Invalid next status from LLM agent: {new_status}")
         
         # Update workflow
