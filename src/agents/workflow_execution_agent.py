@@ -111,7 +111,13 @@ class WorkflowExecutionAgent:
                     raise ValueError(f"LLM response missing required field: {field}")
             
             # Validate executor type
-            valid_executors = ['email', 'crm', 'disclosure', 'task', 'training']
+            valid_executors = [
+                # Human-centric executors
+                'email', 'crm', 'disclosure', 'task', 'training',
+                # API-centric mortgage system executors
+                'servicing_api', 'income_api', 'underwriting_api', 'hardship_api',
+                'pricing_api', 'document_api', 'compliance_api', 'accounting_api'
+            ]
             if decision_data['executor_type'] not in valid_executors:
                 raise ValueError(f"Invalid executor type: {decision_data['executor_type']}")
             
@@ -149,7 +155,13 @@ class WorkflowExecutionAgent:
             ValueError: If cannot generate payload (NO FALLBACK)
         """
         # Validate executor type
-        valid_executors = ['email', 'crm', 'disclosure', 'task', 'training']
+        valid_executors = [
+            # Human-centric executors
+            'email', 'crm', 'disclosure', 'task', 'training',
+            # API-centric mortgage system executors
+            'servicing_api', 'income_api', 'underwriting_api', 'hardship_api',
+            'pricing_api', 'document_api', 'compliance_api', 'accounting_api'
+        ]
         if executor_type not in valid_executors:
             raise ValueError(f"Invalid executor type: {executor_type}")
         
@@ -207,26 +219,39 @@ WORKFLOW CONTEXT:
 - Risk Level: {workflow.get('risk_level', 'UNKNOWN')}
 
 AVAILABLE EXECUTORS:
+
+HUMAN-CENTRIC EXECUTORS:
 1. email - Send emails to borrowers, advisors, or stakeholders
 2. crm - Update customer records, add notes, change status
 3. disclosure - Generate and deliver compliance documents
 4. task - Create tasks for advisors, supervisors, or teams
 5. training - Assign training modules to staff members
 
-CRITICAL RULE: PREFER DIRECT CUSTOMER ACTIONS OVER INTERNAL TASKS
+API-CENTRIC MORTGAGE SYSTEM EXECUTORS:
+6. servicing_api - Loan servicing operations (balance, payments, PMI, escrow)
+7. income_api - Employment and income verification
+8. underwriting_api - DTI calculations, qualification checks
+9. hardship_api - Hardship program evaluation and eligibility
+10. pricing_api - Rate quotes, refinance options, payment calculations
+11. document_api - Document generation and management
+12. compliance_api - Regulatory compliance checks
+13. accounting_api - Financial transactions and adjustments
 
-ANALYSIS RULES - CHOOSE DIRECT ACTIONS:
-1. email - FIRST CHOICE: Send direct customer communication (emails, notifications, requests)
-2. crm - SECOND CHOICE: Update customer records immediately 
-3. disclosure - THIRD CHOICE: Generate compliance documents for customer
-4. task - LAST RESORT: Only for pure internal advisor/supervisor work
-5. training - STAFF ONLY: Training assignments for employees
+DECISION PRIORITY: PREFER API EXECUTORS FOR SYSTEM OPERATIONS, HUMAN EXECUTORS FOR CUSTOMER TOUCHPOINTS
 
 DECISION MATRIX:
-- Customer needs to DO something → email executor (send instructions/requests to customer)
-- Customer needs DOCUMENTS → disclosure executor (generate forms/documents)
-- Customer record needs UPDATE → crm executor (update status/notes)
-- Internal staff needs to WORK → task executor (assign internal work)
+- Need loan data/status → servicing_api
+- Need income verification → income_api
+- Need qualification check → underwriting_api
+- Need hardship evaluation → hardship_api
+- Need rate/payment options → pricing_api
+- Need document creation → document_api
+- Need compliance check → compliance_api
+- Need payment adjustments → accounting_api
+- Customer communication → email
+- Record updates → crm
+- Compliance documents → disclosure
+- Internal work → task
 
 SPECIFIC EXAMPLES:
 - "Confirm prepayment penalties" → email (email customer requesting confirmation)

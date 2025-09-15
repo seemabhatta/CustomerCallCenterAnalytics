@@ -1082,3 +1082,394 @@ class TrainingMockExecutor(BaseMockExecutor):
         for field in required_module_fields:
             if field not in payload['module_details']:
                 raise ValueError(f"Module details missing required field: {field}")
+
+
+class ServicingAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for mortgage servicing API operations.
+
+    Handles loan servicing operations like balance inquiries, payment modifications,
+    PMI updates, and escrow adjustments through simulated API calls.
+    """
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate servicing API execution payload."""
+        try:
+            # Extract workflow context
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            # Generate realistic API endpoint and response
+            payload = {
+                'api_endpoint': self._determine_endpoint(action_item),
+                'request_method': self._determine_method(action_item),
+                'request_payload': self._generate_request_payload(action_item, parameters),
+                'response_payload': self._generate_response_payload(action_item),
+                'response_status': 200,
+                'response_time_ms': self._generate_response_time(),
+                'api_version': 'v1',
+                'system': 'Mortgage Servicing System'
+            }
+
+            return self._generate_base_result('servicing_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Servicing API executor failed: {e}")
+
+    def _determine_endpoint(self, action_item: str) -> str:
+        """Determine API endpoint based on action."""
+        action_lower = action_item.lower()
+
+        if 'loan detail' in action_lower or 'retrieve' in action_lower:
+            return '/api/servicing/loan/{loan_id}/details'
+        elif 'pmi' in action_lower:
+            return '/api/servicing/loan/{loan_id}/pmi'
+        elif 'escrow' in action_lower:
+            return '/api/servicing/loan/{loan_id}/escrow'
+        elif 'payment' in action_lower:
+            return '/api/servicing/loan/{loan_id}/payment-schedule'
+        else:
+            return '/api/servicing/loan/{loan_id}/full-details'
+
+    def _determine_method(self, action_item: str) -> str:
+        """Determine HTTP method based on action."""
+        action_lower = action_item.lower()
+
+        if any(word in action_lower for word in ['update', 'modify', 'change']):
+            return 'PATCH'
+        elif any(word in action_lower for word in ['create', 'add', 'generate']):
+            return 'POST'
+        else:
+            return 'GET'
+
+    def _generate_request_payload(self, action_item: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate realistic request payload."""
+        return {
+            'loan_id': parameters.get('loan_id', 'LN-784523'),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'requested_by': 'system_agent'
+        }
+
+    def _generate_response_payload(self, action_item: str) -> Dict[str, Any]:
+        """Generate realistic API response payload."""
+        action_lower = action_item.lower()
+
+        if 'loan detail' in action_lower:
+            return {
+                'loan_id': 'LN-784523',
+                'current_balance': 385000,
+                'interest_rate': 7.5,
+                'monthly_payment': 3200,
+                'payment_status': 'current',
+                'last_payment_date': '2024-01-01',
+                'origination_date': '2017-03-15'
+            }
+        elif 'pmi' in action_lower:
+            return {
+                'pmi_status': 'active',
+                'monthly_pmi': 150,
+                'ltv_ratio': 82.5,
+                'removal_eligible': False,
+                'required_ltv': 80.0
+            }
+        else:
+            return {
+                'status': 'success',
+                'data_retrieved': True,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+
+    def _generate_response_time(self) -> int:
+        """Generate realistic API response time."""
+        import random
+        return random.randint(100, 500)
+
+
+class IncomeAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for income and employment verification API operations."""
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate income API execution payload."""
+        try:
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            payload = {
+                'api_endpoint': '/api/verification/employment',
+                'request_method': 'POST',
+                'request_payload': {
+                    'employer_name': parameters.get('employer', 'TechCorp Solutions'),
+                    'employee_ssn': '***-**-****',
+                    'verification_type': 'employment_income',
+                    'requested_by': 'mortgage_servicing'
+                },
+                'response_payload': {
+                    'employment_verified': True,
+                    'income_verified': True,
+                    'monthly_income': 5500,
+                    'employment_start_date': '2024-01-15',
+                    'employment_status': 'active',
+                    'income_stability': 'probationary_period',
+                    'verification_method': 'direct_employer_contact'
+                },
+                'response_status': 200,
+                'response_time_ms': 2300,
+                'system': 'Income Verification Service'
+            }
+
+            return self._generate_base_result('income_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Income API executor failed: {e}")
+
+
+class UnderwritingAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for underwriting and qualification API operations."""
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate underwriting API execution payload."""
+        try:
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            payload = {
+                'api_endpoint': '/api/underwriting/dti/calculate',
+                'request_method': 'POST',
+                'request_payload': {
+                    'gross_monthly_income': parameters.get('income', 5500),
+                    'housing_expenses': parameters.get('housing_payment', 3200),
+                    'other_monthly_debts': parameters.get('other_debts', 750)
+                },
+                'response_payload': {
+                    'dti_ratio': 71.8,
+                    'housing_ratio': 58.2,
+                    'qualification_status': 'exceeds_standard_guidelines',
+                    'requires_exception_approval': True,
+                    'max_recommended_payment': 2420,
+                    'risk_assessment': 'elevated'
+                },
+                'response_status': 200,
+                'response_time_ms': 89,
+                'system': 'Underwriting Decision Engine'
+            }
+
+            return self._generate_base_result('underwriting_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Underwriting API executor failed: {e}")
+
+
+class HardshipAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for hardship assistance API operations."""
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate hardship API execution payload."""
+        try:
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            payload = {
+                'api_endpoint': '/api/hardship/evaluate',
+                'request_method': 'POST',
+                'request_payload': {
+                    'hardship_type': 'involuntary_job_loss',
+                    'income_reduction_percent': 35,
+                    'reemployment_status': 'employed_lower_income',
+                    'loan_current_status': True
+                },
+                'response_payload': {
+                    'eligible_programs': [
+                        'forbearance_3month',
+                        'loan_modification',
+                        'payment_deferral'
+                    ],
+                    'fast_track_approved': True,
+                    'specialist_assigned': 'HS_AGENT_042',
+                    'priority_level': 'high',
+                    'documentation_required': ['hardship_affidavit', 'income_verification']
+                },
+                'response_status': 200,
+                'response_time_ms': 567,
+                'system': 'Hardship Assistance Platform'
+            }
+
+            return self._generate_base_result('hardship_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Hardship API executor failed: {e}")
+
+
+class PricingAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for pricing and refinance option API operations."""
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate pricing API execution payload."""
+        try:
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            payload = {
+                'api_endpoint': '/api/pricing/refinance/hardship-options',
+                'request_method': 'POST',
+                'request_payload': {
+                    'current_rate': parameters.get('current_rate', 7.5),
+                    'loan_amount': parameters.get('loan_amount', 385000),
+                    'hardship_qualified': True,
+                    'credit_score': parameters.get('credit_score', 680)
+                },
+                'response_payload': {
+                    'options': [
+                        {
+                            'program': 'FHA_Streamline_Hardship',
+                            'interest_rate': 6.0,
+                            'monthly_payment': 2315,
+                            'closing_costs': 0,
+                            'term_years': 30
+                        },
+                        {
+                            'program': 'In_House_Modification',
+                            'interest_rate': 5.5,
+                            'monthly_payment': 2180,
+                            'closing_costs': 1500,
+                            'term_years': 40
+                        }
+                    ],
+                    'savings_analysis': {
+                        'monthly_savings': 885,
+                        'annual_savings': 10620
+                    }
+                },
+                'response_status': 200,
+                'response_time_ms': 1200,
+                'system': 'Pricing Engine'
+            }
+
+            return self._generate_base_result('pricing_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Pricing API executor failed: {e}")
+
+
+class DocumentAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for document generation and management API operations."""
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate document API execution payload."""
+        try:
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            payload = {
+                'api_endpoint': '/api/documents/generate/hardship-package',
+                'request_method': 'POST',
+                'request_payload': {
+                    'loan_id': parameters.get('loan_id', 'LN-784523'),
+                    'document_types': [
+                        'hardship_affidavit',
+                        'income_verification_form',
+                        'refinance_comparison'
+                    ],
+                    'borrower_info': {
+                        'name': 'John Smith',
+                        'email': 'customer@email.com'
+                    }
+                },
+                'response_payload': {
+                    'package_id': 'DOC_PKG_98234',
+                    'documents_generated': 5,
+                    'pdf_urls': [
+                        '/documents/hardship_affidavit_98234.pdf',
+                        '/documents/income_verification_98234.pdf',
+                        '/documents/refinance_options_98234.pdf',
+                        '/documents/payment_comparison_98234.pdf',
+                        '/documents/next_steps_98234.pdf'
+                    ],
+                    'expiration_date': (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+                },
+                'response_status': 201,
+                'response_time_ms': 3400,
+                'system': 'Document Management Platform'
+            }
+
+            return self._generate_base_result('document_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Document API executor failed: {e}")
+
+
+class ComplianceAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for regulatory compliance API operations."""
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate compliance API execution payload."""
+        try:
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            payload = {
+                'api_endpoint': '/api/compliance/cfpb/hardship-check',
+                'request_method': 'POST',
+                'request_payload': {
+                    'action_type': 'hardship_assistance',
+                    'loan_type': 'conventional',
+                    'state': 'CA',
+                    'interaction_type': 'inbound_call'
+                },
+                'response_payload': {
+                    'compliant': True,
+                    'required_disclosures': ['RESPA', 'TILA', 'CFPB_1024'],
+                    'disclosure_timing': 'within_3_business_days',
+                    'documentation_requirements': ['signed_hardship_affidavit'],
+                    'regulatory_flags': [],
+                    'audit_trail_id': 'AUDIT_7829342'
+                },
+                'response_status': 200,
+                'response_time_ms': 234,
+                'system': 'Compliance Management System'
+            }
+
+            return self._generate_base_result('compliance_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Compliance API executor failed: {e}")
+
+
+class AccountingAPIMockExecutor(BaseMockExecutor):
+    """Mock executor for accounting and financial transaction API operations."""
+
+    def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate accounting API execution payload."""
+        try:
+            workflow_data = workflow.get('workflow_data', {})
+            action_item = workflow_data.get('action_item', '')
+
+            payload = {
+                'api_endpoint': '/api/accounting/payment/modify',
+                'request_method': 'PATCH',
+                'request_payload': {
+                    'loan_id': parameters.get('loan_id', 'LN-784523'),
+                    'modification_type': 'forbearance_payment_adjustment',
+                    'new_payment_amount': 1600,
+                    'effective_date': '2024-02-01',
+                    'duration_months': 3
+                },
+                'response_payload': {
+                    'transaction_id': 'TXN_ACC_98234',
+                    'old_payment': 3200,
+                    'new_payment': 1600,
+                    'deferred_amount': 4800,
+                    'payment_schedule_updated': True,
+                    'escrow_adjustment': {
+                        'required': True,
+                        'new_escrow_payment': 450
+                    },
+                    'next_regular_payment_date': '2024-05-01'
+                },
+                'response_status': 200,
+                'response_time_ms': 445,
+                'system': 'Financial Management System'
+            }
+
+            return self._generate_base_result('accounting_api', payload)
+
+        except Exception as e:
+            raise ValueError(f"Accounting API executor failed: {e}")
