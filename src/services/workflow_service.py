@@ -692,6 +692,10 @@ Each step should be clear enough for someone to follow without additional guidan
                     }
 
                     # Create workflow data for this action item
+                    # Normalize risk_level to uppercase for database compatibility
+                    if risk_assessment and 'risk_level' in risk_assessment:
+                        risk_assessment['risk_level'] = str(risk_assessment['risk_level']).upper()
+
                     return {
                         'plan_id': plan_id,
                         'analysis_id': plan_data['analysis_id'],
@@ -770,17 +774,24 @@ Each step should be clear enough for someone to follow without additional guidan
         
         # Bulk create all workflows
         if all_workflows:
-            workflow_ids = self.workflow_store.create_bulk(all_workflows)
-            
-            # Return workflows with their assigned IDs
-            created_workflows = []
-            for i, workflow_id in enumerate(workflow_ids):
-                workflow = self.workflow_store.get_by_id(workflow_id)
-                if workflow:
-                    created_workflows.append(workflow)
-            
-            return created_workflows
-        
+            try:
+                add_span_event("workflow.bulk_create_start", workflow_count=len(all_workflows))
+                workflow_ids = self.workflow_store.create_bulk(all_workflows)
+                add_span_event("workflow.bulk_create_success", created_count=len(workflow_ids))
+
+                # Return workflows with their assigned IDs
+                created_workflows = []
+                for i, workflow_id in enumerate(workflow_ids):
+                    workflow = self.workflow_store.get_by_id(workflow_id)
+                    if workflow:
+                        created_workflows.append(workflow)
+
+                return created_workflows
+            except Exception as e:
+                add_span_event("workflow.bulk_create_failed", error=str(e), workflow_count=len(all_workflows))
+                # NO FALLBACK - fail fast with clear error
+                raise Exception(f"Failed to save workflows to database: {str(e)}")
+
         return []
     
     async def get_workflows_by_plan(self, plan_id: str) -> List[Dict[str, Any]]:
