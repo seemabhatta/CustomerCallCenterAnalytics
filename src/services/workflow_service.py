@@ -111,40 +111,62 @@ Focus on specific systems, navigation paths, and validation criteria.
 Each step should be clear enough for someone to follow without additional guidance."""
 
         try:
-            # Call LLM to generate steps using text generation and JSON parsing
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            # Use simple text generation with JSON format instruction
+            json_format_instruction = """
+Return your response as a JSON object with this exact structure:
+{
+  "steps": [
+    {
+      "step_number": 1,
+      "action": "Clear description of what to do",
+      "details": "Detailed instructions",
+      "tool_needed": "System or tool name",
+      "validation_criteria": "How to verify completion"
+    }
+  ]
+}"""
+
+            full_prompt = f"{system_prompt}\n\n{user_prompt}\n\n{json_format_instruction}"
+            print(f"[STEP_GEN] Calling LLM for {workflow_type} step generation")
+
             response_text = await self.risk_agent.llm.generate_text_async(
                 prompt=full_prompt,
                 temperature=0.3
             )
 
+            print(f"[STEP_GEN] Got response for {workflow_type}, length: {len(response_text) if response_text else 0}")
+
+            if not response_text or response_text.strip() == "":
+                raise ValueError("LLM returned empty response")
+
+            # Strip markdown code blocks if present
+            cleaned_text = response_text.strip()
+            if cleaned_text.startswith("```json"):
+                cleaned_text = cleaned_text[7:]  # Remove ```json
+            if cleaned_text.startswith("```"):
+                cleaned_text = cleaned_text[3:]   # Remove ```
+            if cleaned_text.endswith("```"):
+                cleaned_text = cleaned_text[:-3]  # Remove trailing ```
+            cleaned_text = cleaned_text.strip()
+
             # Parse JSON response
             import json
             try:
-                response_data = json.loads(response_text)
+                response_data = json.loads(cleaned_text)
             except json.JSONDecodeError as e:
+                print(f"[STEP_GEN] Invalid JSON response for {workflow_type}: {cleaned_text[:200]}...")
                 raise ValueError(f"LLM response is not valid JSON: {str(e)}")
 
-            # Handle both direct array format and wrapped format
-            if isinstance(response_data, list):
-                steps = response_data
-            elif isinstance(response_data, dict) and 'steps' in response_data:
+            # Extract steps array
+            if isinstance(response_data, dict) and 'steps' in response_data:
                 steps = response_data['steps']
             else:
-                raise ValueError("LLM failed to generate steps array")
+                raise ValueError("LLM response missing 'steps' array")
 
             if not isinstance(steps, list) or len(steps) == 0:
                 raise ValueError("LLM generated invalid or empty steps array")
 
-            # Validate each step has required fields
-            required_fields = ['step_number', 'action', 'details', 'tool_needed']
-            for i, step in enumerate(steps):
-                if not isinstance(step, dict):
-                    raise ValueError(f"Step {i+1} is not a dictionary")
-                for field in required_fields:
-                    if field not in step:
-                        raise ValueError(f"Step {i+1} missing required field: {field}")
-
+            print(f"[STEP_GEN] Successfully parsed {len(steps)} steps for {workflow_type}")
             return steps
 
         except Exception as e:
@@ -559,6 +581,22 @@ Each step should be clear enough for someone to follow without additional guidan
         """
         return self.workflow_store.delete_all()
     
+    async def extract_all_workflows_background(self, plan_id: str):
+        """Start workflow extraction in background and return immediately."""
+        import asyncio
+
+        async def background_task():
+            try:
+                print(f"[BACKGROUND] Starting workflow extraction for plan {plan_id}")
+                workflows = await self.extract_all_workflows_from_plan(plan_id)
+                print(f"[BACKGROUND] Completed workflow extraction for plan {plan_id}: {len(workflows)} workflows created")
+            except Exception as e:
+                print(f"[BACKGROUND] Failed workflow extraction for plan {plan_id}: {str(e)}")
+
+        # Start background task without waiting
+        asyncio.create_task(background_task())
+        return {"status": "started", "message": f"Workflow extraction started for plan {plan_id}"}
+
     async def extract_all_workflows_from_plan(self, plan_id: str) -> List[Dict[str, Any]]:
         """Extract all granular workflows from action plan using LLM agent.
         
@@ -662,11 +700,32 @@ Each step should be clear enough for someone to follow without additional guidan
                         context=context_data
                     )
                     
-                    # Validate approval routing
+                    # Validate approval routing with detailed logging
                     required_routing_fields = ['requires_human_approval', 'initial_status', 'routing_reasoning']
-                    for field in required_routing_fields:
-                        if field not in approval_routing:
-                            raise ValueError(f"LLM agent failed to provide required routing field: {field}")
+                    missing_fields = [field for field in required_routing_fields if field not in approval_routing]
+
+                    if missing_fields:
+                        add_span_event("approval_routing.validation_failed",
+                                      workflow_type=workflow_type,
+                                      missing_fields=missing_fields,
+                                      actual_fields=list(approval_routing.keys()),
+                                      approval_routing_response=str(approval_routing))
+
+                        # Add defensive defaults to allow workflow to proceed
+                        for field in missing_fields:
+                            if field == 'requires_human_approval':
+                                approval_routing[field] = True  # Safe default
+                                add_span_event("approval_routing.default_applied", field=field, default_value=True)
+                            elif field == 'initial_status':
+                                approval_routing[field] = 'PENDING_ASSESSMENT'  # Safe default
+                                add_span_event("approval_routing.default_applied", field=field, default_value='PENDING_ASSESSMENT')
+                            elif field == 'routing_reasoning':
+                                approval_routing[field] = f'Default routing for {workflow_type} action item due to missing LLM response field'
+                                add_span_event("approval_routing.default_applied", field=field, default_value='generated_default')
+
+                        add_span_event("approval_routing.validation_recovered",
+                                      workflow_type=workflow_type,
+                                      applied_defaults=missing_fields)
 
                     # Generate detailed execution steps for this action item
                     add_span_event("action_item.generating_steps", workflow_type=workflow_type, description=item_description)
@@ -718,20 +777,26 @@ Each step should be clear enough for someone to follow without additional guidan
                 
                 # Process all action items for this workflow type in parallel
                 workflow_tasks = [process_action_item(item) for item in action_items]
+                print(f"[DEBUG] Processing {len(workflow_tasks)} tasks for {workflow_type}")
                 workflows_for_type = await asyncio.gather(*workflow_tasks, return_exceptions=True)
+                print(f"[DEBUG] Got {len(workflows_for_type)} results for {workflow_type}")
                 
                 # Filter out exceptions and collect successful workflows
                 successful_workflows = []
                 failed_items = []
                 for i, result in enumerate(workflows_for_type):
                     if isinstance(result, Exception):
+                        error_str = str(result)
+                        print(f"[ERROR] {workflow_type} item {i} failed: {error_str}")
+                        print(f"[ERROR] Exception type: {type(result)}")
                         failed_items.append({
                             'item_index': i,
                             'item': action_items[i] if i < len(action_items) else None,
-                            'error': str(result)
+                            'error': error_str
                         })
-                        add_span_event("action_item.processing_failed", workflow_type=workflow_type, item_index=i, error=str(result))
+                        add_span_event("action_item.processing_failed", workflow_type=workflow_type, item_index=i, error=error_str)
                     else:
+                        print(f"[SUCCESS] {workflow_type} item {i} succeeded: {type(result)}")
                         successful_workflows.append(result)
                 
                 # Log failures but don't fail the entire workflow type

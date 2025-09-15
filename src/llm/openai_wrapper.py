@@ -44,6 +44,22 @@ class ActionItemList(BaseModel):
     total_items: int = Field(description="Total number of action items")
 
 
+class WorkflowStep(BaseModel):
+    """Structured output for individual workflow step."""
+    step_number: int = Field(description="Sequential step number")
+    action: str = Field(description="Clear, actionable step description")
+    details: str = Field(description="Detailed instructions for executing this step")
+    tool_needed: str = Field(description="System or tool required for this step")
+    validation_criteria: str = Field(description="How to verify this step was completed correctly")
+
+
+class WorkflowSteps(BaseModel):
+    """Collection of workflow steps for an action item."""
+    steps: List[WorkflowStep] = Field(description="Ordered list of executable steps")
+    total_steps: int = Field(description="Total number of steps")
+    estimated_duration_minutes: int = Field(description="Estimated time to complete all steps")
+
+
 class OpenAIWrapper:
     """Wrapper for OpenAI Responses API with structured outputs."""
     

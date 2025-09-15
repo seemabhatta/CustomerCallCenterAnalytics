@@ -624,14 +624,14 @@ async def get_pending_workflows():
 
 @app.post("/api/v1/workflows/extract-all")
 async def extract_all_workflows(request: WorkflowExtractRequest):
-    """Extract all granular workflows from action plan."""
+    """Extract all granular workflows from action plan (background processing)."""
     try:
-        result = await workflow_service.extract_all_workflows_from_plan(request.plan_id)
+        result = await workflow_service.extract_all_workflows_background(request.plan_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to extract all workflows: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start workflow extraction: {str(e)}")
 
 @app.get("/api/v1/workflows/plan/{plan_id}")
 async def get_workflows_by_plan(plan_id: str):
