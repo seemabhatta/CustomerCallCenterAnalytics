@@ -111,7 +111,7 @@ const HeaderCell: React.FC<{ children: React.ReactNode; className?: string }> = 
 
 const Row: React.FC<{ children: React.ReactNode; depth?: number }> = ({ children, depth = 0 }) => (
   <div
-    className={`grid grid-cols-[minmax(300px,1fr)_120px_110px_110px_140px_150px_200px] items-center border-b border-slate-200 hover:bg-slate-50 transition`}
+    className={`grid grid-cols-[minmax(300px,1fr)_100px_120px_150px_100px] items-center border-b border-slate-200 hover:bg-slate-50 transition`}
     style={{ paddingLeft: depth * 16 }}
   >
     {children}
@@ -240,14 +240,14 @@ export default function ExecutionTree() {
         // Build execution steps from individual executions
         const executionSteps: ExecutionStep[] = executions.map((exec, index) => ({
           step_number: index + 1,
-          action: exec.executor_type?.replace('_', ' ').toUpperCase() + ' execution' || 'Unknown action',
+          action: exec.executor_type?.replace(/_/g, ' ').replace(/api/gi, '').trim().toUpperCase() || 'Unknown',
           tool_needed: exec.executor_type || 'unknown',
-          details: `Execute using ${exec.executor_type || 'unknown'}`,
+          details: `Step ${index + 1}`,
           status: exec.execution_status === 'executed' ? 'EXECUTED' :
                   exec.execution_status === 'failed' ? 'ERROR' :
                   exec.execution_status === 'in_progress' ? 'IN_PROGRESS' : 'PENDING',
-          result: exec.execution_status === 'executed' ? 'Completed successfully' :
-                  exec.execution_status === 'failed' ? exec.error_message || 'Execution failed' : undefined,
+          result: exec.execution_status === 'executed' ? 'Complete' :
+                  exec.execution_status === 'failed' ? exec.error_message || 'Failed' : undefined,
           executed_at: exec.executed_at
         }));
 
@@ -340,55 +340,40 @@ export default function ExecutionTree() {
   };
 
   const Header = (
-    <div className="grid grid-cols-[minmax(300px,1fr)_120px_110px_110px_140px_150px_200px] border-b border-slate-300 bg-slate-50">
-      <HeaderCell className="">Execution Tree</HeaderCell>
+    <div className="grid grid-cols-[minmax(300px,1fr)_100px_120px_150px_100px] border-b border-slate-300 bg-slate-50">
+      <HeaderCell className="">Workflow / Steps</HeaderCell>
       <HeaderCell>Status</HeaderCell>
-      <HeaderCell>Risk</HeaderCell>
-      <HeaderCell>Priority</HeaderCell>
-      <HeaderCell>Type/Tool</HeaderCell>
+      <HeaderCell>Tool</HeaderCell>
       <HeaderCell>Created</HeaderCell>
-      <HeaderCell>Actions</HeaderCell>
+      <HeaderCell>Action</HeaderCell>
     </div>
   );
 
   const renderExecutionStep = (step: ExecutionStep, depth: number, executionId: string) => (
     <Row key={step.step_number} depth={depth}>
       <Cell>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Step {step.step_number}</span>
-            <span className="text-slate-700 font-medium">{step.action}</span>
-          </div>
-          <div className="text-xs text-slate-500 truncate max-w-sm">{step.details}</div>
-          {step.result && (
-            <div className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded mt-1">
-              {step.result}
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 font-mono">{step.step_number}.</span>
+          <span className="text-sm text-slate-600">{step.action}</span>
         </div>
       </Cell>
       <Cell>
-        <StatusPill status={step.status} />
-      </Cell>
-      <Cell>
-        {/* Risk inherited from parent workflow */}
-      </Cell>
-      <Cell>
-        {/* Priority inherited from parent workflow */}
+        {step.status === 'EXECUTED' ? (
+          <CheckCircle2 className="w-4 h-4 text-green-600" />
+        ) : step.status === 'ERROR' ? (
+          <XCircle className="w-4 h-4 text-red-600" />
+        ) : (
+          <StatusPill status={step.status} />
+        )}
       </Cell>
       <Cell>
         <ToolPill tool={step.tool_needed} />
       </Cell>
-      <Cell className="text-slate-500">
+      <Cell className="text-xs text-slate-500">
         {step.executed_at ? new Date(step.executed_at).toLocaleString() : '-'}
       </Cell>
       <Cell>
-        <ActionButtons
-          level="step"
-          status={step.status}
-          onExecute={() => handleExecuteStep(executionId, step.step_number)}
-          isLoading={actionLoading[`${executionId}-step-${step.step_number}`]}
-        />
+        <button className="text-xs text-blue-600 hover:underline">Details</button>
       </Cell>
     </Row>
   );
@@ -399,12 +384,9 @@ export default function ExecutionTree() {
         <Cell>
           <div className="flex items-center">
             <TreeCaret open={!!open[execution.id]} onClick={() => toggle(execution.id)} />
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-900">{execution.workflow_id.slice(3, 11)}…</span>
-                <WorkflowTypePill type={execution.workflow_type} />
-              </div>
-              <div className="text-xs text-slate-600">{execution.action_item}</div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-slate-700">{execution.workflow_id.slice(0, 8)}</span>
+              <WorkflowTypePill type={execution.workflow_type} />
               <span className="text-xs text-slate-500">({execution.execution_steps?.length || 0} steps)</span>
             </div>
           </div>
@@ -413,26 +395,18 @@ export default function ExecutionTree() {
           <StatusPill status={execution.status} />
         </Cell>
         <Cell>
-          <RiskPill risk={execution.risk_level} />
-        </Cell>
-        <Cell>
-          <PriorityPill priority={execution.priority} />
-        </Cell>
-        <Cell>
           <span className="text-xs text-slate-500">Workflow</span>
         </Cell>
-        <Cell className="text-slate-500">
+        <Cell className="text-xs text-slate-500">
           {new Date(execution.created_at).toLocaleString()}
         </Cell>
         <Cell>
-          <ActionButtons
-            level="workflow"
-            status={execution.status}
-            onExecute={() => handleExecuteWorkflow(execution.id)}
-            onApprove={() => handleApproveWorkflow(execution.id)}
-            onReject={() => handleRejectWorkflow(execution.id)}
-            isLoading={actionLoading[execution.id]}
-          />
+          <button
+            className="text-xs text-blue-600 hover:underline"
+            onClick={() => toggle(execution.id)}
+          >
+            {open[execution.id] ? 'Collapse' : 'Expand'}
+          </button>
         </Cell>
       </Row>
       {open[execution.id] && execution.execution_steps?.map((step) => renderExecutionStep(step, depth + 1, execution.id))}
