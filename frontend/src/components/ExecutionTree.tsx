@@ -316,7 +316,7 @@ export default function ExecutionTree() {
                 <WorkflowTypePill type={execution.workflow_type} />
               </div>
               <div className="text-xs text-slate-600">{execution.action_item}</div>
-              <span className="text-xs text-slate-500">({execution.execution_steps.length} steps)</span>
+              <span className="text-xs text-slate-500">({execution.execution_steps?.length || 0} steps)</span>
             </div>
           </div>
         </Cell>
@@ -346,7 +346,7 @@ export default function ExecutionTree() {
           />
         </Cell>
       </Row>
-      {open[execution.id] && execution.execution_steps.map((step) => renderExecutionStep(step, depth + 1, execution.id))}
+      {open[execution.id] && execution.execution_steps?.map((step) => renderExecutionStep(step, depth + 1, execution.id))}
     </React.Fragment>
   );
 
