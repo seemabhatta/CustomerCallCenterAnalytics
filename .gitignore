@@ -30,6 +30,9 @@ wheels/
 data/documents
 data/callbacks
 data/emails
+*.wal
+*.db-shm
+*.db-journal
 
 # IDE
 .vscode/
