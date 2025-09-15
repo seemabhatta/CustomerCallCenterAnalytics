@@ -220,6 +220,11 @@ class WorkflowExecutionEngine:
 
             overall_execution_record = {
                 'workflow_id': workflow_id,
+                'executor_type': 'workflow',
+                'execution_payload': {
+                    'workflow_steps': step_results,
+                    'workflow_data': workflow.get('workflow_data', {})
+                },
                 'execution_status': 'executed' if len(failed_steps) == 0 else 'partial_failure',
                 'executed_at': datetime.now(timezone.utc).isoformat(),
                 'executed_by': executed_by,
