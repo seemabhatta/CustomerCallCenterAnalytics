@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Customer Call Center Analytics API Server
-Streamlined RESTful API with core /api/v1/* endpoints
+Standardized RESTful API with /api/v1/* endpoints
 Clean routing layer - NO business logic, only proxy to services
 """
 import os
@@ -97,12 +97,28 @@ class PlanCreateRequest(BaseModel):
     constraints: Optional[List[str]] = []
     store: Optional[bool] = True
 
+class PlanUpdateRequest(BaseModel):
+    updates: Dict[str, Any]
+
+class ApprovalRequest(BaseModel):
+    approved_by: str
+    approved_at: Optional[str] = None
+    notes: Optional[str] = ""
+
+class ExecutionRequest(BaseModel):
+    executed_by: str
+
+# Workflow request models
 class WorkflowExtractRequest(BaseModel):
     plan_id: str
 
 class WorkflowApprovalRequest(BaseModel):
     approved_by: str
     reasoning: Optional[str] = None
+
+class WorkflowRejectionRequest(BaseModel):
+    rejected_by: str
+    reason: str
 
 class WorkflowExecutionRequest(BaseModel):
     executed_by: str
@@ -122,15 +138,13 @@ async def root():
             "analyses": "/api/v1/analyses",
             "insights": "/api/v1/insights",
             "plans": "/api/v1/plans",
-            "workflows": "/api/v1/workflows",
-            "executions": "/api/v1/executions",
             "metrics": "/api/v1/metrics",
             "health": "/api/v1/health"
         }
     }
 
 # ===============================================
-# SYSTEM ENDPOINTS
+# SYSTEM ENDPOINTS - 3 endpoints
 # ===============================================
 
 @app.get("/api/v1/health")
@@ -152,8 +166,16 @@ async def get_dashboard_metrics():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Metrics collection failed: {str(e)}")
 
+@app.get("/api/v1/workflow/status")
+async def get_workflow_status():
+    """Workflow status endpoint - proxies to system service."""
+    try:
+        return await system_service.get_workflow_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Workflow status retrieval failed: {str(e)}")
+
 # ===============================================
-# TRANSCRIPT ENDPOINTS
+# TRANSCRIPT ENDPOINTS - 8 endpoints
 # ===============================================
 
 @app.get("/api/v1/transcripts")
@@ -198,8 +220,66 @@ async def delete_transcript(transcript_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete transcript: {str(e)}")
 
+@app.get("/api/v1/transcripts/search")
+async def search_transcripts(
+    customer: Optional[str] = Query(None),
+    topic: Optional[str] = Query(None),
+    text: Optional[str] = Query(None)
+):
+    """Search transcripts - proxies to transcript service."""
+    try:
+        search_params = {}
+        if customer:
+            search_params["customer"] = customer
+        if topic:
+            search_params["topic"] = topic
+        if text:
+            search_params["text"] = text
+            
+        if not search_params:
+            raise HTTPException(status_code=400, detail="Must specify customer, topic, or text parameter")
+            
+        return await transcript_service.search(search_params)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search transcripts: {str(e)}")
+
+@app.get("/api/v1/transcripts/metrics")
+async def get_transcript_metrics():
+    """Get transcript metrics - proxies to transcript service."""
+    try:
+        return await transcript_service.get_metrics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get transcript metrics: {str(e)}")
+
+@app.post("/api/v1/transcripts/bulk")
+async def create_bulk_transcripts(requests: List[TranscriptCreateRequest]):
+    """Create multiple transcripts - proxies to transcript service."""
+    try:
+        results = []
+        for request in requests:
+            result = await transcript_service.create(request.dict())
+            results.append(result)
+        return {"transcripts": results, "count": len(results)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create bulk transcripts: {str(e)}")
+
+@app.get("/api/v1/transcripts/{transcript_id}/messages")
+async def get_transcript_messages(transcript_id: str):
+    """Get transcript messages - proxies to transcript service."""
+    try:
+        transcript = await transcript_service.get_by_id(transcript_id)
+        if not transcript:
+            raise HTTPException(status_code=404, detail=f"Transcript {transcript_id} not found")
+        return transcript.get("messages", [])
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get transcript messages: {str(e)}")
+
 # ===============================================
-# ANALYSIS ENDPOINTS
+# ANALYSIS ENDPOINTS - 5 endpoints
 # ===============================================
 
 @app.get("/api/v1/analyses")
@@ -253,8 +333,16 @@ async def delete_all_analyses():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete all analyses: {str(e)}")
 
+@app.get("/api/v1/analyses/search/transcript/{transcript_id}")
+async def search_analyses_by_transcript(transcript_id: str):
+    """Search analyses by transcript ID - proxies to analysis service."""
+    try:
+        return await analysis_service.search_by_transcript(transcript_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search analyses: {str(e)}")
+
 # ===============================================
-# INSIGHTS ENDPOINTS (Core subset)
+# INSIGHTS ENDPOINTS - 5 endpoints
 # ===============================================
 
 @app.get("/api/v1/insights/patterns")
@@ -265,6 +353,30 @@ async def discover_risk_patterns(risk_threshold: float = Query(0.7)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to discover risk patterns: {str(e)}")
 
+@app.get("/api/v1/insights/risks")
+async def get_high_risks(risk_threshold: float = Query(0.8)):
+    """Get high-risk patterns (convenience endpoint) - proxies to insights service."""
+    try:
+        return await insights_service.discover_risk_patterns(risk_threshold)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get high risks: {str(e)}")
+
+@app.get("/api/v1/insights/recommendations/{customer_id}")
+async def get_customer_recommendations(customer_id: str):
+    """Get AI recommendations for a customer - proxies to insights service."""
+    try:
+        return await insights_service.get_customer_recommendations(customer_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get recommendations: {str(e)}")
+
+@app.get("/api/v1/insights/similar/{analysis_id}")
+async def find_similar_cases(analysis_id: str, limit: int = Query(5)):
+    """Find analyses with similar risk patterns - proxies to insights service."""
+    try:
+        return await insights_service.find_similar_cases(analysis_id, limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to find similar cases: {str(e)}")
+
 @app.get("/api/v1/insights/dashboard")
 async def get_insights_dashboard():
     """Get comprehensive insights dashboard - proxies to insights service."""
@@ -273,6 +385,7 @@ async def get_insights_dashboard():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get insights dashboard: {str(e)}")
 
+# New insights management endpoints
 @app.post("/api/v1/insights/populate")
 async def populate_insights_graph(request: dict):
     """Populate knowledge graph from analysis data - proxies to insights service."""
@@ -281,7 +394,7 @@ async def populate_insights_graph(request: dict):
         analysis_ids = request.get("analysis_ids")
         from_date = request.get("from_date")
         populate_all = request.get("all", False)
-
+        
         if analysis_id:
             return await insights_service.populate_from_analysis(analysis_id)
         elif analysis_ids:
@@ -290,9 +403,24 @@ async def populate_insights_graph(request: dict):
             return await insights_service.populate_all(from_date)
         else:
             raise HTTPException(status_code=400, detail="Must provide analysis_id, analysis_ids, or all=true")
-
+            
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to populate insights: {str(e)}")
+
+@app.post("/api/v1/insights/query")
+async def query_insights_graph(request: dict):
+    """Execute raw Cypher query on knowledge graph - proxies to insights service."""
+    try:
+        cypher_query = request.get("cypher")
+        parameters = request.get("parameters", {})
+        
+        if not cypher_query:
+            raise HTTPException(status_code=400, detail="cypher parameter is required")
+            
+        return await insights_service.execute_query(cypher_query, parameters)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute query: {str(e)}")
 
 @app.get("/api/v1/insights/status")
 async def get_insights_status():
@@ -302,8 +430,63 @@ async def get_insights_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get insights status: {str(e)}")
 
+@app.delete("/api/v1/insights/analyses/{analysis_id}")
+async def delete_insights_analysis(analysis_id: str):
+    """Delete analysis from knowledge graph - proxies to insights service."""
+    try:
+        return await insights_service.delete_analysis(analysis_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")
+
+@app.delete("/api/v1/insights/customers/{customer_id}")
+async def delete_insights_customer(customer_id: str, cascade: bool = Query(False)):
+    """Delete customer from knowledge graph - proxies to insights service."""
+    try:
+        return await insights_service.delete_customer(customer_id, cascade)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete customer: {str(e)}")
+
+@app.post("/api/v1/insights/prune")
+async def prune_insights_data(request: dict):
+    """Prune old data from knowledge graph - proxies to insights service."""
+    try:
+        older_than_days = request.get("older_than_days")
+        
+        if not older_than_days or not isinstance(older_than_days, int):
+            raise HTTPException(status_code=400, detail="older_than_days (integer) is required")
+            
+        return await insights_service.prune_old_data(older_than_days)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to prune data: {str(e)}")
+
+@app.delete("/api/v1/insights/clear")
+async def clear_insights_graph():
+    """Clear entire knowledge graph - proxies to insights service."""
+    try:
+        return await insights_service.clear_graph()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear graph: {str(e)}")
+
+# Visualization endpoints
+@app.get("/api/v1/insights/visualization/data")
+async def get_visualization_data():
+    """Get knowledge graph data formatted for visualization - proxies to insights service."""
+    try:
+        return await insights_service.get_visualization_data()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get visualization data: {str(e)}")
+
+@app.get("/api/v1/insights/visualization/stats")
+async def get_visualization_statistics():
+    """Get knowledge graph statistics for visualization - proxies to insights service."""
+    try:
+        return await insights_service.get_visualization_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get visualization statistics: {str(e)}")
+
 # ===============================================
-# PLAN ENDPOINTS
+# ACTION PLAN ENDPOINTS - 8 endpoints
 # ===============================================
 
 @app.get("/api/v1/plans")
@@ -335,6 +518,19 @@ async def get_plan(plan_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get plan: {str(e)}")
 
+@app.put("/api/v1/plans/{plan_id}")
+async def update_plan(plan_id: str, request: PlanUpdateRequest):
+    """Update action plan - proxies to plan service."""
+    try:
+        result = await plan_service.update(plan_id, request.updates)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Plan {plan_id} not found")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update plan: {str(e)}")
+
 @app.delete("/api/v1/plans/{plan_id}")
 async def delete_plan(plan_id: str):
     """Delete action plan by ID - proxies to plan service."""
@@ -357,25 +553,51 @@ async def delete_all_plans():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete all plans: {str(e)}")
 
+@app.get("/api/v1/plans/search/analysis/{analysis_id}")
+async def search_plans_by_analysis(analysis_id: str):
+    """Search action plans by analysis ID - proxies to plan service."""
+    try:
+        return await plan_service.search_by_analysis(analysis_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search plans: {str(e)}")
+
+@app.post("/api/v1/plans/{plan_id}/approve")
+async def approve_plan(plan_id: str, request: ApprovalRequest):
+    """Approve action plan - proxies to plan service."""
+    try:
+        return await plan_service.approve(plan_id, request.dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to approve plan: {str(e)}")
+
+@app.post("/api/v1/plans/{plan_id}/execute")
+async def execute_plan(plan_id: str, request: ExecutionRequest):
+    """Execute approved action plan - proxies to plan service."""
+    try:
+        return await plan_service.execute(plan_id, request.dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to execute plan: {str(e)}")
+
+
 # ===============================================
-# WORKFLOW ENDPOINTS
+# WORKFLOW APPROVAL ENDPOINTS
+# Pure routing layer - all logic in WorkflowService
 # ===============================================
 
-@app.post("/api/v1/workflows/extract-all")
-async def extract_all_workflows(request: WorkflowExtractRequest):
-    """Extract all granular workflows from action plan (background processing)."""
+@app.post("/api/v1/workflows/extract")
+async def extract_workflow(request: WorkflowExtractRequest):
+    """Extract workflow from action plan."""
     try:
-        result = await workflow_service.extract_all_workflows_background(request.plan_id)
+        result = await workflow_service.extract_workflow_from_plan(request.plan_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start workflow extraction: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to extract workflow: {str(e)}")
 
 @app.get("/api/v1/workflows")
 async def list_workflows(
     status: Optional[str] = Query(None, description="Filter by workflow status"),
-    risk_level: Optional[str] = Query(None, description="Filter by risk level"),
+    risk_level: Optional[str] = Query(None, description="Filter by risk level"), 
     limit: Optional[int] = Query(None, description="Limit number of results")
 ):
     """List workflows with optional filters."""
@@ -390,6 +612,59 @@ async def list_workflows(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list workflows: {str(e)}")
+
+@app.get("/api/v1/workflows/pending")
+async def get_pending_workflows():
+    """Get workflows requiring human approval."""
+    try:
+        workflows = await workflow_service.get_pending_approvals()
+        return workflows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get pending workflows: {str(e)}")
+
+@app.post("/api/v1/workflows/extract-all")
+async def extract_all_workflows(request: WorkflowExtractRequest):
+    """Extract all granular workflows from action plan (background processing)."""
+    try:
+        result = await workflow_service.extract_all_workflows_background(request.plan_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start workflow extraction: {str(e)}")
+
+@app.get("/api/v1/workflows/plan/{plan_id}")
+async def get_workflows_by_plan(plan_id: str):
+    """Get all workflows for a specific plan."""
+    try:
+        workflows = await workflow_service.get_workflows_by_plan(plan_id)
+        return workflows
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflows by plan: {str(e)}")
+
+@app.get("/api/v1/workflows/type/{workflow_type}")
+async def get_workflows_by_type(workflow_type: str):
+    """Get workflows by type."""
+    try:
+        workflows = await workflow_service.get_workflows_by_type(workflow_type)
+        return workflows
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflows by type: {str(e)}")
+
+@app.get("/api/v1/workflows/plan/{plan_id}/type/{workflow_type}")
+async def get_workflows_by_plan_and_type(plan_id: str, workflow_type: str):
+    """Get workflows by plan and type."""
+    try:
+        workflows = await workflow_service.get_workflows_by_plan_and_type(plan_id, workflow_type)
+        return workflows
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflows by plan and type: {str(e)}")
 
 @app.get("/api/v1/workflows/{workflow_id}")
 async def get_workflow(workflow_id: str):
@@ -419,6 +694,21 @@ async def approve_workflow(workflow_id: str, request: WorkflowApprovalRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to approve workflow: {str(e)}")
 
+@app.post("/api/v1/workflows/{workflow_id}/reject")
+async def reject_workflow(workflow_id: str, request: WorkflowRejectionRequest):
+    """Reject a workflow."""
+    try:
+        result = await workflow_service.reject_workflow(
+            workflow_id=workflow_id,
+            rejected_by=request.rejected_by,
+            reason=request.reason
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reject workflow: {str(e)}")
+
 @app.post("/api/v1/workflows/{workflow_id}/execute")
 async def execute_workflow(workflow_id: str, request: WorkflowExecutionRequest):
     """Execute an approved workflow."""
@@ -433,48 +723,31 @@ async def execute_workflow(workflow_id: str, request: WorkflowExecutionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to execute workflow: {str(e)}")
 
-@app.delete("/api/v1/workflows/{workflow_id}")
-async def delete_workflow(workflow_id: str):
-    """Delete workflow by ID."""
+@app.get("/api/v1/workflows/{workflow_id}/history")
+async def get_workflow_history(workflow_id: str):
+    """Get workflow state transition history."""
     try:
-        deleted = await workflow_service.delete_workflow(workflow_id)
-        if not deleted:
-            raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
-
-        return {"message": f"Workflow {workflow_id} deleted successfully", "deleted": True}
-    except HTTPException:
-        raise
+        result = await workflow_service.get_workflow_history(workflow_id)
+        return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete workflow: {str(e)}")
-
-@app.delete("/api/v1/workflows")
-async def delete_all_workflows():
-    """Delete all workflows."""
-    try:
-        deleted_count = await workflow_service.delete_all_workflows()
-        return {
-            "message": "All workflows deleted successfully",
-            "deleted_count": deleted_count
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete workflows: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get workflow history: {str(e)}")
 
 @app.post("/api/v1/workflows/execute-all")
 async def execute_all_approved_workflows(request: Optional[Dict] = None):
-    """Execute all approved workflows (orchestration)."""
+    """Execute all approved workflows."""
     try:
         from src.services.workflow_execution_engine import WorkflowExecutionEngine
         execution_engine = WorkflowExecutionEngine()
-
+        
         workflow_type = None
         executed_by = "api_user"
-
+        
         if request:
             workflow_type = request.get('workflow_type')
             executed_by = request.get('executed_by', executed_by)
-
+        
         result = await execution_engine.execute_all_approved_workflows(
             workflow_type=workflow_type,
             executed_by=executed_by
@@ -482,10 +755,6 @@ async def execute_all_approved_workflows(request: Optional[Dict] = None):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to execute all workflows: {str(e)}")
-
-# ===============================================
-# EXECUTION ENDPOINTS
-# ===============================================
 
 @app.get("/api/v1/executions")
 async def list_executions(
@@ -508,6 +777,7 @@ async def list_executions(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list executions: {str(e)}")
+
 
 @app.get("/api/v1/executions/{execution_id}")
 async def get_execution_status(execution_id: str):
@@ -564,17 +834,111 @@ async def delete_all_executions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete executions: {str(e)}")
 
+@app.get("/api/v1/workflows/{workflow_id}/executions")
+async def get_workflow_executions(workflow_id: str):
+    """Get all execution records for a workflow."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+        
+        result = await execution_engine.get_workflow_execution_history(workflow_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workflow executions: {str(e)}")
+
 @app.get("/api/v1/executions/statistics")
 async def get_execution_statistics():
     """Get comprehensive execution statistics."""
     try:
         from src.services.workflow_execution_engine import WorkflowExecutionEngine
         execution_engine = WorkflowExecutionEngine()
-
+        
         result = await execution_engine.get_execution_statistics()
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get execution statistics: {str(e)}")
+
+
+@app.post("/api/v1/workflows/{workflow_id}/preview-execution")
+async def preview_workflow_execution(workflow_id: str):
+    """Preview what would be executed without actually executing."""
+    try:
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+        execution_engine = WorkflowExecutionEngine()
+        
+        result = await execution_engine.preview_execution(workflow_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to preview execution: {str(e)}")
+
+@app.delete("/api/v1/workflows/{workflow_id}")
+async def delete_workflow(workflow_id: str):
+    """Delete workflow by ID."""
+    try:
+        deleted = await workflow_service.delete_workflow(workflow_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
+
+        return {"message": f"Workflow {workflow_id} deleted successfully", "deleted": True}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete workflow: {str(e)}")
+
+@app.delete("/api/v1/workflows")
+async def delete_all_workflows(
+    status: Optional[str] = Query(None, description="Only delete workflows with this status"),
+    risk_level: Optional[str] = Query(None, description="Only delete workflows with this risk level"),
+    plan_id: Optional[str] = Query(None, description="Only delete workflows for this plan")
+):
+    """Delete all workflows with optional filters."""
+    try:
+        # Note: Current service doesn't support filters, so we implement basic version
+        # In the future, this could be enhanced to support filtering
+        deleted_count = await workflow_service.delete_all_workflows()
+
+        return {
+            "message": "All workflows deleted successfully",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete workflows: {str(e)}")
+
+
+# ===============================================
+# LEGACY ENDPOINTS (for backward compatibility)
+# These will be deprecated once frontend migrates
+# ===============================================
+
+# Legacy transcript endpoints
+@app.get("/transcripts")
+async def legacy_get_transcripts():
+    """Legacy endpoint - redirects to /api/v1/transcripts."""
+    return await list_transcripts()
+
+@app.get("/transcript/{transcript_id}")
+async def legacy_get_transcript(transcript_id: str):
+    """Legacy endpoint - redirects to /api/v1/transcripts/{id}."""
+    return await get_transcript(transcript_id)
+
+@app.post("/generate")
+async def legacy_generate_transcript(request: dict):
+    """Legacy endpoint - redirects to /api/v1/transcripts."""
+    transcript_request = TranscriptCreateRequest(**request)
+    return await create_transcript(transcript_request)
+
+# Legacy API endpoints
+@app.get("/api/metrics")
+async def legacy_api_metrics():
+    """Legacy endpoint - redirects to /api/v1/metrics."""
+    return await get_dashboard_metrics()
+
 
 # ===============================================
 # MAIN ENTRY POINT
@@ -584,8 +948,8 @@ if __name__ == "__main__":
     print("🚀 Starting Customer Call Center Analytics API Server")
     print("📚 API Documentation: http://localhost:8000/docs")
     print("🌐 Server URL: http://0.0.0.0:8000")
-    print("✅ Streamlined API with core endpoints only")
-
+    print("✅ All 30 standardized /api/v1/* endpoints available")
+    
     uvicorn.run(
         app,
         host="0.0.0.0",

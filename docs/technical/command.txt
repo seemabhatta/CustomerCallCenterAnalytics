@@ -1,0 +1,71 @@
+CLI vs Server API Comparison
+
+  ✅ Matched Commands (Both CLI and API exist):
+
+  Transcript:
+  - transcript create → POST /api/v1/transcripts
+  - transcript list → GET /api/v1/transcripts
+  - transcript get → GET /api/v1/transcripts/{transcript_id}
+  - transcript delete → DELETE /api/v1/transcripts/{transcript_id}
+
+  Analysis:
+  - analysis create → POST /api/v1/analyses
+  - analysis list → GET /api/v1/analyses
+  - analysis get → GET /api/v1/analyses/{analysis_id}
+  - analysis delete → DELETE /api/v1/analyses/{analysis_id}
+  - analysis delete-all → DELETE /api/v1/analyses
+
+  Insights:
+  - insights patterns → GET /api/v1/insights/patterns
+  - insights dashboard → GET /api/v1/insights/dashboard
+  - insights populate → POST /api/v1/insights/populate
+  - insights status → GET /api/v1/insights/status
+
+  Plan:
+  - plan create → POST /api/v1/plans
+  - plan list → GET /api/v1/plans
+  - plan view → GET /api/v1/plans/{plan_id}
+  - plan delete → DELETE /api/v1/plans/{plan_id}
+  - plan delete-all → DELETE /api/v1/plans
+
+  Workflow:
+  - workflow extract-all → POST /api/v1/workflows/extract-all
+  - workflow list → GET /api/v1/workflows
+  - workflow details → GET /api/v1/workflows/{workflow_id}
+  - workflow approve → POST /api/v1/workflows/{workflow_id}/approve
+  - workflow execute → POST /api/v1/workflows/{workflow_id}/execute
+  - workflow delete → DELETE /api/v1/workflows/{workflow_id}
+  - workflow delete-all → DELETE /api/v1/workflows
+
+  Execution:
+  - execution list → GET /api/v1/executions
+  - execution get → GET /api/v1/executions/{execution_id}
+  - execution delete → DELETE /api/v1/executions/{execution_id}
+  - execution delete-all → DELETE /api/v1/executions
+  - execution statistics → GET /api/v1/executions/statistics
+
+  System:
+  - system health → GET /api/v1/health
+  - system metrics → GET /api/v1/metrics
+
+  ❌ Mismatches Found:
+
+  1. CLI Commands WITHOUT corresponding API:
+  - orchestrate run - No API endpoint (orchestrates multiple operations)
+  - orchestrate execute-approved - Uses POST /api/v1/workflows/execute-all indirectly
+  - system tree - Local CLI feature, no API needed
+
+  2. API Endpoints WITHOUT CLI commands:
+  - POST /api/v1/workflows/execute-all - Used by orchestrate execute-approved but not directly exposed
+
+  Summary:
+
+  - 33 API endpoints → 32 have CLI commands
+  - 35 CLI commands → 32 have API endpoints
+  - 3 CLI-only commands (orchestrate run, execute-approved, system tree)
+  - 1 API-only endpoint (/api/v1/workflows/execute-all - used indirectly)
+
+  The mismatches are intentional:
+  - orchestrate commands are high-level CLI orchestrators that combine multiple API calls
+  - system tree is a local CLI visualization feature
+  - /api/v1/workflows/execute-all is used by orchestrate execute-approved internally
