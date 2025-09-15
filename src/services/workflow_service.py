@@ -39,7 +39,117 @@ class WorkflowService:
         self.workflow_store = WorkflowStore(db_path)
         self.action_plan_store = ActionPlanStore(db_path)
         self.risk_agent = RiskAssessmentAgent()
-    
+
+    async def generate_steps_for_action(self, action_item: Dict[str, Any],
+                                       workflow_type: str,
+                                       context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Generate detailed execution steps for an action item using LLM.
+
+        This is the critical transformation layer that converts strategic actions
+        into tactical, executable steps with tool mappings.
+
+        Args:
+            action_item: The action from the plan to break down
+            workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
+            context: Full context for step generation
+
+        Returns:
+            List of detailed execution steps
+
+        Raises:
+            ValueError: Invalid inputs (NO FALLBACK)
+            Exception: LLM step generation failure (NO FALLBACK)
+        """
+        if not action_item or not isinstance(action_item, dict):
+            raise ValueError("action_item must be a non-empty dictionary")
+
+        if workflow_type not in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
+            raise ValueError("workflow_type must be one of: BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP")
+
+        # Build comprehensive prompt for step generation
+        system_prompt = f"""You are a Mortgage Servicing Step Generation Agent for {workflow_type} workflows.
+
+Your role is to break down high-level actions into specific, executable steps.
+
+CRITICAL INSTRUCTIONS:
+- Generate 3-7 detailed steps for the given action
+- Each step must be independently executable by a human or system
+- Include specific system names (Black Knight, Encompass, Salesforce, etc.)
+- Include navigation paths (Menu > Submenu > Action)
+- Specify what data to enter or verify
+- Include expected outcomes and validation criteria
+- Map each step to appropriate tools (servicing_system, email, crm, document_generator)
+- NO GENERIC STEPS - each must be actionable and specific to mortgage servicing
+
+Return a JSON array where each step contains:
+1. step_number: Sequential number (1, 2, 3...)
+2. action: What to do in this step
+3. details: Detailed description of the step
+4. system: Which system to use (e.g., "Black Knight MSP", "Salesforce CRM")
+5. navigation: How to navigate in the system (e.g., "Main Menu > Loan Details > LTV")
+6. data_required: What information is needed
+7. expected_result: What should happen when step is complete
+8. validation: How to verify the step was successful
+9. tool_needed: Tool type (servicing_system, email, crm, document_generator)
+10. estimated_time_minutes: Time estimate for completion"""
+
+        user_prompt = f"""ACTION TO BREAK DOWN:
+Action: {action_item.get('action', '')}
+Description: {action_item.get('description', '')}
+Priority: {action_item.get('priority', '')}
+Timeline: {action_item.get('timeline', '')}
+
+WORKFLOW TYPE: {workflow_type}
+
+CONTEXT:
+Transcript ID: {context.get('transcript_id', 'Unknown')}
+Customer ID: {context.get('customer_id', 'Unknown')}
+Plan ID: {context.get('plan_id', 'Unknown')}
+
+Generate detailed, executable steps for this {workflow_type} action in mortgage servicing operations.
+Focus on specific systems, navigation paths, and validation criteria.
+Each step should be clear enough for someone to follow without additional guidance."""
+
+        try:
+            # Call LLM to generate steps using text generation and JSON parsing
+            full_prompt = f"{system_prompt}\n\n{user_prompt}"
+            response_text = await self.risk_agent.llm.generate_text_async(
+                prompt=full_prompt,
+                temperature=0.3
+            )
+
+            # Parse JSON response
+            import json
+            try:
+                response_data = json.loads(response_text)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"LLM response is not valid JSON: {str(e)}")
+
+            # Handle both direct array format and wrapped format
+            if isinstance(response_data, list):
+                steps = response_data
+            elif isinstance(response_data, dict) and 'steps' in response_data:
+                steps = response_data['steps']
+            else:
+                raise ValueError("LLM failed to generate steps array")
+
+            if not isinstance(steps, list) or len(steps) == 0:
+                raise ValueError("LLM generated invalid or empty steps array")
+
+            # Validate each step has required fields
+            required_fields = ['step_number', 'action', 'details', 'tool_needed']
+            for i, step in enumerate(steps):
+                if not isinstance(step, dict):
+                    raise ValueError(f"Step {i+1} is not a dictionary")
+                for field in required_fields:
+                    if field not in step:
+                        raise ValueError(f"Step {i+1} missing required field: {field}")
+
+            return steps
+
+        except Exception as e:
+            raise Exception(f"Failed to generate steps for {workflow_type} action: {str(e)}")
+
     async def extract_workflow_from_plan(self, plan_id: str) -> Dict[str, Any]:
         """Extract workflow from action plan using LLM agent.
         
@@ -557,13 +667,36 @@ class WorkflowService:
                     for field in required_routing_fields:
                         if field not in approval_routing:
                             raise ValueError(f"LLM agent failed to provide required routing field: {field}")
-                    
+
+                    # Generate detailed execution steps for this action item
+                    add_span_event("action_item.generating_steps", workflow_type=workflow_type, description=item_description)
+
+                    try:
+                        steps = await self.generate_steps_for_action(
+                            action_item=item,
+                            workflow_type=workflow_type,
+                            context=context_data
+                        )
+                        add_span_event("action_item.steps_generated", workflow_type=workflow_type,
+                                      step_count=len(steps))
+                    except Exception as e:
+                        add_span_event("action_item.step_generation_failed", workflow_type=workflow_type,
+                                      error=str(e))
+                        # Following NO FALLBACK principle - fail fast if steps can't be generated
+                        raise Exception(f"Failed to generate steps for {workflow_type} action: {str(e)}")
+
+                    # Enhance the item with generated steps
+                    enhanced_item = {
+                        **item,
+                        'steps': steps
+                    }
+
                     # Create workflow data for this action item
                     return {
                         'plan_id': plan_id,
                         'analysis_id': plan_data['analysis_id'],
                         'transcript_id': plan_data['transcript_id'],
-                        'workflow_data': item,
+                        'workflow_data': enhanced_item,
                         'workflow_type': workflow_type,
                         'context_data': {
                             **context_data,
