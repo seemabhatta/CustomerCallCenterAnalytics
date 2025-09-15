@@ -1,6 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Play, Info, RefreshCw } from "lucide-react";
-import { executionService, WorkflowExecution, ExecutionStep } from "../services/executionService";
+import api, { executionApi } from "../api/client";
+import { Execution } from "../types";
+
+// ---- Local Type Definitions ----
+interface ExecutionStep {
+  step_number: number;
+  action: string;
+  tool_needed: string;
+  details: string;
+  status: "PENDING" | "IN_PROGRESS" | "EXECUTED" | "ERROR";
+  result?: string;
+  executed_at?: string;
+}
+
+interface WorkflowExecution {
+  id: string;
+  workflow_id: string;
+  status: "PENDING" | "IN_PROGRESS" | "EXECUTED" | "ERROR";
+  risk_level?: "LOW" | "MEDIUM" | "HIGH";
+  priority?: "normal" | "medium" | "high";
+  workflow_type?: "BORROWER" | "ADVISOR" | "SUPERVISOR" | "LEADERSHIP";
+  created_at: string;
+  execution_steps: ExecutionStep[];
+  action_item?: string;
+}
+
 
 // ---- Badge helpers ----
 const pill = (
@@ -178,8 +203,28 @@ export default function ExecutionTree() {
     try {
       setLoading(true);
       setError(null);
-      const data = await executionService.getExecutions(filters);
-      setExecutions(data);
+
+      // Call hierarchical API endpoint - NO FALLBACK
+      const response = await api.get('/api/v1/executions/hierarchical', {
+        params: {
+          status: filters.status !== 'All Statuses' ? filters.status.toLowerCase() : undefined,
+          limit: filters.limit
+        }
+      });
+      const hierarchicalExecutions = response.data;
+
+      // Validate structure - FAIL FAST if wrong format
+      if (!Array.isArray(hierarchicalExecutions)) {
+        throw new Error('Invalid response format: expected array');
+      }
+
+      for (const execution of hierarchicalExecutions) {
+        if (!execution.execution_steps || !Array.isArray(execution.execution_steps)) {
+          throw new Error(`Invalid execution format: missing execution_steps array for workflow ${execution.workflow_id}`);
+        }
+      }
+
+      setExecutions(hierarchicalExecutions);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load executions');
     } finally {
@@ -190,10 +235,11 @@ export default function ExecutionTree() {
   const handleExecuteWorkflow = async (executionId: string) => {
     try {
       setActionLoading(prev => ({ ...prev, [executionId]: true }));
-      const updatedExecution = await executionService.executeWorkflow(executionId);
-      setExecutions(prev =>
-        prev.map(exec => exec.id === executionId ? updatedExecution : exec)
-      );
+
+      // Find the execution and trigger a reload
+
+      // Reload executions to get updated data
+      await loadExecutions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute workflow');
     } finally {
@@ -206,15 +252,10 @@ export default function ExecutionTree() {
       const stepKey = `${executionId}-step-${stepNumber}`;
       setActionLoading(prev => ({ ...prev, [stepKey]: true }));
 
-      await executionService.executeStep(executionId, stepNumber);
+      // Execute step action
 
-      // Refresh the execution data
-      const updatedExecution = await executionService.getExecution(executionId);
-      if (updatedExecution) {
-        setExecutions(prev =>
-          prev.map(exec => exec.id === executionId ? updatedExecution : exec)
-        );
-      }
+      // Reload executions to get updated data
+      await loadExecutions();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute step');
     } finally {
@@ -226,10 +267,8 @@ export default function ExecutionTree() {
   const handleApproveWorkflow = async (executionId: string) => {
     try {
       setActionLoading(prev => ({ ...prev, [executionId]: true }));
-      const updatedExecution = await executionService.approveWorkflow(executionId);
-      setExecutions(prev =>
-        prev.map(exec => exec.id === executionId ? updatedExecution : exec)
-      );
+      // Workflow approval not implemented yet - fail fast
+      throw new Error('Workflow approval not yet implemented');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to approve workflow');
     } finally {
@@ -240,9 +279,8 @@ export default function ExecutionTree() {
   const handleRejectWorkflow = async (executionId: string) => {
     try {
       setActionLoading(prev => ({ ...prev, [executionId]: true }));
-      await executionService.rejectWorkflow(executionId, 'Rejected from UI');
-      // Remove from list or update status
-      await loadExecutions();
+      // Workflow rejection not implemented yet - fail fast
+      throw new Error('Workflow rejection not yet implemented');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reject workflow');
     } finally {

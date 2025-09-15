@@ -376,7 +376,68 @@ class WorkflowExecutionStore:
             # Only close if not using persistent connection
             if not self._persistent_conn:
                 conn.close()
-    
+
+    async def get_all_executions(self,
+                                status_filter: Optional[str] = None,
+                                executor_type_filter: Optional[str] = None,
+                                limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get all execution records with optional filtering.
+
+        Args:
+            status_filter: Optional status filter
+            executor_type_filter: Optional executor type filter
+            limit: Maximum number of records to return
+
+        Returns:
+            List of execution records matching filters
+
+        Raises:
+            ValueError: Invalid filter parameters (NO FALLBACK)
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        if limit is not None and (not isinstance(limit, int) or limit <= 0):
+            raise ValueError("limit must be a positive integer")
+
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # Build query with filters
+            query = '''
+                SELECT id, workflow_id, executor_type, execution_status,
+                       execution_payload, executed_at, executed_by,
+                       execution_duration_ms, mock_execution, error_message,
+                       metadata, created_at
+                FROM workflow_executions
+                WHERE 1=1
+            '''
+            params = []
+
+            if status_filter:
+                query += ' AND execution_status = ?'
+                params.append(status_filter)
+
+            if executor_type_filter:
+                query += ' AND executor_type = ?'
+                params.append(executor_type_filter)
+
+            query += ' ORDER BY created_at DESC'
+
+            if limit:
+                query += ' LIMIT ?'
+                params.append(limit)
+
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            return [self._row_to_dict(row) for row in rows]
+
+        except Exception as e:
+            raise Exception(f"Failed to retrieve executions: {e}")
+        finally:
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
+
     async def get_execution_statistics(self) -> Dict[str, Any]:
         """Get execution statistics and metrics.
         
