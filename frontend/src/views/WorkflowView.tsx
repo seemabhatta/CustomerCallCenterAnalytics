@@ -410,19 +410,88 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
         <CardTitle className="text-xs font-medium flex items-center gap-1">
           <CheckCircle className="h-3 w-3" />
           Execution Steps
+          {workflow.workflow_data?.steps && workflow.workflow_data.steps.length > 0 && (
+            <Badge className="text-xs h-4 bg-blue-100 text-blue-700 border-blue-200">
+              {workflow.workflow_data.steps.length} steps
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="py-2 px-3">
         {workflow.workflow_data?.steps && workflow.workflow_data.steps.length > 0 ? (
-          <div className="space-y-1">
-            {workflow.workflow_data.steps.map((step, index) => (
-              <div key={index} className="flex items-center gap-2 text-xs">
-                <div className="w-4 h-4 border border-slate-300 rounded flex items-center justify-center text-xs">
-                  {index + 1}
-                </div>
-                <span className="text-slate-700">{step}</span>
-              </div>
-            ))}
+          <div className="space-y-2">
+            {workflow.workflow_data.steps.map((step, index) => {
+              // Handle both old simple string format and new detailed object format
+              const isDetailedStep = typeof step === 'object' && step !== null;
+              
+              if (isDetailedStep) {
+                return (
+                  <Card key={index} className="border-l-4 border-l-blue-500 bg-gray-50/50">
+                    <CardContent className="py-2 px-3">
+                      <div className="flex items-start gap-2">
+                        <Badge className="mt-0.5 text-xs h-5 min-w-[1.5rem] flex items-center justify-center">
+                          {step.step || index + 1}
+                        </Badge>
+                        <div className="flex-1 space-y-1">
+                          <h4 className="font-medium text-xs text-gray-900">{step.action}</h4>
+                          {step.details && (
+                            <p className="text-xs text-gray-600 leading-relaxed">{step.details}</p>
+                          )}
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                            {step.system && (
+                              <div className="flex items-center gap-1 text-xs">
+                                <Monitor className="h-3 w-3 text-blue-600" />
+                                <span className="text-gray-600">System:</span>
+                                <span className="font-medium text-gray-900">{step.system}</span>
+                              </div>
+                            )}
+                            {step.tool_needed && (
+                              <div className="flex items-center gap-1 text-xs">
+                                <Settings className="h-3 w-3 text-green-600" />
+                                <span className="text-gray-600">Tool:</span>
+                                <span className="font-medium text-gray-900">{step.tool_needed}</span>
+                              </div>
+                            )}
+                            {step.navigation && (
+                              <div className="flex items-center gap-1 text-xs">
+                                <MapPin className="h-3 w-3 text-purple-600" />
+                                <span className="text-gray-600">Path:</span>
+                                <span className="font-medium text-gray-900">{step.navigation}</span>
+                              </div>
+                            )}
+                            {step.expected_result && (
+                              <div className="flex items-center gap-1 text-xs">
+                                <CheckCircle className="h-3 w-3 text-green-600" />
+                                <span className="text-gray-600">Expected:</span>
+                                <span className="font-medium text-gray-900">{step.expected_result}</span>
+                              </div>
+                            )}
+                            {step.estimated_time && (
+                              <div className="flex items-center gap-1 text-xs">
+                                <Clock className="h-3 w-3 text-orange-600" />
+                                <span className="text-gray-600">Time:</span>
+                                <span className="font-medium text-gray-900">{step.estimated_time}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              } else {
+                // Fallback for simple string steps (old format)
+                return (
+                  <div key={index} className="flex items-center gap-2 text-xs">
+                    <div className="w-4 h-4 border border-slate-300 rounded flex items-center justify-center text-xs">
+                      {index + 1}
+                    </div>
+                    <span className="text-slate-700">{step}</span>
+                  </div>
+                );
+              }
+            })}
           </div>
         ) : (
           <div className="text-xs text-slate-500 italic">
