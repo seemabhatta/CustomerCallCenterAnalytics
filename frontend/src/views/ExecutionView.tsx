@@ -6,11 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Trash2, AlertTriangle, RefreshCw, ArrowLeft } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Trash2, AlertTriangle, RefreshCw, ArrowLeft, TreePine, Table } from "lucide-react";
 import { executionApi } from "@/api/client";
 import { Execution, ExecutionDetails } from "@/types";
+import ExecutionTree from "@/components/ExecutionTree";
 
 export function ExecutionView() {
+  const [viewMode, setViewMode] = useState<"tree" | "table">("tree");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -262,7 +265,8 @@ export function ExecutionView() {
     );
   }
 
-  return (
+  // Table view component (existing functionality)
+  const TableView = () => (
     <div className="space-y-4">
       {/* Header with search and actions */}
       <div className="flex items-center justify-between gap-4">
@@ -464,6 +468,30 @@ export function ExecutionView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+
+  // Main component return
+  return (
+    <div className="space-y-4">
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-between">
+        <Tabs value={viewMode} onValueChange={(value: "tree" | "table") => setViewMode(value)}>
+          <TabsList>
+            <TabsTrigger value="tree" className="flex items-center gap-2">
+              <TreePine className="h-4 w-4" />
+              Tree View
+            </TabsTrigger>
+            <TabsTrigger value="table" className="flex items-center gap-2">
+              <Table className="h-4 w-4" />
+              Table View
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* Content based on view mode */}
+      {viewMode === "tree" ? <ExecutionTree /> : <TableView />}
     </div>
   );
 }

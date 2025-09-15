@@ -1,0 +1,446 @@
+import React, { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, CheckCircle2, XCircle, Play, Info } from "lucide-react";
+
+// ---- Badge helpers ----
+const pill = (
+  label: string,
+  color:
+    | "slate"
+    | "green"
+    | "emerald"
+    | "amber"
+    | "red"
+    | "blue"
+    | "violet"
+    | "indigo"
+) => (
+  <span
+    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-${color}-100 text-${color}-800 border border-${color}-200`}
+  >
+    {label}
+  </span>
+);
+
+// Tailwind's arbitrary class detection may not pick dynamic template strings well in some setups.
+// To make sure colors are included, we mention the classes here (tree-shake friendly hint):
+// bg-slate-100 text-slate-800 border-slate-200 bg-green-100 text-green-800 border-green-200
+// bg-emerald-100 text-emerald-800 border-emerald-200 bg-amber-100 text-amber-800 border-amber-200
+// bg-red-100 text-red-800 border-red-200 bg-blue-100 text-blue-800 border-blue-200
+// bg-violet-100 text-violet-800 border-violet-200 bg-indigo-100 text-indigo-800 border-indigo-200
+
+// ---- Types ----
+interface ActionItem {
+  id: string;
+  label: string;
+  status: "PENDING" | "IN_PROGRESS" | "EXECUTED" | "ERROR";
+  risk?: "LOW" | "MEDIUM" | "HIGH";
+  priority?: "normal" | "medium" | "high";
+  owner?: "BORROWER" | "ADVISOR" | "SUPERVISOR" | "LEADERSHIP";
+  created?: string; // ISO date
+}
+
+interface PlanNode extends ActionItem {
+  plan: "Borrower" | "Advisor" | "Supervisor" | "Leadership";
+  children: ActionItem[];
+}
+
+interface WorkflowNode extends ActionItem {
+  type: "BORROWER" | "ADVISOR" | "SUPERVISOR" | "LEADERSHIP";
+  children: PlanNode[];
+}
+
+// ---- Mock Data ----
+const MOCK: WorkflowNode[] = [
+  {
+    id: "bb4ac73-527d-45e0-8a8f-39bb6bc10058",
+    label: "Workflow",
+    type: "BORROWER",
+    status: "IN_PROGRESS",
+    risk: "MEDIUM",
+    priority: "high",
+    owner: "ADVISOR",
+    created: "2025-09-15",
+    children: [
+      {
+        id: "plan-borrower-1",
+        label: "Borrower Plan",
+        plan: "Borrower",
+        status: "PENDING",
+        risk: "MEDIUM",
+        priority: "normal",
+        owner: "BORROWER",
+        created: "2025-09-15",
+        children: [
+          {
+            id: "a1",
+            label: "Gather employment docs",
+            status: "PENDING",
+            risk: "LOW",
+            priority: "normal",
+            owner: "BORROWER",
+            created: "2025-09-15",
+          },
+          {
+            id: "a2",
+            label: "Submit hardship affidavit",
+            status: "IN_PROGRESS",
+            risk: "MEDIUM",
+            priority: "medium",
+            owner: "BORROWER",
+            created: "2025-09-15",
+          },
+        ],
+      },
+      {
+        id: "plan-advisor-1",
+        label: "Advisor Plan",
+        plan: "Advisor",
+        status: "PENDING",
+        risk: "MEDIUM",
+        priority: "high",
+        owner: "ADVISOR",
+        created: "2025-09-15",
+        children: [
+          {
+            id: "a3",
+            label: "Analyze refinance qualifications",
+            status: "PENDING",
+            risk: "MEDIUM",
+            priority: "high",
+            owner: "ADVISOR",
+            created: "2025-09-15",
+          },
+          {
+            id: "a4",
+            label: "Evaluate modification options",
+            status: "PENDING",
+            risk: "LOW",
+            priority: "normal",
+            owner: "ADVISOR",
+            created: "2025-09-15",
+          },
+        ],
+      },
+      {
+        id: "plan-supervisor-1",
+        label: "Supervisor Plan",
+        plan: "Supervisor",
+        status: "PENDING",
+        risk: "HIGH",
+        priority: "medium",
+        owner: "SUPERVISOR",
+        created: "2025-09-15",
+        children: [
+          {
+            id: "a5",
+            label: "Approve DTI exception",
+            status: "PENDING",
+            risk: "HIGH",
+            priority: "high",
+            owner: "SUPERVISOR",
+            created: "2025-09-15",
+          },
+          {
+            id: "a6",
+            label: "Ensure CFPB compliance",
+            status: "PENDING",
+            risk: "HIGH",
+            priority: "high",
+            owner: "SUPERVISOR",
+            created: "2025-09-15",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "100e7f4d-551c-41a6-9567-86d79db261d1",
+    label: "Workflow",
+    type: "ADVISOR",
+    status: "EXECUTED",
+    risk: "MEDIUM",
+    priority: "normal",
+    owner: "ADVISOR",
+    created: "2025-09-15",
+    children: [
+      {
+        id: "plan-borrower-2",
+        label: "Borrower Plan",
+        plan: "Borrower",
+        status: "EXECUTED",
+        risk: "LOW",
+        priority: "normal",
+        owner: "BORROWER",
+        created: "2025-09-15",
+        children: [
+          {
+            id: "a7",
+            label: "Send satisfaction survey",
+            status: "EXECUTED",
+            risk: "LOW",
+            priority: "normal",
+            owner: "ADVISOR",
+            created: "2025-09-15",
+          },
+        ],
+      },
+    ],
+  },
+];
+
+// ---- Utilities ----
+const StatusPill: React.FC<{ status: ActionItem["status"] }> = ({ status }) => {
+  switch (status) {
+    case "PENDING":
+      return pill("PENDING", "slate");
+    case "IN_PROGRESS":
+      return pill("IN PROGRESS", "blue");
+    case "EXECUTED":
+      return pill("EXECUTED", "emerald");
+    case "ERROR":
+      return pill("ERROR", "red");
+  }
+};
+
+const RiskPill: React.FC<{ risk?: ActionItem["risk"] }> = ({ risk }) => {
+  if (!risk) return null;
+  if (risk === "LOW") return pill("LOW", "green");
+  if (risk === "MEDIUM") return pill("MEDIUM", "amber");
+  return pill("HIGH", "red");
+};
+
+const PriorityPill: React.FC<{ priority?: ActionItem["priority"] }> = ({ priority }) => {
+  if (!priority) return null;
+  if (priority === "normal") return pill("normal", "slate");
+  if (priority === "medium") return pill("medium", "indigo");
+  return pill("high", "violet");
+};
+
+const OwnerPill: React.FC<{ owner?: ActionItem["owner"] }> = ({ owner }) => {
+  if (!owner) return null;
+  const map: Record<NonNullable<ActionItem["owner"]>, keyof JSX.IntrinsicElements> = {
+    BORROWER: "span",
+    ADVISOR: "span",
+    SUPERVISOR: "span",
+    LEADERSHIP: "span",
+  };
+  const colorMap: Record<NonNullable<ActionItem["owner"]>, any> = {
+    BORROWER: pill("BORROWER", "slate"),
+    ADVISOR: pill("ADVISOR", "blue"),
+    SUPERVISOR: pill("SUPERVISOR", "violet"),
+    LEADERSHIP: pill("LEADERSHIP", "indigo"),
+  };
+  return <>{colorMap[owner]}</>;
+};
+
+// ---- Row components ----
+const Cell: React.FC<{ className?: string; children: React.ReactNode }> = ({ className, children }) => (
+  <div className={`px-3 py-2 text-sm ${className ?? ""}`}>{children}</div>
+);
+
+const HeaderCell: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={`px-3 py-2 text-xs uppercase tracking-wide font-semibold text-slate-500 ${className ?? ""}`}>{children}</div>
+);
+
+const Row: React.FC<{ children: React.ReactNode; depth?: number }> = ({ children, depth = 0 }) => (
+  <div
+    className={`grid grid-cols-[minmax(260px,1fr)_120px_110px_110px_140px_150px_200px] items-center border-b border-slate-200 hover:bg-slate-50 transition`}
+    style={{ paddingLeft: depth * 16 }}
+  >
+    {children}
+  </div>
+);
+
+// ---- Tree Row ----
+const TreeCaret: React.FC<{ open: boolean; onClick: () => void }> = ({ open, onClick }) => (
+  <button
+    onClick={onClick}
+    className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-100"
+    aria-label={open ? "Collapse" : "Expand"}
+  >
+    {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+  </button>
+);
+
+const ActionButtons: React.FC<{ level: "workflow" | "plan" | "action"; status: ActionItem["status"] }> = ({ level, status }) => {
+  const base = "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:shadow-sm transition";
+  const ghost = "border-slate-200 text-slate-700 bg-white hover:bg-slate-50";
+  const primary = "border-emerald-600 text-emerald-700 bg-emerald-50 hover:bg-emerald-100";
+  const danger = "border-red-600 text-red-700 bg-red-50 hover:bg-red-100";
+
+  return (
+    <div className="flex gap-2">
+      {status !== "EXECUTED" && (
+        <button className={`${base} ${primary}`}>
+          <Play size={14} /> Execute
+        </button>
+      )}
+      {level !== "action" && status !== "EXECUTED" && (
+        <button className={`${base} ${ghost}`}>
+          <CheckCircle2 size={14} /> Approve
+        </button>
+      )}
+      {status !== "EXECUTED" && (
+        <button className={`${base} ${danger}`}>
+          <XCircle size={14} /> Reject
+        </button>
+      )}
+      <button className={`${base} ${ghost}`}>
+        <Info size={14} /> Details
+      </button>
+    </div>
+  );
+};
+
+// ---- Main Component ----
+export default function ExecutionTreePreview() {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+
+  const toggle = (id: string) => setOpen((s) => ({ ...s, [id]: !s[id] }));
+
+  const Header = (
+    <div className="grid grid-cols-[minmax(260px,1fr)_120px_110px_110px_140px_150px_200px] border-b border-slate-300 bg-slate-50">
+      <HeaderCell className="">Execution Tree</HeaderCell>
+      <HeaderCell>Status</HeaderCell>
+      <HeaderCell>Risk</HeaderCell>
+      <HeaderCell>Priority</HeaderCell>
+      <HeaderCell>Owner</HeaderCell>
+      <HeaderCell>Created</HeaderCell>
+      <HeaderCell>Actions</HeaderCell>
+    </div>
+  );
+
+  const renderAction = (a: ActionItem, depth: number) => (
+    <Row key={a.id} depth={depth}>
+      <Cell>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-700">{a.label}</span>
+        </div>
+      </Cell>
+      <Cell>
+        <StatusPill status={a.status} />
+      </Cell>
+      <Cell>
+        <RiskPill risk={a.risk} />
+      </Cell>
+      <Cell>
+        <PriorityPill priority={a.priority} />
+      </Cell>
+      <Cell>
+        <OwnerPill owner={a.owner} />
+      </Cell>
+      <Cell className="text-slate-500">{a.created}</Cell>
+      <Cell>
+        <ActionButtons level="action" status={a.status} />
+      </Cell>
+    </Row>
+  );
+
+  const renderPlan = (p: PlanNode, depth: number) => (
+    <React.Fragment key={p.id}>
+      <Row depth={depth}>
+        <Cell>
+          <div className="flex items-center">
+            <TreeCaret open={!!open[p.id]} onClick={() => toggle(p.id)} />
+            <span className="font-medium text-slate-800 mr-2">{p.label}</span>
+            <span className="text-xs text-slate-500">({p.children.length} actions)</span>
+          </div>
+        </Cell>
+        <Cell>
+          <StatusPill status={p.status} />
+        </Cell>
+        <Cell>
+          <RiskPill risk={p.risk} />
+        </Cell>
+        <Cell>
+          <PriorityPill priority={p.priority} />
+        </Cell>
+        <Cell>
+          <OwnerPill owner={p.owner} />
+        </Cell>
+        <Cell className="text-slate-500">{p.created}</Cell>
+        <Cell>
+          <ActionButtons level="plan" status={p.status} />
+        </Cell>
+      </Row>
+      {open[p.id] && p.children.map((a) => renderAction(a, depth + 1))}
+    </React.Fragment>
+  );
+
+  const renderWorkflow = (w: WorkflowNode, depth: number) => (
+    <React.Fragment key={w.id}>
+      <Row depth={depth}>
+        <Cell>
+          <div className="flex items-center">
+            <TreeCaret open={!!open[w.id]} onClick={() => toggle(w.id)} />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-900">{w.id.slice(0, 8)}…</span>
+              {pill(w.type, w.type === "BORROWER" ? "slate" : w.type === "ADVISOR" ? "blue" : w.type === "SUPERVISOR" ? "violet" : "indigo")}
+            </div>
+          </div>
+        </Cell>
+        <Cell>
+          <StatusPill status={w.status} />
+        </Cell>
+        <Cell>
+          <RiskPill risk={w.risk} />
+        </Cell>
+        <Cell>
+          <PriorityPill priority={w.priority} />
+        </Cell>
+        <Cell>
+          <OwnerPill owner={w.owner} />
+        </Cell>
+        <Cell className="text-slate-500">{w.created}</Cell>
+        <Cell>
+          <ActionButtons level="workflow" status={w.status} />
+        </Cell>
+      </Row>
+      {open[w.id] && w.children.map((p) => renderPlan(p, depth + 1))}
+    </React.Fragment>
+  );
+
+  return (
+    <div className="w-full min-h-screen bg-white p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Execution</h1>
+          <p className="text-sm text-slate-500">Hierarchical view of Workflows → Plans → Actions</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option>All Statuses</option>
+            <option>Pending</option>
+            <option>In Progress</option>
+            <option>Executed</option>
+            <option>Error</option>
+          </select>
+          <select className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option>All Risk Levels</option>
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+          <select className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <option>50</option>
+            <option>25</option>
+            <option>100</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {Header}
+        <div className="divide-y divide-slate-200">
+          {MOCK.map((w) => renderWorkflow(w, 0))}
+        </div>
+      </div>
+
+      <div className="mt-6 text-xs text-slate-500">
+        <p>
+          Note: This is a static preview with mock data. Wire it to your API by replacing <code>MOCK</code> with live data in the same shape.
+        </p>
+      </div>
+    </div>
+  );
+}
