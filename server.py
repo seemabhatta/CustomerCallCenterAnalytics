@@ -788,8 +788,9 @@ async def get_hierarchical_executions(
     try:
         from src.services.execution_hierarchy_service import ExecutionHierarchyService
 
-        # Thin API layer - just route to backend service
-        hierarchy_service = ExecutionHierarchyService(db_path)
+        # Use same database path as WorkflowExecutionEngine default
+        # This ensures consistency with the execution engine data
+        hierarchy_service = ExecutionHierarchyService('data/call_center.db')
         result = await hierarchy_service.get_hierarchical_executions(
             status_filter=status,
             executor_type_filter=executor_type,

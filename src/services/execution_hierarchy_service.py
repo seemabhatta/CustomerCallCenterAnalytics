@@ -66,9 +66,9 @@ class ExecutionHierarchyService:
 
         try:
             # Get all executions from store
-            executions = await self.execution_store.get_all_executions(
-                status_filter=status_filter,
-                executor_type_filter=executor_type_filter,
+            executions = await self.execution_store.get_all(
+                status=status_filter,
+                executor_type=executor_type_filter,
                 limit=limit
             )
 
@@ -163,8 +163,15 @@ class ExecutionHierarchyService:
 
         for execution in executions:
             executor_type = execution.get('executor_type', '')
+            # DEBUG: Add logging to understand what's happening
+            add_span_event("hierarchy.processing_execution",
+                          execution_id=execution.get('id'),
+                          executor_type=executor_type,
+                          workflow_id=execution.get('workflow_id'))
 
             if executor_type == 'workflow':
+                add_span_event("hierarchy.found_workflow_execution",
+                              execution_id=execution.get('id'))
                 if main_execution is not None:
                     # Multiple workflow executions - shouldn't happen, but handle gracefully
                     add_span_event("hierarchy.multiple_workflow_executions",

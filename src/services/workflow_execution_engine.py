@@ -110,18 +110,12 @@ class WorkflowExecutionEngine:
             # Step 2: Execute workflow steps sequentially
             workflow_steps = workflow_data.get('steps', [])
 
+            # NO FALLBACK - if no steps defined, fail fast
             if not workflow_steps:
-                # Fallback to single-step execution if no steps defined
-                execution_decision = await self.execution_agent.analyze_workflow_action(workflow)
-                executor_type = execution_decision['executor_type']
-                parameters = execution_decision['parameters']
-
-                workflow_steps = [{
-                    'step_number': 1,
-                    'action': action_item,
-                    'tool_needed': executor_type,
-                    'details': workflow_data.get('description', '')
-                }]
+                raise ValueError(
+                    f"Workflow {workflow_id} has no steps defined. "
+                    f"Cannot execute workflow without defined steps."
+                )
 
             # Execute each step with its specified executor
             step_results = []
@@ -130,87 +124,70 @@ class WorkflowExecutionEngine:
             for i, step in enumerate(workflow_steps, 1):
                 step_start_time = time.time()
 
-                try:
-                    # Extract step details
-                    step_number = step.get('step_number', i)
-                    step_action = step.get('action', '')
-                    executor_type = step.get('tool_needed', '').strip()
-                    step_details = step.get('details', '')
+                # Extract step details - NO FALLBACK validation
+                step_number = step.get('step_number', i)
+                step_action = step.get('action', '')
+                executor_type = step.get('tool_needed', '').strip()
+                step_details = step.get('details', '')
 
-                    if not executor_type:
-                        raise ValueError(f"Step {step_number} missing tool_needed field")
+                if not executor_type:
+                    raise ValueError(f"Step {step_number} missing tool_needed field")
 
-                    # Validate executor exists
-                    if executor_type not in self.executors:
-                        raise ValueError(
-                            f"No executor available for type: {executor_type}. "
-                            f"Available: {list(self.executors.keys())}"
-                        )
+                # Validate executor exists - NO FALLBACK
+                if executor_type not in self.executors:
+                    raise ValueError(
+                        f"No executor available for type: {executor_type}. "
+                        f"Available: {list(self.executors.keys())}"
+                    )
 
-                    # Execute step using appropriate executor
-                    executor = self.executors[executor_type]
+                # Execute step using appropriate executor
+                executor = self.executors[executor_type]
 
-                    # Create step-specific parameters
-                    step_parameters = {
-                        'step_number': step_number,
-                        'step_action': step_action,
+                # Create step-specific parameters
+                step_parameters = {
+                    'step_number': step_number,
+                    'step_action': step_action,
+                    'step_details': step_details,
+                    'loan_id': 'LN-784523',  # Default from examples
+                    'workflow_id': workflow_id
+                }
+
+                # Execute the step - FAIL FAST if execution fails
+                step_result = executor.execute(workflow, step_parameters)
+
+                # Calculate step timing
+                step_duration = int((time.time() - step_start_time) * 1000)
+                total_execution_time += step_duration
+
+                # Store individual step execution result - FAIL FAST if storage fails
+                step_execution_record = {
+                    'workflow_id': workflow_id,
+                    'executor_type': executor_type,
+                    'execution_payload': step_result['payload'],
+                    'execution_status': 'executed',
+                    'executed_at': datetime.now(timezone.utc).isoformat(),
+                    'executed_by': executed_by,
+                    'execution_duration_ms': step_duration,
+                    'mock_execution': True,
+                    'metadata': {
                         'step_details': step_details,
-                        'loan_id': 'LN-784523',  # Default from examples
-                        'workflow_id': workflow_id
+                        'executor_result': step_result,
+                        'workflow_type': workflow.get('workflow_type'),
+                        'plan_id': workflow.get('plan_id')
                     }
+                }
 
-                    # Execute the step
-                    step_result = executor.execute(workflow, step_parameters)
+                step_execution_id = await self.execution_store.create(step_execution_record)
 
-                    # Calculate step timing
-                    step_duration = int((time.time() - step_start_time) * 1000)
-                    total_execution_time += step_duration
-
-                    # Store step execution result
-                    step_execution_record = {
-                        'workflow_id': workflow_id,
-                        'step_number': step_number,
-                        'step_action': step_action,
-                        'executor_type': executor_type,
-                        'execution_payload': step_result['payload'],
-                        'execution_status': 'executed',
-                        'executed_at': datetime.now(timezone.utc).isoformat(),
-                        'executed_by': executed_by,
-                        'execution_duration_ms': step_duration,
-                        'mock_execution': True,
-                        'metadata': {
-                            'step_details': step_details,
-                            'executor_result': step_result,
-                            'workflow_type': workflow.get('workflow_type'),
-                            'plan_id': workflow.get('plan_id')
-                        }
-                    }
-
-                    step_execution_id = await self.execution_store.create(step_execution_record)
-
-                    step_results.append({
-                        'step_number': step_number,
-                        'step_action': step_action,
-                        'executor_type': executor_type,
-                        'execution_id': step_execution_id,
-                        'status': 'executed',
-                        'duration_ms': step_duration,
-                        'payload': step_result['payload']
-                    })
-
-                except Exception as step_error:
-                    # Record failed step but continue with others
-                    step_duration = int((time.time() - step_start_time) * 1000)
-                    total_execution_time += step_duration
-
-                    step_results.append({
-                        'step_number': step.get('step_number', i),
-                        'step_action': step.get('action', ''),
-                        'executor_type': step.get('tool_needed', 'unknown'),
-                        'status': 'failed',
-                        'error': str(step_error),
-                        'duration_ms': step_duration
-                    })
+                step_results.append({
+                    'step_number': step_number,
+                    'step_action': step_action,
+                    'executor_type': executor_type,
+                    'execution_id': step_execution_id,
+                    'status': 'executed',
+                    'duration_ms': step_duration,
+                    'payload': step_result['payload']
+                })
 
             # Step 3: Create overall execution record
             execution_duration = int((time.time() - execution_start_time) * 1000)
