@@ -778,29 +778,6 @@ async def list_executions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list executions: {str(e)}")
 
-@app.get("/api/v1/executions/hierarchical")
-async def get_hierarchical_executions(
-    status: Optional[str] = Query(None, description="Filter by execution status"),
-    executor_type: Optional[str] = Query(None, description="Filter by executor type"),
-    limit: Optional[int] = Query(None, description="Maximum number of results")
-):
-    """Get executions in hierarchical structure for tree view - thin routing layer only."""
-    try:
-        from src.services.execution_hierarchy_service import ExecutionHierarchyService
-
-        # Use same database path as WorkflowExecutionEngine default
-        # This ensures consistency with the execution engine data
-        hierarchy_service = ExecutionHierarchyService('data/call_center.db')
-        result = await hierarchy_service.get_hierarchical_executions(
-            status_filter=status,
-            executor_type_filter=executor_type,
-            limit=limit
-        )
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get hierarchical executions: {str(e)}")
 
 @app.get("/api/v1/executions/{execution_id}")
 async def get_execution_status(execution_id: str):

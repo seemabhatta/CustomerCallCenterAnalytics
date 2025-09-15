@@ -133,12 +133,45 @@ class WorkflowExecutionEngine:
                 if not executor_type:
                     raise ValueError(f"Step {step_number} missing tool_needed field")
 
-                # Validate executor exists - NO FALLBACK
+                # Check if executor exists
                 if executor_type not in self.executors:
-                    raise ValueError(
-                        f"No executor available for type: {executor_type}. "
-                        f"Available: {list(self.executors.keys())}"
-                    )
+                    # Mark step as failed due to missing executor - but continue with other steps
+                    step_duration = int((time.time() - step_start_time) * 1000)
+
+                    # Store failed step execution record
+                    step_execution_record = {
+                        'workflow_id': workflow_id,
+                        'executor_type': executor_type,
+                        'execution_payload': {},
+                        'execution_status': 'failed',
+                        'executed_at': datetime.now(timezone.utc).isoformat(),
+                        'executed_by': executed_by,
+                        'execution_duration_ms': step_duration,
+                        'mock_execution': True,
+                        'error_message': f"No executor available for type: {executor_type}",
+                        'metadata': {
+                            'step_details': step_details,
+                            'available_executors': list(self.executors.keys()),
+                            'workflow_type': workflow.get('workflow_type'),
+                            'plan_id': workflow.get('plan_id')
+                        }
+                    }
+
+                    step_execution_id = await self.execution_store.create(step_execution_record)
+
+                    step_results.append({
+                        'step_number': step_number,
+                        'step_action': step_action,
+                        'executor_type': executor_type,
+                        'execution_id': step_execution_id,
+                        'status': 'failed',
+                        'duration_ms': step_duration,
+                        'error': f"No executor available for type: {executor_type}",
+                        'payload': {}
+                    })
+
+                    # Continue to next step
+                    continue
 
                 # Execute step using appropriate executor
                 executor = self.executors[executor_type]
@@ -189,36 +222,14 @@ class WorkflowExecutionEngine:
                     'payload': step_result['payload']
                 })
 
-            # Step 3: Create overall execution record
+            # Step 3: Calculate summary (no overall record created)
             execution_duration = int((time.time() - execution_start_time) * 1000)
 
             successful_steps = [s for s in step_results if s['status'] == 'executed']
             failed_steps = [s for s in step_results if s['status'] == 'failed']
 
-            overall_execution_record = {
-                'workflow_id': workflow_id,
-                'executor_type': 'workflow',
-                'execution_payload': {
-                    'workflow_steps': step_results,
-                    'workflow_data': workflow.get('workflow_data', {})
-                },
-                'execution_status': 'executed' if len(failed_steps) == 0 else 'partial_failure',
-                'executed_at': datetime.now(timezone.utc).isoformat(),
-                'executed_by': executed_by,
-                'execution_duration_ms': execution_duration,
-                'mock_execution': True,
-                'step_results': step_results,
-                'metadata': {
-                    'total_steps': len(workflow_steps),
-                    'successful_steps': len(successful_steps),
-                    'failed_steps': len(failed_steps),
-                    'workflow_type': workflow.get('workflow_type'),
-                    'plan_id': workflow.get('plan_id'),
-                    'risk_level': workflow.get('risk_level')
-                }
-            }
-
-            execution_id = await self.execution_store.create(overall_execution_record)
+            # Use first step's execution_id as the primary ID for reference
+            execution_id = step_results[0]['execution_id'] if step_results else None
 
             # Step 4: Update workflow status to EXECUTED
             success = self.workflow_store.update_status(
@@ -242,7 +253,7 @@ class WorkflowExecutionEngine:
                 'failed_steps': len(failed_steps),
                 'step_results': step_results,
                 'mock': True,
-                'executed_at': overall_execution_record['executed_at'],
+                'executed_at': datetime.now(timezone.utc).isoformat(),
                 'executed_by': executed_by,
                 'execution_duration_ms': execution_duration
             }

@@ -204,25 +204,76 @@ export default function ExecutionTree() {
       setLoading(true);
       setError(null);
 
-      // Call hierarchical API endpoint - NO FALLBACK
-      const response = await api.get('/api/v1/executions/hierarchical', {
+      // Call regular executions API and group by workflow_id client-side
+      const response = await api.get('/api/v1/executions', {
         params: {
           status: filters.status !== 'All Statuses' ? filters.status.toLowerCase() : undefined,
           limit: filters.limit
         }
       });
-      const hierarchicalExecutions = response.data;
+      const flatExecutions = response.data;
 
       // Validate structure - FAIL FAST if wrong format
-      if (!Array.isArray(hierarchicalExecutions)) {
+      if (!Array.isArray(flatExecutions)) {
         throw new Error('Invalid response format: expected array');
       }
 
-      for (const execution of hierarchicalExecutions) {
-        if (!execution.execution_steps || !Array.isArray(execution.execution_steps)) {
-          throw new Error(`Invalid execution format: missing execution_steps array for workflow ${execution.workflow_id}`);
+      // Group executions by workflow_id to create hierarchical structure
+      const workflowGroups: Record<string, any[]> = {};
+      for (const execution of flatExecutions) {
+        const workflowId = execution.workflow_id;
+        if (!workflowId) {
+          throw new Error('Execution missing workflow_id');
         }
+        if (!workflowGroups[workflowId]) {
+          workflowGroups[workflowId] = [];
+        }
+        workflowGroups[workflowId].push(execution);
       }
+
+      // Build hierarchical structure from grouped executions
+      const hierarchicalExecutions: WorkflowExecution[] = [];
+      for (const [workflowId, executions] of Object.entries(workflowGroups)) {
+        // Sort executions by created_at to get steps in order
+        executions.sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
+
+        // Build execution steps from individual executions
+        const executionSteps: ExecutionStep[] = executions.map((exec, index) => ({
+          step_number: index + 1,
+          action: exec.executor_type?.replace('_', ' ').toUpperCase() + ' execution' || 'Unknown action',
+          tool_needed: exec.executor_type || 'unknown',
+          details: `Execute using ${exec.executor_type || 'unknown'}`,
+          status: exec.execution_status === 'executed' ? 'EXECUTED' :
+                  exec.execution_status === 'failed' ? 'ERROR' :
+                  exec.execution_status === 'in_progress' ? 'IN_PROGRESS' : 'PENDING',
+          result: exec.execution_status === 'executed' ? 'Completed successfully' :
+                  exec.execution_status === 'failed' ? exec.error_message || 'Execution failed' : undefined,
+          executed_at: exec.executed_at
+        }));
+
+        // Use first execution for workflow-level metadata
+        const firstExec = executions[0];
+        const workflowExecution: WorkflowExecution = {
+          id: `workflow_${workflowId}`,
+          workflow_id: workflowId,
+          status: executions.some(e => e.execution_status === 'failed') ? 'ERROR' :
+                  executions.every(e => e.execution_status === 'executed') ? 'EXECUTED' :
+                  executions.some(e => e.execution_status === 'in_progress') ? 'IN_PROGRESS' : 'PENDING',
+          risk_level: firstExec.metadata?.risk_level,
+          priority: 'normal',
+          workflow_type: firstExec.metadata?.workflow_type,
+          created_at: firstExec.created_at || new Date().toISOString(),
+          execution_steps: executionSteps,
+          action_item: `Workflow execution for ${workflowId}`
+        };
+
+        hierarchicalExecutions.push(workflowExecution);
+      }
+
+      // Sort by creation time (newest first)
+      hierarchicalExecutions.sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
       setExecutions(hierarchicalExecutions);
     } catch (err) {
