@@ -31,18 +31,14 @@ class RoutingDecision(BaseModel):
 
 
 class ValidationResult(BaseModel):
-    is_valid: bool = Field(description="Whether the validation passed")
-    validation_status: str = Field(description="Status of the validation")
+    approval_valid: bool = Field(description="Whether the approval is valid")
     validation_reasoning: str = Field(description="Reasoning for the validation result")
-    issues_found: List[str] = Field(description="List of issues found during validation")
-    recommended_actions: List[str] = Field(description="Recommended actions to address issues")
+    rejection_reason: Optional[str] = Field(description="Reason if invalid, null if valid")
 
 
 class StatusDecision(BaseModel):
-    new_status: str = Field(description="New status to be assigned")
+    next_status: str = Field(description="Next status to be assigned")
     status_reasoning: str = Field(description="Reasoning for the status change")
-    next_actions: List[str] = Field(description="Next actions required")
-    requires_notification: bool = Field(description="Whether notification is required")
 
 
 class ExecutionResult(BaseModel):
