@@ -1,0 +1,25 @@
+DISCLOSURE PAYLOAD FORMAT:
+{{
+    "document_type": "tila|respa|refinance_disclosure|general",
+    "customer_id": "CUST_123456",
+    "customer_data": {{
+        "loan_amount": 250000,
+        "interest_rate": 6.5,
+        "term_years": 30,
+        "property_address": "123 Main St, City, ST 12345"
+    }},
+    "required_fields": {{
+        "apr": "6.75%",
+        "finance_charge": "$150,000",
+        "total_payments": "$400,000"
+    }},
+    "compliance_flags": ["TILA", "RESPA", "ECOA"],
+    "delivery_method": "email|mail|portal",
+    "generation_timestamp": "2024-01-15T10:30:00Z"
+}}
+
+REQUIREMENTS:
+- Document type must match action requirements
+- Include realistic financial data
+- Add all relevant compliance flags
+- Use proper regulatory terminology

@@ -13,6 +13,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from ..llm import OpenAIWrapper, RiskAssessment, ApprovalRouting, ActionItemList
 from ..telemetry import trace_async_function, set_span_attributes, add_span_event
+from src.utils.prompt_loader import prompt_loader
 
 load_dotenv()
 
@@ -89,39 +90,16 @@ class RiskAssessmentAgent:
         
         # Build comprehensive prompt for extracting individual items by workflow type
         add_span_event("extraction.prompt_building", workflow_type=workflow_type)
-        system_prompt = f"""You are an Action Item Extraction Agent for mortgage servicing operations.
-
-Your role is to extract individual actionable items from {workflow_type.lower()} plans for granular risk assessment.
-
-CRITICAL INSTRUCTIONS:
-- Extract ONLY items from the {workflow_type.lower()} section of the action plan
-- Each item should be independently executable and assessable
-- Preserve all item details including priority, timeline, and descriptions
-- NO GUESSING or assumptions - base extraction only on provided data
-- FAIL if required information is missing
-- Return empty list if no items found for this workflow type
-
-Return a JSON array where each item contains:
-1. action_item: The specific action to be taken
-2. description: Detailed description of the action
-3. priority: Priority level (high, medium, low)
-4. timeline: Expected timeline or due date
-5. workflow_type: The workflow type ({workflow_type})
-6. item_metadata: Any additional relevant metadata from the plan"""
-
-        user_prompt = f"""CONTEXT CHAIN:
-Transcript ID: {context.get('transcript_id', 'Unknown')}
-Analysis ID: {context.get('analysis_id', 'Unknown')}
-Plan ID: {context.get('plan_id', 'Unknown')}
-Workflow Type: {workflow_type}
-
-COMPLETE ACTION PLAN:
-{json.dumps(plan_data, indent=2)}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Extract individual action items from the {workflow_type.lower()} section of this plan. Each item should be assessable independently for risk evaluation. Return as JSON array."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/extract_action_items.txt',
+            workflow_type_lower=workflow_type.lower(),
+            workflow_type=workflow_type,
+            transcript_id=context.get('transcript_id', 'Unknown'),
+            analysis_id=context.get('analysis_id', 'Unknown'),
+            plan_id=context.get('plan_id', 'Unknown'),
+            plan_data=json.dumps(plan_data, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             add_span_event("extraction.api_call_started", workflow_type=workflow_type, model=self.model)
@@ -129,8 +107,7 @@ Extract individual action items from the {workflow_type.lower()} section of this
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1  # Low temperature for consistent extraction
@@ -185,44 +162,21 @@ Extract individual action items from the {workflow_type.lower()} section of this
             raise ValueError("context must be a non-empty dictionary")
         
         # Build comprehensive prompt with full context
-        system_prompt = """You are a Workflow Extraction Agent for mortgage servicing operations.
-
-Your role is to analyze action plans and extract executable workflows with detailed step-by-step processes.
-
-CRITICAL INSTRUCTIONS:
-- Extract ONLY actionable workflow steps from the action plan
-- Assess workflow complexity and dependencies
-- Identify potential execution challenges
-- NO GUESSING or assumptions - base decisions only on provided data
-- FAIL if required information is missing
-
-Return a structured workflow as valid JSON format with:
-1. workflow_steps: Detailed step-by-step executable actions
-2. complexity_assessment: Analysis of workflow complexity
-3. dependencies: Required resources, systems, or approvals
-4. execution_risks: Potential issues during execution
-5. estimated_duration: Time estimate for completion"""
-
-        user_prompt = f"""CONTEXT CHAIN:
-Transcript ID: {context.get('transcript_id', 'Unknown')}
-Analysis ID: {context.get('analysis_id', 'Unknown')}
-Plan ID: {context.get('plan_id', 'Unknown')}
-Pipeline Stage: {context.get('pipeline_stage', 'Unknown')}
-
-ACTION PLAN TO ANALYZE:
-{json.dumps(plan_data, indent=2)}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Extract an executable workflow from this action plan. Focus on concrete, actionable steps that can be executed by operations teams. Return your response as valid JSON."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/extract_workflow.txt',
+            transcript_id=context.get('transcript_id', 'Unknown'),
+            analysis_id=context.get('analysis_id', 'Unknown'),
+            plan_id=context.get('plan_id', 'Unknown'),
+            pipeline_stage=context.get('pipeline_stage', 'Unknown'),
+            plan_data=json.dumps(plan_data, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1  # Low temperature for consistent extraction
@@ -301,45 +255,16 @@ Extract an executable workflow from this action plan. Focus on concrete, actiona
         
         considerations = type_considerations[workflow_type]
         
-        system_prompt = f"""You are a Granular Risk Assessment Agent for {workflow_type.lower()} actions in mortgage servicing operations.
-
-Your role is to evaluate individual action item risk levels based on workflow type-specific criteria.
-
-CRITICAL INSTRUCTIONS:
-- Assess risk level as LOW, MEDIUM, or HIGH only
-- Provide detailed reasoning for risk assessment
-- Consider {considerations['focus']}
-- NO FALLBACK assessments - base decisions only on provided data
-- FAIL if insufficient information for accurate assessment
-
-Risk Level Guidelines for {workflow_type}:
-- LOW: {considerations['low_risk_indicators']}
-- MEDIUM: Moderate complexity, potential impact, requires careful execution
-- HIGH: {considerations['high_risk_indicators']}
-
-Consider:
-1. Action complexity and execution difficulty
-2. Potential impact on customers, operations, or compliance
-3. Timeline constraints and urgency
-4. Resource requirements and dependencies
-5. {workflow_type}-specific risk factors"""
-
-        user_prompt = f"""ACTION ITEM TO ASSESS:
-{json.dumps(action_item, indent=2)}
-
-WORKFLOW TYPE: {workflow_type}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Assess the risk level of this individual {workflow_type.lower()} action item. Consider:
-1. Specific risks associated with {workflow_type.lower()} workflows
-2. Action complexity and potential for errors
-3. Customer impact and operational consequences
-4. Regulatory and compliance implications
-5. Timeline and resource constraints
-
-Return your assessment with detailed reasoning as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/assess_action_item_risk.txt',
+            workflow_type_lower=workflow_type.lower(),
+            workflow_type=workflow_type,
+            focus=considerations['focus'],
+            low_risk_indicators=considerations['low_risk_indicators'],
+            high_risk_indicators=considerations['high_risk_indicators'],
+            action_item=json.dumps(action_item, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             # Add tracing attributes for observability
@@ -357,8 +282,7 @@ Return your assessment with detailed reasoning as valid JSON format."""
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1  # Consistent risk assessment
@@ -431,43 +355,17 @@ Return your assessment with detailed reasoning as valid JSON format."""
         if not context or not isinstance(context, dict):
             raise ValueError("context must be a non-empty dictionary")
         
-        system_prompt = """You are a Risk Assessment Agent for mortgage servicing operations.
-
-Your role is to evaluate workflow risk levels based on complexity, impact, and regulatory considerations.
-
-CRITICAL INSTRUCTIONS:
-- Assess risk level as LOW, MEDIUM, or HIGH only
-- Provide detailed reasoning for risk assessment
-- Consider operational complexity, customer impact, regulatory compliance
-- NO FALLBACK assessments - base decisions only on provided data
-- FAIL if insufficient information for accurate assessment
-
-Risk Level Guidelines:
-- LOW: Simple operations, minimal customer impact, standard procedures
-- MEDIUM: Moderate complexity, potential customer impact, requires careful execution  
-- HIGH: Complex operations, significant customer impact, regulatory implications"""
-
-        user_prompt = f"""WORKFLOW TO ASSESS:
-{json.dumps(workflow_data, indent=2)}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Assess the risk level of this workflow. Consider:
-1. Operational complexity and dependencies
-2. Potential customer impact (financial, service)
-3. Regulatory and compliance implications
-4. Execution difficulty and error potential
-5. Resource requirements and availability
-
-Return your assessment with detailed reasoning as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/assess_workflow_risk.txt',
+            workflow_data=json.dumps(workflow_data, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1  # Consistent risk assessment
@@ -558,62 +456,24 @@ Return your assessment with detailed reasoning as valid JSON format."""
         
         patterns = routing_patterns[workflow_type]
         
-        system_prompt = f"""You are an Action Item Approval Routing Agent for {workflow_type.lower()} actions in mortgage servicing operations.
-
-Your role is to determine approval requirements for individual action items based on workflow type and risk level.
-
-CRITICAL INSTRUCTIONS:
-- Determine if action item requires human approval (true/false)
-- Set initial workflow status based on routing decision
-- Consider {workflow_type}-specific approval patterns
-- Provide detailed reasoning for routing decision
-- NO HARDCODED RULES - make decisions based on provided data only
-
-{workflow_type} Routing Patterns:
-- Auto-approve: {patterns['auto_approve']}
-- Advisor approval: {patterns['advisor_approve']}
-- Supervisor approval: {patterns['supervisor_approve']}
-
-Risk-based Guidelines:
-- LOW risk: Usually auto-approved unless {workflow_type}-specific factors require review
-- MEDIUM risk: Usually requires advisor approval
-- HIGH risk: Usually requires supervisor approval
-
-Return your response as valid JSON format with these exact fields:
-{{
-  "requires_human_approval": boolean,
-  "initial_status": "PENDING_ASSESSMENT" | "AWAITING_APPROVAL" | "AUTO_APPROVED",
-  "routing_reasoning": "detailed explanation",
-  "suggested_approver_level": "advisor" | "supervisor" | "auto"
-}}"""
-
-        user_prompt = f"""ACTION ITEM DATA:
-{json.dumps(action_item, indent=2)}
-
-RISK ASSESSMENT:
-{json.dumps(risk_assessment, indent=2)}
-
-WORKFLOW TYPE: {workflow_type}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Determine the approval routing for this {workflow_type.lower()} action item. Consider:
-1. Risk level and assessment reasoning
-2. Action complexity and potential impact
-3. {workflow_type}-specific approval requirements
-4. Context factors (customer situation, compliance needs)
-5. Operational capacity and urgency
-
-Return routing decision with clear reasoning as valid JSON format using the exact field structure specified above."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/action_item_approval_routing.txt',
+            workflow_type_lower=workflow_type.lower(),
+            workflow_type=workflow_type,
+            auto_approve=patterns['auto_approve'],
+            advisor_approve=patterns['advisor_approve'],
+            supervisor_approve=patterns['supervisor_approve'],
+            action_item=json.dumps(action_item, indent=2),
+            risk_assessment=json.dumps(risk_assessment, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             # Use old approach for now - will migrate to structured outputs later
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1  # Consistent routing decisions
@@ -681,54 +541,18 @@ Return routing decision with clear reasoning as valid JSON format using the exac
         if not context or not isinstance(context, dict):
             raise ValueError("context must be a non-empty dictionary")
         
-        system_prompt = """You are an Approval Routing Agent for mortgage servicing operations.
-
-Your role is to determine approval requirements and routing based on workflow risk and operational context.
-
-CRITICAL INSTRUCTIONS:
-- Determine if workflow requires human approval (true/false)
-- Set initial workflow status based on routing decision
-- Assign appropriate approver if human approval required
-- Provide detailed reasoning for routing decision
-- NO HARDCODED RULES - make decisions based on provided data only
-
-Routing Options:
-- LOW risk: Usually auto-approved (status: AUTO_APPROVED, requires_human_approval: false)
-- MEDIUM risk: Usually requires advisor approval (status: AWAITING_APPROVAL, requires_human_approval: true)
-- HIGH risk: Usually requires supervisor approval (status: AWAITING_APPROVAL, requires_human_approval: true)
-
-Consider context factors that may override standard routing.
-
-Return your response as valid JSON format with these exact fields:
-{
-  "requires_human_approval": boolean,
-  "initial_status": "PENDING_ASSESSMENT" | "AWAITING_APPROVAL" | "AUTO_APPROVED",
-  "routing_reasoning": "detailed explanation"
-}"""
-
-        user_prompt = f"""WORKFLOW DATA:
-{json.dumps(workflow_data, indent=2)}
-
-RISK ASSESSMENT:
-{json.dumps(risk_assessment, indent=2)}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Determine the approval routing for this workflow. Consider:
-1. Risk level and assessment reasoning
-2. Workflow complexity and impact
-3. Context factors (customer situation, compliance needs)
-4. Operational capacity and urgency
-
-Return routing decision with clear reasoning as valid JSON format using the exact field structure specified above."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/workflow_approval_routing.txt',
+            workflow_data=json.dumps(workflow_data, indent=2),
+            risk_assessment=json.dumps(risk_assessment, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1  # Consistent routing decisions
@@ -794,59 +618,26 @@ Return routing decision with clear reasoning as valid JSON format using the exac
         if not approver or not isinstance(approver, str):
             raise ValueError("approver must be a non-empty string")
         
-        system_prompt = f"""You are an Action Item Approval Validation Agent for {workflow_type.lower()} actions in mortgage servicing operations.
-
-Your role is to validate human approval decisions for individual action items.
-
-CRITICAL INSTRUCTIONS:
-- Validate if the approval decision is reasonable given the action item and context
-- Consider approver authority for {workflow_type} actions
-- Evaluate reasoning quality and completeness
-- Flag any potential issues or concerns specific to {workflow_type} workflows
-- Provide validation result (approval_valid: true/false)
-- Include detailed reasoning for validation decision
-- NO BLANKET APPROVALS - evaluate each decision carefully
-- Return your response as valid JSON format with exact fields:
-  {{
-    "approval_valid": boolean,
-    "validation_reasoning": "detailed explanation",
-    "rejection_reason": "reason if approval_valid is false",
-    "workflow_type_concerns": "any {workflow_type}-specific concerns"
-  }}"""
-
-        user_prompt = f"""ACTION ITEM TO VALIDATE:
-{json.dumps(action_item, indent=2)}
-
-WORKFLOW TYPE: {workflow_type}
-
-APPROVAL DETAILS:
-Approver: {approver}
-Reasoning: {reasoning or 'No specific reasoning provided'}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Validate this approval decision for a {workflow_type.lower()} action item. Consider:
-1. Action item risk level and complexity
-2. Approver authority level for {workflow_type} workflows
-3. Quality and completeness of reasoning
-4. Alignment with {workflow_type}-specific best practices
-5. Any red flags or concerns
-6. Potential impact on customers, operations, or compliance
-
-Return validation decision with detailed analysis as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/validate_action_approval.txt',
+            workflow_type_lower=workflow_type.lower(),
+            workflow_type=workflow_type,
+            action_item=json.dumps(action_item, indent=2),
+            approver=approver,
+            reasoning=reasoning or 'No specific reasoning provided',
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate validation response")
             
@@ -896,54 +687,24 @@ Return validation decision with detailed analysis as valid JSON format."""
         if not approver or not isinstance(approver, str):
             raise ValueError("approver must be a non-empty string")
         
-        system_prompt = """You are an Approval Validation Agent for mortgage servicing operations.
-
-Your role is to validate human approval decisions for workflow execution.
-
-CRITICAL INSTRUCTIONS:
-- Validate if the approval decision is reasonable given the workflow and context
-- Consider approver authority and reasoning quality
-- Flag any potential issues or concerns
-- Provide validation result (approval_valid: true/false)
-- Include detailed reasoning for validation decision
-- NO BLANKET APPROVALS - evaluate each decision carefully
-- Return your response as valid JSON format with exact fields:
-  {
-    "approval_valid": boolean,
-    "validation_reasoning": "detailed explanation",
-    "rejection_reason": "reason if approval_valid is false"
-  }"""
-
-        user_prompt = f"""WORKFLOW TO VALIDATE:
-{json.dumps(workflow_data, indent=2)}
-
-APPROVAL DETAILS:
-Approver: {approver}
-Reasoning: {reasoning or 'No specific reasoning provided'}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Validate this approval decision. Consider:
-1. Workflow risk level and complexity
-2. Approver authority level
-3. Quality and completeness of reasoning
-4. Alignment with operational best practices
-5. Any red flags or concerns
-
-Return validation decision with detailed analysis as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/validate_workflow_approval.txt',
+            workflow_data=json.dumps(workflow_data, indent=2),
+            approver=approver,
+            reasoning=reasoning or 'No specific reasoning provided',
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate validation response")
             
@@ -996,53 +757,26 @@ Return validation decision with detailed analysis as valid JSON format."""
         if not reason or not isinstance(reason, str):
             raise ValueError("reason must be a non-empty string")
         
-        system_prompt = f"""You are an Action Item Rejection Validation Agent for {workflow_type.lower()} actions in mortgage servicing operations.
-
-Your role is to validate human rejection decisions for individual action items.
-
-CRITICAL INSTRUCTIONS:
-- Assess if the rejection decision is justified given the action item and reasoning
-- Consider rejection reason quality and validity for {workflow_type} workflows
-- Flag if rejection seems inappropriate or lacks justification
-- Provide validation result (rejection_valid: true/false)
-- Include concerns or recommendations if rejection seems questionable
-- Support legitimate quality control through rejection validation
-- Consider {workflow_type}-specific rejection patterns
-- Return your response as valid JSON format"""
-
-        user_prompt = f"""ACTION ITEM TO VALIDATE:
-{json.dumps(action_item, indent=2)}
-
-WORKFLOW TYPE: {workflow_type}
-
-REJECTION DETAILS:
-Rejector: {rejector}
-Reason: {reason}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Validate this rejection decision for a {workflow_type.lower()} action item. Consider:
-1. Appropriateness of rejection given action item content
-2. Quality and specificity of rejection reason
-3. Rejector's authority to make this decision for {workflow_type} workflows
-4. Whether rejection serves legitimate quality/risk control
-5. {workflow_type}-specific considerations for rejection
-6. Alternative solutions or modifications that might address concerns
-
-Return validation decision with analysis as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/validate_action_rejection.txt',
+            workflow_type_lower=workflow_type.lower(),
+            workflow_type=workflow_type,
+            action_item=json.dumps(action_item, indent=2),
+            rejector=rejector,
+            reason=reason,
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate rejection validation response")
             
@@ -1095,54 +829,29 @@ Return validation decision with analysis as valid JSON format."""
         if not reason or not isinstance(reason, str):
             raise ValueError("reason must be a non-empty string")
         
-        system_prompt = """You are a Rejection Validation Agent for mortgage servicing operations.
-
-Your role is to validate human rejection decisions for workflows.
-
-CRITICAL INSTRUCTIONS:
-- Assess if the rejection decision is justified given the workflow and reasoning
-- Consider rejection reason quality and validity
-- Flag if rejection seems inappropriate or lacks justification
-- Provide validation result (rejection_valid: true/false)
-- Include concerns or recommendations if rejection seems questionable
-- Support legitimate quality control through rejection validation
-- Return your response as valid JSON format"""
-
-        user_prompt = f"""WORKFLOW TO VALIDATE:
-{json.dumps(workflow_data, indent=2)}
-
-REJECTION DETAILS:
-Rejector: {rejector}
-Reason: {reason}
-
-FULL CONTEXT:
-{json.dumps(context, indent=2)}
-
-Validate this rejection decision. Consider:
-1. Appropriateness of rejection given workflow content
-2. Quality and specificity of rejection reason
-3. Rejector's authority to make this decision
-4. Whether rejection serves legitimate quality/risk control
-5. Alternative solutions or modifications that might address concerns
-
-Return validation decision with analysis as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/validate_workflow_rejection.txt',
+            workflow_data=json.dumps(workflow_data, indent=2),
+            rejector=rejector,
+            reason=reason,
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate rejection validation response")
-            
+
             validation_result = json.loads(response.choices[0].message.content)
-            
+
             # Add validation metadata
             validation_result['validation_metadata'] = {
                 'agent_id': self.agent_id,
@@ -1181,57 +890,27 @@ Return validation decision with analysis as valid JSON format."""
         if workflow_type not in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
             raise ValueError("workflow_type must be one of: BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP")
         
-        system_prompt = f"""You are an Action Item Post-Approval Status Agent for {workflow_type.lower()} actions in mortgage servicing operations.
-
-Your role is to determine the appropriate next status for individual action items after human approval.
-
-CRITICAL INSTRUCTIONS:
-- Determine next status: APPROVED or AUTO_APPROVED only
-- NEVER use EXECUTED status - that is reserved for after actual execution
-- APPROVED = requires manual execution trigger
-- AUTO_APPROVED = can be automatically scheduled for execution
-- Evaluate {workflow_type}-specific execution requirements
-- Provide reasoning for status decision
-- NO HARDCODED LOGIC - base decisions on action item specifics and context
-- Return your decision as valid JSON format
-
-{workflow_type} Execution Considerations:
-- Dependencies and prerequisites for {workflow_type.lower()} actions
-- Resource availability and timing
-- Integration with existing {workflow_type.lower()} processes
-- Follow-up actions or monitoring requirements"""
-
-        user_prompt = f"""APPROVED ACTION ITEM:
-{json.dumps(action_item, indent=2)}
-
-WORKFLOW TYPE: {workflow_type}
-
-APPROVAL CONTEXT:
-{json.dumps(approval_context, indent=2)}
-
-Determine the next status for this approved {workflow_type.lower()} action item. Consider:
-1. Action item readiness for immediate execution
-2. Any dependencies or prerequisites remaining
-3. Resource availability and timing considerations
-4. {workflow_type}-specific operational procedures
-5. Integration with existing workflows
-
-Return next status decision (AUTO_APPROVED or EXECUTED) with reasoning as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/action_post_approval_status.txt',
+            workflow_type_lower=workflow_type.lower(),
+            workflow_type=workflow_type,
+            action_item=json.dumps(action_item, indent=2),
+            approval_context=json.dumps(approval_context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate status decision response")
-            
+
             status_decision = json.loads(response.choices[0].message.content)
             
             # Add decision metadata
@@ -1269,49 +948,27 @@ Return next status decision (AUTO_APPROVED or EXECUTED) with reasoning as valid 
             ValueError: Invalid inputs (NO FALLBACK)
             Exception: LLM decision failure (NO FALLBACK)
         """
-        system_prompt = """You are a Post-Approval Status Agent for mortgage servicing operations.
-
-Your role is to determine the appropriate next status for workflows after human approval.
-
-CRITICAL INSTRUCTIONS:
-- Determine next status: APPROVED or AUTO_APPROVED only
-- NEVER use EXECUTED status - that is reserved for after actual execution
-- APPROVED = requires manual execution trigger
-- AUTO_APPROVED = can be automatically scheduled for execution
-- Provide reasoning for status decision
-- NO HARDCODED LOGIC - base decisions on workflow specifics and context
-- Return your decision as valid JSON format"""
-
-        user_prompt = f"""APPROVED WORKFLOW:
-{json.dumps(workflow_data, indent=2)}
-
-APPROVAL CONTEXT:
-{json.dumps(approval_context, indent=2)}
-
-Determine the next status for this approved workflow. Consider:
-1. Workflow readiness for immediate execution
-2. Any dependencies or prerequisites remaining
-3. Resource availability and timing considerations
-4. Standard operational procedures
-
-Return next status decision (AUTO_APPROVED or EXECUTED) with reasoning as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/workflow_post_approval_status.txt',
+            workflow_data=json.dumps(workflow_data, indent=2),
+            approval_context=json.dumps(approval_context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate status decision response")
-            
+
             status_decision = json.loads(response.choices[0].message.content)
-            
+
             # Add decision metadata
             status_decision['decision_metadata'] = {
                 'agent_id': self.agent_id,
@@ -1375,54 +1032,27 @@ Return next status decision (AUTO_APPROVED or EXECUTED) with reasoning as valid 
         
         patterns = execution_patterns[workflow_type]
         
-        system_prompt = f"""You are an Action Item Execution Agent for {workflow_type.lower()} actions in mortgage servicing operations.
-
-Your role is to simulate execution of approved individual action items and report results.
-
-CRITICAL INSTRUCTIONS:
-- Process the {workflow_type.lower()} action item systematically
-- Consider {workflow_type}-specific execution requirements
-- Report execution status and outcomes
-- Identify any issues or blockers encountered
-- Provide overall execution status (completed, partial, failed)
-- Include execution summary and any recommendations
-- SIMULATE EXECUTION - do not perform actual system operations
-- Consider integration with: {patterns['systems']}
-- Focus on: {patterns['considerations']}
-- Return your response as valid JSON format"""
-
-        user_prompt = f"""ACTION ITEM TO EXECUTE:
-{json.dumps(action_item, indent=2)}
-
-WORKFLOW TYPE: {workflow_type}
-
-EXECUTION CONTEXT:
-{json.dumps(context, indent=2)}
-
-Simulate execution of this {workflow_type.lower()} action item. Consider:
-1. Action-specific execution requirements
-2. {workflow_type}-specific system integrations
-3. Potential issues or dependencies
-4. Quality assurance and validation steps
-5. Follow-up actions or monitoring requirements
-6. Customer, advisor, or operational impact
-
-Return comprehensive execution results as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/execute_action_item.txt',
+            workflow_type_lower=workflow_type.lower(),
+            workflow_type=workflow_type,
+            action_item=json.dumps(action_item, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.2  # Slightly higher for varied execution scenarios
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate execution response")
-            
+
             execution_results = json.loads(response.choices[0].message.content)
             
             # Add execution metadata
@@ -1460,47 +1090,25 @@ Return comprehensive execution results as valid JSON format."""
             ValueError: Invalid inputs (NO FALLBACK)
             Exception: LLM execution failure (NO FALLBACK)
         """
-        system_prompt = """You are a Workflow Execution Agent for mortgage servicing operations.
-
-Your role is to simulate execution of approved workflow steps and report results.
-
-CRITICAL INSTRUCTIONS:
-- Process each workflow step systematically
-- Report execution status for each step
-- Identify any issues or blockers encountered
-- Provide overall execution status (completed, partial, failed)
-- Include execution summary and any recommendations
-- SIMULATE EXECUTION - do not perform actual system operations
-- Return your response as valid JSON format"""
-
-        user_prompt = f"""WORKFLOW TO EXECUTE:
-{json.dumps(workflow_data, indent=2)}
-
-EXECUTION CONTEXT:
-{json.dumps(context, indent=2)}
-
-Simulate execution of this workflow. For each step:
-1. Assess executability and prerequisites
-2. Identify potential issues or dependencies
-3. Report simulated execution outcome
-4. Note any follow-up actions required
-
-Return comprehensive execution results as valid JSON format."""
+        full_prompt = prompt_loader.format(
+            'agents/risk/execute_workflow.txt',
+            workflow_data=json.dumps(workflow_data, indent=2),
+            context=json.dumps(context, indent=2)
+        )
 
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": full_prompt}
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.2  # Slightly higher for varied execution scenarios
             )
-            
+
             if not response.choices or not response.choices[0].message.content:
                 raise Exception("LLM failed to generate execution response")
-            
+
             execution_results = json.loads(response.choices[0].message.content)
             
             # Add execution metadata

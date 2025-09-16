@@ -1,0 +1,5 @@
+Generate a mortgage servicing customer care call transcript about: {context}
+
+Context: This is a call between a borrower and a mortgage servicing representative. Include realistic mortgage details like loan numbers, property addresses, payment amounts, and mortgage-specific terminology.
+
+Generate a natural conversation that would occur in a mortgage servicing call center.

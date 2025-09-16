@@ -1,0 +1,20 @@
+TASK PAYLOAD FORMAT:
+{{
+    "task_id": "TASK_123456",
+    "assignee": "advisor_id|supervisor_id|team_name",
+    "title": "Specific task title based on action",
+    "description": "Detailed task description with context",
+    "priority": "low|medium|high|urgent",
+    "due_date": "2024-01-20",
+    "category": "follow_up|compliance|documentation|training",
+    "workflow_id": "wf_123",
+    "customer_id": "CUST_123456",
+    "estimated_duration": "30 minutes",
+    "task_type": "manual|automated|approval_required"
+}}
+
+REQUIREMENTS:
+- Title must be actionable and specific
+- Description must provide context and steps (50+ characters)
+- Due date should be realistic based on priority
+- Include customer context when relevant

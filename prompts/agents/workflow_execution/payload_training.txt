@@ -1,0 +1,23 @@
+TRAINING PAYLOAD FORMAT:
+{{
+    "employee_id": "EMP_123456",
+    "training_module": "module_name",
+    "module_details": {{
+        "title": "Training Module Title",
+        "description": "Module description and objectives",
+        "duration_hours": 2,
+        "difficulty": "beginner|intermediate|advanced",
+        "category": "compliance|sales|customer_service|technical"
+    }},
+    "assignment_reason": "Based on workflow analysis",
+    "due_date": "2024-01-30",
+    "completion_required": true,
+    "certification_level": "basic|advanced|expert",
+    "learning_path": "regulatory_compliance|customer_relations|technical_skills"
+}}
+
+REQUIREMENTS:
+- Module must be relevant to workflow type and action
+- Assignment reason must explain why training is needed
+- Include realistic duration and difficulty
+- Use appropriate compliance categories for mortgage industry

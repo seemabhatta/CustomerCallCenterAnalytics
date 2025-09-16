@@ -9,6 +9,7 @@ from datetime import datetime
 
 from src.llm.openai_wrapper import OpenAIWrapper
 from src.llm.openai_wrapper import ActionItem
+from src.utils.prompt_loader import prompt_loader
 
 
 class ExecutionDecision:
@@ -206,241 +207,40 @@ class WorkflowExecutionAgent:
         except Exception as e:
             raise ValueError(f"Payload generation failed: {e}")
     
-    def _create_analysis_prompt(self, action_item: str, description: str, 
+    def _create_analysis_prompt(self, action_item: str, description: str,
                               workflow_type: str, workflow: Dict[str, Any]) -> str:
         """Create prompt for execution analysis."""
-        return f"""You are a Workflow Execution Analysis Agent. Your job is to analyze action items and determine the best execution approach.
+        return prompt_loader.format(
+            'agents/workflow_execution/analysis.txt',
+            workflow_type=workflow_type,
+            action_item=action_item,
+            description=description,
+            plan_id=workflow.get('plan_id', 'UNKNOWN'),
+            risk_level=workflow.get('risk_level', 'UNKNOWN')
+        )
 
-WORKFLOW CONTEXT:
-- Type: {workflow_type} 
-- Action: {action_item}
-- Description: {description}
-- Plan ID: {workflow.get('plan_id', 'UNKNOWN')}
-- Risk Level: {workflow.get('risk_level', 'UNKNOWN')}
-
-AVAILABLE EXECUTORS:
-
-HUMAN-CENTRIC EXECUTORS:
-1. email - Send emails to borrowers, advisors, or stakeholders
-2. crm - Update customer records, add notes, change status
-3. disclosure - Generate and deliver compliance documents
-4. task - Create tasks for advisors, supervisors, or teams
-5. training - Assign training modules to staff members
-
-API-CENTRIC MORTGAGE SYSTEM EXECUTORS:
-6. servicing_api - Loan servicing operations (balance, payments, PMI, escrow)
-7. income_api - Employment and income verification
-8. underwriting_api - DTI calculations, qualification checks
-9. hardship_api - Hardship program evaluation and eligibility
-10. pricing_api - Rate quotes, refinance options, payment calculations
-11. document_api - Document generation and management
-12. compliance_api - Regulatory compliance checks
-13. accounting_api - Financial transactions and adjustments
-
-DECISION PRIORITY: PREFER API EXECUTORS FOR SYSTEM OPERATIONS, HUMAN EXECUTORS FOR CUSTOMER TOUCHPOINTS
-
-DECISION MATRIX:
-- Need loan data/status → servicing_api
-- Need income verification → income_api
-- Need qualification check → underwriting_api
-- Need hardship evaluation → hardship_api
-- Need rate/payment options → pricing_api
-- Need document creation → document_api
-- Need compliance check → compliance_api
-- Need payment adjustments → accounting_api
-- Customer communication → email
-- Record updates → crm
-- Compliance documents → disclosure
-- Internal work → task
-
-SPECIFIC EXAMPLES:
-- "Confirm prepayment penalties" → email (email customer requesting confirmation)
-- "Gather financial documents" → email (email customer with document checklist)
-- "Prepare for call" → email (email customer with call preparation instructions)
-- "Update customer status" → crm (update CRM record directly)
-- "Generate TILA disclosure" → disclosure (create compliance document)
-- "Review loan application" → task (internal advisor review work)
-
-BIAS TOWARD CUSTOMER-FACING ACTIONS: When in doubt, choose email to communicate directly with customer rather than creating internal tasks.
-
-CONFIDENCE RULES:
-- High confidence (0.9+): Clear action type with obvious executor
-- Medium confidence (0.7-0.9): Clear action but some ambiguity
-- Low confidence (<0.7): Ambiguous action - REJECT with error
-
-OUTPUT REQUIREMENTS:
-Return ONLY valid JSON with these exact fields:
-{{
-    "executor_type": "email|crm|disclosure|task|training",
-    "parameters": {{
-        "key1": "value1",
-        "key2": "value2"
-    }},
-    "confidence": 0.0-1.0,
-    "reasoning": "Detailed explanation of decision"
-}}
-
-PARAMETER GUIDELINES:
-- email: recipient, subject, message_type, attachments
-- crm: customer_id, updates, interaction_type  
-- disclosure: document_type, customer_data, delivery_method
-- task: assignee, title, priority, due_date
-- training: employee_id, module_name, completion_required
-
-CRITICAL: If action is unclear or ambiguous, set confidence < 0.7 and explain why in reasoning.
-NO FALLBACK DECISIONS - be precise or fail."""
-
-    def _create_payload_prompt(self, executor_type: str, action_item: str, 
-                             description: str, workflow_type: str, 
+    def _create_payload_prompt(self, executor_type: str, action_item: str,
+                             description: str, workflow_type: str,
                              workflow: Dict[str, Any]) -> str:
         """Create prompt for payload generation."""
-        
-        base_prompt = f"""You are a Workflow Payload Generation Agent. Generate realistic mock payload for {executor_type} executor.
 
-WORKFLOW CONTEXT:
-- Type: {workflow_type}
-- Action: {action_item}
-- Description: {description}
-- Plan ID: {workflow.get('plan_id', 'UNKNOWN')}
-- Risk Level: {workflow.get('risk_level', 'UNKNOWN')}
+        # Load base prompt
+        base_prompt = prompt_loader.format(
+            'agents/workflow_execution/payload_base.txt',
+            executor_type=executor_type,
+            workflow_type=workflow_type,
+            action_item=action_item,
+            description=description,
+            plan_id=workflow.get('plan_id', 'UNKNOWN'),
+            risk_level=workflow.get('risk_level', 'UNKNOWN')
+        )
 
-GENERATE REALISTIC PAYLOAD:
-Create detailed, realistic data that would be used in production.
-Use contextual information to make payload specific and relevant.
-Include all required fields for {executor_type} operations.
-
-"""
-        
-        if executor_type == 'email':
-            return base_prompt + """
-EMAIL PAYLOAD FORMAT:
-{{
-    "to": "recipient@example.com",
-    "cc": ["cc@example.com"],
-    "subject": "Specific subject based on action",
-    "body": "Detailed email body content (minimum 100 chars)",
-    "attachments": ["file1.pdf", "file2.pdf"],
-    "template_id": "template_name",
-    "delivery_method": "smtp",
-    "priority": "normal|high|urgent"
-}}
-
-REQUIREMENTS:
-- Subject must be specific to the action
-- Body must be professional and relevant (100+ characters)
-- Include appropriate attachments based on action type
-- Use borrower-friendly language for BORROWER workflows
-- Use internal language for ADVISOR/SUPERVISOR workflows
-"""
-        
-        elif executor_type == 'crm':
-            return base_prompt + """
-CRM PAYLOAD FORMAT:
-{{
-    "customer_id": "CUST_123456",
-    "api_endpoint": "/api/v1/customers/update",
-    "method": "POST|PUT|PATCH",
-    "updates": {{
-        "status": "new_status",
-        "notes": "Detailed notes about interaction",
-        "last_contact": "2024-01-15",
-        "tags": ["tag1", "tag2"],
-        "custom_fields": {{
-            "field1": "value1"
-        }}
-    }},
-    "crm_system": "salesforce|hubspot|dynamics",
-    "interaction_type": "call|email|meeting|system_update"
-}}
-
-REQUIREMENTS:
-- Notes must be detailed and professional (50+ characters)
-- Status updates must be meaningful business states
-- Include relevant custom fields based on workflow type
-- Use proper CRM terminology
-"""
-        
-        elif executor_type == 'disclosure':
-            return base_prompt + """
-DISCLOSURE PAYLOAD FORMAT:
-{{
-    "document_type": "tila|respa|refinance_disclosure|general",
-    "customer_id": "CUST_123456",
-    "customer_data": {{
-        "loan_amount": 250000,
-        "interest_rate": 6.5,
-        "term_years": 30,
-        "property_address": "123 Main St, City, ST 12345"
-    }},
-    "required_fields": {{
-        "apr": "6.75%",
-        "finance_charge": "$150,000",
-        "total_payments": "$400,000"
-    }},
-    "compliance_flags": ["TILA", "RESPA", "ECOA"],
-    "delivery_method": "email|mail|portal",
-    "generation_timestamp": "2024-01-15T10:30:00Z"
-}}
-
-REQUIREMENTS:
-- Document type must match action requirements
-- Include realistic financial data
-- Add all relevant compliance flags
-- Use proper regulatory terminology
-"""
-        
-        elif executor_type == 'task':
-            return base_prompt + """
-TASK PAYLOAD FORMAT:
-{{
-    "task_id": "TASK_123456",
-    "assignee": "advisor_id|supervisor_id|team_name",
-    "title": "Specific task title based on action",
-    "description": "Detailed task description with context",
-    "priority": "low|medium|high|urgent",
-    "due_date": "2024-01-20",
-    "category": "follow_up|compliance|documentation|training",
-    "workflow_id": "wf_123",
-    "customer_id": "CUST_123456",
-    "estimated_duration": "30 minutes",
-    "task_type": "manual|automated|approval_required"
-}}
-
-REQUIREMENTS:
-- Title must be actionable and specific
-- Description must provide context and steps (50+ characters)
-- Due date should be realistic based on priority
-- Include customer context when relevant
-"""
-        
-        elif executor_type == 'training':
-            return base_prompt + """
-TRAINING PAYLOAD FORMAT:
-{{
-    "employee_id": "EMP_123456",
-    "training_module": "module_name",
-    "module_details": {{
-        "title": "Training Module Title",
-        "description": "Module description and objectives",
-        "duration_hours": 2,
-        "difficulty": "beginner|intermediate|advanced",
-        "category": "compliance|sales|customer_service|technical"
-    }},
-    "assignment_reason": "Based on workflow analysis",
-    "due_date": "2024-01-30",
-    "completion_required": true,
-    "certification_level": "basic|advanced|expert",
-    "learning_path": "regulatory_compliance|customer_relations|technical_skills"
-}}
-
-REQUIREMENTS:
-- Module must be relevant to workflow type and action
-- Assignment reason must explain why training is needed
-- Include realistic duration and difficulty
-- Use appropriate compliance categories for mortgage industry
-"""
-        
-        return base_prompt + "\nGenerate appropriate payload structure for this executor type."
+        # Load specific payload format based on executor type
+        if executor_type in ['email', 'crm', 'disclosure', 'task', 'training']:
+            specific_prompt = prompt_loader.load(f'agents/workflow_execution/payload_{executor_type}.txt')
+            return f"{base_prompt}\n\n{specific_prompt}"
+        else:
+            return base_prompt + "\nGenerate appropriate payload structure for this executor type."
     
     def _validate_payload_structure(self, executor_type: str, payload_data: Dict[str, Any]):
         """Validate payload has required structure for executor type."""

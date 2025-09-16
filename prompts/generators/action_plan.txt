@@ -1,0 +1,44 @@
+=== COMPLETE CALL TRANSCRIPT ===
+{conversation_text}
+
+=== CALL METADATA ===
+Duration: {call_duration} minutes
+Topic: {call_topic}
+Customer ID: {customer_id}
+
+=== AI ANALYSIS ===
+Primary Intent: {primary_intent}
+Sentiment: {sentiment}
+Urgency: {urgency_level}
+Risk Score: {risk_score}
+Compliance Flags: {compliance_flags}
+
+Borrower Risks:
+{borrower_risks}
+
+Advisor Performance:
+{advisor_performance}
+
+=== EXTRACTED KEY POINTS ===
+Promises Made: {promises_made}
+Customer Concerns: {customer_concerns}
+Timeline Commitments: {timeline_commitments}
+Next Steps: {next_steps_mentioned}
+
+=== INSTRUCTION ===
+IMPORTANT: Generate mortgage servicing action plans based on this customer care call.
+
+Based on the COMPLETE mortgage servicing conversation and analysis above, generate four comprehensive action plans:
+
+1. BORROWER PLAN: What mortgage-specific actions should be taken for the borrower?
+   - Examples: escrow adjustments, payment plan setup, PMI removal processing, refinancing guidance, hardship assistance
+2. ADVISOR PLAN: What coaching or feedback for the mortgage servicing advisor?
+   - Examples: mortgage compliance training, customer communication improvements, technical knowledge updates
+3. SUPERVISOR PLAN: What mortgage servicing items need supervisor attention or approval?
+   - Examples: loan modification approvals, escalated hardship cases, compliance violations
+4. LEADERSHIP PLAN: What strategic insights or patterns emerged from this mortgage call?
+   - Examples: portfolio risk patterns, process improvements, training needs, customer satisfaction trends
+
+Focus on mortgage servicing specifics: loan servicing, payment processing, escrow management, insurance requirements, regulatory compliance.
+
+Use the actual conversation details. Be specific and actionable for mortgage operations.

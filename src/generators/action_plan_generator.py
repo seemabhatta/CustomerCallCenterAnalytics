@@ -8,6 +8,7 @@ import openai
 from dotenv import load_dotenv
 
 from src.models.transcript import Transcript
+from src.utils.prompt_loader import prompt_loader
 
 load_dotenv()
 
@@ -183,52 +184,24 @@ class ActionPlanGenerator:
         # Get analysis details
         analysis = context['analysis']
         
-        return f'''
-=== COMPLETE CALL TRANSCRIPT ===
-{conversation_text}
-
-=== CALL METADATA ===
-Duration: {context['call_duration']} minutes
-Topic: {context['call_topic']}
-Customer ID: {context['customer_id']}
-
-=== AI ANALYSIS ===
-Primary Intent: {analysis.get('primary_intent', 'Unknown')}
-Sentiment: {analysis.get('sentiment', 'Unknown')}
-Urgency: {analysis.get('urgency_level', 'Unknown')}
-Risk Score: {analysis.get('risk_score', 0)}
-Compliance Flags: {', '.join(analysis.get('compliance_flags', []))}
-
-Borrower Risks:
-{json.dumps(analysis.get('borrower_risks', {}), indent=2)}
-
-Advisor Performance:
-{json.dumps(analysis.get('advisor_performance', {}), indent=2)}
-
-=== EXTRACTED KEY POINTS ===
-Promises Made: {', '.join(context['promises_made'])}
-Customer Concerns: {', '.join(context['customer_concerns'])}
-Timeline Commitments: {', '.join(context['timeline_commitments'])}
-Next Steps: {', '.join(context['next_steps_mentioned'])}
-
-=== INSTRUCTION ===
-IMPORTANT: Generate mortgage servicing action plans based on this customer care call.
-
-Based on the COMPLETE mortgage servicing conversation and analysis above, generate four comprehensive action plans:
-
-1. BORROWER PLAN: What mortgage-specific actions should be taken for the borrower?
-   - Examples: escrow adjustments, payment plan setup, PMI removal processing, refinancing guidance, hardship assistance
-2. ADVISOR PLAN: What coaching or feedback for the mortgage servicing advisor?
-   - Examples: mortgage compliance training, customer communication improvements, technical knowledge updates
-3. SUPERVISOR PLAN: What mortgage servicing items need supervisor attention or approval?
-   - Examples: loan modification approvals, escalated hardship cases, compliance violations
-4. LEADERSHIP PLAN: What strategic insights or patterns emerged from this mortgage call?
-   - Examples: portfolio risk patterns, process improvements, training needs, customer satisfaction trends
-
-Focus on mortgage servicing specifics: loan servicing, payment processing, escrow management, insurance requirements, regulatory compliance.
-
-Use the actual conversation details. Be specific and actionable for mortgage operations.
-'''
+        return prompt_loader.format(
+            'generators/action_plan.txt',
+            conversation_text=conversation_text,
+            call_duration=context['call_duration'],
+            call_topic=context['call_topic'],
+            customer_id=context['customer_id'],
+            primary_intent=analysis.get('primary_intent', 'Unknown'),
+            sentiment=analysis.get('sentiment', 'Unknown'),
+            urgency_level=analysis.get('urgency_level', 'Unknown'),
+            risk_score=analysis.get('risk_score', 0),
+            compliance_flags=', '.join(analysis.get('compliance_flags', [])),
+            borrower_risks=json.dumps(analysis.get('borrower_risks', {}), indent=2),
+            advisor_performance=json.dumps(analysis.get('advisor_performance', {}), indent=2),
+            promises_made=', '.join(context['promises_made']),
+            customer_concerns=', '.join(context['customer_concerns']),
+            timeline_commitments=', '.join(context['timeline_commitments']),
+            next_steps_mentioned=', '.join(context['next_steps_mentioned'])
+        )
     
     def _get_action_plan_schema(self) -> Dict[str, Any]:
         """Define JSON schema for structured action plan output.

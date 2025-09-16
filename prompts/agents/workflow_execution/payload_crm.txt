@@ -1,0 +1,23 @@
+CRM PAYLOAD FORMAT:
+{{
+    "customer_id": "CUST_123456",
+    "api_endpoint": "/api/v1/customers/update",
+    "method": "POST|PUT|PATCH",
+    "updates": {{
+        "status": "new_status",
+        "notes": "Detailed notes about interaction",
+        "last_contact": "2024-01-15",
+        "tags": ["tag1", "tag2"],
+        "custom_fields": {{
+            "field1": "value1"
+        }}
+    }},
+    "crm_system": "salesforce|hubspot|dynamics",
+    "interaction_type": "call|email|meeting|system_update"
+}}
+
+REQUIREMENTS:
+- Notes must be detailed and professional (50+ characters)
+- Status updates must be meaningful business states
+- Include relevant custom fields based on workflow type
+- Use proper CRM terminology

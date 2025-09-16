@@ -14,6 +14,7 @@ from datetime import datetime
 from src.storage.workflow_store import WorkflowStore
 from src.storage.action_plan_store import ActionPlanStore
 from src.agents.risk_assessment_agent import RiskAssessmentAgent
+from src.utils.prompt_loader import prompt_loader
 
 
 class WorkflowService:
@@ -66,99 +67,19 @@ class WorkflowService:
         if workflow_type not in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
             raise ValueError("workflow_type must be one of: BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP")
 
-        # Build comprehensive prompt for step generation
-        system_prompt = f"""You are a Mortgage System API Step Generation Agent for {workflow_type} workflows.
-
-Your role is to break down high-level actions into specific, executable API calls and human actions.
-
-AVAILABLE EXECUTORS:
-API EXECUTORS (System-to-System):
-- servicing_api: Loan servicing operations (balance, payments, PMI, escrow)
-- income_api: Employment and income verification
-- underwriting_api: DTI calculations, qualification checks
-- hardship_api: Hardship program evaluation and eligibility
-- pricing_api: Rate quotes, refinance options, payment calculations
-- document_api: Document generation and management
-- compliance_api: Regulatory compliance checks
-- accounting_api: Financial transactions and adjustments
-
-HUMAN EXECUTORS (Customer/Staff Actions):
-- email: Send notifications, requests, confirmations to customers
-- crm: Update customer records, add notes, change status
-- disclosure: Generate and deliver compliance documents
-- task: Create internal tasks for advisors/supervisors
-- training: Assign training modules to staff
-
-CRITICAL INSTRUCTIONS:
-- Generate 3-7 executable steps for the given action
-- For API executors: Use specific API endpoints (GET/POST/PATCH /api/...)
-- For human executors: Use clear action instructions
-- Use GENERIC mortgage system names (not vendor-specific)
-- Focus on system-to-system integration, not UI navigation
-- Each step must be independently executable
-
-SYSTEM NAMING CONVENTIONS:
-- Use "Mortgage Servicing System" not "Black Knight"
-- Use "Origination System" not "Encompass"
-- Use "CRM System" not "Salesforce"
-- Use "Appraisal Service" not "Lakewood"
-
-Return a simplified JSON structure with exactly these 4 fields per step:
-1. step_number: Sequential number (1, 2, 3...)
-2. action: Clear description of what to do in this step
-3. tool_needed: One of the available executors listed above
-4. details: Specific API endpoint OR detailed instructions"""
-
-        user_prompt = f"""ACTION TO BREAK DOWN:
-Action: {action_item.get('action', '')}
-Description: {action_item.get('description', '')}
-Priority: {action_item.get('priority', '')}
-Timeline: {action_item.get('timeline', '')}
-
-WORKFLOW TYPE: {workflow_type}
-
-CONTEXT:
-Transcript ID: {context.get('transcript_id', 'Unknown')}
-Customer ID: {context.get('customer_id', 'Unknown')}
-Plan ID: {context.get('plan_id', 'Unknown')}
-
-Generate executable steps for this {workflow_type} action in mortgage operations.
-Each step should be independently executable using the available executors.
-For API executors, specify the endpoint. For human executors, provide clear instructions."""
-
+        # Use external prompt file for step generation
         try:
-            # Use simple text generation with JSON format instruction
-            json_format_instruction = """
-Return your response as a JSON object with this exact structure:
-{
-  "steps": [
-    {
-      "step_number": 1,
-      "action": "Clear description of what to do",
-      "tool_needed": "One of the available executors",
-      "details": "API endpoint (for API executors) OR detailed instructions (for human executors)"
-    }
-  ]
-}
-
-EXAMPLES:
-API Executor Step:
-{
-  "step_number": 1,
-  "action": "Retrieve current loan details",
-  "tool_needed": "servicing_api",
-  "details": "Call GET /api/servicing/loan/{loan_id}/full-details"
-}
-
-Human Executor Step:
-{
-  "step_number": 7,
-  "action": "Send options to borrower",
-  "tool_needed": "email",
-  "details": "Email refinance options and hardship application with next steps"
-}"""
-
-            full_prompt = f"{system_prompt}\n\n{user_prompt}\n\n{json_format_instruction}"
+            full_prompt = prompt_loader.format(
+                'services/workflow/generate_api_steps.txt',
+                workflow_type=workflow_type,
+                action=action_item.get('action', ''),
+                description=action_item.get('description', ''),
+                priority=action_item.get('priority', ''),
+                timeline=action_item.get('timeline', ''),
+                transcript_id=context.get('transcript_id', 'Unknown'),
+                customer_id=context.get('customer_id', 'Unknown'),
+                plan_id=context.get('plan_id', 'Unknown')
+            )
             print(f"[STEP_GEN] Calling LLM for {workflow_type} step generation")
 
             response_text = await self.risk_agent.llm.generate_text_async(

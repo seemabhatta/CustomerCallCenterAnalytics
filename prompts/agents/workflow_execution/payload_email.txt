@@ -1,0 +1,18 @@
+EMAIL PAYLOAD FORMAT:
+{{
+    "to": "recipient@example.com",
+    "cc": ["cc@example.com"],
+    "subject": "Specific subject based on action",
+    "body": "Detailed email body content (minimum 100 chars)",
+    "attachments": ["file1.pdf", "file2.pdf"],
+    "template_id": "template_name",
+    "delivery_method": "smtp",
+    "priority": "normal|high|urgent"
+}}
+
+REQUIREMENTS:
+- Subject must be specific to the action
+- Body must be professional and relevant (100+ characters)
+- Include appropriate attachments based on action type
+- Use borrower-friendly language for BORROWER workflows
+- Use internal language for ADVISOR/SUPERVISOR workflows

@@ -7,6 +7,7 @@ import openai
 from dotenv import load_dotenv
 
 from src.models.transcript import Transcript
+from src.utils.prompt_loader import prompt_loader
 
 load_dotenv()
 
@@ -127,29 +128,14 @@ class CallAnalyzer:
             "schema": schema,
         }
         
-        # Create analysis prompt
-        prompt = f"""
-        IMPORTANT: This MUST be analyzed as a mortgage servicing customer care call.
-
-        Analyze this mortgage servicing call transcript and provide comprehensive insights.
-
-        Focus on:
-        - Borrower's primary intent and emotional journey (related to their mortgage loan)
-        - Risk indicators (delinquency, churn, complaints) specific to mortgage servicing
-        - Advisor's performance and coaching opportunities for mortgage conversations
-        - Compliance requirements and potential issues in mortgage servicing
-        - Mortgage-specific topics: payment issues, escrow analysis, PMI removal, refinancing, hardship assistance, payoff requests, insurance claims, property tax matters
-        - Resolution effectiveness and next steps for mortgage-related concerns
-
-        Expected mortgage context: loan numbers, payment amounts, escrow accounts, property addresses, mortgage terms, interest rates, etc.
-
-        Transcript:
-        {transcript_text}
-
-        Customer ID: {getattr(transcript, 'customer_id', 'N/A')}
-        Advisor ID: {getattr(transcript, 'advisor_id', 'N/A')}
-        Call Duration: {getattr(transcript, 'duration', 'N/A')} seconds
-        """
+        # Create analysis prompt using external template
+        prompt = prompt_loader.format(
+            'analyzers/call_analysis.txt',
+            transcript_text=transcript_text,
+            customer_id=getattr(transcript, 'customer_id', 'N/A'),
+            advisor_id=getattr(transcript, 'advisor_id', 'N/A'),
+            duration=getattr(transcript, 'duration', 'N/A')
+        )
         
         try:
             # Use OpenAI Responses API for structured analysis
