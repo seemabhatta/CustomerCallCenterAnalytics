@@ -591,31 +591,30 @@ class WorkflowStore:
         Raises:
             Exception: JSON parsing failure (NO FALLBACK)
         """
-        # Fixed column mapping to match actual database schema
-        # Table columns: id, plan_id, analysis_id, transcript_id, workflow_type, workflow_data, ...
+        # Column mapping matches explicit SELECT column order (workflow_type at end)
         result = {
             'id': row[0],
             'plan_id': row[1],
             'analysis_id': row[2],
             'transcript_id': row[3],
-            'workflow_type': row[4],  # Position 4 is workflow_type
-            'workflow_data': json.loads(row[5]),  # Position 5 is workflow_data (JSON)
-            'risk_level': row[6],
-            'status': row[7],
-            'context_data': json.loads(row[8]),
-            'risk_reasoning': row[9],
-            'approval_reasoning': row[10],
-            'requires_human_approval': bool(row[11]),
-            'assigned_approver': row[12],
-            'approved_by': row[13],
-            'approved_at': row[14],
-            'rejected_by': row[15],
-            'rejected_at': row[16],
-            'rejection_reason': row[17],
-            'executed_at': row[18],
-            'execution_results': json.loads(row[19]) if row[19] else None,
-            'created_at': row[20],
-            'updated_at': row[21]
+            'workflow_data': json.loads(row[4]),
+            'risk_level': row[5],
+            'status': row[6],
+            'context_data': json.loads(row[7]),
+            'risk_reasoning': row[8],
+            'approval_reasoning': row[9],
+            'requires_human_approval': bool(row[10]),
+            'assigned_approver': row[11],
+            'approved_by': row[12],
+            'approved_at': row[13],
+            'rejected_by': row[14],
+            'rejected_at': row[15],
+            'rejection_reason': row[16],
+            'executed_at': row[17],
+            'execution_results': json.loads(row[18]) if row[18] else None,
+            'created_at': row[19],
+            'updated_at': row[20],
+            'workflow_type': row[21] if len(row) > 21 else 'UNKNOWN'
         }
 
         # Extract steps from workflow_data for backward compatibility
@@ -769,7 +768,14 @@ class WorkflowStore:
         
         try:
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM workflows WHERE plan_id = ?', (plan_id,))
+            # Use explicit column list matching _row_to_dict expectations
+            cursor.execute('''
+                SELECT id, plan_id, analysis_id, transcript_id, workflow_data, risk_level, status,
+                       context_data, risk_reasoning, approval_reasoning, requires_human_approval,
+                       assigned_approver, approved_by, approved_at, rejected_by, rejected_at,
+                       rejection_reason, executed_at, execution_results, created_at, updated_at, workflow_type
+                FROM workflows WHERE plan_id = ?
+            ''', (plan_id,))
             rows = cursor.fetchall()
             
             if not rows:
@@ -782,66 +788,6 @@ class WorkflowStore:
         finally:
             conn.close()
     
-    def get_by_type(self, workflow_type: str) -> List[Dict[str, Any]]:
-        """Get all workflows of a specific type.
-        
-        Args:
-            workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
-            
-        Returns:
-            List of workflow dictionaries
-            
-        Raises:
-            Exception: Invalid type or database failure (NO FALLBACK)
-        """
-        # NO FALLBACK: Validate workflow type
-        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP', 'LEGACY']
-        if workflow_type not in valid_types:
-            raise ValueError(f"Invalid workflow type: {workflow_type}. Must be one of: {valid_types}")
-        
-        conn = sqlite3.connect(self.db_path)
-        
-        try:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM workflows WHERE workflow_type = ?', (workflow_type,))
-            rows = cursor.fetchall()
-            
-            return [self._row_to_dict(row) for row in rows]
-            
-        except Exception as e:
-            raise Exception(f"Failed to retrieve workflows by type {workflow_type}: {str(e)}")
-        finally:
-            conn.close()
+    # REMOVED: get_by_type() - unused method (not called by API or CLI)
     
-    def get_by_plan_and_type(self, plan_id: str, workflow_type: str) -> List[Dict[str, Any]]:
-        """Get workflows for a specific plan and type combination.
-        
-        Args:
-            plan_id: Plan ID
-            workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
-            
-        Returns:
-            List of workflow dictionaries
-            
-        Raises:
-            Exception: Invalid type or database failure (NO FALLBACK)
-        """
-        # NO FALLBACK: Validate workflow type
-        valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP', 'LEGACY']
-        if workflow_type not in valid_types:
-            raise ValueError(f"Invalid workflow type: {workflow_type}. Must be one of: {valid_types}")
-        
-        conn = sqlite3.connect(self.db_path)
-        
-        try:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM workflows WHERE plan_id = ? AND workflow_type = ?', 
-                         (plan_id, workflow_type))
-            rows = cursor.fetchall()
-            
-            return [self._row_to_dict(row) for row in rows]
-            
-        except Exception as e:
-            raise Exception(f"Failed to retrieve workflows for plan {plan_id} and type {workflow_type}: {str(e)}")
-        finally:
-            conn.close()
+    # REMOVED: get_by_plan_and_type() - unused method (not called by API or CLI)

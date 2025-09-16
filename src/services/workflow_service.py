@@ -812,37 +812,9 @@ class WorkflowService:
         
         return self.workflow_store.get_by_plan_id(plan_id)
     
-    async def get_workflows_by_type(self, workflow_type: str) -> List[Dict[str, Any]]:
-        """Get all workflows of a specific type.
-        
-        Args:
-            workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
-            
-        Returns:
-            List of workflows of the specified type
-            
-        Raises:
-            ValueError: Invalid workflow_type (NO FALLBACK)
-        """
-        return self.workflow_store.get_by_type(workflow_type)
+    # REMOVED: get_workflows_by_type() - unused method (not called by API or CLI)
     
-    async def get_workflows_by_plan_and_type(self, plan_id: str, workflow_type: str) -> List[Dict[str, Any]]:
-        """Get workflows for a specific plan and type combination.
-        
-        Args:
-            plan_id: Plan ID
-            workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
-            
-        Returns:
-            List of workflows matching both criteria
-            
-        Raises:
-            ValueError: Invalid parameters (NO FALLBACK)
-        """
-        if not plan_id or not isinstance(plan_id, str):
-            raise ValueError("plan_id must be a non-empty string")
-        
-        return self.workflow_store.get_by_plan_and_type(plan_id, workflow_type)
+    # REMOVED: get_workflows_by_plan_and_type() - unused method (not called by API or CLI)
 
     def _validate_plan_workflow_alignment(self, plan_data: Dict[str, Any], workflows: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Validate 1:1 mapping between plan items and generated workflows.

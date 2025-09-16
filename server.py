@@ -509,8 +509,8 @@ async def list_executions(
         from src.services.workflow_execution_engine import WorkflowExecutionEngine
         execution_engine = WorkflowExecutionEngine()
 
+        # Note: workflow_id filtering not supported by list_all_executions
         result = await execution_engine.list_all_executions(
-            workflow_id=workflow_id,
             limit=limit,
             status=status,
             executor_type=executor_type
