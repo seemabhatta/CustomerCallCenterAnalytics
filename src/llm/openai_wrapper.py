@@ -19,20 +19,34 @@ class OpenAIWrapper:
     def _create_json_schema(self, pydantic_model: BaseModel) -> Dict[str, Any]:
         """Convert Pydantic model to JSON schema for structured outputs."""
         schema = pydantic_model.model_json_schema()
-        
-        # Ensure additionalProperties is false for all objects to meet OpenAI's strict requirements
+
+        # Fix schema to meet OpenAI's strict requirements
         def fix_schema(obj):
             if isinstance(obj, dict):
+                # Ensure additionalProperties is false for all objects
                 if obj.get("type") == "object" and "additionalProperties" not in obj:
                     obj["additionalProperties"] = False
+
+                # Handle anyOf structures (like Optional fields)
+                if "anyOf" in obj:
+                    for any_item in obj["anyOf"]:
+                        if isinstance(any_item, dict) and any_item.get("type") == "object":
+                            # Force additionalProperties to false for all object types in anyOf
+                            any_item["additionalProperties"] = False
+
+                # Remove description from objects that have $ref (OpenAI requirement)
+                if "$ref" in obj and "description" in obj:
+                    del obj["description"]
+
+                # Recursively fix nested objects
                 for key, value in obj.items():
                     fix_schema(value)
             elif isinstance(obj, list):
                 for item in obj:
                     fix_schema(item)
-        
+
         fix_schema(schema)
-        
+
         return {
             "type": "json_schema",
             "name": pydantic_model.__name__,
@@ -57,7 +71,10 @@ class OpenAIWrapper:
             text={"format": self._create_json_schema(schema_model)},
             temperature=temperature
         )
-        return schema_model.model_validate(resp.output_parsed)
+        # For structured output, parse the JSON from output_text
+        import json
+        parsed_data = json.loads(resp.output_text)
+        return schema_model.model_validate(parsed_data)
     
     async def generate_text_async(self, prompt: str, temperature: float = 0.3) -> str:
         """Generate plain text response asynchronously."""
@@ -76,6 +93,9 @@ class OpenAIWrapper:
             text={"format": self._create_json_schema(schema_model)},
             temperature=temperature
         )
-        return schema_model.model_validate(resp.output_parsed)
+        # For structured output, parse the JSON from output_text
+        import json
+        parsed_data = json.loads(resp.output_text)
+        return schema_model.model_validate(parsed_data)
     
     

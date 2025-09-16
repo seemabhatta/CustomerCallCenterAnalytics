@@ -113,17 +113,23 @@ class RiskAssessmentAgent:
             action_items = result.action_items
             add_span_event("extraction.api_call_completed", workflow_type=workflow_type, items_extracted=len(action_items))
             
-            # Add extraction metadata to each item
+            # Convert ActionItem objects to dicts and add extraction metadata
+            metadata = {
+                'agent_id': self.agent_id,
+                'agent_version': self.agent_version,
+                'model_used': self.model,
+                'extracted_at': datetime.utcnow().isoformat(),
+                'workflow_type': workflow_type
+            }
+
+            # Convert each ActionItem to dict and add metadata
+            updated_items = []
             for item in action_items:
-                item['extraction_metadata'] = {
-                    'agent_id': self.agent_id,
-                    'agent_version': self.agent_version,
-                    'model_used': self.model,
-                    'extracted_at': datetime.utcnow().isoformat(),
-                    'workflow_type': workflow_type
-                }
-            
-            return action_items
+                item_dict = item.model_dump()
+                item_dict['extraction_metadata'] = metadata
+                updated_items.append(item_dict)
+
+            return updated_items
             
         except json.JSONDecodeError as e:
             raise Exception(f"LLM returned invalid JSON: {e}")

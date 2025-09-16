@@ -1,4 +1,5 @@
 """Four-layer action plan generator for mortgage servicing."""
+import json
 import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime
