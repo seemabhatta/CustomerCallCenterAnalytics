@@ -43,7 +43,8 @@
       "Read(//home/ujjal/code/**)",
       "Bash(xargs:*)",
       "Bash(netstat:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

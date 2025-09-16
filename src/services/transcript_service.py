@@ -14,7 +14,7 @@ class TranscriptService:
         self.api_key = api_key
         self.db_path = db_path
         self.store = TranscriptStore(db_path)
-        self.generator = TranscriptGenerator(api_key=api_key)
+        self.generator = TranscriptGenerator()
     
     async def list_all(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """List all transcripts with optional limit."""

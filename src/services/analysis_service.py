@@ -14,7 +14,7 @@ class AnalysisService:
         self.api_key = api_key
         self.db_path = db_path
         self.store = AnalysisStore(db_path)
-        self.analyzer = CallAnalyzer(api_key=api_key)
+        self.analyzer = CallAnalyzer()
     
     async def list_all(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """List all analyses with optional limit."""

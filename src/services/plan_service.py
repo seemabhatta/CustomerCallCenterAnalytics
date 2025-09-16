@@ -14,7 +14,7 @@ class PlanService:
         self.api_key = api_key
         self.db_path = db_path
         self.store = ActionPlanStore(db_path)
-        self.generator = ActionPlanGenerator(api_key=api_key)
+        self.generator = ActionPlanGenerator()
     
     async def list_all(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """List all action plans with optional limit."""
