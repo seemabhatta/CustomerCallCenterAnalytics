@@ -581,39 +581,41 @@ class WorkflowStore:
     
     def _row_to_dict(self, row) -> Dict[str, Any]:
         """Convert database row to dictionary.
-        
+
         Args:
             row: Database row tuple
-            
+
         Returns:
             Dictionary representation
-            
+
         Raises:
             Exception: JSON parsing failure (NO FALLBACK)
         """
+        # Fixed column mapping to match actual database schema
+        # Table columns: id, plan_id, analysis_id, transcript_id, workflow_type, workflow_data, ...
         result = {
             'id': row[0],
             'plan_id': row[1],
             'analysis_id': row[2],
             'transcript_id': row[3],
-            'workflow_data': json.loads(row[4]),
-            'risk_level': row[5],
-            'status': row[6],
-            'context_data': json.loads(row[7]),
-            'risk_reasoning': row[8],
-            'approval_reasoning': row[9],
-            'requires_human_approval': bool(row[10]),
-            'assigned_approver': row[11],
-            'approved_by': row[12],
-            'approved_at': row[13],
-            'rejected_by': row[14],
-            'rejected_at': row[15],
-            'rejection_reason': row[16],
-            'executed_at': row[17],
-            'execution_results': json.loads(row[18]) if row[18] else None,
-            'created_at': row[19],
-            'updated_at': row[20],
-            'workflow_type': row[21] if len(row) > 21 and row[21] else 'LEGACY'  # Handle missing workflow_type
+            'workflow_type': row[4],  # Position 4 is workflow_type
+            'workflow_data': json.loads(row[5]),  # Position 5 is workflow_data (JSON)
+            'risk_level': row[6],
+            'status': row[7],
+            'context_data': json.loads(row[8]),
+            'risk_reasoning': row[9],
+            'approval_reasoning': row[10],
+            'requires_human_approval': bool(row[11]),
+            'assigned_approver': row[12],
+            'approved_by': row[13],
+            'approved_at': row[14],
+            'rejected_by': row[15],
+            'rejected_at': row[16],
+            'rejection_reason': row[17],
+            'executed_at': row[18],
+            'execution_results': json.loads(row[19]) if row[19] else None,
+            'created_at': row[20],
+            'updated_at': row[21]
         }
 
         # Extract steps from workflow_data for backward compatibility

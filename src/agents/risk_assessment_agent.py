@@ -63,78 +63,218 @@ class RiskAssessmentAgent:
         self.agent_version = "v2.0"
     
     @trace_async_function("risk_agent.extract_action_items")
-    async def extract_individual_action_items(self, plan_data: Dict[str, Any], 
-                                               workflow_type: str, 
+    async def extract_individual_action_items(self, plan_data: Dict[str, Any],
+                                               workflow_type: str,
                                                context: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Extract individual action items from 4-pillar action plan using LLM.
-        
+        """Translate plan action items to executable workflows (1:1 mapping).
+
+        FIXED: Changed from LLM extraction to direct translation to ensure
+        every plan item becomes exactly one workflow (no hallucinations).
+
         Args:
             plan_data: Complete action plan data with all 4 pillars
             workflow_type: Type (BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP)
             context: Full context chain for decision making
-            
+
         Returns:
             List of individual action items for the specified workflow type
-            
+
         Raises:
             ValueError: Invalid inputs (NO FALLBACK)
-            Exception: LLM extraction failure (NO FALLBACK)
+            Exception: Translation failure (NO FALLBACK)
         """
         if not plan_data or not isinstance(plan_data, dict):
             raise ValueError("plan_data must be a non-empty dictionary")
-        
+
         if workflow_type not in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
             raise ValueError("workflow_type must be one of: BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP")
-        
+
         if not context or not isinstance(context, dict):
             raise ValueError("context must be a non-empty dictionary")
-        
-        # Start tracing the extraction process
-        set_span_attributes(workflow_type=workflow_type, operation="extract_action_items")
-        add_span_event("extraction.started", workflow_type=workflow_type)
-        
-        # Build comprehensive prompt for extracting individual items by workflow type
-        add_span_event("extraction.prompt_building", workflow_type=workflow_type)
-        full_prompt = prompt_loader.format(
-            'agents/risk/extract_action_items.txt',
-            workflow_type_lower=workflow_type.lower(),
-            workflow_type=workflow_type,
-            transcript_id=context.get('transcript_id', 'Unknown'),
-            analysis_id=context.get('analysis_id', 'Unknown'),
-            plan_id=context.get('plan_id', 'Unknown'),
-            plan_data=json.dumps(plan_data, indent=2),
-            context=json.dumps(context, indent=2)
-        )
 
-        try:
-            add_span_event("extraction.api_call_started", workflow_type=workflow_type, model=self.model)
-            # Use OpenAI wrapper with structured output for action item extraction
-            result = await self.llm.generate_structured_async(full_prompt, ActionItemList, temperature=0.1)
-            action_items = result.action_items
-            add_span_event("extraction.api_call_completed", workflow_type=workflow_type, items_extracted=len(action_items))
-            
-            # Convert ActionItem objects to dicts and add extraction metadata
-            metadata = {
-                'agent_id': self.agent_id,
-                'agent_version': self.agent_version,
-                'model_used': self.model,
-                'extracted_at': datetime.utcnow().isoformat(),
-                'workflow_type': workflow_type
-            }
+        # Start tracing the translation process
+        set_span_attributes(workflow_type=workflow_type, operation="translate_action_items")
+        add_span_event("translation.started", workflow_type=workflow_type)
 
-            # Convert each ActionItem to dict and add metadata
-            updated_items = []
-            for item in action_items:
-                item_dict = item.model_dump()
-                item_dict['extraction_metadata'] = metadata
-                updated_items.append(item_dict)
+        # Direct translation from plan items (no LLM hallucination)
+        add_span_event("translation.direct_mapping_started", workflow_type=workflow_type)
+        translated_items = self._translate_plan_items_directly(plan_data, workflow_type, context)
+        add_span_event("translation.direct_mapping_completed", workflow_type=workflow_type, items_translated=len(translated_items))
 
-            return updated_items
-            
-        except json.JSONDecodeError as e:
-            raise Exception(f"LLM returned invalid JSON: {e}")
-        except Exception as e:
-            raise Exception(f"Action items extraction failed: {e}")
+        # NO FALLBACK - fail fast if no items found
+        if not translated_items:
+            add_span_event("translation.no_items_found", workflow_type=workflow_type)
+            raise ValueError(f"No executable items found for {workflow_type} in plan - check plan structure")
+
+        # Add metadata to translated items
+        metadata = {
+            'agent_id': self.agent_id,
+            'agent_version': self.agent_version,
+            'translation_method': 'DIRECT_MAPPING',
+            'translated_at': datetime.utcnow().isoformat(),
+            'workflow_type': workflow_type
+        }
+
+        for item in translated_items:
+            item['extraction_metadata'] = metadata
+
+        add_span_event("translation.completed", workflow_type=workflow_type, items_count=len(translated_items))
+        return translated_items
+
+    def _translate_plan_items_directly(self, plan_data: Dict[str, Any], workflow_type: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Direct 1:1 translation of plan items to workflows (no LLM interpretation)."""
+        plan_section = plan_data.get(f'{workflow_type.lower()}_plan', {})
+        translated_items = []
+
+        if workflow_type == 'BORROWER':
+            # Translate immediate_actions (always executable)
+            for idx, item in enumerate(plan_section.get('immediate_actions', [])):
+                translated_items.append({
+                    'action_item': item.get('action', 'Unknown action'),
+                    'description': item.get('description', ''),
+                    'priority': item.get('priority', 'medium').lower(),
+                    'timeline': item.get('timeline', 'not specified'),
+                    'workflow_type': 'BORROWER',
+                    'item_metadata': {
+                        'plan_source': f'borrower_plan.immediate_actions[{idx}]',
+                        'auto_executable': item.get('auto_executable', False),
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+            # Translate follow_ups (with trigger conditions)
+            for idx, item in enumerate(plan_section.get('follow_ups', [])):
+                translated_items.append({
+                    'action_item': item.get('action', 'Unknown follow-up'),
+                    'description': f"Follow-up: {item.get('action', '')}",
+                    'priority': 'medium',
+                    'timeline': item.get('due_date', 'not specified'),
+                    'workflow_type': 'BORROWER',
+                    'item_metadata': {
+                        'plan_source': f'borrower_plan.follow_ups[{idx}]',
+                        'trigger_condition': item.get('trigger_condition'),
+                        'owner': item.get('owner'),
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+        elif workflow_type == 'ADVISOR':
+            # Translate high-priority coaching items
+            for idx, item in enumerate(plan_section.get('coaching_items', [])):
+                if item.get('priority', '').lower() == 'high':
+                    translated_items.append({
+                        'action_item': item.get('action', 'Unknown coaching action'),
+                        'description': f"Coaching: {item.get('coaching_point', '')}",
+                        'priority': item.get('priority', 'medium').lower(),
+                        'timeline': 'ongoing',
+                        'workflow_type': 'ADVISOR',
+                        'item_metadata': {
+                            'plan_source': f'advisor_plan.coaching_items[{idx}]',
+                            'expected_improvement': item.get('expected_improvement'),
+                            'translation_method': 'DIRECT'
+                        }
+                    })
+
+            # Translate training recommendations
+            for idx, item in enumerate(plan_section.get('training_recommendations', [])):
+                translated_items.append({
+                    'action_item': f"Provide training: {item}",
+                    'description': f"Training recommendation: {item}",
+                    'priority': 'medium',
+                    'timeline': 'within 30 days',
+                    'workflow_type': 'ADVISOR',
+                    'item_metadata': {
+                        'plan_source': f'advisor_plan.training_recommendations[{idx}]',
+                        'training_type': item,
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+            # Translate next_actions
+            for idx, item in enumerate(plan_section.get('next_actions', [])):
+                translated_items.append({
+                    'action_item': item,
+                    'description': f"Next action: {item}",
+                    'priority': 'medium',
+                    'timeline': 'within 7 days',
+                    'workflow_type': 'ADVISOR',
+                    'item_metadata': {
+                        'plan_source': f'advisor_plan.next_actions[{idx}]',
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+        elif workflow_type == 'SUPERVISOR':
+            # Translate escalation items (always require workflow)
+            for idx, item in enumerate(plan_section.get('escalation_items', [])):
+                translated_items.append({
+                    'action_item': item.get('item', 'Unknown escalation'),
+                    'description': f"Escalation: {item.get('reason', '')}",
+                    'priority': item.get('priority', 'high').lower(),
+                    'timeline': 'immediate',
+                    'workflow_type': 'SUPERVISOR',
+                    'item_metadata': {
+                        'plan_source': f'supervisor_plan.escalation_items[{idx}]',
+                        'reason': item.get('reason'),
+                        'action_required': item.get('action_required'),
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+            # Translate compliance review items
+            for idx, item in enumerate(plan_section.get('compliance_review', [])):
+                translated_items.append({
+                    'action_item': f"Compliance review: {item}",
+                    'description': f"Ensure compliance: {item}",
+                    'priority': 'high',
+                    'timeline': 'within 24 hours',
+                    'workflow_type': 'SUPERVISOR',
+                    'item_metadata': {
+                        'plan_source': f'supervisor_plan.compliance_review[{idx}]',
+                        'compliance_area': item,
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+            # Translate process improvements (if actionable)
+            for idx, item in enumerate(plan_section.get('process_improvements', [])):
+                translated_items.append({
+                    'action_item': f"Implement process improvement: {item}",
+                    'description': f"Process improvement: {item}",
+                    'priority': 'medium',
+                    'timeline': 'within 30 days',
+                    'workflow_type': 'SUPERVISOR',
+                    'item_metadata': {
+                        'plan_source': f'supervisor_plan.process_improvements[{idx}]',
+                        'improvement_type': item,
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+        elif workflow_type == 'LEADERSHIP':
+            # Translate resource allocation (only if actionable)
+            for idx, item in enumerate(plan_section.get('resource_allocation', [])):
+                translated_items.append({
+                    'action_item': item,  # Use exact text from plan
+                    'description': f"Resource allocation: {item}",
+                    'priority': 'medium',
+                    'timeline': 'within 60 days',
+                    'workflow_type': 'LEADERSHIP',
+                    'item_metadata': {
+                        'plan_source': f'leadership_plan.resource_allocation[{idx}]',
+                        'allocation_type': item,
+                        'translation_method': 'DIRECT'
+                    }
+                })
+
+            # Note: strategic_opportunities, portfolio_insights, etc. are NOT translated
+            # They are insights/data for dashboards, not executable actions
+
+        return translated_items
+
+    # REMOVED: _extract_with_llm_fallback method - violates NO FALLBACK principle
+    # The system should fail fast if direct translation doesn't find items
+    # This ensures deterministic 1:1 mapping between plan items and workflows
     
     async def extract_workflow_from_plan(self, plan_data: Dict[str, Any], 
                                        context: Dict[str, Any]) -> Dict[str, Any]:

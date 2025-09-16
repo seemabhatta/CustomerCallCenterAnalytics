@@ -253,10 +253,12 @@ class CLIRestClient:
         return self._make_request('POST', '/api/v1/workflows/execute-all', json_data=json_data, timeout=600)
 
     # Execution operations
-    def list_executions(self, limit: Optional[int] = None, status: Optional[str] = None,
-                       executor_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_executions(self, workflow_id: Optional[str] = None, limit: Optional[int] = None,
+                       status: Optional[str] = None, executor_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all executions via GET /api/v1/executions."""
         params = {}
+        if workflow_id:
+            params['workflow_id'] = workflow_id
         if limit is not None:
             params['limit'] = limit
         if status:
@@ -450,9 +452,9 @@ def transcript_list(
         raise typer.Exit(1)
 
 
-@transcript_app.command("get")
-def transcript_get(transcript_id: str):
-    """Get specific transcript details."""
+@transcript_app.command("show")
+def transcript_show(transcript_id: str):
+    """Show specific transcript details."""
     try:
         client = get_client()
 
@@ -651,9 +653,9 @@ def analysis_list(
         raise typer.Exit(1)
 
 
-@analysis_app.command("get")
-def analysis_get(analysis_id: str):
-    """Get specific analysis details."""
+@analysis_app.command("show")
+def analysis_show(analysis_id: str):
+    """Show specific analysis details."""
     try:
         client = get_client()
 
@@ -948,8 +950,8 @@ def plan_list(
         raise typer.Exit(1)
 
 
-@plan_app.command("view")
-def plan_view(
+@plan_app.command("show")
+def plan_show(
     plan_id: str,
     stakeholder: Optional[str] = typer.Option(
         None,
@@ -1217,19 +1219,19 @@ def plan_delete_all(
 # WORKFLOW COMMANDS
 # ====================================================================
 
-@workflow_app.command("extract-all")
-def workflow_extract_all(
-    plan: str = typer.Option(..., "--plan", "-p", help="Plan ID to extract all workflows from")
+@workflow_app.command("generate")
+def workflow_generate(
+    plan: str = typer.Option(..., "--plan", "-p", help="Plan ID to generate workflows from")
 ):
-    """Extract all workflows from action plan."""
+    """Generate workflows from action plan."""
     try:
         client = get_client()
 
-        console.print(f"⚙️ [bold magenta]Extracting all workflows from plan {plan}...[/bold magenta]")
+        console.print(f"⚙️ [bold magenta]Generating workflows from plan {plan}...[/bold magenta]")
         result = client.extract_all_workflows(plan)
 
-        # Display extraction results
-        console.print(f"\n⚙️ [bold green]Workflows Extraction Started[/bold green]:")
+        # Display generation results
+        console.print(f"\n⚙️ [bold green]Workflow Generation Started[/bold green]:")
         console.print(f"Plan ID: [cyan]{result.get('plan_id', plan)}[/cyan]")
         console.print(f"Status: [yellow]{result.get('status', 'processing')}[/yellow]")
 
@@ -1256,6 +1258,7 @@ def workflow_extract_all(
 
 @workflow_app.command("list")
 def workflow_list(
+    plan: Optional[str] = typer.Option(None, "--plan", "-p", help="Filter by plan ID"),
     status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
     limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of results")
 ):
@@ -1265,6 +1268,8 @@ def workflow_list(
 
         console.print("⚙️ [bold magenta]Listing workflows...[/bold magenta]")
         params = {}
+        if plan:
+            params['plan_id'] = plan
         if status:
             params['status'] = status
         if limit:
@@ -1297,36 +1302,94 @@ def workflow_list(
         raise typer.Exit(1)
 
 
-@workflow_app.command("details")
-def workflow_details(workflow_id: str):
-    """Get detailed workflow information."""
+@workflow_app.command("show")
+def workflow_show(
+    workflow_id: Optional[str] = typer.Argument(None, help="Workflow ID to show"),
+    plan: Optional[str] = typer.Option(None, "--plan", "-p", help="Show all workflows for this plan ID")
+):
+    """Show detailed workflow information."""
+    if not workflow_id and not plan:
+        console.print("❌ [red]Either workflow_id or --plan must be specified[/red]")
+        raise typer.Exit(1)
+
+    if workflow_id and plan:
+        console.print("❌ [red]Cannot specify both workflow_id and --plan[/red]")
+        raise typer.Exit(1)
+
     try:
         client = get_client()
 
-        console.print(f"⚙️ [bold magenta]Getting workflow {workflow_id}...[/bold magenta]")
-        workflow = client.get_workflow(workflow_id)
+        if workflow_id:
+            # Show single workflow
+            console.print(f"⚙️ [bold magenta]Getting workflow {workflow_id}...[/bold magenta]")
+            workflow = client.get_workflow(workflow_id)
 
-        console.print(f"\n⚙️ [bold green]Workflow Details[/bold green]:")
-        console.print(f"Workflow ID: [cyan]{workflow.get('workflow_id', workflow_id)}[/cyan]")
-        console.print(f"Plan ID: [cyan]{workflow.get('plan_id', 'N/A')}[/cyan]")
-        console.print(f"Status: [yellow]{workflow.get('status', 'N/A')}[/yellow]")
-        console.print(f"Type: [yellow]{workflow.get('workflow_type', 'N/A')}[/yellow]")
+            console.print(f"\n⚙️ [bold green]Workflow Details[/bold green]:")
+            console.print(f"Workflow ID: [cyan]{workflow.get('workflow_id', workflow_id)}[/cyan]")
+            console.print(f"Plan ID: [cyan]{workflow.get('plan_id', 'N/A')}[/cyan]")
+            console.print(f"Status: [yellow]{workflow.get('status', 'N/A')}[/yellow]")
+            console.print(f"Type: [yellow]{workflow.get('workflow_type', 'N/A')}[/yellow]")
 
-        # Display workflow steps
-        workflow_steps = workflow.get('workflow_steps', [])
-        if workflow_steps:
-            console.print(f"\n📋 [bold blue]Workflow Steps ({len(workflow_steps)}):[/bold blue]")
-            for i, step in enumerate(workflow_steps, 1):
-                action = step.get('action', 'N/A')
-                tool = step.get('tool_needed', 'N/A')
-                details = step.get('details', '')
-                console.print(f"\n   {i}. {action}")
-                console.print(f"      Tool: {tool}")
-                if details:
-                    console.print(f"      Details: {details}")
+            # Display workflow steps
+            workflow_steps = workflow.get('workflow_steps', [])
+            if workflow_steps:
+                console.print(f"\n📋 [bold blue]Workflow Steps ({len(workflow_steps)}):[/bold blue]")
+                for i, step in enumerate(workflow_steps, 1):
+                    action = step.get('action', 'N/A')
+                    tool = step.get('tool_needed', 'N/A')
+                    details = step.get('details', '')
+                    console.print(f"\n   {i}. {action}")
+                    console.print(f"      Tool: {tool}")
+                    if details:
+                        console.print(f"      Details: {details}")
+
+        elif plan:
+            # Show all workflows for plan
+            console.print(f"⚙️ [bold magenta]Getting all workflows for plan {plan}...[/bold magenta]")
+            workflows = client.list_workflows(plan_id=plan)
+
+            if not workflows:
+                console.print("📭 No workflows found for this plan")
+                return
+
+            console.print(f"\n⚙️ [bold green]Workflows for Plan {plan} ({len(workflows)}):[/bold green]")
+
+            # Group by stakeholder
+            by_stakeholder = {}
+            for workflow in workflows:
+                stakeholder = workflow.get('workflow_type', 'UNKNOWN')
+                if stakeholder not in by_stakeholder:
+                    by_stakeholder[stakeholder] = []
+                by_stakeholder[stakeholder].append(workflow)
+
+            # Display by stakeholder
+            for stakeholder in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
+                if stakeholder in by_stakeholder:
+                    stakeholder_workflows = by_stakeholder[stakeholder]
+                    console.print(f"\n🎯 [bold cyan]{stakeholder} WORKFLOWS ({len(stakeholder_workflows)}):[/bold cyan]")
+
+                    for i, workflow in enumerate(stakeholder_workflows, 1):
+                        workflow_id = workflow.get('workflow_id', 'N/A')
+                        status = workflow.get('status', 'N/A')
+                        workflow_data = workflow.get('workflow_data', {})
+                        title = workflow_data.get('title', 'No title')
+                        steps = workflow_data.get('steps', [])
+
+                        console.print(f"\n  {i}. [cyan]{title}[/cyan]")
+                        console.print(f"     ID: {workflow_id}")
+                        console.print(f"     Status: [yellow]{status}[/yellow]")
+                        console.print(f"     Steps: {len(steps)}")
+
+                        if steps:
+                            console.print(f"     📋 [bold blue]Steps:[/bold blue]")
+                            for j, step in enumerate(steps[:3], 1):  # Show first 3 steps
+                                step_action = step.get('action', 'N/A')
+                                console.print(f"       {j}. {step_action}")
+                            if len(steps) > 3:
+                                console.print(f"       ... and {len(steps) - 3} more steps")
 
     except CLIError as e:
-        print_error(f"Details failed: {str(e)}")
+        print_error(f"Show failed: {str(e)}")
         raise typer.Exit(1)
 
 
@@ -1455,6 +1518,7 @@ def workflow_delete_all(
 
 @execution_app.command("list")
 def execution_list(
+    workflow: Optional[str] = typer.Option(None, "--workflow", "-w", help="Filter by workflow ID"),
     limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of results"),
     status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
     executor_type: Optional[str] = typer.Option(None, "--type", "-t", help="Filter by executor type")
@@ -1464,7 +1528,7 @@ def execution_list(
         client = get_client()
 
         console.print("🚀 [bold magenta]Listing executions...[/bold magenta]")
-        executions = client.list_executions(limit=limit, status=status, executor_type=executor_type)
+        executions = client.list_executions(workflow_id=workflow, limit=limit, status=status, executor_type=executor_type)
 
         if not executions:
             console.print("📭 No executions found")
@@ -1497,9 +1561,9 @@ def execution_list(
         raise typer.Exit(1)
 
 
-@execution_app.command("get")
-def execution_get(execution_id: str):
-    """Get specific execution details."""
+@execution_app.command("show")
+def execution_show(execution_id: str):
+    """Show specific execution details."""
     try:
         client = get_client()
 
@@ -1591,8 +1655,8 @@ def execution_delete_all(
         raise typer.Exit(1)
 
 
-@execution_app.command("statistics")
-def execution_statistics():
+@execution_app.command("stats")
+def execution_stats():
     """Get comprehensive execution statistics."""
     try:
         client = get_client()

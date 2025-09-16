@@ -378,6 +378,7 @@ async def extract_all_workflows(request: WorkflowExtractRequest):
 
 @app.get("/api/v1/workflows")
 async def list_workflows(
+    plan_id: Optional[str] = Query(None, description="Filter by plan ID"),
     status: Optional[str] = Query(None, description="Filter by workflow status"),
     risk_level: Optional[str] = Query(None, description="Filter by risk level"),
     limit: Optional[int] = Query(None, description="Limit number of results")
@@ -385,6 +386,7 @@ async def list_workflows(
     """List workflows with optional filters."""
     try:
         workflows = await workflow_service.list_workflows(
+            plan_id=plan_id,
             status=status,
             risk_level=risk_level,
             limit=limit
@@ -497,6 +499,7 @@ async def execute_all_approved_workflows(request: Optional[Dict] = None):
 
 @app.get("/api/v1/executions")
 async def list_executions(
+    workflow_id: Optional[str] = Query(None, description="Filter by workflow ID"),
     limit: Optional[int] = Query(None, description="Maximum number of results"),
     status: Optional[str] = Query(None, description="Filter by execution status"),
     executor_type: Optional[str] = Query(None, description="Filter by executor type")
@@ -507,6 +510,7 @@ async def list_executions(
         execution_engine = WorkflowExecutionEngine()
 
         result = await execution_engine.list_all_executions(
+            workflow_id=workflow_id,
             limit=limit,
             status=status,
             executor_type=executor_type

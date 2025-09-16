@@ -187,25 +187,44 @@ class WorkflowService:
         
         return self.workflow_store.get_by_plan_id(plan_id)
     
-    async def list_workflows(self, status: Optional[str] = None, 
+    async def list_workflows(self, plan_id: Optional[str] = None,
+                           status: Optional[str] = None,
                            risk_level: Optional[str] = None,
                            limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """List workflows with optional filters.
-        
+
         Args:
+            plan_id: Optional plan ID filter
             status: Optional status filter
             risk_level: Optional risk level filter
             limit: Optional result limit
-            
+
         Returns:
             List of matching workflows
-            
+
         Raises:
             ValueError: Invalid filter values (NO FALLBACK)
         """
+        if plan_id:
+            # If plan_id is specified, get workflows for that plan first
+            workflows = self.workflow_store.get_by_plan_id(plan_id)
+
+            # Apply additional filters if specified
+            if status:
+                workflows = [w for w in workflows if w.get('status') == status]
+            if risk_level:
+                workflows = [w for w in workflows if w.get('risk_level') == risk_level]
+
+            # Apply limit
+            if limit:
+                workflows = workflows[:limit]
+
+            return workflows
+
+        # Original logic for when no plan_id is specified
         if status and risk_level:
             raise ValueError("Cannot filter by both status and risk_level simultaneously")
-        
+
         if status:
             return self.workflow_store.get_by_status(status, limit)
         elif risk_level:
@@ -733,7 +752,27 @@ class WorkflowService:
         # Only fail completely if no workflows were extracted at all
         if not all_workflows and failed_workflow_types:
             raise Exception(f"All workflow types failed: {[f['error'] for f in failed_workflow_types]}")
-        
+
+        # Validate plan-to-workflow alignment (1:1 mapping) - FAIL FAST if misaligned
+        if all_workflows:
+            validation_report = self._validate_plan_workflow_alignment(plan_data, all_workflows)
+            add_span_event("workflow.validation_completed",
+                          alignment_score=validation_report['alignment_score'],
+                          total_workflows=len(all_workflows),
+                          expected_executable_items=validation_report['expected_total'])
+
+            # FAIL FAST - NO FALLBACK: If alignment is not perfect, fail immediately
+            if not validation_report['perfect_alignment']:
+                error_details = {
+                    'expected_counts': validation_report['expected_counts'],
+                    'actual_counts': validation_report['actual_counts'],
+                    'mismatches': validation_report['mismatches']
+                }
+                add_span_event("workflow.validation_failed",
+                              alignment_score=validation_report['alignment_score'],
+                              error_details=error_details)
+                raise ValueError(f"Plan-to-workflow mapping failed: Expected {validation_report['expected_total']} workflows, got {validation_report['actual_total']}. Mismatches: {validation_report['mismatches']}")
+
         # Bulk create all workflows
         if all_workflows:
             try:
@@ -804,6 +843,91 @@ class WorkflowService:
             raise ValueError("plan_id must be a non-empty string")
         
         return self.workflow_store.get_by_plan_and_type(plan_id, workflow_type)
+
+    def _validate_plan_workflow_alignment(self, plan_data: Dict[str, Any], workflows: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Validate 1:1 mapping between plan items and generated workflows.
+
+        Args:
+            plan_data: Original plan data
+            workflows: Generated workflows
+
+        Returns:
+            Validation report with alignment score and details
+        """
+        # Count expected executable items from plan
+        expected_counts = {
+            'BORROWER': self._count_borrower_executable_items(plan_data.get('borrower_plan', {})),
+            'ADVISOR': self._count_advisor_executable_items(plan_data.get('advisor_plan', {})),
+            'SUPERVISOR': self._count_supervisor_executable_items(plan_data.get('supervisor_plan', {})),
+            'LEADERSHIP': self._count_leadership_executable_items(plan_data.get('leadership_plan', {}))
+        }
+
+        # Count actual workflows by type
+        actual_counts = {}
+        for workflow in workflows:
+            wf_type = workflow.get('workflow_type', 'UNKNOWN')
+            actual_counts[wf_type] = actual_counts.get(wf_type, 0) + 1
+
+        # Calculate alignment score
+        total_expected = sum(expected_counts.values())
+        total_actual = len(workflows)
+
+        # Perfect alignment = exactly right number of workflows per type
+        perfect_matches = 0
+        for wf_type in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
+            if expected_counts[wf_type] == actual_counts.get(wf_type, 0):
+                perfect_matches += 1
+
+        alignment_score = perfect_matches / 4  # 4 workflow types
+
+        return {
+            'alignment_score': alignment_score,
+            'expected_counts': expected_counts,
+            'actual_counts': actual_counts,
+            'expected_total': total_expected,
+            'actual_total': total_actual,
+            'perfect_alignment': alignment_score == 1.0,
+            'mismatches': [
+                {'type': wf_type, 'expected': expected_counts[wf_type], 'actual': actual_counts.get(wf_type, 0)}
+                for wf_type in expected_counts
+                if expected_counts[wf_type] != actual_counts.get(wf_type, 0)
+            ]
+        }
+
+    def _count_borrower_executable_items(self, borrower_plan: Dict[str, Any]) -> int:
+        """Count executable items in borrower plan."""
+        count = 0
+        count += len(borrower_plan.get('immediate_actions', []))  # Always executable
+        count += len(borrower_plan.get('follow_ups', []))  # Always executable
+        # Skip: personalized_offers, risk_mitigation (not executable)
+        return count
+
+    def _count_advisor_executable_items(self, advisor_plan: Dict[str, Any]) -> int:
+        """Count executable items in advisor plan."""
+        count = 0
+        # High priority coaching items only
+        coaching_items = advisor_plan.get('coaching_items', [])
+        count += len([item for item in coaching_items if item.get('priority', '').lower() == 'high'])
+        count += len(advisor_plan.get('training_recommendations', []))  # Always executable
+        count += len(advisor_plan.get('next_actions', []))  # Always executable
+        # Skip: performance_feedback (informational)
+        return count
+
+    def _count_supervisor_executable_items(self, supervisor_plan: Dict[str, Any]) -> int:
+        """Count executable items in supervisor plan."""
+        count = 0
+        count += len(supervisor_plan.get('escalation_items', []))  # Always executable
+        count += len(supervisor_plan.get('compliance_review', []))  # Always executable
+        count += len(supervisor_plan.get('process_improvements', []))  # Always executable
+        # Skip: team_patterns (insights)
+        return count
+
+    def _count_leadership_executable_items(self, leadership_plan: Dict[str, Any]) -> int:
+        """Count executable items in leadership plan."""
+        count = 0
+        count += len(leadership_plan.get('resource_allocation', []))  # Always executable
+        # Skip: portfolio_insights, strategic_opportunities, risk_indicators, trend_analysis (insights)
+        return count
     
     async def approve_action_item_workflow(self, workflow_id: str, approved_by: str, 
                                          reasoning: Optional[str] = None) -> Dict[str, Any]:
