@@ -615,7 +615,10 @@ class WorkflowStore:
             'updated_at': row[20],
             'workflow_type': row[21] if len(row) > 21 and row[21] else 'LEGACY'  # Handle missing workflow_type
         }
-            
+
+        # Extract steps from workflow_data for backward compatibility
+        result['workflow_steps'] = result['workflow_data'].get('steps', [])
+
         return result
     
     def _log_state_transition(self, cursor, workflow_id: str, from_status: Optional[str],

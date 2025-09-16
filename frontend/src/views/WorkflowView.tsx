@@ -79,14 +79,9 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   };
 
   // Helper function to detect workflow type
-  const getWorkflowDisplayType = (workflow: any) => {
-    if (workflow.workflow_data?.action_item) return 'GRANULAR'; // New granular format
-    if (workflow.risk_reasoning) return 'META';   // Old meta format  
-    return 'UNKNOWN';
-  };
-
-  const isGranularWorkflow = (workflow: any): workflow is GranularWorkflow => 
-    getWorkflowDisplayType(workflow) === 'GRANULAR';
+  // All workflows with steps are granular ActionItem workflows
+  const isGranularWorkflow = (workflow: any): workflow is GranularWorkflow =>
+    Boolean(workflow.workflow_data?.steps);
 
   // Helper function for priority colors
   const getPriorityColor = (priority: string) => {
@@ -367,7 +362,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
         <div className="space-y-2">
           <div>
             <div className="text-slate-600 text-xs">Action Item</div>
-            <div className="font-medium text-sm">{workflow.workflow_data?.action_item || 'No action item specified'}</div>
+            <div className="font-medium text-sm">{workflow.workflow_data?.title || 'No title specified'}</div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div>
@@ -430,7 +425,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
                     <CardContent className="py-2 px-3">
                       <div className="flex items-start gap-2">
                         <Badge className="mt-0.5 text-xs h-5 min-w-[1.5rem] flex items-center justify-center">
-                          {step.step || index + 1}
+                          {step.step_number || index + 1}
                         </Badge>
                         <div className="flex-1 space-y-1">
                           <h4 className="font-medium text-xs text-gray-900">{step.action}</h4>
@@ -495,7 +490,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
           </div>
         ) : (
           <div className="text-xs text-slate-500 italic">
-            No specific steps defined. Follow standard procedures for: {workflow.workflow_data?.action_item || 'this task'}
+            No specific steps defined. Follow standard procedures for: {workflow.workflow_data?.title || 'this task'}
           </div>
         )}
       </CardContent>
@@ -587,7 +582,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
             <AssignmentDetails workflow={workflow} />
           </div>
         ) : (
-          /* Meta Workflow Layout (Existing) */
+          /* No workflow steps available */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {/* Core Information */}
             <Card>
