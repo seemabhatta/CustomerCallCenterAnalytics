@@ -11,7 +11,10 @@ import uuid
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from dotenv import load_dotenv
-from ..llm import OpenAIWrapper, RiskAssessment, ApprovalRouting, ActionItemList
+from ..llm import (
+    OpenAIWrapper, RiskAssessment, ApprovalRouting, ActionItemList,
+    WorkflowExtraction, RoutingDecision, ValidationResult, StatusDecision, ExecutionResult
+)
 from ..telemetry import trace_async_function, set_span_attributes, add_span_event
 from src.utils.prompt_loader import prompt_loader
 
@@ -103,21 +106,9 @@ class RiskAssessmentAgent:
 
         try:
             add_span_event("extraction.api_call_started", workflow_type=workflow_type, model=self.model)
-            # Use old approach with OpenAI client for action item extraction
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Low temperature for consistent extraction
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate action items extraction response")
-            
-            response_data = json.loads(response.choices[0].message.content)
-            action_items = response_data.get('action_items', [])
+            # Use OpenAI wrapper with structured output for action item extraction
+            result = await self.llm.generate_structured_async(full_prompt, ActionItemList, temperature=0.1)
+            action_items = result.action_items
             add_span_event("extraction.api_call_completed", workflow_type=workflow_type, items_extracted=len(action_items))
             
             # Add extraction metadata to each item
@@ -173,21 +164,11 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Low temperature for consistent extraction
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate workflow extraction response")
-            
-            workflow_data = json.loads(response.choices[0].message.content)
-            
-            # Add agent metadata
+            # Use OpenAI wrapper with structured WorkflowExtraction output
+            result = await self.llm.generate_structured_async(full_prompt, WorkflowExtraction, temperature=0.1)
+
+            # Convert to dict and add agent metadata
+            workflow_data = result.model_dump()
             workflow_data['extraction_metadata'] = {
                 'agent_id': self.agent_id,
                 'agent_version': self.agent_version,
@@ -278,33 +259,12 @@ class RiskAssessmentAgent:
                           workflow_type=workflow_type, 
                           action_item_id=action_item.get('id', 'unknown'))
             
-            # Use old approach for now - will migrate to structured outputs later
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Consistent risk assessment
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate risk assessment response")
-            
+            # Use OpenAI wrapper with structured RiskAssessment output
+            result = await self.llm.generate_structured_async(full_prompt, RiskAssessment, temperature=0.1)
             add_span_event("risk_assessment.llm_call_completed")
-            
-            risk_assessment = json.loads(response.choices[0].message.content)
-            
-            # Validate and fix risk_level to prevent database constraint violations
-            if 'risk_level' not in risk_assessment or 'reasoning' not in risk_assessment:
-                raise Exception("LLM failed to provide required risk assessment fields")
-            
-            # Ensure risk_level is valid for database constraint
-            if risk_assessment['risk_level'] not in ['LOW', 'MEDIUM', 'HIGH']:
-                # Fix invalid risk levels - this prevents database constraint violations
-                risk_assessment['risk_level'] = 'MEDIUM'  # Safe fallback
-            
-            # Add assessment metadata
+
+            # Convert to dict and add assessment metadata
+            risk_assessment = result.model_dump()
             risk_assessment['assessment_metadata'] = {
                 'agent_id': self.agent_id,
                 'agent_version': self.agent_version,
@@ -362,29 +322,11 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Consistent risk assessment
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate risk assessment response")
-            
-            risk_assessment = json.loads(response.choices[0].message.content)
-            
-            # Validate required fields
-            if 'risk_level' not in risk_assessment or 'reasoning' not in risk_assessment:
-                raise Exception("LLM failed to provide required risk assessment fields")
-            
-            # Validate risk level
-            if risk_assessment['risk_level'] not in ['LOW', 'MEDIUM', 'HIGH']:
-                raise Exception(f"Invalid risk level from LLM: {risk_assessment['risk_level']}")
-            
-            # Add assessment metadata
+            # Use OpenAI wrapper with structured RiskAssessment output
+            result = await self.llm.generate_structured_async(full_prompt, RiskAssessment, temperature=0.1)
+
+            # Convert to dict and add assessment metadata
+            risk_assessment = result.model_dump()
             risk_assessment['assessment_metadata'] = {
                 'agent_id': self.agent_id,
                 'agent_version': self.agent_version,
@@ -469,33 +411,11 @@ class RiskAssessmentAgent:
         )
 
         try:
-            # Use old approach for now - will migrate to structured outputs later
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Consistent routing decisions
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate routing response")
-            
-            routing_decision = json.loads(response.choices[0].message.content)
-            
-            # Validate required fields
-            required_fields = ['requires_human_approval', 'initial_status', 'routing_reasoning']
-            for field in required_fields:
-                if field not in routing_decision:
-                    raise Exception(f"LLM failed to provide required routing field: {field}")
-            
-            # Validate status values
-            valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'AUTO_APPROVED']
-            if routing_decision['initial_status'] not in valid_statuses:
-                raise Exception(f"Invalid initial status from LLM: {routing_decision['initial_status']}")
-            
-            # Add routing metadata
+            # Use OpenAI wrapper with structured RoutingDecision output
+            result = await self.llm.generate_structured_async(full_prompt, RoutingDecision, temperature=0.1)
+
+            # Convert to dict and add routing metadata
+            routing_decision = result.model_dump()
             routing_decision['routing_metadata'] = {
                 'agent_id': self.agent_id,
                 'agent_version': self.agent_version,
@@ -549,32 +469,11 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1  # Consistent routing decisions
-            )
-            
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate routing response")
-            
-            routing_decision = json.loads(response.choices[0].message.content)
-            
-            # Validate required fields
-            required_fields = ['requires_human_approval', 'initial_status', 'routing_reasoning']
-            for field in required_fields:
-                if field not in routing_decision:
-                    raise Exception(f"LLM failed to provide required routing field: {field}")
-            
-            # Validate status values
-            valid_statuses = ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'AUTO_APPROVED']
-            if routing_decision['initial_status'] not in valid_statuses:
-                raise Exception(f"Invalid initial status from LLM: {routing_decision['initial_status']}")
-            
-            # Add routing metadata
+            # Use OpenAI wrapper with structured RoutingDecision output
+            result = await self.llm.generate_structured_async(full_prompt, RoutingDecision, temperature=0.1)
+
+            # Convert to dict and add routing metadata
+            routing_decision = result.model_dump()
             routing_decision['routing_metadata'] = {
                 'agent_id': self.agent_id,
                 'agent_version': self.agent_version,
@@ -629,20 +528,10 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1
-            )
+            # Use OpenAI wrapper with structured ValidationResult output
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            validation_result = result.model_dump()
 
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate validation response")
-            
-            validation_result = json.loads(response.choices[0].message.content)
-            
             # Add validation metadata
             validation_result['validation_metadata'] = {
                 'agent_id': self.agent_id,
@@ -696,19 +585,9 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate validation response")
-            
-            validation_result = json.loads(response.choices[0].message.content)
+            # Use OpenAI wrapper with structured ValidationResult output
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            validation_result = result.model_dump()
             
             # Add validation metadata
             validation_result['validation_metadata'] = {
@@ -768,19 +647,9 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate rejection validation response")
-            
-            validation_result = json.loads(response.choices[0].message.content)
+            # Use OpenAI wrapper with structured ValidationResult output
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            validation_result = result.model_dump()
             
             # Add validation metadata
             validation_result['validation_metadata'] = {
@@ -838,19 +707,9 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate rejection validation response")
-
-            validation_result = json.loads(response.choices[0].message.content)
+            # Use OpenAI wrapper with structured ValidationResult output
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            validation_result = result.model_dump()
 
             # Add validation metadata
             validation_result['validation_metadata'] = {
@@ -899,19 +758,9 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate status decision response")
-
-            status_decision = json.loads(response.choices[0].message.content)
+            # Use OpenAI wrapper with structured StatusDecision output
+            result = await self.llm.generate_structured_async(full_prompt, StatusDecision, temperature=0.1)
+            status_decision = result.model_dump()
             
             # Add decision metadata
             status_decision['decision_metadata'] = {
@@ -955,19 +804,9 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.1
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate status decision response")
-
-            status_decision = json.loads(response.choices[0].message.content)
+            # Use OpenAI wrapper with structured StatusDecision output
+            result = await self.llm.generate_structured_async(full_prompt, StatusDecision, temperature=0.1)
+            status_decision = result.model_dump()
 
             # Add decision metadata
             status_decision['decision_metadata'] = {
@@ -1041,19 +880,9 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.2  # Slightly higher for varied execution scenarios
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate execution response")
-
-            execution_results = json.loads(response.choices[0].message.content)
+            # Use OpenAI wrapper with structured ExecutionResult output
+            result = await self.llm.generate_structured_async(full_prompt, ExecutionResult, temperature=0.2)
+            execution_results = result.model_dump()
             
             # Add execution metadata
             execution_results['execution_metadata'] = {
@@ -1097,19 +926,9 @@ class RiskAssessmentAgent:
         )
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "user", "content": full_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.2  # Slightly higher for varied execution scenarios
-            )
-
-            if not response.choices or not response.choices[0].message.content:
-                raise Exception("LLM failed to generate execution response")
-
-            execution_results = json.loads(response.choices[0].message.content)
+            # Use OpenAI wrapper with structured ExecutionResult output
+            result = await self.llm.generate_structured_async(full_prompt, ExecutionResult, temperature=0.2)
+            execution_results = result.model_dump()
             
             # Add execution metadata
             execution_results['execution_metadata'] = {

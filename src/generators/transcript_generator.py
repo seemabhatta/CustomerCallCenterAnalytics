@@ -73,62 +73,21 @@ class TranscriptGenerator:
         )
     
     def _call_openai(self, prompt: str) -> str:
-        """Call OpenAI API - try different methods until one works.
-        
+        """Call OpenAI API using Responses API.
+
         Args:
             prompt: The prompt to send
-            
+
         Returns:
             Response text
         """
-        # Try Responses API first (if available)
-        if hasattr(self.client, 'responses'):
-            try:
-                response = self.client.responses.create(
-                    model="gpt-4o-mini",
-                    input=prompt,
-                    temperature=0.7,
-                    max_output_tokens=1500
-                )
-                # Extract text from Responses API format
-                if hasattr(response, 'output') and response.output:
-                    if isinstance(response.output, list) and len(response.output) > 0:
-                        output_item = response.output[0]
-                        if hasattr(output_item, 'content') and output_item.content:
-                            if isinstance(output_item.content, list) and len(output_item.content) > 0:
-                                content_item = output_item.content[0]
-                                if hasattr(content_item, 'text'):
-                                    return content_item.text
-                # If we can't extract properly, fall back to string conversion
-                return str(response)
-            except:
-                pass  # Fall through to next method
-        
-        # Fallback to Chat Completions
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=1500
-            )
-            return response.choices[0].message.content
-        except:
-            pass
-        
-        # Last resort: Completions API
-        try:
-            response = self.client.completions.create(
-                model="gpt-3.5-turbo-instruct",
-                prompt=prompt,
-                temperature=0.7,
-                max_tokens=1500
-            )
-            return response.choices[0].text
-        except Exception as e:
-            raise Exception(f"All API methods failed: {str(e)}")
+        response = self.client.responses.create(
+            model="gpt-4o-mini",
+            input=prompt,
+            temperature=0.7,
+            max_output_tokens=1500
+        )
+        return response.output_text
     
     def generate_batch(self, count: int, **context) -> list[Transcript]:
         """Generate multiple transcripts.

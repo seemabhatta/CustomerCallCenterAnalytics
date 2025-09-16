@@ -25,19 +25,27 @@ def openai_wrapper():
 
 
 @pytest.fixture
-def mock_openai_response():
-    """Mock OpenAI API response."""
+def mock_text_response():
+    """Mock OpenAI Responses API text response."""
     mock_response = Mock()
-    mock_choice = Mock()
-    mock_message = Mock()
-    mock_message.content = "Test response"
-    mock_choice.message = mock_message
-    mock_response.choices = [mock_choice]
+    mock_response.output_text = "Test response"
     return mock_response
 
 
-class TestStructuredModel(BaseModel):
-    """Test Pydantic model for schema testing."""
+@pytest.fixture
+def mock_structured_response():
+    """Mock OpenAI Responses API structured response."""
+    mock_response = Mock()
+    mock_response.output_parsed = {
+        "name": "Test Name",
+        "value": 42,
+        "category": "A"
+    }
+    return mock_response
+
+
+class SampleStructuredModel(BaseModel):
+    """Sample Pydantic model for schema testing."""
     name: str = Field(description="Name field")
     value: int = Field(ge=0, description="Positive integer")
     category: Literal["A", "B", "C"] = Field(description="Category selection")
@@ -194,10 +202,10 @@ class TestOpenAIWrapper:
 
     def test_create_json_schema(self, openai_wrapper):
         """Test JSON schema creation from Pydantic model."""
-        schema = openai_wrapper._create_json_schema(TestStructuredModel)
+        schema = openai_wrapper._create_json_schema(SampleStructuredModel)
         
         assert schema["type"] == "json_schema"
-        assert schema["name"] == "TestStructuredModel"
+        assert schema["name"] == "SampleStructuredModel"
         assert schema["strict"] is True
         assert "schema" in schema
         
@@ -226,70 +234,68 @@ class TestOpenAIWrapper:
         
         check_additional_properties(schema["schema"])
 
-    def test_generate_text_success(self, openai_wrapper, mock_openai_response):
+    def test_generate_text_success(self, openai_wrapper, mock_text_response):
         """Test successful text generation."""
-        mock_openai_response.choices[0].message.content = "Generated response"
-        
-        with patch.object(openai_wrapper.client.chat.completions, 'create', return_value=mock_openai_response):
+        mock_text_response.output_text = "Generated response"
+
+        with patch.object(openai_wrapper.client.responses, 'create', return_value=mock_text_response):
             result = openai_wrapper.generate_text("Test prompt")
-            
+
             assert result == "Generated response"
 
-    def test_generate_text_with_temperature(self, openai_wrapper, mock_openai_response):
+    def test_generate_text_with_temperature(self, openai_wrapper, mock_text_response):
         """Test text generation with custom temperature."""
-        with patch.object(openai_wrapper.client.chat.completions, 'create', return_value=mock_openai_response) as mock_create:
+        with patch.object(openai_wrapper.client.responses, 'create', return_value=mock_text_response) as mock_create:
             openai_wrapper.generate_text("Test prompt", temperature=0.7)
-            
+
             mock_create.assert_called_once()
             call_args = mock_create.call_args[1]
             assert call_args["temperature"] == 0.7
 
     def test_generate_text_api_failure(self, openai_wrapper):
         """Test text generation fails fast when API fails."""
-        with patch.object(openai_wrapper.client.chat.completions, 'create', side_effect=Exception("API error")):
-            
+        with patch.object(openai_wrapper.client.responses, 'create', side_effect=Exception("API error")):
+
             with pytest.raises(Exception, match="API error"):
                 openai_wrapper.generate_text("Test prompt")
 
-    def test_generate_structured_success(self, openai_wrapper, mock_openai_response):
+    def test_generate_structured_success(self, openai_wrapper, mock_structured_response):
         """Test successful structured output generation."""
-        # Mock valid JSON response
+        # Mock valid structured response
         response_data = {
             "name": "Test Name",
             "value": 42,
             "category": "A"
         }
-        mock_openai_response.choices[0].message.content = json.dumps(response_data)
-        
-        with patch.object(openai_wrapper.client.chat.completions, 'create', return_value=mock_openai_response):
-            result = openai_wrapper.generate_structured("Test prompt", TestStructuredModel)
-            
-            assert isinstance(result, TestStructuredModel)
+        mock_structured_response.output_parsed = response_data
+
+        with patch.object(openai_wrapper.client.responses, 'create', return_value=mock_structured_response):
+            result = openai_wrapper.generate_structured("Test prompt", SampleStructuredModel)
+
+            assert isinstance(result, SampleStructuredModel)
             assert result.name == "Test Name"
             assert result.value == 42
             assert result.category == "A"
 
-    def test_generate_structured_with_temperature(self, openai_wrapper, mock_openai_response):
+    def test_generate_structured_with_temperature(self, openai_wrapper, mock_structured_response):
         """Test structured generation with custom temperature."""
         response_data = {"name": "Test", "value": 1, "category": "B"}
-        mock_openai_response.choices[0].message.content = json.dumps(response_data)
-        
-        with patch.object(openai_wrapper.client.chat.completions, 'create', return_value=mock_openai_response) as mock_create:
-            openai_wrapper.generate_structured("Test prompt", TestStructuredModel, temperature=0.9)
-            
+        mock_structured_response.output_parsed = response_data
+
+        with patch.object(openai_wrapper.client.responses, 'create', return_value=mock_structured_response) as mock_create:
+            openai_wrapper.generate_structured("Test prompt", SampleStructuredModel, temperature=0.9)
+
             call_args = mock_create.call_args[1]
             assert call_args["temperature"] == 0.9
 
-    def test_generate_structured_invalid_json(self, openai_wrapper, mock_openai_response):
-        """Test structured generation fails fast on invalid JSON."""
-        mock_openai_response.choices[0].message.content = "invalid json"
-        
-        with patch.object(openai_wrapper.client.chat.completions, 'create', return_value=mock_openai_response):
-            
-            with pytest.raises(json.JSONDecodeError):
-                openai_wrapper.generate_structured("Test prompt", TestStructuredModel)
+    def test_generate_structured_api_failure(self, openai_wrapper):
+        """Test structured generation fails fast when API fails."""
+        with patch.object(openai_wrapper.client.responses, 'create', side_effect=Exception("API error")):
 
-    def test_generate_structured_validation_error(self, openai_wrapper, mock_openai_response):
+            with pytest.raises(Exception, match="API error"):
+                openai_wrapper.generate_structured("Test prompt", SampleStructuredModel)
+
+    def test_generate_structured_validation_error(self, openai_wrapper, mock_structured_response):
         """Test structured generation fails fast on validation error."""
         # Mock response with invalid data
         response_data = {
@@ -297,55 +303,49 @@ class TestOpenAIWrapper:
             "value": -1,  # Invalid: must be >= 0
             "category": "D"  # Invalid: not in allowed values
         }
-        mock_openai_response.choices[0].message.content = json.dumps(response_data)
-        
-        with patch.object(openai_wrapper.client.chat.completions, 'create', return_value=mock_openai_response):
-            
+        mock_structured_response.output_parsed = response_data
+
+        with patch.object(openai_wrapper.client.responses, 'create', return_value=mock_structured_response):
+
             with pytest.raises(ValidationError):
-                openai_wrapper.generate_structured("Test prompt", TestStructuredModel)
+                openai_wrapper.generate_structured("Test prompt", SampleStructuredModel)
 
-    def test_generate_structured_response_format(self, openai_wrapper, mock_openai_response):
-        """Test structured generation uses correct response format."""
+    def test_generate_structured_response_format(self, openai_wrapper, mock_structured_response):
+        """Test structured generation uses correct text format."""
         response_data = {"name": "Test", "value": 1, "category": "A"}
-        mock_openai_response.choices[0].message.content = json.dumps(response_data)
-        
-        with patch.object(openai_wrapper.client.chat.completions, 'create', return_value=mock_openai_response) as mock_create:
-            openai_wrapper.generate_structured("Test prompt", TestStructuredModel)
-            
-            call_args = mock_create.call_args[1]
-            response_format = call_args["response_format"]
-            
-            assert response_format["type"] == "json_schema"
-            assert "json_schema" in response_format
-            assert response_format["json_schema"]["strict"] is True
+        mock_structured_response.output_parsed = response_data
 
-    def test_generate_structured_api_failure(self, openai_wrapper):
-        """Test structured generation fails fast when API fails."""
-        with patch.object(openai_wrapper.client.chat.completions, 'create', side_effect=Exception("API error")):
-            
-            with pytest.raises(Exception, match="API error"):
-                openai_wrapper.generate_structured("Test prompt", TestStructuredModel)
+        with patch.object(openai_wrapper.client.responses, 'create', return_value=mock_structured_response) as mock_create:
+            openai_wrapper.generate_structured("Test prompt", SampleStructuredModel)
+
+            call_args = mock_create.call_args[1]
+            text_format = call_args["text"]
+
+            assert text_format["format"]["type"] == "json_schema"
+            assert text_format["format"]["strict"] is True
+            assert text_format["format"]["name"] == "SampleStructuredModel"
+
 
     @pytest.mark.asyncio
-    async def test_generate_text_async_success(self, openai_wrapper, mock_openai_response):
+    async def test_generate_text_async_success(self, openai_wrapper, mock_text_response):
         """Test successful async text generation."""
-        mock_openai_response.choices[0].message.content = "Async response"
-        
-        with patch.object(openai_wrapper.async_client.chat.completions, 'create', return_value=mock_openai_response):
+        mock_text_response.output_text = "Async response"
+
+        with patch.object(openai_wrapper.async_client.responses, 'create', return_value=mock_text_response):
             result = await openai_wrapper.generate_text_async("Test prompt")
-            
+
             assert result == "Async response"
 
     @pytest.mark.asyncio
-    async def test_generate_structured_async_success(self, openai_wrapper, mock_openai_response):
+    async def test_generate_structured_async_success(self, openai_wrapper, mock_structured_response):
         """Test successful async structured generation."""
         response_data = {"name": "Async Test", "value": 99, "category": "C"}
-        mock_openai_response.choices[0].message.content = json.dumps(response_data)
-        
-        with patch.object(openai_wrapper.async_client.chat.completions, 'create', return_value=mock_openai_response):
-            result = await openai_wrapper.generate_structured_async("Test prompt", TestStructuredModel)
-            
-            assert isinstance(result, TestStructuredModel)
+        mock_structured_response.output_parsed = response_data
+
+        with patch.object(openai_wrapper.async_client.responses, 'create', return_value=mock_structured_response):
+            result = await openai_wrapper.generate_structured_async("Test prompt", SampleStructuredModel)
+
+            assert isinstance(result, SampleStructuredModel)
             assert result.name == "Async Test"
             assert result.value == 99
 
