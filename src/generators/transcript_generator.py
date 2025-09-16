@@ -7,7 +7,7 @@ import openai
 from dotenv import load_dotenv
 
 from src.models.transcript import Transcript, Message
-from src.generators.prompt_builder import PromptBuilder
+from src.utils.prompt_loader import prompt_loader
 from src.generators.response_parser import ResponseParser
 
 # Load environment variables from .env file
@@ -28,7 +28,6 @@ class TranscriptGenerator:
             raise ValueError("OpenAI API key must be provided or set in OPENAI_API_KEY environment variable")
         
         self.client = openai.OpenAI(api_key=self.api_key)
-        self.prompt_builder = PromptBuilder()
         self.response_parser = ResponseParser()
     
     def generate(self, **context) -> Transcript:
@@ -41,7 +40,11 @@ class TranscriptGenerator:
             Generated Transcript object
         """
         # Build simple prompt
-        prompt = self.prompt_builder.build_prompt(**context)
+        if context:
+            params_str = ", ".join([f"{k}: {v}" for k, v in context.items() if v is not None])
+            prompt = prompt_loader.format('generators/transcript_generation.txt', context=params_str)
+        else:
+            prompt = prompt_loader.format('generators/transcript_generation.txt', context="general mortgage servicing topics")
         
         # Get conversation from OpenAI
         try:
