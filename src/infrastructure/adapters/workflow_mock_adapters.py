@@ -102,30 +102,30 @@ class EmailMockAdapter(BaseMockAdapter):
     
     def _generate_subject(self, title: str, workflow_type: str) -> str:
         """Generate appropriate email subject."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
         # Subject patterns based on title content
-        if 'disclosure' in title_lower:
+        if 'disclosure' in action_lower:
             return 'Important Mortgage Disclosure Documents'
-        elif 'refinance' in title_lower:
+        elif 'refinance' in action_lower:
             return 'Your Refinance Application - Next Steps'
-        elif 'approval' in title_lower:
+        elif 'approval' in action_lower:
             return 'Loan Approval Notification'
-        elif 'follow' in title_lower or 'callback' in title_lower:
+        elif 'follow' in action_lower or 'callback' in action_lower:
             return 'Follow-up: Your Recent Mortgage Inquiry'
-        elif 'welcome' in title_lower:
+        elif 'welcome' in action_lower:
             return 'Welcome to Our Mortgage Services'
-        elif 'training' in title_lower and workflow_type in ['ADVISOR', 'SUPERVISOR']:
+        elif 'training' in action_lower and workflow_type in ['ADVISOR', 'SUPERVISOR']:
             return 'New Training Assignment - Immediate Action Required'
         else:
             return 'Important Update Regarding Your Mortgage'
     
     def _generate_body(self, title: str, description: str, workflow_data: Dict[str, Any]) -> str:
         """Generate email body content."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
         # Generate contextual body content
-        if 'disclosure' in title_lower:
+        if 'disclosure' in action_lower:
             return """Dear Valued Customer,
 
 We are sending you important disclosure documents related to your mortgage application. Please review these documents carefully as they contain critical information about your loan terms, fees, and rights.
@@ -142,7 +142,7 @@ Customer Service Team
 Phone: (555) 123-4567
 Email: service@company.com"""
         
-        elif 'refinance' in title_lower:
+        elif 'refinance' in action_lower:
             return """Dear Customer,
 
 Thank you for your interest in refinancing your mortgage. Based on our initial review, we have prepared next steps for your application.
@@ -159,7 +159,7 @@ Sincerely,
 Refinance Team
 Phone: (555) 123-4567"""
         
-        elif 'approval' in title_lower:
+        elif 'approval' in action_lower:
             return """Congratulations!
 
 We are pleased to inform you that your mortgage application has been approved. This is an important milestone in your home financing journey.
@@ -195,26 +195,26 @@ Email: service@company.com"""
     
     def _determine_attachments(self, title: str) -> list:
         """Determine attachments based on title."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if 'disclosure' in title_lower:
+        if 'disclosure' in action_lower:
             return ['tila_disclosure.pdf', 'good_faith_estimate.pdf', 'right_to_cancel.pdf']
-        elif 'refinance' in title_lower:
+        elif 'refinance' in action_lower:
             return ['refinance_options.pdf', 'application_form.pdf', 'rate_sheet.pdf']
-        elif 'approval' in title_lower:
+        elif 'approval' in action_lower:
             return ['loan_approval_letter.pdf', 'closing_checklist.pdf']
-        elif 'welcome' in title_lower:
+        elif 'welcome' in action_lower:
             return ['welcome_packet.pdf', 'customer_portal_guide.pdf']
         else:
             return []
     
     def _determine_priority(self, title: str) -> str:
         """Determine email priority based on title urgency."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if any(word in title_lower for word in ['urgent', 'immediate', 'asap', 'emergency']):
+        if any(word in action_lower for word in ['urgent', 'immediate', 'asap', 'emergency']):
             return 'urgent'
-        elif any(word in title_lower for word in ['approval', 'disclosure', 'closing']):
+        elif any(word in action_lower for word in ['approval', 'disclosure', 'closing']):
             return 'high'
         else:
             return 'normal'
@@ -289,7 +289,7 @@ class CRMockAdapter(BaseMockAdapter):
     
     def _generate_updates(self, title: str, description: str) -> Dict[str, Any]:
         """Generate CRM update data based on title."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
         base_updates = {
             'last_contact': datetime.now(timezone.utc).isoformat(),
@@ -299,7 +299,7 @@ class CRMockAdapter(BaseMockAdapter):
         }
         
         # Add specific updates based on action type
-        if 'refinance' in title_lower:
+        if 'refinance' in action_lower:
             base_updates.update({
                 'status': 'refinance_inquiry',
                 'lead_source': 'existing_customer',
@@ -309,7 +309,7 @@ class CRMockAdapter(BaseMockAdapter):
                 'updated_fields': ['status', 'tags', 'next_action']
             })
         
-        elif 'approval' in title_lower:
+        elif 'approval' in action_lower:
             base_updates.update({
                 'status': 'approved',
                 'loan_stage': 'approved_pending_docs',
@@ -319,7 +319,7 @@ class CRMockAdapter(BaseMockAdapter):
                 'updated_fields': ['status', 'loan_stage', 'next_action']
             })
         
-        elif 'disclosure' in title_lower:
+        elif 'disclosure' in action_lower:
             base_updates.update({
                 'status': 'disclosure_sent',
                 'compliance_status': 'disclosures_delivered',
@@ -329,7 +329,7 @@ class CRMockAdapter(BaseMockAdapter):
                 'updated_fields': ['status', 'compliance_status', 'document_delivery_date']
             })
         
-        elif 'callback' in title_lower or 'follow' in title_lower:
+        elif 'callback' in action_lower or 'follow' in action_lower:
             base_updates.update({
                 'status': 'pending_callback',
                 'callback_scheduled': True,
@@ -368,13 +368,13 @@ Follow-up Required: As indicated by next_action field"""
     
     def _determine_interaction_type(self, title: str) -> str:
         """Determine type of CRM interaction."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if any(word in title_lower for word in ['email', 'send', 'notify']):
+        if any(word in action_lower for word in ['email', 'send', 'notify']):
             return 'email'
-        elif any(word in title_lower for word in ['call', 'callback', 'phone']):
+        elif any(word in action_lower for word in ['call', 'callback', 'phone']):
             return 'phone'
-        elif any(word in title_lower for word in ['meeting', 'appointment']):
+        elif any(word in action_lower for word in ['meeting', 'appointment']):
             return 'meeting'
         else:
             return 'system_update'
@@ -443,17 +443,17 @@ class DisclosureMockAdapter(BaseMockAdapter):
     
     def _determine_document_type(self, title: str) -> str:
         """Determine disclosure document type."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if 'tila' in title_lower:
+        if 'tila' in action_lower:
             return 'tila_disclosure'
-        elif 'respa' in title_lower:
+        elif 'respa' in action_lower:
             return 'respa_disclosure'
-        elif 'refinance' in title_lower:
+        elif 'refinance' in action_lower:
             return 'refinance_disclosure'
-        elif 'good faith' in title_lower:
+        elif 'good faith' in action_lower:
             return 'good_faith_estimate'
-        elif 'closing' in title_lower:
+        elif 'closing' in action_lower:
             return 'closing_disclosure'
         else:
             return 'general_mortgage_disclosure'
@@ -484,9 +484,9 @@ class DisclosureMockAdapter(BaseMockAdapter):
             'payment_schedule': 'Monthly payments of $1,840.14'
         }
         
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if 'refinance' in title_lower:
+        if 'refinance' in action_lower:
             base_fields.update({
                 'cash_to_close': '$3,250.00',
                 'closing_costs': '$8,750.00',
@@ -494,7 +494,7 @@ class DisclosureMockAdapter(BaseMockAdapter):
                 'escrow_deposits': '$4,200.00'
             })
         
-        if 'closing' in title_lower:
+        if 'closing' in action_lower:
             base_fields.update({
                 'final_loan_amount': '$275,000.00',
                 'final_apr': '6.95%',
@@ -509,18 +509,18 @@ class DisclosureMockAdapter(BaseMockAdapter):
         """Determine applicable compliance regulations."""
         flags = ['TILA']  # Truth in Lending Act always applies
         
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if 'respa' in title_lower or 'settlement' in title_lower:
+        if 'respa' in action_lower or 'settlement' in action_lower:
             flags.append('RESPA')
         
-        if 'ecoa' in title_lower or 'equal credit' in title_lower:
+        if 'ecoa' in action_lower or 'equal credit' in action_lower:
             flags.append('ECOA')
         
-        if 'fair lending' in title_lower:
+        if 'fair lending' in action_lower:
             flags.append('FAIR_LENDING')
         
-        if 'privacy' in title_lower:
+        if 'privacy' in action_lower:
             flags.append('GLBA')
         
         # Always include HMDA for mortgage transactions
@@ -591,25 +591,25 @@ class TaskMockAdapter(BaseMockAdapter):
             workflow_description = workflow_data.get('description', '')
             workflow_type = workflow.get('workflow_type', 'BORROWER')
             
-            # Build task payload
+            # Build task payload using step_action (not workflow title)
             payload = {
                 'task_id': f"TASK_{uuid.uuid4().hex[:10].upper()}",
-                'assignee': parameters.get('assignee', self._determine_assignee(workflow_type, title)),
-                'title': parameters.get('title', self._generate_title(title)),
-                'description': parameters.get('description', self._generate_description(title, description)),
-                'priority': parameters.get('priority', self._determine_priority(title)),
-                'due_date': parameters.get('due_date', self._calculate_due_date(title)),
-                'category': self._determine_category(title),
+                'assignee': parameters.get('assignee', self._determine_assignee(workflow_type, step_action)),
+                'title': parameters.get('title', self._generate_title(step_action)),
+                'description': parameters.get('description', self._generate_description(step_action, step_details)),
+                'priority': parameters.get('priority', self._determine_priority(step_action)),
+                'due_date': parameters.get('due_date', self._calculate_due_date(step_action)),
+                'category': self._determine_category(step_action),
                 'workflow_id': workflow.get('id'),
                 'customer_id': f"CUST_{uuid.uuid4().hex[:8]}",
-                'estimated_duration': self._estimate_duration(title),
-                'task_type': self._determine_task_type(title),
+                'estimated_duration': self._estimate_duration(step_action),
+                'task_type': self._determine_task_type(step_action),
                 'status': 'assigned',
                 'created_at': datetime.now(timezone.utc).isoformat(),
                 'created_by': 'workflow_executor',
                 'dependencies': [],
-                'tags': self._generate_tags(title),
-                'checklist': self._generate_checklist(title),
+                'tags': self._generate_tags(step_action),
+                'checklist': self._generate_checklist(step_action),
                 'automation_rules': {
                     'auto_remind': True,
                     'reminder_intervals': ['1_day_before', '1_hour_before'],
@@ -626,20 +626,20 @@ class TaskMockAdapter(BaseMockAdapter):
         except Exception as e:
             raise ValueError(f"Task adapter failed: {e}")
     
-    def _determine_assignee(self, workflow_type: str, title: str) -> str:
-        """Determine task assignee based on workflow type and action."""
-        title_lower = title.lower()
-        
+    def _determine_assignee(self, workflow_type: str, action_item: str) -> str:
+        """Determine task assignee based on workflow type and step action."""
+        action_lower = action_item.lower()
+
         # High priority items go to supervisors
-        if any(word in title_lower for word in ['urgent', 'escalation', 'complaint', 'legal']):
+        if any(word in action_lower for word in ['urgent', 'escalation', 'complaint', 'legal']):
             return 'supervisor_001'
-        
+
         # Compliance items go to compliance team
-        if any(word in title_lower for word in ['compliance', 'disclosure', 'regulatory']):
+        if any(word in action_lower for word in ['compliance', 'disclosure', 'regulatory']):
             return 'compliance_team'
-        
+
         # Customer-facing items go to advisors
-        if workflow_type == 'BORROWER' or 'customer' in title_lower:
+        if workflow_type == 'BORROWER' or 'customer' in action_lower:
             return 'advisor_001'
         
         # Internal items based on workflow type
@@ -651,10 +651,10 @@ class TaskMockAdapter(BaseMockAdapter):
         
         return type_assignments.get(workflow_type, 'advisor_001')
     
-    def _generate_title(self, title: str) -> str:
-        """Generate clear, actionable task title."""
-        # Clean up title
-        title = title.strip()
+    def _generate_title(self, action_item: str) -> str:
+        """Generate clear, actionable task title from step action."""
+        # Clean up action item for title
+        title = action_item.strip()
 
         # Ensure title is action-oriented
         if not any(title.lower().startswith(verb) for verb in ['follow', 'contact', 'send', 'update', 'review', 'complete', 'schedule']):
@@ -662,12 +662,12 @@ class TaskMockAdapter(BaseMockAdapter):
 
         return title
     
-    def _generate_description(self, title: str, description: str) -> str:
-        """Generate detailed task description."""
-        base_description = f"Task: {title}\n\n"
-        
-        if description:
-            base_description += f"Details: {description}\n\n"
+    def _generate_description(self, action_item: str, details: str) -> str:
+        """Generate detailed task description from step action and details."""
+        base_description = f"Task: {action_item}\n\n"
+
+        if details:
+            base_description += f"Details: {details}\n\n"
         
         base_description += """Instructions:
 1. Review all relevant customer information and context
@@ -688,39 +688,39 @@ Completion Requirements:
         
         return base_description
     
-    def _determine_priority(self, title: str) -> str:
-        """Determine task priority."""
-        title_lower = title.lower()
-        
+    def _determine_priority(self, action_item: str) -> str:
+        """Determine task priority based on step action."""
+        action_lower = action_item.lower()
+
         urgent_keywords = ['urgent', 'immediate', 'asap', 'emergency', 'complaint']
         high_keywords = ['approval', 'disclosure', 'closing', 'deadline']
-        
-        if any(keyword in title_lower for keyword in urgent_keywords):
+
+        if any(keyword in action_lower for keyword in urgent_keywords):
             return 'urgent'
-        elif any(keyword in title_lower for keyword in high_keywords):
+        elif any(keyword in action_lower for keyword in high_keywords):
             return 'high'
         else:
             return 'medium'
     
-    def _calculate_due_date(self, title: str) -> str:
-        """Calculate appropriate due date."""
-        title_lower = title.lower()
-        
-        if any(word in title_lower for word in ['urgent', 'immediate', 'asap']):
+    def _calculate_due_date(self, action_item: str) -> str:
+        """Calculate appropriate due date based on step action."""
+        action_lower = action_item.lower()
+
+        if any(word in action_lower for word in ['urgent', 'immediate', 'asap']):
             due_date = datetime.now(timezone.utc) + timedelta(hours=4)
-        elif any(word in title_lower for word in ['disclosure', 'compliance']):
+        elif any(word in action_lower for word in ['disclosure', 'compliance']):
             due_date = datetime.now(timezone.utc) + timedelta(days=1)
-        elif 'follow' in title_lower:
+        elif 'follow' in action_lower:
             due_date = datetime.now(timezone.utc) + timedelta(days=2)
         else:
             due_date = datetime.now(timezone.utc) + timedelta(days=3)
         
         return due_date.strftime('%Y-%m-%d')
     
-    def _determine_category(self, title: str) -> str:
-        """Determine task category."""
-        title_lower = title.lower()
-        
+    def _determine_category(self, action_item: str) -> str:
+        """Determine task category based on step action."""
+        action_lower = action_item.lower()
+
         categories = {
             'follow_up': ['follow', 'callback', 'contact'],
             'compliance': ['disclosure', 'compliance', 'regulatory'],
@@ -729,42 +729,42 @@ Completion Requirements:
             'training': ['training', 'coaching', 'development'],
             'approval': ['approve', 'review', 'authorize']
         }
-        
+
         for category, keywords in categories.items():
-            if any(keyword in title_lower for keyword in keywords):
+            if any(keyword in action_lower for keyword in keywords):
                 return category
         
         return 'general'
     
-    def _determine_task_type(self, title: str) -> str:
-        """Determine if task is manual, automated, or requires approval."""
-        title_lower = title.lower()
-        
-        if any(word in title_lower for word in ['approve', 'authorize', 'escalate']):
+    def _determine_task_type(self, action_item: str) -> str:
+        """Determine if task is manual, automated, or requires approval based on step action."""
+        action_lower = action_item.lower()
+
+        if any(word in action_lower for word in ['approve', 'authorize', 'escalate']):
             return 'approval_required'
-        elif any(word in title_lower for word in ['send', 'email', 'notify']):
+        elif any(word in action_lower for word in ['send', 'email', 'notify']):
             return 'automated'
         else:
             return 'manual'
     
-    def _estimate_duration(self, title: str) -> str:
-        """Estimate task duration."""
-        title_lower = title.lower()
-        
-        if any(word in title_lower for word in ['review', 'analyze', 'investigate']):
+    def _estimate_duration(self, action_item: str) -> str:
+        """Estimate task duration based on step action."""
+        action_lower = action_item.lower()
+
+        if any(word in action_lower for word in ['review', 'analyze', 'investigate']):
             return '60 minutes'
-        elif any(word in title_lower for word in ['send', 'email', 'update']):
+        elif any(word in action_lower for word in ['send', 'email', 'update']):
             return '15 minutes'
-        elif any(word in title_lower for word in ['call', 'contact', 'follow']):
+        elif any(word in action_lower for word in ['call', 'contact', 'follow']):
             return '30 minutes'
         else:
             return '45 minutes'
     
-    def _generate_tags(self, title: str) -> list:
-        """Generate relevant tags for task."""
+    def _generate_tags(self, action_item: str) -> list:
+        """Generate relevant tags for task based on step action."""
         tags = ['workflow_generated']
-        title_lower = title.lower()
-        
+        action_lower = action_item.lower()
+
         tag_mapping = {
             'customer': ['customer_facing'],
             'urgent': ['urgent', 'high_priority'],
@@ -775,24 +775,24 @@ Completion Requirements:
             'approval': ['approval_required', 'review'],
             'training': ['training', 'development']
         }
-        
+
         for keyword, tag_list in tag_mapping.items():
-            if keyword in title_lower:
+            if keyword in action_lower:
                 tags.extend(tag_list)
-        
+
         return list(set(tags))  # Remove duplicates
     
-    def _generate_checklist(self, title: str) -> list:
-        """Generate task checklist."""
+    def _generate_checklist(self, action_item: str) -> list:
+        """Generate task checklist based on step action."""
         base_checklist = [
             'Review customer information and context',
             'Gather all required materials and information',
             'Complete primary action as specified'
         ]
+
+        action_lower = action_item.lower()
         
-        title_lower = title.lower()
-        
-        if 'email' in title_lower or 'send' in title_lower:
+        if 'email' in action_lower or 'send' in action_lower:
             base_checklist.extend([
                 'Verify recipient email address',
                 'Review email content for accuracy',
@@ -800,7 +800,7 @@ Completion Requirements:
                 'Send email and verify delivery'
             ])
         
-        if 'follow' in title_lower or 'callback' in title_lower:
+        if 'follow' in action_lower or 'callback' in action_lower:
             base_checklist.extend([
                 'Check customer preferred contact method',
                 'Review previous interaction history',
@@ -808,7 +808,7 @@ Completion Requirements:
                 'Make contact and document outcome'
             ])
         
-        if 'disclosure' in title_lower:
+        if 'disclosure' in action_lower:
             base_checklist.extend([
                 'Verify all required disclosure documents',
                 'Confirm customer information accuracy',
@@ -886,7 +886,7 @@ class TrainingMockAdapter(BaseMockAdapter):
     
     def _determine_training_module(self, title: str) -> str:
         """Determine appropriate training module."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
         module_mapping = {
             'compliance': 'regulatory_compliance_foundations',
@@ -901,7 +901,7 @@ class TrainingMockAdapter(BaseMockAdapter):
         }
         
         for keyword, module in module_mapping.items():
-            if keyword in title_lower:
+            if keyword in action_lower:
                 return module
         
         return 'general_mortgage_operations'
@@ -979,11 +979,11 @@ class TrainingMockAdapter(BaseMockAdapter):
     
     def _calculate_training_due_date(self, title: str) -> str:
         """Calculate training completion due date."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if 'urgent' in title_lower or 'immediate' in title_lower:
+        if 'urgent' in action_lower or 'immediate' in action_lower:
             due_date = datetime.now(timezone.utc) + timedelta(days=3)
-        elif 'compliance' in title_lower:
+        elif 'compliance' in action_lower:
             due_date = datetime.now(timezone.utc) + timedelta(days=7)
         else:
             due_date = datetime.now(timezone.utc) + timedelta(days=14)
@@ -992,18 +992,18 @@ class TrainingMockAdapter(BaseMockAdapter):
     
     def _determine_certification_level(self, title: str) -> str:
         """Determine required certification level."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if any(word in title_lower for word in ['advanced', 'expert', 'leadership']):
+        if any(word in action_lower for word in ['advanced', 'expert', 'leadership']):
             return 'advanced'
-        elif any(word in title_lower for word in ['compliance', 'regulatory', 'legal']):
+        elif any(word in action_lower for word in ['compliance', 'regulatory', 'legal']):
             return 'expert'
         else:
             return 'basic'
     
     def _determine_learning_path(self, title: str) -> str:
         """Determine appropriate learning path."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
         path_mapping = {
             'compliance': 'regulatory_compliance',
@@ -1014,7 +1014,7 @@ class TrainingMockAdapter(BaseMockAdapter):
         }
         
         for keyword, path in path_mapping.items():
-            if keyword in title_lower:
+            if keyword in action_lower:
                 return path
         
         return 'general_development'
@@ -1049,15 +1049,15 @@ class TrainingMockAdapter(BaseMockAdapter):
     
     def _get_prerequisites(self, title: str) -> list:
         """Get training prerequisites."""
-        title_lower = title.lower()
+        action_lower = title.lower()
         
-        if 'advanced' in title_lower:
+        if 'advanced' in action_lower:
             return [
                 'Complete basic mortgage operations training',
                 'Minimum 6 months experience',
                 'Supervisor approval required'
             ]
-        elif 'compliance' in title_lower:
+        elif 'compliance' in action_lower:
             return [
                 'Complete general compliance overview',
                 'Review current regulatory updates',
@@ -1121,26 +1121,26 @@ class ServicingAPIMockAdapter(BaseMockAdapter):
 
     def _determine_endpoint(self, title: str) -> str:
         """Determine API endpoint based on action."""
-        title_lower = title.lower()
+        action_lower = title.lower()
 
-        if 'loan detail' in title_lower or 'retrieve' in title_lower:
+        if 'loan detail' in action_lower or 'retrieve' in action_lower:
             return '/api/servicing/loan/{loan_id}/details'
-        elif 'pmi' in title_lower:
+        elif 'pmi' in action_lower:
             return '/api/servicing/loan/{loan_id}/pmi'
-        elif 'escrow' in title_lower:
+        elif 'escrow' in action_lower:
             return '/api/servicing/loan/{loan_id}/escrow'
-        elif 'payment' in title_lower:
+        elif 'payment' in action_lower:
             return '/api/servicing/loan/{loan_id}/payment-schedule'
         else:
             return '/api/servicing/loan/{loan_id}/full-details'
 
     def _determine_method(self, title: str) -> str:
         """Determine HTTP method based on action."""
-        title_lower = title.lower()
+        action_lower = title.lower()
 
-        if any(word in title_lower for word in ['update', 'modify', 'change']):
+        if any(word in action_lower for word in ['update', 'modify', 'change']):
             return 'PATCH'
-        elif any(word in title_lower for word in ['create', 'add', 'generate']):
+        elif any(word in action_lower for word in ['create', 'add', 'generate']):
             return 'POST'
         else:
             return 'GET'
@@ -1155,9 +1155,9 @@ class ServicingAPIMockAdapter(BaseMockAdapter):
 
     def _generate_response_payload(self, title: str) -> Dict[str, Any]:
         """Generate realistic API response payload."""
-        title_lower = title.lower()
+        action_lower = title.lower()
 
-        if 'loan detail' in title_lower:
+        if 'loan detail' in action_lower:
             return {
                 'loan_id': 'LN-784523',
                 'current_balance': 385000,
@@ -1167,7 +1167,7 @@ class ServicingAPIMockAdapter(BaseMockAdapter):
                 'last_payment_date': '2024-01-01',
                 'origination_date': '2017-03-15'
             }
-        elif 'pmi' in title_lower:
+        elif 'pmi' in action_lower:
             return {
                 'pmi_status': 'active',
                 'monthly_pmi': 150,
