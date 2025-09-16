@@ -19,7 +19,9 @@ class WorkflowSteps(BaseModel):
 class WorkflowExtraction(BaseModel):
     workflow_type: str = Field(description="Type of workflow")
     workflow_steps: List[Dict[str, Any]] = Field(description="List of extracted workflow steps")
+    complexity_assessment: str = Field(description="Analysis of workflow complexity")
     dependencies: List[str] = Field(description="List of dependencies between steps")
+    execution_risks: List[str] = Field(description="Potential issues during execution")
     estimated_duration: str = Field(description="Estimated duration for the workflow")
 
 

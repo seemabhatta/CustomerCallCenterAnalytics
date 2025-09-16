@@ -573,8 +573,8 @@ class WorkflowExecutionEngine:
         
         # Check workflow data
         workflow_data = workflow.get('workflow_data', {})
-        if not workflow_data.get('action_item'):
-            raise ValueError("Workflow missing action_item")
+        if not workflow_data.get('title'):
+            raise ValueError("Workflow missing title")
         
         # Check workflow type
         valid_types = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']

@@ -72,17 +72,17 @@ class WorkflowExecutionAgent:
         Raises:
             ValueError: If cannot determine executor type (NO FALLBACK)
         """
-        # Extract action item data
+        # Extract workflow data
         workflow_data = workflow.get('workflow_data', {})
-        action_item = workflow_data.get('action_item')
+        title = workflow_data.get('title')
         description = workflow_data.get('description', '')
         workflow_type = workflow.get('workflow_type', 'UNKNOWN')
-        
-        if not action_item:
-            raise ValueError("No action_item found in workflow data")
+
+        if not title:
+            raise ValueError("No title found in workflow data")
         
         # Create analysis prompt
-        prompt = self._create_analysis_prompt(action_item, description, workflow_type, workflow)
+        prompt = self._create_analysis_prompt(title, description, workflow_type, workflow)
         
         try:
             # Get LLM decision
@@ -131,7 +131,7 @@ class WorkflowExecutionAgent:
             if confidence < 0.6:
                 raise ValueError(
                     f"Low confidence ({confidence}) in executor decision. "
-                    f"Action too ambiguous: {action_item}"
+                    f"Action too ambiguous: {title}"
                 )
             
             return decision_data
@@ -168,12 +168,12 @@ class WorkflowExecutionAgent:
         
         # Extract workflow data
         workflow_data = workflow.get('workflow_data', {})
-        action_item = workflow_data.get('action_item', '')
+        title = workflow_data.get('title', '')
         description = workflow_data.get('description', '')
         workflow_type = workflow.get('workflow_type', 'UNKNOWN')
         
         # Create payload generation prompt
-        prompt = self._create_payload_prompt(executor_type, action_item, description, 
+        prompt = self._create_payload_prompt(executor_type, title, description, 
                                            workflow_type, workflow)
         
         try:
@@ -207,19 +207,19 @@ class WorkflowExecutionAgent:
         except Exception as e:
             raise ValueError(f"Payload generation failed: {e}")
     
-    def _create_analysis_prompt(self, action_item: str, description: str,
+    def _create_analysis_prompt(self, title: str, description: str,
                               workflow_type: str, workflow: Dict[str, Any]) -> str:
         """Create prompt for execution analysis."""
         return prompt_loader.format(
             'agents/workflow_execution/analysis.txt',
             workflow_type=workflow_type,
-            action_item=action_item,
+            action_item=title,
             description=description,
             plan_id=workflow.get('plan_id', 'UNKNOWN'),
             risk_level=workflow.get('risk_level', 'UNKNOWN')
         )
 
-    def _create_payload_prompt(self, executor_type: str, action_item: str,
+    def _create_payload_prompt(self, executor_type: str, title: str,
                              description: str, workflow_type: str,
                              workflow: Dict[str, Any]) -> str:
         """Create prompt for payload generation."""
@@ -229,7 +229,7 @@ class WorkflowExecutionAgent:
             'agents/workflow_execution/payload_base.txt',
             executor_type=executor_type,
             workflow_type=workflow_type,
-            action_item=action_item,
+            action_item=title,
             description=description,
             plan_id=workflow.get('plan_id', 'UNKNOWN'),
             risk_level=workflow.get('risk_level', 'UNKNOWN')
