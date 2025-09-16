@@ -1,5 +1,5 @@
 """
-Simple pipeline implementation using native Python orchestrator
+Simple pipeline implementation using native Python async/await
 Connects: Transcript → Analysis → Plan → Workflows → Execution
 NO FALLBACK LOGIC - fails fast on any errors
 """
@@ -13,8 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from src.infrastructure.telemetry import get_tracer, set_span_attributes, add_span_event, trace_async_function
 
 
-from src.orchestration.simple_orchestrator import SimpleOrchestrator
-from src.orchestration.models.pipeline_models import PipelineResult, PipelineStage, WorkflowType
+from src.services.orchestration.models.pipeline_models import PipelineResult, PipelineStage, WorkflowType
 from src.services.analysis_service import AnalysisService
 from src.services.plan_service import PlanService
 from src.services.workflow_service import WorkflowService
@@ -22,12 +21,12 @@ from src.services.workflow_execution_engine import WorkflowExecutionEngine
 
 
 class SimplePipeline:
-    """Simple pipeline orchestrator without external dependencies"""
+    """Simple pipeline using native Python async/await without external dependencies"""
     
     def __init__(self, api_key: str, db_path: str):
         self.api_key = api_key
         self.db_path = db_path
-        self.orchestrator = SimpleOrchestrator()
+        self.current_stage = PipelineStage.TRANSCRIPT
         
         # Initialize tracing to ensure OpenAI instrumentation is active
         from src.infrastructure.telemetry import initialize_tracing
@@ -74,53 +73,38 @@ class SimplePipeline:
             
                 # Stage 1: Generate Analysis (1:1)
                 with tracer.start_as_current_span("pipeline.stage.analysis") as analysis_span:
-                    self.orchestrator.current_stage = PipelineStage.ANALYSIS
+                    self.current_stage = PipelineStage.ANALYSIS
                     add_span_event("stage.started", stage="analysis")
-                    
-                    analysis_result = await self.orchestrator.execute_task(
-                        "generate-analysis",
-                        self._generate_analysis_task,
-                        transcript_id
-                    )
-                    analysis = analysis_result.result
-                    
+
+                    analysis = await self._generate_analysis_task(transcript_id)
+
                     analysis_span.set_attribute("analysis_id", analysis["id"])
                     add_span_event("stage.completed", stage="analysis", analysis_id=analysis["id"])
                 
                 # Stage 2: Create Plan (1:1)
                 with tracer.start_as_current_span("pipeline.stage.plan") as plan_span:
-                    self.orchestrator.current_stage = PipelineStage.PLAN
+                    self.current_stage = PipelineStage.PLAN
                     add_span_event("stage.started", stage="plan")
-                    
-                    plan_result = await self.orchestrator.execute_task(
-                        "create-plan",
-                        self._create_plan_task,
-                        analysis["id"]
-                    )
-                    plan = plan_result.result
+
+                    plan = await self._create_plan_task(analysis["id"])
                     
                     plan_span.set_attribute("plan_id", plan["id"])
                     add_span_event("stage.completed", stage="plan", plan_id=plan["id"])
                 
                 # Stage 3: Extract Workflows (1:n) - THE BOTTLENECK
                 with tracer.start_as_current_span("pipeline.stage.workflows") as workflows_span:
-                    self.orchestrator.current_stage = PipelineStage.WORKFLOWS
+                    self.current_stage = PipelineStage.WORKFLOWS
                     add_span_event("stage.started", stage="workflows", message="This stage may take 2-5 minutes")
-                    
-                    workflows_result = await self.orchestrator.execute_task(
-                        "extract-workflows",
-                        self._extract_workflows_task,
-                        plan["id"]
-                    )
-                    workflows = workflows_result.result
-                    
+
+                    workflows = await self._extract_workflows_task(plan["id"])
+
                     workflows_span.set_attribute("workflow_count", len(workflows))
                     workflows_span.set_attribute("plan_id", plan["id"])
                     add_span_event("stage.completed", stage="workflows", workflow_count=len(workflows))
             
                 # Stage 4: Process approvals
                 with tracer.start_as_current_span("pipeline.stage.approval") as approval_span:
-                    self.orchestrator.current_stage = PipelineStage.APPROVAL
+                    self.current_stage = PipelineStage.APPROVAL
                     approval_span.set_attribute("auto_approve", auto_approve)
                     add_span_event("stage.started", stage="approval")
                     
@@ -149,7 +133,7 @@ class SimplePipeline:
                 ]
                 # Stage 5: Execute workflows in parallel (n:n)
                 with tracer.start_as_current_span("pipeline.stage.execution") as execution_span:
-                    self.orchestrator.current_stage = PipelineStage.EXECUTION
+                    self.current_stage = PipelineStage.EXECUTION
                     execution_span.set_attribute("approved_workflow_count", len(approved_workflows))
                     add_span_event("stage.started", stage="execution", approved_workflows=len(approved_workflows))
                     
@@ -176,7 +160,7 @@ class SimplePipeline:
                                   successful=len(execution_results), failed=len(failed_executions))
                 
                 # Stage 6: Complete
-                self.orchestrator.current_stage = PipelineStage.COMPLETE
+                self.current_stage = PipelineStage.COMPLETE
             
                 # Build final result
                 pipeline_result = {
@@ -191,8 +175,7 @@ class SimplePipeline:
                     "failed_executions": failed_executions,
                     "stage": PipelineStage.COMPLETE.value,
                     "success": len(execution_results) > 0 or len(approved_workflows) == 0,  # Success if we executed something or had nothing to execute
-                    "partial_success": len(failed_executions) > 0 and len(execution_results) > 0,
-                    "execution_summary": self.orchestrator.get_execution_summary()
+                    "partial_success": len(failed_executions) > 0 and len(execution_results) > 0
                 }
                 
                 # Set final span attributes for observability
@@ -313,20 +296,10 @@ class SimplePipeline:
         
         return result
     
-    def pause_pipeline(self):
-        """Pause pipeline execution"""
-        self.orchestrator.pause_execution()
-    
-    def resume_pipeline(self):
-        """Resume pipeline execution"""
-        self.orchestrator.resume_execution()
-    
     def get_pipeline_status(self) -> Dict[str, Any]:
         """Get current pipeline status"""
         return {
-            "current_stage": self.orchestrator.current_stage.value,
-            "paused": self.orchestrator.paused,
-            "execution_summary": self.orchestrator.get_execution_summary()
+            "current_stage": self.current_stage.value
         }
 
 
