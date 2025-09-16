@@ -949,7 +949,14 @@ def plan_list(
 
 
 @plan_app.command("view")
-def plan_view(plan_id: str):
+def plan_view(
+    plan_id: str,
+    stakeholder: Optional[str] = typer.Option(
+        None,
+        "--stakeholder", "-s",
+        help="Filter by stakeholder: BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP"
+    )
+):
     """View specific action plan details."""
     try:
         client = get_client()
@@ -968,25 +975,192 @@ def plan_view(plan_id: str):
             console.print(f"\n📝 [bold yellow]Summary:[/bold yellow]")
             console.print(f"   {summary}")
 
-        # Display action items
-        action_items = plan.get('action_items', [])
-        if action_items:
-            console.print(f"\n📋 [bold blue]Action Items ({len(action_items)}):[/bold blue]")
-            for i, item in enumerate(action_items, 1):
-                priority = item.get('priority', 'normal')
-                action = item.get('action', 'N/A')
-                assignee = item.get('assignee', 'Unassigned')
-                console.print(f"\n   {i}. [{priority.upper()}] {action}")
-                console.print(f"      Assignee: {assignee}")
+        # Filter stakeholders if specified
+        stakeholders_to_show = []
+        if stakeholder:
+            stakeholder_upper = stakeholder.upper()
+            if stakeholder_upper in ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']:
+                stakeholders_to_show = [stakeholder_upper]
+            else:
+                console.print(f"❌ [red]Invalid stakeholder: {stakeholder}. Valid options: BORROWER, ADVISOR, SUPERVISOR, LEADERSHIP[/red]")
+                raise typer.Exit(1)
+        else:
+            stakeholders_to_show = ['BORROWER', 'ADVISOR', 'SUPERVISOR', 'LEADERSHIP']
 
-                # Show rationale if available
-                rationale = item.get('rationale')
-                if rationale:
-                    console.print(f"      Rationale: {rationale}")
+        # Display stakeholder plans
+        for stakeholder_name in stakeholders_to_show:
+            stakeholder_key = f"{stakeholder_name.lower()}_plan"
+            stakeholder_plan = plan.get(stakeholder_key)
+
+            if stakeholder_plan:
+                console.print(f"\n🎯 [bold cyan]{stakeholder_name} PLAN[/bold cyan]:")
+
+                if stakeholder_name == 'BORROWER':
+                    _display_borrower_plan(stakeholder_plan)
+                elif stakeholder_name == 'ADVISOR':
+                    _display_advisor_plan(stakeholder_plan)
+                elif stakeholder_name == 'SUPERVISOR':
+                    _display_supervisor_plan(stakeholder_plan)
+                elif stakeholder_name == 'LEADERSHIP':
+                    _display_leadership_plan(stakeholder_plan)
 
     except CLIError as e:
         print_error(f"View failed: {str(e)}")
         raise typer.Exit(1)
+
+
+def _display_borrower_plan(borrower_plan: Dict[str, Any]):
+    """Display BORROWER plan section."""
+    # Immediate Actions
+    immediate_actions = borrower_plan.get('immediate_actions', [])
+    if immediate_actions:
+        console.print(f"\n  🚨 [bold red]Immediate Actions ({len(immediate_actions)}):[/bold red]")
+        for i, action in enumerate(immediate_actions, 1):
+            console.print(f"    {i}. [{action.get('priority', 'N/A').upper()}] {action.get('action', 'N/A')}")
+            console.print(f"       Timeline: {action.get('timeline', 'N/A')}")
+            console.print(f"       Auto-executable: {action.get('auto_executable', False)}")
+            if action.get('description'):
+                console.print(f"       Description: {action['description']}")
+
+    # Follow-ups
+    follow_ups = borrower_plan.get('follow_ups', [])
+    if follow_ups:
+        console.print(f"\n  📋 [bold yellow]Follow-ups ({len(follow_ups)}):[/bold yellow]")
+        for i, follow_up in enumerate(follow_ups, 1):
+            console.print(f"    {i}. {follow_up.get('action', 'N/A')}")
+            console.print(f"       Due: {follow_up.get('due_date', 'N/A')}")
+            console.print(f"       Owner: {follow_up.get('owner', 'N/A')}")
+            if follow_up.get('trigger_condition'):
+                console.print(f"       Trigger: {follow_up['trigger_condition']}")
+
+    # Risk Mitigation
+    risk_mitigation = borrower_plan.get('risk_mitigation', [])
+    if risk_mitigation:
+        console.print(f"\n  🛡️ [bold blue]Risk Mitigation ({len(risk_mitigation)}):[/bold blue]")
+        for i, risk in enumerate(risk_mitigation, 1):
+            console.print(f"    {i}. {risk}")
+
+
+def _display_advisor_plan(advisor_plan: Dict[str, Any]):
+    """Display ADVISOR plan section."""
+    # Coaching Items
+    coaching_items = advisor_plan.get('coaching_items', [])
+    if coaching_items:
+        console.print(f"\n  👥 [bold green]Coaching Items ({len(coaching_items)}):[/bold green]")
+        for i, item in enumerate(coaching_items, 1):
+            console.print(f"    {i}. [{item.get('priority', 'N/A').upper()}] {item.get('action', 'N/A')}")
+            console.print(f"       Coaching Point: {item.get('coaching_point', 'N/A')}")
+            console.print(f"       Expected Improvement: {item.get('expected_improvement', 'N/A')}")
+
+    # Training Recommendations
+    training_recs = advisor_plan.get('training_recommendations', [])
+    if training_recs:
+        console.print(f"\n  🎓 [bold yellow]Training Recommendations ({len(training_recs)}):[/bold yellow]")
+        for i, training in enumerate(training_recs, 1):
+            console.print(f"    {i}. {training}")
+
+    # Performance Feedback
+    performance = advisor_plan.get('performance_feedback', {})
+    if performance:
+        console.print(f"\n  📊 [bold blue]Performance Feedback:[/bold blue]")
+        strengths = performance.get('strengths', [])
+        if strengths:
+            console.print(f"    Strengths:")
+            for strength in strengths:
+                console.print(f"      • {strength}")
+
+        improvements = performance.get('improvements', [])
+        if improvements:
+            console.print(f"    Areas for Improvement:")
+            for improvement in improvements:
+                console.print(f"      • {improvement}")
+
+    # Next Actions
+    next_actions = advisor_plan.get('next_actions', [])
+    if next_actions:
+        console.print(f"\n  ⏭️ [bold cyan]Next Actions ({len(next_actions)}):[/bold cyan]")
+        for i, action in enumerate(next_actions, 1):
+            console.print(f"    {i}. {action}")
+
+
+def _display_supervisor_plan(supervisor_plan: Dict[str, Any]):
+    """Display SUPERVISOR plan section."""
+    # Escalation Items
+    escalation_items = supervisor_plan.get('escalation_items', [])
+    if escalation_items:
+        console.print(f"\n  🚨 [bold red]Escalation Items ({len(escalation_items)}):[/bold red]")
+        for i, item in enumerate(escalation_items, 1):
+            if isinstance(item, dict):
+                console.print(f"    {i}. {item.get('item', 'N/A')}")
+                console.print(f"       Reason: {item.get('reason', 'N/A')}")
+                console.print(f"       Action Required: {item.get('action_required', 'N/A')}")
+            else:
+                console.print(f"    {i}. {item}")
+
+    # Team Patterns
+    team_patterns = supervisor_plan.get('team_patterns', [])
+    if team_patterns:
+        console.print(f"\n  👥 [bold yellow]Team Patterns ({len(team_patterns)}):[/bold yellow]")
+        for i, pattern in enumerate(team_patterns, 1):
+            console.print(f"    {i}. {pattern}")
+
+    # Compliance Review
+    compliance_review = supervisor_plan.get('compliance_review', [])
+    if compliance_review:
+        console.print(f"\n  ⚖️ [bold blue]Compliance Review ({len(compliance_review)}):[/bold blue]")
+        for i, review in enumerate(compliance_review, 1):
+            console.print(f"    {i}. {review}")
+
+    # Process Improvements
+    process_improvements = supervisor_plan.get('process_improvements', [])
+    if process_improvements:
+        console.print(f"\n  📈 [bold green]Process Improvements ({len(process_improvements)}):[/bold green]")
+        for i, improvement in enumerate(process_improvements, 1):
+            if isinstance(improvement, dict):
+                console.print(f"    {i}. {improvement.get('improvement', 'N/A')}")
+                console.print(f"       Expected Benefit: {improvement.get('expected_benefit', 'N/A')}")
+            else:
+                console.print(f"    {i}. {improvement}")
+
+
+def _display_leadership_plan(leadership_plan: Dict[str, Any]):
+    """Display LEADERSHIP plan section."""
+    # Strategic Initiatives
+    strategic_initiatives = leadership_plan.get('strategic_initiatives', [])
+    if strategic_initiatives:
+        console.print(f"\n  🎯 [bold red]Strategic Initiatives ({len(strategic_initiatives)}):[/bold red]")
+        for i, initiative in enumerate(strategic_initiatives, 1):
+            if isinstance(initiative, dict):
+                console.print(f"    {i}. {initiative.get('initiative', 'N/A')}")
+                console.print(f"       Business Impact: {initiative.get('business_impact', 'N/A')}")
+            else:
+                console.print(f"    {i}. {initiative}")
+
+    # Long-term Goals
+    long_term_goals = leadership_plan.get('long_term_goals', [])
+    if long_term_goals:
+        console.print(f"\n  🎯 [bold yellow]Long-term Goals ({len(long_term_goals)}):[/bold yellow]")
+        for i, goal in enumerate(long_term_goals, 1):
+            console.print(f"    {i}. {goal}")
+
+    # Resource Allocation
+    resource_allocation = leadership_plan.get('resource_allocation', [])
+    if resource_allocation:
+        console.print(f"\n  💰 [bold green]Resource Allocation ({len(resource_allocation)}):[/bold green]")
+        for i, resource in enumerate(resource_allocation, 1):
+            if isinstance(resource, dict):
+                console.print(f"    {i}. {resource.get('resource', 'N/A')}")
+                console.print(f"       Amount: {resource.get('amount', 'N/A')}")
+                console.print(f"       Justification: {resource.get('justification', 'N/A')}")
+            else:
+                console.print(f"    {i}. {resource}")
+
+    # Budget Considerations
+    budget_considerations = leadership_plan.get('budget_considerations', [])
+    if budget_considerations:
+        console.print(f"\n  💼 [bold blue]Budget Considerations ({len(budget_considerations)}):[/bold blue]")
+        for i, consideration in enumerate(budget_considerations, 1):
+            console.print(f"    {i}. {consideration}")
 
 
 @plan_app.command("delete")
