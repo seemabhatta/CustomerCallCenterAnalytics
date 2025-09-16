@@ -6,6 +6,7 @@ Clean routing layer - NO business logic, only proxy to services
 """
 import os
 import sys
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -25,6 +26,9 @@ try:
     )
 except ImportError:
     pass  # Telemetry not available
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # NOW import everything else
 from fastapi import FastAPI, HTTPException, Query
@@ -422,15 +426,19 @@ async def approve_workflow(workflow_id: str, request: WorkflowApprovalRequest):
 @app.post("/api/v1/workflows/{workflow_id}/execute")
 async def execute_workflow(workflow_id: str, request: WorkflowExecutionRequest):
     """Execute an approved workflow."""
+    logger.info(f"Starting workflow execution: workflow_id={workflow_id}, executed_by={request.executed_by}")
     try:
         result = await workflow_service.execute_workflow(
             workflow_id=workflow_id,
             executed_by=request.executed_by
         )
+        logger.info(f"Workflow execution completed successfully: workflow_id={workflow_id}")
         return result
     except ValueError as e:
+        logger.error(f"Workflow execution validation error: workflow_id={workflow_id}, error={str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.exception(f"Workflow execution failed: workflow_id={workflow_id}, executed_by={request.executed_by}")
         raise HTTPException(status_code=500, detail=f"Failed to execute workflow: {str(e)}")
 
 @app.delete("/api/v1/workflows/{workflow_id}")

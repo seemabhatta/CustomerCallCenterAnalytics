@@ -99,8 +99,8 @@ def simple_span_formatter(span: ReadableSpan) -> str:
 
 
 def initialize_tracing(
-    service_name: str = "call-center-analytics", 
-    enable_console: bool = None, 
+    service_name: str = "call-center-analytics",
+    enable_console: bool = None,
     enable_jaeger: bool = None,
     enable_otlp: bool = None
 ):
@@ -116,7 +116,15 @@ def initialize_tracing(
     
     if _initialized:
         return tracer
-    
+
+    # Check trace level for verbosity control (OFF/BASIC/VERBOSE)
+    trace_level = os.getenv("TRACE_LEVEL", "BASIC").upper()
+
+    # OFF: Disable all tracing
+    if trace_level == "OFF":
+        _initialized = True
+        return None
+
     # Determine exporters from environment variables if not explicitly provided
     if enable_console is None:
         enable_console = os.getenv("OTEL_CONSOLE_ENABLED", "true").lower() == "true"
@@ -188,16 +196,19 @@ def initialize_tracing(
         if not any(isinstance(h, LoggingHandler) for h in root_logger.handlers):
             root_logger.addHandler(handler)
 
-    # Auto-instrument HTTP, database, and OpenAI calls
-    HTTPXClientInstrumentor().instrument()
-    SQLite3Instrumentor().instrument()
-    
-    # Auto-instrument OpenAI API calls for LLM observability
-    try:
-        from opentelemetry.instrumentation.openai import OpenAIInstrumentor
-        OpenAIInstrumentor().instrument()
-    except ImportError:
-        pass  # OpenAI instrumentation not available
+    # Auto-instrument based on trace level
+    # BASIC: Only instrument HTTP, DB, and OpenAI (infrastructure)
+    # VERBOSE: Include all instrumentation (same as BASIC for auto-instrumentation)
+    if trace_level in ["BASIC", "VERBOSE"]:
+        HTTPXClientInstrumentor().instrument()
+        SQLite3Instrumentor().instrument()
+
+        # Auto-instrument OpenAI API calls for LLM observability
+        try:
+            from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+            OpenAIInstrumentor().instrument()
+        except ImportError:
+            pass  # OpenAI instrumentation not available
     
     _initialized = True
     
@@ -229,10 +240,10 @@ def get_tracer():
 
 def trace_async_function(operation_name: str):
     """Decorator to trace async functions with automatic span creation.
-    
+
     Args:
         operation_name: Name for the traced operation
-        
+
     Usage:
         @trace_async_function("workflow.extract")
         async def extract_workflows(self, plan_id):
@@ -240,7 +251,15 @@ def trace_async_function(operation_name: str):
     """
     def decorator(func):
         async def wrapper(*args, **kwargs):
+            # Check trace level - only create spans for VERBOSE mode
+            trace_level = os.getenv("TRACE_LEVEL", "BASIC").upper()
+            if trace_level != "VERBOSE":
+                return await func(*args, **kwargs)
+
             tracer = get_tracer()
+            if not tracer:  # OFF mode
+                return await func(*args, **kwargs)
+
             with tracer.start_as_current_span(operation_name) as span:
                 # Add function arguments as attributes
                 if args and hasattr(args[0], '__class__'):
@@ -262,13 +281,21 @@ def trace_async_function(operation_name: str):
 
 def trace_function(operation_name: str):
     """Decorator to trace synchronous functions with automatic span creation.
-    
+
     Args:
         operation_name: Name for the traced operation
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
+            # Check trace level - only create spans for VERBOSE mode
+            trace_level = os.getenv("TRACE_LEVEL", "BASIC").upper()
+            if trace_level != "VERBOSE":
+                return func(*args, **kwargs)
+
             tracer = get_tracer()
+            if not tracer:  # OFF mode
+                return func(*args, **kwargs)
+
             with tracer.start_as_current_span(operation_name) as span:
                 # Add function arguments as attributes
                 if args and hasattr(args[0], '__class__'):
@@ -290,10 +317,15 @@ def trace_function(operation_name: str):
 
 def set_span_attributes(**attributes):
     """Set attributes on the current active span.
-    
+
     Args:
         **attributes: Key-value pairs to add as span attributes
     """
+    # Only add attributes in VERBOSE mode
+    trace_level = os.getenv("TRACE_LEVEL", "BASIC").upper()
+    if trace_level != "VERBOSE":
+        return
+
     current_span = trace.get_current_span()
     if current_span and current_span.is_recording():
         for key, value in attributes.items():
@@ -302,11 +334,16 @@ def set_span_attributes(**attributes):
 
 def add_span_event(name: str, **attributes):
     """Add an event to the current active span.
-    
+
     Args:
         name: Event name
         **attributes: Event attributes
     """
+    # Only add events in VERBOSE mode
+    trace_level = os.getenv("TRACE_LEVEL", "BASIC").upper()
+    if trace_level != "VERBOSE":
+        return
+
     current_span = trace.get_current_span()
     if current_span and current_span.is_recording():
         current_span.add_event(name, attributes)

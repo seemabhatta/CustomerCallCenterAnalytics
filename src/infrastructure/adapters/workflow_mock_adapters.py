@@ -581,10 +581,14 @@ class TaskMockAdapter(BaseMockAdapter):
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate task execution payload."""
         try:
-            # Extract workflow data
+            # Extract step-specific data from parameters (this is what the task should represent)
+            step_action = parameters.get('step_action', '')
+            step_details = parameters.get('step_details', '')
+
+            # Extract workflow data for context
             workflow_data = workflow.get('workflow_data', {})
-            title = workflow_data.get('title', '')
-            description = workflow_data.get('description', '')
+            workflow_title = workflow_data.get('title', '')
+            workflow_description = workflow_data.get('description', '')
             workflow_type = workflow.get('workflow_type', 'BORROWER')
             
             # Build task payload
@@ -649,18 +653,18 @@ class TaskMockAdapter(BaseMockAdapter):
     
     def _generate_title(self, title: str) -> str:
         """Generate clear, actionable task title."""
-        # Clean up action item for title
-        title = action_item.strip()
-        
+        # Clean up title
+        title = title.strip()
+
         # Ensure title is action-oriented
         if not any(title.lower().startswith(verb) for verb in ['follow', 'contact', 'send', 'update', 'review', 'complete', 'schedule']):
             title = f"Complete: {title}"
-        
+
         return title
     
     def _generate_description(self, title: str, description: str) -> str:
         """Generate detailed task description."""
-        base_description = f"Task: {action_item}\n\n"
+        base_description = f"Task: {title}\n\n"
         
         if description:
             base_description += f"Details: {description}\n\n"

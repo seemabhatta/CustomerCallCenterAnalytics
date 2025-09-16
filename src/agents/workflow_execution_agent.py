@@ -4,6 +4,7 @@ Analyzes workflow action items and makes intelligent execution decisions.
 NO FALLBACK LOGIC - fails fast if cannot make decisions.
 """
 import json
+import logging
 from typing import Dict, Any
 from datetime import datetime
 
@@ -59,6 +60,7 @@ class WorkflowExecutionAgent:
         self.llm = OpenAIWrapper()
         self.agent_id = "workflow_execution_agent"
         self.agent_version = "v1.0"
+        self.logger = logging.getLogger(__name__)
     
     async def analyze_workflow_action(self, workflow: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze workflow action item and determine execution approach.
@@ -78,7 +80,10 @@ class WorkflowExecutionAgent:
         description = workflow_data.get('description', '')
         workflow_type = workflow.get('workflow_type', 'UNKNOWN')
 
+        self.logger.info(f"Analyzing workflow action: title='{title}', workflow_type={workflow_type}, description_length={len(description) if description else 0}")
+
         if not title:
+            self.logger.error(f"No title found in workflow data: workflow_data={workflow_data}")
             raise ValueError("No title found in workflow data")
         
         # Create analysis prompt
@@ -86,11 +91,15 @@ class WorkflowExecutionAgent:
         
         try:
             # Get LLM decision
+            self.logger.info(f"Calling LLM for workflow analysis: title='{title}', prompt_length={len(prompt)}")
             response = await self.llm.generate_text_async(prompt, temperature=0.2)
-            
+
             # Debug: Check response
             if not response or not response.strip():
+                self.logger.error(f"LLM returned empty response: title='{title}', prompt_length={len(prompt)}")
                 raise ValueError(f"LLM returned empty response. Prompt length: {len(prompt)} chars")
+
+            self.logger.info(f"LLM response received: title='{title}', response_length={len(response)}")
             
             # Clean response - remove markdown code blocks if present
             cleaned_response = response.strip()
@@ -137,8 +146,10 @@ class WorkflowExecutionAgent:
             return decision_data
             
         except json.JSONDecodeError as e:
+            self.logger.error(f"LLM returned invalid JSON: title='{title}', response='{response[:200]}...', error={e}")
             raise ValueError(f"LLM returned invalid JSON: {e}")
         except Exception as e:
+            self.logger.exception(f"Execution analysis failed: title='{title}'")
             raise ValueError(f"Execution analysis failed: {e}")
     
     async def generate_execution_payload(self, workflow: Dict[str, Any], 

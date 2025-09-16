@@ -4,6 +4,7 @@ Coordinates between agents, adapters, and storage systems.
 NO FALLBACK LOGIC - fails fast on any execution issues.
 """
 import time
+import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
@@ -42,10 +43,12 @@ class WorkflowExecutionEngine:
     
     def __init__(self, db_path: str = "data/call_center.db"):
         """Initialize execution engine with all dependencies.
-        
+
         Args:
             db_path: Path to database file
         """
+        self.logger = logging.getLogger(__name__)
+
         # Initialize agent and storage
         self.execution_agent = WorkflowExecutionAgent()
         self.workflow_store = WorkflowStore(db_path)
@@ -85,32 +88,41 @@ class WorkflowExecutionEngine:
             Exception: Execution failure (NO FALLBACK)
         """
         execution_start_time = time.time()
-        
+        self.logger.info(f"Starting workflow execution: workflow_id={workflow_id}, executed_by={executed_by}")
+
         try:
             # Step 1: Get and validate workflow
             workflow = self.workflow_store.get_by_id(workflow_id)
             if not workflow:
+                self.logger.error(f"Workflow not found: workflow_id={workflow_id}")
                 raise ValueError(f"Workflow not found: {workflow_id}")
-            
+
+            self.logger.info(f"Workflow retrieved: workflow_id={workflow_id}, status={workflow.get('status')}")
+
             # Validate workflow status - accept both APPROVED and AUTO_APPROVED
             if workflow['status'] not in ['APPROVED', 'AUTO_APPROVED']:
+                self.logger.error(f"Invalid workflow status for execution: workflow_id={workflow_id}, status={workflow['status']}")
                 raise ValueError(
                     f"Workflow must be approved for execution. "
                     f"Current status: {workflow['status']}"
                 )
-            
+
             # Extract workflow data
             workflow_data = workflow.get('workflow_data', {})
-            
+            self.logger.info(f"Extracted workflow data: workflow_id={workflow_id}, workflow_data_keys={list(workflow_data.keys())}")
+
             # Step 2: Execute workflow steps sequentially
             workflow_steps = workflow_data.get('steps', [])
 
             # NO FALLBACK - if no steps defined, fail fast
             if not workflow_steps:
+                self.logger.error(f"No workflow steps found: workflow_id={workflow_id}, workflow_data={workflow_data}")
                 raise ValueError(
                     f"Workflow {workflow_id} has no steps defined. "
                     f"Cannot execute workflow without defined steps."
                 )
+
+            self.logger.info(f"Found {len(workflow_steps)} steps to execute: workflow_id={workflow_id}")
 
             # Execute each step with its specified executor
             step_results = []
@@ -125,7 +137,10 @@ class WorkflowExecutionEngine:
                 executor_type = step.get('tool_needed', '').strip()
                 step_details = step.get('details', '')
 
+                self.logger.info(f"Executing step {step_number}/{len(workflow_steps)}: workflow_id={workflow_id}, action='{step_action}', executor_type='{executor_type}'")
+
                 if not executor_type:
+                    self.logger.error(f"Step missing tool_needed field: workflow_id={workflow_id}, step_number={step_number}, step={step}")
                     raise ValueError(f"Step {step_number} missing tool_needed field")
 
                 # Check if executor exists
@@ -170,6 +185,7 @@ class WorkflowExecutionEngine:
 
                 # Execute step using appropriate executor
                 executor = self.adapters[executor_type]
+                self.logger.info(f"Found executor for step: workflow_id={workflow_id}, step_number={step_number}, executor_type={executor_type}")
 
                 # Create step-specific parameters
                 step_parameters = {
@@ -181,7 +197,13 @@ class WorkflowExecutionEngine:
                 }
 
                 # Execute the step - FAIL FAST if execution fails
-                step_result = executor.execute(workflow, step_parameters)
+                self.logger.info(f"Calling executor.execute(): workflow_id={workflow_id}, step_number={step_number}, executor_type={executor_type}")
+                try:
+                    step_result = executor.execute(workflow, step_parameters)
+                    self.logger.info(f"Executor completed successfully: workflow_id={workflow_id}, step_number={step_number}, result_keys={list(step_result.keys()) if isinstance(step_result, dict) else 'not_dict'}")
+                except Exception as e:
+                    self.logger.exception(f"Executor failed: workflow_id={workflow_id}, step_number={step_number}, executor_type={executor_type}")
+                    raise
 
                 # Calculate step timing
                 step_duration = int((time.time() - step_start_time) * 1000)
@@ -256,7 +278,8 @@ class WorkflowExecutionEngine:
         except Exception as e:
             # Store failed execution record
             execution_duration = int((time.time() - execution_start_time) * 1000)
-            
+            self.logger.exception(f"Workflow execution failed: workflow_id={workflow_id}, executed_by={executed_by}, duration={execution_duration}ms")
+
             try:
                 failed_execution_record = {
                     'workflow_id': workflow_id,
