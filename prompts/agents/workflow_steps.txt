@@ -28,6 +28,19 @@ CRITICAL INSTRUCTIONS:
 - Focus on system-to-system integration, not UI navigation
 - Each step must be independently executable
 
+WORKFLOW TYPE SPECIFIC FOCUS:
+- BORROWER: Generate customer-facing actions (payments, documents, notifications)
+- ADVISOR: Generate coaching/training actions FOR the advisor (NOT customer actions)
+- SUPERVISOR: Generate oversight, compliance, and team management actions
+- LEADERSHIP: Generate strategic resource allocation and policy actions
+
+For ADVISOR workflows specifically:
+- Focus on training module assignments
+- Schedule coaching sessions
+- Create performance improvement tasks
+- Assign skill development activities
+- DO NOT generate customer account actions
+
 SYSTEM NAMING CONVENTIONS:
 - Use "Mortgage Servicing System" not "Black Knight"
 - Use "Origination System" not "Encompass"
@@ -84,4 +97,26 @@ Human Executor Step:
   "action": "Send options to borrower",
   "tool_needed": "email",
   "details": "Email refinance options and hardship application with next steps"
+}}
+
+ADVISOR Workflow Examples:
+{{
+  "step_number": 1,
+  "action": "Assign escrow management training module",
+  "tool_needed": "training",
+  "details": "Assign module TRAIN-ESCROW-101 to advisor with 30-day completion deadline"
+}}
+
+{{
+  "step_number": 2,
+  "action": "Schedule coaching session with manager",
+  "tool_needed": "task",
+  "details": "Create task for manager to conduct 1-on-1 coaching session on escrow account management within 7 days"
+}}
+
+{{
+  "step_number": 3,
+  "action": "Update advisor performance record",
+  "tool_needed": "crm",
+  "details": "Add coaching requirement note to advisor's performance record in HR system"
 }}
