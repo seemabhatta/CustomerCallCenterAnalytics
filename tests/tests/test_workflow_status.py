@@ -47,7 +47,7 @@ class TestWorkflowStatusBackend:
         }
         
         # This import should fail initially - the backend doesn't exist yet
-        from workflow.status_backend import WorkflowStatusBackend
+        from src.services.workflow_status_service import WorkflowStatusBackend
         
         backend = WorkflowStatusBackend(
             self.transcript_store,
@@ -74,7 +74,7 @@ class TestWorkflowStatusBackend:
     
     def test_get_workflow_status_by_transcript_id(self):
         """Test getting workflow status for a specific transcript."""
-        from workflow.status_backend import WorkflowStatusBackend
+        from src.services.workflow_status_service import WorkflowStatusBackend
         
         backend = WorkflowStatusBackend(
             self.transcript_store,
@@ -103,7 +103,7 @@ class TestWorkflowStatusBackend:
     
     def test_determine_current_stage_transcript_only(self):
         """Test stage determination when only transcript exists."""
-        from workflow.status_backend import WorkflowStatusBackend
+        from src.services.workflow_status_service import WorkflowStatusBackend
         
         backend = WorkflowStatusBackend(
             self.transcript_store,
@@ -127,7 +127,7 @@ class TestWorkflowStatusBackend:
     
     def test_determine_current_stage_analysis_in_progress(self):
         """Test stage determination when analysis exists but plan doesn't."""
-        from workflow.status_backend import WorkflowStatusBackend
+        from src.services.workflow_status_service import WorkflowStatusBackend
         
         backend = WorkflowStatusBackend(
             self.transcript_store,
@@ -150,7 +150,7 @@ class TestWorkflowStatusBackend:
     
     def test_determine_current_stage_full_workflow(self):
         """Test stage determination for complete workflow."""
-        from workflow.status_backend import WorkflowStatusBackend
+        from src.services.workflow_status_service import WorkflowStatusBackend
         
         backend = WorkflowStatusBackend(
             self.transcript_store,
@@ -189,7 +189,7 @@ class TestWorkflowStatusBackend:
     
     def test_workflow_status_fails_with_invalid_transcript(self):
         """Test that workflow status fails fast with invalid transcript ID."""
-        from workflow.status_backend import WorkflowStatusBackend
+        from src.services.workflow_status_service import WorkflowStatusBackend
         
         backend = WorkflowStatusBackend(
             self.transcript_store,
@@ -207,7 +207,7 @@ class TestWorkflowStatusBackend:
         """Test that backend fails if any store is missing."""
         # Should fail if any store is None - no fallback logic
         with pytest.raises(Exception):
-            from workflow.status_backend import WorkflowStatusBackend
+            from src.services.workflow_status_service import WorkflowStatusBackend
             WorkflowStatusBackend(None, None, None, None, None)
 
 

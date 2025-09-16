@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from src.models.transcript import Transcript
 from src.utils.prompt_loader import prompt_loader
-from src.llm.openai_wrapper import OpenAIWrapper
+from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
 from src.agents.models.action_plan_models import FourLayerActionPlan
 
 load_dotenv()

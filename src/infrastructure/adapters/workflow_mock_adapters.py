@@ -1,6 +1,6 @@
 """
-Workflow Mock Executors - Generate realistic payloads without real integrations.
-Each executor creates detailed mock payloads for demonstration purposes.
+Workflow Mock Adapters - Generate realistic payloads without real integrations.
+Each adapter creates detailed mock payloads for demonstration purposes.
 NO FALLBACK LOGIC - fails fast if cannot generate valid payload.
 """
 import uuid
@@ -9,10 +9,10 @@ from typing import Dict, Any
 from abc import ABC, abstractmethod
 
 
-class BaseMockExecutor(ABC):
-    """Base class for all mock executors.
-    
-    Each executor generates realistic payloads for its specific action type.
+class BaseMockAdapter(ABC):
+    """Base class for all mock adapters.
+
+    Each adapter generates realistic payloads for its specific action type.
     NO FALLBACK LOGIC - if payload cannot be generated, fail fast.
     """
     
@@ -25,26 +25,26 @@ class BaseMockExecutor(ABC):
             parameters: Execution parameters from agent
             
         Returns:
-            Dict with executor type, payload, and metadata
+            Dict with adapter type, payload, and metadata
             
         Raises:
             ValueError: If cannot generate valid payload (NO FALLBACK)
         """
         pass
     
-    def _generate_base_result(self, executor_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_base_result(self, adapter_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Generate base result structure."""
         return {
-            'executor': executor_type,
+            'adapter': adapter_type,
             'payload': payload,
             'mock': True,
             'timestamp': datetime.now(timezone.utc).isoformat(),
-            'execution_id': f'{executor_type}_{uuid.uuid4().hex[:8]}'
+            'execution_id': f'{adapter_type}_{uuid.uuid4().hex[:8]}'
         }
 
 
-class EmailMockExecutor(BaseMockExecutor):
-    """Mock executor for email operations.
+class EmailMockAdapter(BaseMockAdapter):
+    """Mock adapter for email operations.
     
     Generates realistic email payloads including recipient, subject, body, and attachments.
     """
@@ -87,7 +87,7 @@ class EmailMockExecutor(BaseMockExecutor):
             return self._generate_base_result('email', payload)
             
         except Exception as e:
-            raise ValueError(f"Email executor failed: {e}")
+            raise ValueError(f"Email adapter failed: {e}")
     
     def _determine_recipient(self, workflow_type: str) -> str:
         """Determine email recipient based on workflow type."""
@@ -236,8 +236,8 @@ Email: service@company.com"""
             raise ValueError("Email body too short for professional communication")
 
 
-class CRMockExecutor(BaseMockExecutor):
-    """Mock executor for CRM operations.
+class CRMockAdapter(BaseMockAdapter):
+    """Mock adapter for CRM operations.
     
     Generates realistic CRM update payloads for customer record management.
     """
@@ -281,7 +281,7 @@ class CRMockExecutor(BaseMockExecutor):
             return self._generate_base_result('crm', payload)
             
         except Exception as e:
-            raise ValueError(f"CRM executor failed: {e}")
+            raise ValueError(f"CRM adapter failed: {e}")
     
     def _generate_customer_id(self) -> str:
         """Generate realistic customer ID."""
@@ -396,8 +396,8 @@ Follow-up Required: As indicated by next_action field"""
             raise ValueError("CRM notes must be substantial (20+ characters)")
 
 
-class DisclosureMockExecutor(BaseMockExecutor):
-    """Mock executor for disclosure document operations.
+class DisclosureMockAdapter(BaseMockAdapter):
+    """Mock adapter for disclosure document operations.
     
     Generates realistic disclosure document payloads for compliance requirements.
     """
@@ -439,7 +439,7 @@ class DisclosureMockExecutor(BaseMockExecutor):
             return self._generate_base_result('disclosure', payload)
             
         except Exception as e:
-            raise ValueError(f"Disclosure executor failed: {e}")
+            raise ValueError(f"Disclosure adapter failed: {e}")
     
     def _determine_document_type(self, action_item: str) -> str:
         """Determine disclosure document type."""
@@ -572,8 +572,8 @@ class DisclosureMockExecutor(BaseMockExecutor):
             raise ValueError("Compliance flags must be a non-empty list")
 
 
-class TaskMockExecutor(BaseMockExecutor):
-    """Mock executor for task management operations.
+class TaskMockAdapter(BaseMockAdapter):
+    """Mock adapter for task management operations.
     
     Generates realistic task creation and assignment payloads.
     """
@@ -620,7 +620,7 @@ class TaskMockExecutor(BaseMockExecutor):
             return self._generate_base_result('task', payload)
             
         except Exception as e:
-            raise ValueError(f"Task executor failed: {e}")
+            raise ValueError(f"Task adapter failed: {e}")
     
     def _determine_assignee(self, workflow_type: str, action_item: str) -> str:
         """Determine task assignee based on workflow type and action."""
@@ -834,8 +834,8 @@ Completion Requirements:
             raise ValueError("Task description must be detailed (50+ characters)")
 
 
-class TrainingMockExecutor(BaseMockExecutor):
-    """Mock executor for training assignment operations.
+class TrainingMockAdapter(BaseMockAdapter):
+    """Mock adapter for training assignment operations.
     
     Generates realistic training assignment payloads for staff development.
     """
@@ -878,7 +878,7 @@ class TrainingMockExecutor(BaseMockExecutor):
             return self._generate_base_result('training', payload)
             
         except Exception as e:
-            raise ValueError(f"Training executor failed: {e}")
+            raise ValueError(f"Training adapter failed: {e}")
     
     def _determine_training_module(self, action_item: str) -> str:
         """Determine appropriate training module."""
@@ -1084,8 +1084,8 @@ class TrainingMockExecutor(BaseMockExecutor):
                 raise ValueError(f"Module details missing required field: {field}")
 
 
-class ServicingAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for mortgage servicing API operations.
+class ServicingAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for mortgage servicing API operations.
 
     Handles loan servicing operations like balance inquiries, payment modifications,
     PMI updates, and escrow adjustments through simulated API calls.
@@ -1113,7 +1113,7 @@ class ServicingAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('servicing_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Servicing API executor failed: {e}")
+            raise ValueError(f"Servicing API adapter failed: {e}")
 
     def _determine_endpoint(self, action_item: str) -> str:
         """Determine API endpoint based on action."""
@@ -1184,8 +1184,8 @@ class ServicingAPIMockExecutor(BaseMockExecutor):
         return random.randint(100, 500)
 
 
-class IncomeAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for income and employment verification API operations."""
+class IncomeAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for income and employment verification API operations."""
 
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate income API execution payload."""
@@ -1219,11 +1219,11 @@ class IncomeAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('income_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Income API executor failed: {e}")
+            raise ValueError(f"Income API adapter failed: {e}")
 
 
-class UnderwritingAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for underwriting and qualification API operations."""
+class UnderwritingAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for underwriting and qualification API operations."""
 
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate underwriting API execution payload."""
@@ -1255,11 +1255,11 @@ class UnderwritingAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('underwriting_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Underwriting API executor failed: {e}")
+            raise ValueError(f"Underwriting API adapter failed: {e}")
 
 
-class HardshipAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for hardship assistance API operations."""
+class HardshipAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for hardship assistance API operations."""
 
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate hardship API execution payload."""
@@ -1295,11 +1295,11 @@ class HardshipAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('hardship_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Hardship API executor failed: {e}")
+            raise ValueError(f"Hardship API adapter failed: {e}")
 
 
-class PricingAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for pricing and refinance option API operations."""
+class PricingAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for pricing and refinance option API operations."""
 
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate pricing API execution payload."""
@@ -1346,11 +1346,11 @@ class PricingAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('pricing_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Pricing API executor failed: {e}")
+            raise ValueError(f"Pricing API adapter failed: {e}")
 
 
-class DocumentAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for document generation and management API operations."""
+class DocumentAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for document generation and management API operations."""
 
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate document API execution payload."""
@@ -1393,11 +1393,11 @@ class DocumentAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('document_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Document API executor failed: {e}")
+            raise ValueError(f"Document API adapter failed: {e}")
 
 
-class ComplianceAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for regulatory compliance API operations."""
+class ComplianceAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for regulatory compliance API operations."""
 
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate compliance API execution payload."""
@@ -1430,11 +1430,11 @@ class ComplianceAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('compliance_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Compliance API executor failed: {e}")
+            raise ValueError(f"Compliance API adapter failed: {e}")
 
 
-class AccountingAPIMockExecutor(BaseMockExecutor):
-    """Mock executor for accounting and financial transaction API operations."""
+class AccountingAPIMockAdapter(BaseMockAdapter):
+    """Mock adapter for accounting and financial transaction API operations."""
 
     def execute(self, workflow: Dict[str, Any], parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Generate accounting API execution payload."""
@@ -1472,4 +1472,4 @@ class AccountingAPIMockExecutor(BaseMockExecutor):
             return self._generate_base_result('accounting_api', payload)
 
         except Exception as e:
-            raise ValueError(f"Accounting API executor failed: {e}")
+            raise ValueError(f"Accounting API adapter failed: {e}")

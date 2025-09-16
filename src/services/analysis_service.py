@@ -36,7 +36,7 @@ class AnalysisService:
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new analysis from transcript."""
         # Set up tracing for analysis creation
-        from src.telemetry import set_span_attributes, add_span_event
+        from src.infrastructure.telemetry import set_span_attributes, add_span_event
         transcript_id = request_data.get("transcript_id")
         if not transcript_id:
             raise ValueError("transcript_id is required")

@@ -10,7 +10,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 # Import OpenTelemetry tracing
-from src.telemetry import get_tracer, set_span_attributes, add_span_event, trace_async_function
+from src.infrastructure.telemetry import get_tracer, set_span_attributes, add_span_event, trace_async_function
 
 
 from src.orchestration.simple_orchestrator import SimpleOrchestrator
@@ -30,7 +30,7 @@ class SimplePipeline:
         self.orchestrator = SimpleOrchestrator()
         
         # Initialize tracing to ensure OpenAI instrumentation is active
-        from src.telemetry import initialize_tracing
+        from src.infrastructure.telemetry import initialize_tracing
         initialize_tracing(
             service_name="call-center-analytics-pipeline",
             enable_console=True,

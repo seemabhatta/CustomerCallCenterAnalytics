@@ -14,7 +14,7 @@ load_dotenv()
 
 # Initialize OpenTelemetry tracing IMMEDIATELY after env loading for complete observability coverage
 try:
-    from src.telemetry import initialize_tracing
+    from src.infrastructure.telemetry import initialize_tracing
     initialize_tracing(
         service_name="xai",
         enable_console=os.getenv("OTEL_CONSOLE_ENABLED", "true").lower() == "true",
@@ -38,7 +38,7 @@ from urllib.parse import urljoin, urlencode
 try:
     import sys
     sys.path.insert(0, '.')
-    from src.generators.transcript_generator import TranscriptGenerator
+    from src.agents.transcript_agent import TranscriptAgent
     from src.storage.transcript_store import TranscriptStore
     DIRECT_MODE_AVAILABLE = True
 except ImportError as e:
@@ -1309,7 +1309,7 @@ def analysis_visualize(
 ):
     """Create interactive network visualization of the knowledge graph."""
     try:
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         console.print("📊 [bold magenta]Creating knowledge graph visualization...[/bold magenta]")
         
@@ -3249,7 +3249,7 @@ def orchestrate_run(
         
         # Import here to avoid issues with missing dependencies
         import asyncio
-        from src.orchestration.simple_pipeline import run_simple_pipeline
+        from src.services.orchestration.simple_pipeline import run_simple_pipeline
         
         # Run the pipeline
         if verbose:

@@ -1,1 +1,0 @@
-"""Graph visualization module for KuzuDB knowledge graph."""

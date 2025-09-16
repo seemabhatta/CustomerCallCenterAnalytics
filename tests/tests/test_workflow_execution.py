@@ -10,12 +10,12 @@ from unittest.mock import Mock, patch
 
 from src.agents.workflow_execution_agent import WorkflowExecutionAgent
 from src.services.workflow_execution_engine import WorkflowExecutionEngine
-from src.executors.workflow_mock_executors import (
-    EmailMockExecutor,
-    CRMockExecutor,
-    DisclosureMockExecutor,
-    TaskMockExecutor,
-    TrainingMockExecutor
+from src.infrastructure.adapters.workflow_mock_adapters import (
+    EmailMockAdapter,
+    CRMockAdapter,
+    DisclosureMockAdapter,
+    TaskMockAdapter,
+    TrainingMockAdapter
 )
 from src.storage.workflow_execution_store import WorkflowExecutionStore
 
@@ -132,7 +132,7 @@ class TestWorkflowExecutionAgent:
         assert 'status' in payload['updates']
 
 
-class TestMockExecutors:
+class TestMockAdapters:
     """Test individual mock executors."""
     
     @pytest.fixture
@@ -150,7 +150,7 @@ class TestMockExecutors:
     def test_email_executor_generates_payload(self, sample_workflow):
         """Test email executor generates proper payload."""
         # Given: Email executor and workflow
-        executor = EmailMockExecutor()
+        executor = EmailMockAdapter()
         params = {
             'recipient': 'test@example.com',
             'subject': 'Test Email',
@@ -171,7 +171,7 @@ class TestMockExecutors:
     def test_crm_executor_generates_payload(self, sample_workflow):
         """Test CRM executor generates proper payload."""
         # Given: CRM executor
-        executor = CRMockExecutor()
+        executor = CRMockAdapter()
         params = {
             'customer_id': 'CUST_123',
             'updates': {'status': 'contacted', 'notes': 'Comprehensive test notes with sufficient detail to meet CRM validation requirements for professional record keeping.'}
@@ -191,7 +191,7 @@ class TestMockExecutors:
     def test_disclosure_executor_generates_payload(self, sample_workflow):
         """Test disclosure executor generates proper payload."""
         # Given: Disclosure executor
-        executor = DisclosureMockExecutor()
+        executor = DisclosureMockAdapter()
         params = {
             'document_type': 'refinance_disclosure',
             'customer_data': {'loan_amount': 250000, 'rate': 6.5}
@@ -210,7 +210,7 @@ class TestMockExecutors:
     def test_task_executor_generates_payload(self, sample_workflow):
         """Test task executor generates proper payload."""
         # Given: Task executor
-        executor = TaskMockExecutor()
+        executor = TaskMockAdapter()
         params = {
             'assignee': 'advisor_123',
             'title': 'Follow up with customer',

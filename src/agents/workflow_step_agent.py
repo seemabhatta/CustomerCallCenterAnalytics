@@ -2,7 +2,7 @@
 import json
 from typing import Dict, Any, List
 from datetime import datetime
-from src.llm.openai_wrapper import OpenAIWrapper
+from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
 from src.utils.prompt_loader import prompt_loader
 
 

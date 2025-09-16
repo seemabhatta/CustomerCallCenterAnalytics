@@ -1,6 +1,6 @@
 """
 Workflow Execution Engine - Orchestrates execution of approved workflows.
-Coordinates between agents, executors, and storage systems.
+Coordinates between agents, adapters, and storage systems.
 NO FALLBACK LOGIC - fails fast on any execution issues.
 """
 import time
@@ -8,20 +8,20 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 from src.agents.workflow_execution_agent import WorkflowExecutionAgent
-from src.executors.workflow_mock_executors import (
-    EmailMockExecutor,
-    CRMockExecutor,
-    DisclosureMockExecutor,
-    TaskMockExecutor,
-    TrainingMockExecutor,
-    ServicingAPIMockExecutor,
-    IncomeAPIMockExecutor,
-    UnderwritingAPIMockExecutor,
-    HardshipAPIMockExecutor,
-    PricingAPIMockExecutor,
-    DocumentAPIMockExecutor,
-    ComplianceAPIMockExecutor,
-    AccountingAPIMockExecutor
+from src.infrastructure.adapters.workflow_mock_adapters import (
+    EmailMockAdapter,
+    CRMockAdapter,
+    DisclosureMockAdapter,
+    TaskMockAdapter,
+    TrainingMockAdapter,
+    ServicingAPIMockAdapter,
+    IncomeAPIMockAdapter,
+    UnderwritingAPIMockAdapter,
+    HardshipAPIMockAdapter,
+    PricingAPIMockAdapter,
+    DocumentAPIMockAdapter,
+    ComplianceAPIMockAdapter,
+    AccountingAPIMockAdapter
 )
 from src.storage.workflow_store import WorkflowStore
 from src.storage.workflow_execution_store import WorkflowExecutionStore
@@ -33,7 +33,7 @@ class WorkflowExecutionEngine:
     This engine handles the complete workflow execution lifecycle:
     1. Validates workflow is ready for execution
     2. Uses LLM agent to analyze action and determine executor
-    3. Routes to appropriate mock executor
+    3. Routes to appropriate mock adapter
     4. Stores execution results and updates workflow status
     5. Provides execution tracking and reporting
     
@@ -51,23 +51,23 @@ class WorkflowExecutionEngine:
         self.workflow_store = WorkflowStore(db_path)
         self.execution_store = WorkflowExecutionStore(db_path)
         
-        # Initialize mock executors
-        self.executors = {
-            # Human-centric executors
-            'email': EmailMockExecutor(),
-            'crm': CRMockExecutor(),
-            'disclosure': DisclosureMockExecutor(),
-            'task': TaskMockExecutor(),
-            'training': TrainingMockExecutor(),
-            # API-centric mortgage system executors
-            'servicing_api': ServicingAPIMockExecutor(),
-            'income_api': IncomeAPIMockExecutor(),
-            'underwriting_api': UnderwritingAPIMockExecutor(),
-            'hardship_api': HardshipAPIMockExecutor(),
-            'pricing_api': PricingAPIMockExecutor(),
-            'document_api': DocumentAPIMockExecutor(),
-            'compliance_api': ComplianceAPIMockExecutor(),
-            'accounting_api': AccountingAPIMockExecutor()
+        # Initialize mock adapters
+        self.adapters = {
+            # Human-centric adapters
+            'email': EmailMockAdapter(),
+            'crm': CRMockAdapter(),
+            'disclosure': DisclosureMockAdapter(),
+            'task': TaskMockAdapter(),
+            'training': TrainingMockAdapter(),
+            # API-centric mortgage system adapters
+            'servicing_api': ServicingAPIMockAdapter(),
+            'income_api': IncomeAPIMockAdapter(),
+            'underwriting_api': UnderwritingAPIMockAdapter(),
+            'hardship_api': HardshipAPIMockAdapter(),
+            'pricing_api': PricingAPIMockAdapter(),
+            'document_api': DocumentAPIMockAdapter(),
+            'compliance_api': ComplianceAPIMockAdapter(),
+            'accounting_api': AccountingAPIMockAdapter()
         }
     
     async def execute_workflow(self, workflow_id: str, executed_by: str = "system_executor") -> Dict[str, Any]:
@@ -134,7 +134,7 @@ class WorkflowExecutionEngine:
                     raise ValueError(f"Step {step_number} missing tool_needed field")
 
                 # Check if executor exists
-                if executor_type not in self.executors:
+                if executor_type not in self.adapters:
                     # Mark step as failed due to missing executor - but continue with other steps
                     step_duration = int((time.time() - step_start_time) * 1000)
 
@@ -151,7 +151,7 @@ class WorkflowExecutionEngine:
                         'error_message': f"No executor available for type: {executor_type}",
                         'metadata': {
                             'step_details': step_details,
-                            'available_executors': list(self.executors.keys()),
+                            'available_adapters': list(self.adapters.keys()),
                             'workflow_type': workflow.get('workflow_type'),
                             'plan_id': workflow.get('plan_id')
                         }
@@ -174,7 +174,7 @@ class WorkflowExecutionEngine:
                     continue
 
                 # Execute step using appropriate executor
-                executor = self.executors[executor_type]
+                executor = self.adapters[executor_type]
 
                 # Create step-specific parameters
                 step_parameters = {
@@ -473,8 +473,8 @@ class WorkflowExecutionEngine:
             
             # Add engine-specific statistics
             engine_stats = {
-                'available_executors': list(self.executors.keys()),
-                'total_executor_types': len(self.executors),
+                'available_adapters': list(self.adapters.keys()),
+                'total_executor_types': len(self.adapters),
                 'agent_version': self.execution_agent.agent_version,
                 'engine_initialized_at': datetime.now(timezone.utc).isoformat()
             }

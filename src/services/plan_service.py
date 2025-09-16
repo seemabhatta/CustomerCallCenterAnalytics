@@ -26,7 +26,7 @@ class PlanService:
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new action plan from analysis."""
         # Set up tracing for plan creation
-        from src.telemetry import set_span_attributes, add_span_event
+        from src.infrastructure.telemetry import set_span_attributes, add_span_event
         analysis_id = request_data.get("analysis_id")
         if not analysis_id:
             raise ValueError("analysis_id is required")

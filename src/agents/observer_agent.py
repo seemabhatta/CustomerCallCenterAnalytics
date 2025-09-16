@@ -15,7 +15,7 @@ from dataclasses import dataclass, asdict
 from collections import defaultdict, Counter
 
 from src.storage.approval_store import ApprovalStore
-from src.llm.openai_wrapper import OpenAIWrapper
+from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
 from src.agents.models.observer_models import ExecutionEvaluation, DecisionAgentFeedback
 import os
 

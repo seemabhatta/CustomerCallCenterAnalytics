@@ -14,7 +14,7 @@ load_dotenv()
 
 # Initialize OpenTelemetry tracing IMMEDIATELY after env loading for complete observability coverage
 try:
-    from src.telemetry import initialize_tracing
+    from src.infrastructure.telemetry import initialize_tracing
     initialize_tracing(
         service_name="xai",
         enable_console=os.getenv("OTEL_CONSOLE_ENABLED", "true").lower() == "true",
@@ -1472,7 +1472,7 @@ def orchestrate_run(
 
         # Import here to avoid issues with missing dependencies
         import asyncio
-        from src.orchestration.simple_pipeline import run_simple_pipeline
+        from src.services.orchestration.simple_pipeline import run_simple_pipeline
 
         # Run the pipeline
         if verbose:

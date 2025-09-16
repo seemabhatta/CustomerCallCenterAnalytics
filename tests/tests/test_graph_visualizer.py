@@ -11,7 +11,7 @@ class TestGraphVisualizer:
     
     def test_create_network_graph_with_valid_data(self):
         """Test creating NetworkX graph from valid KuzuDB data."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         # Mock graph data structure
         graph_data = {
@@ -41,7 +41,7 @@ class TestGraphVisualizer:
     
     def test_create_network_graph_fails_fast_with_empty_data(self):
         """Test that empty data fails fast - NO FALLBACK."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         empty_data = {"nodes": [], "edges": []}
         visualizer = GraphVisualizer()
@@ -53,7 +53,7 @@ class TestGraphVisualizer:
     
     def test_create_network_graph_fails_fast_with_invalid_data(self):
         """Test that invalid data structure fails fast - NO FALLBACK."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         invalid_data = {"invalid": "structure"}
         visualizer = GraphVisualizer()
@@ -65,7 +65,7 @@ class TestGraphVisualizer:
     
     def test_node_styling_by_type(self):
         """Test that nodes are styled differently by type."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         graph_data = {
             "nodes": [
@@ -99,7 +99,7 @@ class TestGraphVisualizer:
     
     def test_node_sizing_by_importance(self):
         """Test that nodes are sized based on risk/severity scores."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         graph_data = {
             "nodes": [
@@ -129,7 +129,7 @@ class TestGraphVisualizer:
     
     def test_save_to_html(self):
         """Test saving visualization to HTML file."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         # Create a mock figure
         mock_figure = MagicMock()
@@ -151,7 +151,7 @@ class TestGraphVisualizer:
     
     def test_save_to_html_fails_fast_invalid_path(self):
         """Test that invalid file path fails fast - NO FALLBACK."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         mock_figure = MagicMock()
         invalid_path = "/nonexistent/directory/graph.html"
@@ -166,7 +166,7 @@ class TestGraphVisualizer:
     
     def test_hover_information_included(self):
         """Test that hover information is included in the visualization.""" 
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         graph_data = {
             "nodes": [
@@ -192,7 +192,7 @@ class TestGraphVisualizer:
     
     def test_edge_labels_included(self):
         """Test that edge relationships are labeled."""
-        from src.visualization.graph_visualizer import GraphVisualizer
+        from src.services.visualization.graph_visualizer import GraphVisualizer
         
         graph_data = {
             "nodes": [

@@ -8,7 +8,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from pydantic import BaseModel, Field, ValidationError
 from typing import List, Literal
-from src.llm.openai_wrapper import OpenAIWrapper
+from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
 from src.agents.models.risk_models import RiskAssessment, ApprovalRouting
 from src.models.shared import ActionItem, ActionItemList
 

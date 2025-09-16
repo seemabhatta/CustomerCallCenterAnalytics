@@ -11,13 +11,13 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
-from src.orchestration.tasks.analysis_tasks import generate_analysis_task, validate_analysis_task
-from src.orchestration.tasks.plan_tasks import create_plan_task, validate_plan_task
-from src.orchestration.tasks.workflow_tasks import (
+from ..tasks.analysis_tasks import generate_analysis_task, validate_analysis_task
+from ..tasks.plan_tasks import create_plan_task, validate_plan_task
+from ..tasks.workflow_tasks import (
     extract_workflows_task, validate_workflow_task, check_auto_approval_task
 )
-from src.orchestration.tasks.execution_tasks import execute_workflow_task, validate_execution_task
-from src.orchestration.tasks.approval_tasks import filter_approved_workflows_task
+from ..tasks.execution_tasks import execute_workflow_task, validate_execution_task
+from ..tasks.approval_tasks import filter_approved_workflows_task
 from src.orchestration.models.pipeline_models import PipelineResult, PipelineStage
 
 

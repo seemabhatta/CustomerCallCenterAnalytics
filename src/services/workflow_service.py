@@ -507,7 +507,7 @@ class WorkflowService:
             Exception: LLM agent failures (NO FALLBACK)
         """
         # Set up tracing for workflow extraction
-        from src.telemetry import set_span_attributes, add_span_event
+        from src.infrastructure.telemetry import set_span_attributes, add_span_event
         set_span_attributes(plan_id=plan_id, operation="extract_all_workflows")
         add_span_event("extraction.started", plan_id=plan_id)
         

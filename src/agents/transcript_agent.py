@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 
 from src.models.transcript import Transcript, Message
 from src.utils.prompt_loader import prompt_loader
-from src.generators.response_parser import ResponseParser
-from src.llm.openai_wrapper import OpenAIWrapper
+from src.agents.helpers.response_parser import ResponseParser
+from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
 
 # Load environment variables from .env file
 load_dotenv()

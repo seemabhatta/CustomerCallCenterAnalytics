@@ -8,9 +8,9 @@ import asyncio
 import os
 from unittest.mock import Mock, AsyncMock, patch
 
-from src.orchestration.simple_orchestrator import SimpleOrchestrator, TaskStatus
-from src.orchestration.simple_pipeline import SimplePipeline, run_simple_pipeline
-from src.orchestration.models.pipeline_models import PipelineStage, WorkflowType
+from src.services.orchestration.simple_orchestrator import SimpleOrchestrator, TaskStatus
+from src.services.orchestration.simple_pipeline import SimplePipeline, run_simple_pipeline
+from src.services.orchestration.models.pipeline_models import PipelineStage, WorkflowType
 
 
 class TestSimpleOrchestrator:
@@ -148,10 +148,10 @@ class TestSimplePipeline:
     @pytest.fixture
     def mock_services(self):
         """Mock all service dependencies"""
-        with patch('src.orchestration.simple_pipeline.AnalysisService') as mock_analysis, \
-             patch('src.orchestration.simple_pipeline.PlanService') as mock_plan, \
-             patch('src.orchestration.simple_pipeline.WorkflowService') as mock_workflow, \
-             patch('src.orchestration.simple_pipeline.WorkflowExecutionEngine') as mock_execution:
+        with patch('src.services.orchestration.simple_pipeline.AnalysisService') as mock_analysis, \
+             patch('src.services.orchestration.simple_pipeline.PlanService') as mock_plan, \
+             patch('src.services.orchestration.simple_pipeline.WorkflowService') as mock_workflow, \
+             patch('src.services.orchestration.simple_pipeline.WorkflowExecutionEngine') as mock_execution:
             
             yield {
                 'analysis': mock_analysis,
