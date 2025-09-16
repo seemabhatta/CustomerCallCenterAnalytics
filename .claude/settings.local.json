@@ -44,7 +44,8 @@
       "Bash(xargs:*)",
       "Bash(netstat:*)",
       "Bash(sqlite3:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "WebFetch(domain:platform.openai.com)"
     ],
     "deny": [],
     "ask": []

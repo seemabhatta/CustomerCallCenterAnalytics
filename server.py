@@ -168,7 +168,7 @@ async def list_transcripts(limit: Optional[int] = Query(None)):
 async def create_transcript(request: TranscriptCreateRequest):
     """Create new transcript - proxies to transcript service."""
     try:
-        return await transcript_service.create(request.dict())
+        return await transcript_service.create(request.model_dump())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create transcript: {str(e)}")
 
@@ -214,7 +214,7 @@ async def list_analyses(limit: Optional[int] = Query(None)):
 async def create_analysis(request: AnalysisCreateRequest):
     """Create new analysis - proxies to analysis service."""
     try:
-        return await analysis_service.create(request.dict())
+        return await analysis_service.create(request.model_dump())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create analysis: {str(e)}")
 
@@ -318,7 +318,7 @@ async def list_plans(limit: Optional[int] = Query(None)):
 async def create_plan(request: PlanCreateRequest):
     """Create new action plan - proxies to plan service."""
     try:
-        return await plan_service.create(request.dict())
+        return await plan_service.create(request.model_dump())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create plan: {str(e)}")
 
