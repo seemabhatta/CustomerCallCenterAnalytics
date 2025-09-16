@@ -1,14 +1,13 @@
 """Simple transcript generator - just natural conversations."""
-import os
 import uuid
 from typing import Optional
 from datetime import datetime
-import openai
 from dotenv import load_dotenv
 
 from src.models.transcript import Transcript, Message
 from src.utils.prompt_loader import prompt_loader
 from src.generators.response_parser import ResponseParser
+from src.llm.openai_wrapper import OpenAIWrapper
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,17 +16,9 @@ load_dotenv()
 class TranscriptGenerator:
     """Simple transcript generator - creates natural conversations."""
     
-    def __init__(self, api_key: Optional[str] = None):
-        """Initialize the generator.
-        
-        Args:
-            api_key: OpenAI API key (defaults to environment variable)
-        """
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OpenAI API key must be provided or set in OPENAI_API_KEY environment variable")
-        
-        self.client = openai.OpenAI(api_key=self.api_key)
+    def __init__(self):
+        """Initialize the generator."""
+        self.llm = OpenAIWrapper()
         self.response_parser = ResponseParser()
     
     def generate(self, **context) -> Transcript:
@@ -73,7 +64,7 @@ class TranscriptGenerator:
         )
     
     def _call_openai(self, prompt: str) -> str:
-        """Call OpenAI API using Responses API.
+        """Call OpenAI API using wrapper.
 
         Args:
             prompt: The prompt to send
@@ -81,13 +72,7 @@ class TranscriptGenerator:
         Returns:
             Response text
         """
-        response = self.client.responses.create(
-            model="gpt-4o-mini",
-            input=prompt,
-            temperature=0.7,
-            max_output_tokens=1500
-        )
-        return response.output_text
+        return self.llm.generate_text(prompt, temperature=0.7)
     
     def generate_batch(self, count: int, **context) -> list[Transcript]:
         """Generate multiple transcripts.

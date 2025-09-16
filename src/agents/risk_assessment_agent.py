@@ -11,8 +11,10 @@ import uuid
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from dotenv import load_dotenv
-from ..llm import (
-    OpenAIWrapper, RiskAssessment, ApprovalRouting, ActionItemList,
+from ..llm import OpenAIWrapper
+from .models.risk_models import RiskAssessment, ApprovalRouting
+from ..models.shared import ActionItemList
+from .models.workflow_models import (
     WorkflowExtraction, RoutingDecision, ValidationResult, StatusDecision, ExecutionResult
 )
 from ..telemetry import trace_async_function, set_span_attributes, add_span_event

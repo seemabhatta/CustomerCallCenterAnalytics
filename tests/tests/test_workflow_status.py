@@ -12,11 +12,11 @@ import os
 # Add the src directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from storage.transcript_store import TranscriptStore
-from storage.analysis_store import AnalysisStore  
-from storage.action_plan_store import ActionPlanStore
-from storage.approval_store import ApprovalStore
-from storage.execution_store import ExecutionStore
+from src.storage.transcript_store import TranscriptStore
+from src.storage.analysis_store import AnalysisStore
+from src.storage.action_plan_store import ActionPlanStore
+from src.storage.approval_store import ApprovalStore
+from src.storage.execution_store import ExecutionStore
 
 
 class TestWorkflowStatusBackend:

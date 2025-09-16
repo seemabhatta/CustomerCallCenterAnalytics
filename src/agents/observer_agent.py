@@ -15,7 +15,8 @@ from dataclasses import dataclass, asdict
 from collections import defaultdict, Counter
 
 from src.storage.approval_store import ApprovalStore
-import openai
+from src.llm.openai_wrapper import OpenAIWrapper
+from src.agents.models.observer_models import ExecutionEvaluation, DecisionAgentFeedback
 import os
 
 
@@ -69,8 +70,8 @@ class ObserverAgent:
         else:
             self.approval_store = None
             
-        # Initialize OpenAI client
-        self.client = openai.OpenAI(api_key=api_key or os.getenv('OPENAI_API_KEY'))
+        # Initialize OpenAI wrapper
+        self.llm = OpenAIWrapper()
             
         self.observation_history: List[Dict[str, Any]] = []
         self.lessons_learned: List[Dict[str, Any]] = []
@@ -158,32 +159,14 @@ class ObserverAgent:
         """
         
         try:
-            response = self.client.responses.create(
-                model="gpt-4",
-                input=evaluation_prompt,
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": "ExecutionEvaluation",
-                        "strict": True,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "overall_satisfaction": {"type": "string", "enum": ["satisfactory", "unsatisfactory", "needs_improvement"]},
-                                "execution_quality": {"type": "number", "minimum": 1.0, "maximum": 5.0},
-                                "identified_issues": {"type": "array", "items": {"type": "string"}},
-                                "improvement_opportunities": {"type": "array", "items": {"type": "string"}},
-                                "feedback_for_decision_agent": {"type": "string"}
-                            },
-                            "required": ["overall_satisfaction", "execution_quality", "identified_issues", "improvement_opportunities", "feedback_for_decision_agent"],
-                            "additionalProperties": False
-                        }
-                    }
-                },
+            # Use OpenAI wrapper with structured output
+            evaluation_result = self.llm.generate_structured(
+                prompt=evaluation_prompt,
+                schema_model=ExecutionEvaluation,
                 temperature=0.3
             )
-            
-            return response.output_parsed
+
+            return evaluation_result.model_dump()
             
         except Exception as e:
             raise Exception(f"Observer Agent evaluation failed: {str(e)}")
@@ -279,31 +262,14 @@ class ObserverAgent:
         """
         
         try:
-            response = self.client.responses.create(
-                model="gpt-4",
-                input=feedback_prompt,
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": "DecisionAgentFeedback",
-                        "strict": True,
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "routing_adjustments": {"type": "array", "items": {"type": "string"}},
-                                "risk_assessment_updates": {"type": "array", "items": {"type": "string"}},
-                                "process_improvements": {"type": "array", "items": {"type": "string"}},
-                                "training_recommendations": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string"}}}
-                            },
-                            "required": ["routing_adjustments", "risk_assessment_updates", "process_improvements", "training_recommendations"],
-                            "additionalProperties": False
-                        }
-                    }
-                },
+            # Use OpenAI wrapper with structured output
+            feedback_result = self.llm.generate_structured(
+                prompt=feedback_prompt,
+                schema_model=DecisionAgentFeedback,
                 temperature=0.3
             )
-            
-            return response.output_parsed
+
+            return feedback_result.model_dump()
             
         except Exception as e:
             raise Exception(f"Observer Agent feedback generation failed: {str(e)}")

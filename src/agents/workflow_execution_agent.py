@@ -8,7 +8,7 @@ from typing import Dict, Any
 from datetime import datetime
 
 from src.llm.openai_wrapper import OpenAIWrapper
-from src.llm.openai_wrapper import ActionItem
+from src.models.shared import ActionItem
 from src.utils.prompt_loader import prompt_loader
 
 
