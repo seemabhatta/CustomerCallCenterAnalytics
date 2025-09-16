@@ -8,14 +8,14 @@ from dotenv import load_dotenv
 from src.models.transcript import Transcript
 from src.utils.prompt_loader import prompt_loader
 from src.llm.openai_wrapper import OpenAIWrapper
-from src.generators.models.action_plan_models import FourLayerActionPlan
+from src.agents.models.action_plan_models import FourLayerActionPlan
 
 load_dotenv()
 
 
-class ActionPlanGenerator:
-    """Generate four-layer action plans from analysis and transcript data.
-    
+class ActionPlanAgent:
+    """Agent for generating four-layer action plans from analysis and transcript data.
+
     Follows architecture principles:
     - Pure Python business logic (no UI dependencies)
     - Uses OpenAI Responses API with structured output
@@ -23,7 +23,7 @@ class ActionPlanGenerator:
     """
     
     def __init__(self):
-        """Initialize the action plan generator."""
+        """Initialize the action plan agent."""
         self.llm = OpenAIWrapper()
     
     def generate(self, analysis: Dict[str, Any], transcript: Transcript) -> Dict[str, Any]:
@@ -143,7 +143,7 @@ class ActionPlanGenerator:
         analysis = context['analysis']
         
         return prompt_loader.format(
-            'generators/action_plan.txt',
+            'agents/action_plan.txt',
             conversation_text=conversation_text,
             call_duration=context['call_duration'],
             call_topic=context['call_topic'],

@@ -6,13 +6,13 @@ from dotenv import load_dotenv
 from src.models.transcript import Transcript
 from src.utils.prompt_loader import prompt_loader
 from src.llm.openai_wrapper import OpenAIWrapper
-from src.analyzers.models.call_models import CallAnalysis
+from src.agents.models.call_models import CallAnalysis
 
 load_dotenv()
 
 
-class CallAnalyzer:
-    """Mortgage servicing call analyzer using OpenAI Responses API."""
+class CallAnalysisAgent:
+    """Mortgage servicing call analysis agent using OpenAI Responses API."""
     
     def __init__(self):
         """Initialize the analyzer."""
@@ -33,7 +33,7 @@ class CallAnalyzer:
 
             # Create analysis prompt using external template
             prompt = prompt_loader.format(
-                'analyzers/call_analysis.txt',
+                'agents/call_analysis.txt',
                 transcript_text=transcript_text,
                 customer_id=getattr(transcript, 'customer_id', 'N/A'),
                 advisor_id=getattr(transcript, 'advisor_id', 'N/A'),

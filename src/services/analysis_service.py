@@ -4,7 +4,7 @@ Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
 from ..storage.analysis_store import AnalysisStore
-from ..analyzers.call_analyzer import CallAnalyzer
+from ..agents.call_analysis_agent import CallAnalysisAgent
 
 
 class AnalysisService:
@@ -14,7 +14,7 @@ class AnalysisService:
         self.api_key = api_key
         self.db_path = db_path
         self.store = AnalysisStore(db_path)
-        self.analyzer = CallAnalyzer()
+        self.analyzer = CallAnalysisAgent()
     
     async def list_all(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """List all analyses with optional limit."""

@@ -4,7 +4,7 @@ Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
 from ..storage.transcript_store import TranscriptStore
-from ..generators.transcript_generator import TranscriptGenerator
+from ..agents.transcript_agent import TranscriptAgent
 
 
 class TranscriptService:
@@ -14,7 +14,7 @@ class TranscriptService:
         self.api_key = api_key
         self.db_path = db_path
         self.store = TranscriptStore(db_path)
-        self.generator = TranscriptGenerator()
+        self.generator = TranscriptAgent()
     
     async def list_all(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """List all transcripts with optional limit."""

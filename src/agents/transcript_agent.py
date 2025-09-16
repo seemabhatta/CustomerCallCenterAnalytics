@@ -13,11 +13,11 @@ from src.llm.openai_wrapper import OpenAIWrapper
 load_dotenv()
 
 
-class TranscriptGenerator:
-    """Simple transcript generator - creates natural conversations."""
+class TranscriptAgent:
+    """Transcript generation agent - creates natural conversations."""
     
     def __init__(self):
-        """Initialize the generator."""
+        """Initialize the transcript agent."""
         self.llm = OpenAIWrapper()
         self.response_parser = ResponseParser()
     
@@ -33,9 +33,9 @@ class TranscriptGenerator:
         # Build simple prompt
         if context:
             params_str = ", ".join([f"{k}: {v}" for k, v in context.items() if v is not None])
-            prompt = prompt_loader.format('generators/transcript_generation.txt', context=params_str)
+            prompt = prompt_loader.format('agents/transcript_generation.txt', context=params_str)
         else:
-            prompt = prompt_loader.format('generators/transcript_generation.txt', context="general mortgage servicing topics")
+            prompt = prompt_loader.format('agents/transcript_generation.txt', context="general mortgage servicing topics")
         
         # Get conversation from OpenAI
         try:

@@ -38,7 +38,7 @@ from urllib.parse import urljoin, urlencode
 try:
     import sys
     sys.path.insert(0, '.')
-    from src.generators.transcript_generator import TranscriptGenerator
+    from src.agents.transcript_agent import TranscriptAgent
     from src.storage.transcript_store import TranscriptStore
     DIRECT_MODE_AVAILABLE = True
 except ImportError as e:
@@ -387,7 +387,7 @@ def transcript_create(
                 raise typer.Exit(1)
 
             # Generate transcript directly
-            generator = TranscriptGenerator(api_key=api_key)
+            generator = TranscriptAgent()
             transcript = generator.generate(topic=topic)
 
             # Store if requested

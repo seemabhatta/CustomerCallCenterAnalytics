@@ -4,7 +4,7 @@ Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
 from ..storage.action_plan_store import ActionPlanStore
-from ..generators.action_plan_generator import ActionPlanGenerator
+from ..agents.action_plan_agent import ActionPlanAgent
 
 
 class PlanService:
@@ -14,7 +14,7 @@ class PlanService:
         self.api_key = api_key
         self.db_path = db_path
         self.store = ActionPlanStore(db_path)
-        self.generator = ActionPlanGenerator()
+        self.generator = ActionPlanAgent()
     
     async def list_all(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """List all action plans with optional limit."""
