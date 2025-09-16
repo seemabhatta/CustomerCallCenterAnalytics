@@ -4,10 +4,14 @@ Provides distributed tracing for the entire call center analytics pipeline.
 """
 
 import os
+import logging
 from datetime import datetime
-from opentelemetry import trace
+from opentelemetry import trace, _logs
 from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.sqlite3 import SQLite3Instrumentor
 
@@ -121,8 +125,14 @@ def initialize_tracing(
     if enable_otlp is None:
         enable_otlp = os.getenv("OTEL_OTLP_ENABLED", "false").lower() == "true"
     
-    # Create tracer provider
-    trace.set_tracer_provider(TracerProvider())
+    # Create resource with service information
+    resource = Resource.create({
+        "service.name": service_name,
+        "service.version": "1.0.0"
+    })
+
+    # Create tracer provider with resource
+    trace.set_tracer_provider(TracerProvider(resource=resource))
     tracer = trace.get_tracer(__name__, service_name)
     
     # Configure exporters
@@ -162,7 +172,22 @@ def initialize_tracing(
             trace.get_tracer_provider().add_span_processor(otlp_processor)
         except ImportError:
             pass  # OTLP exporter not available
-    
+
+    # Setup OpenTelemetry logging integration
+    if enable_console:
+        # Create logger provider with same resource
+        logger_provider = LoggerProvider(resource=resource)
+        logger_provider.add_log_record_processor(
+            BatchLogRecordProcessor(ConsoleLogExporter())
+        )
+        _logs.set_logger_provider(logger_provider)
+
+        # Bridge Python logging to OpenTelemetry (adds trace/span IDs automatically)
+        handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+        root_logger = logging.getLogger()
+        if not any(isinstance(h, LoggingHandler) for h in root_logger.handlers):
+            root_logger.addHandler(handler)
+
     # Auto-instrument HTTP, database, and OpenAI calls
     HTTPXClientInstrumentor().instrument()
     SQLite3Instrumentor().instrument()

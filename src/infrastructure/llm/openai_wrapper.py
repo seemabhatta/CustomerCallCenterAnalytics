@@ -1,11 +1,16 @@
 from typing import Dict, Any, Union
 import os
+import json
+import logging
 from pydantic import BaseModel
 from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Logger for minimal logging (auto-correlated with traces)
+logger = logging.getLogger(__name__)
 
 
 class OpenAIWrapper:
@@ -56,6 +61,8 @@ class OpenAIWrapper:
     
     def generate_text(self, prompt: str, temperature: float = 0.3) -> str:
         """Generate plain text response."""
+        logger.info(f"OpenAI text request: model={self.model}, temp={temperature}")
+
         resp = self.client.responses.create(
             model=self.model,
             input=prompt,
@@ -65,19 +72,23 @@ class OpenAIWrapper:
     
     def generate_structured(self, prompt: str, schema_model: BaseModel, temperature: float = 0.3) -> Any:
         """Generate structured output using Pydantic model schema."""
+        logger.info(f"OpenAI structured request: model={self.model}, schema={schema_model.__name__}")
+
         resp = self.client.responses.create(
             model=self.model,
             input=prompt,
             text={"format": self._create_json_schema(schema_model)},
             temperature=temperature
         )
+
         # For structured output, parse the JSON from output_text
-        import json
         parsed_data = json.loads(resp.output_text)
         return schema_model.model_validate(parsed_data)
     
     async def generate_text_async(self, prompt: str, temperature: float = 0.3) -> str:
         """Generate plain text response asynchronously."""
+        logger.info(f"OpenAI async text request: model={self.model}, temp={temperature}")
+
         resp = await self.async_client.responses.create(
             model=self.model,
             input=prompt,
@@ -87,14 +98,16 @@ class OpenAIWrapper:
     
     async def generate_structured_async(self, prompt: str, schema_model: BaseModel, temperature: float = 0.3) -> Any:
         """Generate structured output using Pydantic model schema asynchronously."""
+        logger.info(f"OpenAI async structured request: model={self.model}, schema={schema_model.__name__}")
+
         resp = await self.async_client.responses.create(
             model=self.model,
             input=prompt,
             text={"format": self._create_json_schema(schema_model)},
             temperature=temperature
         )
+
         # For structured output, parse the JSON from output_text
-        import json
         parsed_data = json.loads(resp.output_text)
         return schema_model.model_validate(parsed_data)
     
