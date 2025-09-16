@@ -99,13 +99,8 @@ class WorkflowExecutionEngine:
                     f"Current status: {workflow['status']}"
                 )
             
-            # Extract action item
+            # Extract workflow data
             workflow_data = workflow.get('workflow_data', {})
-            action_item = workflow_data.get('action_item')
-            if not action_item:
-                raise ValueError(
-                    f"Workflow missing action_item: {workflow_id}"
-                )
             
             # Step 2: Execute workflow steps sequentially
             workflow_steps = workflow_data.get('steps', [])
