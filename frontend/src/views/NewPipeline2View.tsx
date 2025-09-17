@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   analysisApi,
@@ -16,38 +16,11 @@ import {
 } from "@/types";
 import { Play, Pause, BarChart2, Check, X, CheckCircle2 } from "lucide-react";
 
-type PriorityTone = "high" | "medium" | "low" | "default";
-
 const WF_LABELS: Record<string, string> = {
   BORROWER: "Borrower",
   ADVISOR: "Advisor",
   SUPERVISOR: "Supervisor",
   LEADERSHIP: "Leadership",
-};
-
-const priorityInfo = (analysis?: Analysis, plan?: Plan): { label: string; tone: PriorityTone } => {
-  const raw = plan?.risk_level || analysis?.urgency || "";
-  if (!raw) {
-    return { label: "Medium", tone: "medium" };
-  }
-  const normalized = raw.toLowerCase();
-  if (normalized.includes("high")) {
-    return { label: "High", tone: "high" };
-  }
-  if (normalized.includes("low")) {
-    return { label: "Low", tone: "low" };
-  }
-  if (normalized.includes("critical")) {
-    return { label: "High", tone: "high" };
-  }
-  return { label: "Medium", tone: "medium" };
-};
-
-const priorityToneStyles: Record<PriorityTone, string> = {
-  high: "text-red-500",
-  medium: "text-orange-500",
-  low: "text-green-500",
-  default: "text-slate-600",
 };
 
 const formatMinutes = (durationSec?: number, createdAt?: string) => {
@@ -59,11 +32,6 @@ const formatMinutes = (durationSec?: number, createdAt?: string) => {
   if (Number.isNaN(started)) return "—";
   const diffMs = Date.now() - started;
   return `${Math.max(diffMs / 60000, 0).toFixed(1)}min`;
-};
-
-const pluralize = (count: number, label: string) => {
-  if (count === 1) return `1 ${label}`;
-  return `${count} ${label}s`;
 };
 
 const analyzeComplete = (analysis?: Analysis) => {
@@ -92,9 +60,10 @@ interface TranscriptRow {
   analysis?: Analysis;
   plan?: Plan;
   workflows: Workflow[];
-  priority: { label: string; tone: PriorityTone };
   analyzeDone: boolean;
+  planReady: boolean;
   workflowCount: number;
+  executedCount: number;
   approvalsPending: number;
 }
 
@@ -105,6 +74,7 @@ export function NewPipeline2View() {
   const [expandedTranscript, setExpandedTranscript] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<string | null>(null);
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({});
+  const lastStageRef = useRef<string | null>(null);
 
   const { data: transcripts = [] } = useQuery({
     queryKey: ["transcripts"],
@@ -129,9 +99,31 @@ export function NewPipeline2View() {
   const { data: runsData } = useQuery({
     queryKey: ["orchestration-runs"],
     queryFn: orchestrationApi.listRuns,
+    refetchInterval: activeRun ? 2000 : 10000,
+    refetchIntervalInBackground: true,
   });
 
   const runs: OrchestrationRun[] = runsData?.runs || [];
+
+  useEffect(() => {
+    if (activeRun) {
+      const stillActive = runs.some(
+        (run) =>
+          run.id === activeRun &&
+          (run.status === "RUNNING" || run.status === "STARTED")
+      );
+      if (!stillActive) {
+        return;
+      }
+    } else {
+      const runningRun = runs.find(
+        (run) => run.status === "RUNNING" || run.status === "STARTED"
+      );
+      if (runningRun) {
+        setActiveRun(runningRun.id);
+      }
+    }
+  }, [runs, activeRun]);
 
   const analysisByTranscript = useMemo(() => {
     const map: Record<string, Analysis> = {};
@@ -170,14 +162,18 @@ export function NewPipeline2View() {
       const analysis = analysisByTranscript[transcript.id];
       const plan = planByTranscript[transcript.id];
       const transcriptWorkflows = workflowsByTranscript[transcript.id] || [];
+      const executedCount = transcriptWorkflows.filter(
+        (workflow) => workflow.status === "EXECUTED"
+      ).length;
       return {
         transcript,
         analysis,
         plan,
         workflows: transcriptWorkflows,
-        priority: priorityInfo(analysis, plan),
         analyzeDone: analyzeComplete(analysis),
+        planReady: Boolean(plan),
         workflowCount: transcriptWorkflows.length,
+        executedCount,
         approvalsPending: workflowsNeedingApproval(transcriptWorkflows).length,
       };
     });
@@ -274,15 +270,33 @@ export function NewPipeline2View() {
     queryFn: () => orchestrationApi.getStatus(activeRun!),
     enabled: Boolean(activeRun),
     refetchInterval: 2000,
+    refetchIntervalInBackground: true,
   });
 
   useEffect(() => {
     if (!runStatus) return;
+
+    if (runStatus.stage && runStatus.stage !== lastStageRef.current) {
+      lastStageRef.current = runStatus.stage;
+      if (runStatus.stage.includes("ANALYSIS")) {
+        queryClient.invalidateQueries({ queryKey: ["analyses"] });
+      }
+      if (runStatus.stage.includes("PLAN")) {
+        queryClient.invalidateQueries({ queryKey: ["plans"] });
+      }
+      if (runStatus.stage.includes("WORKFLOW") || runStatus.stage.includes("EXECUTION")) {
+        queryClient.invalidateQueries({ queryKey: ["workflows"] });
+      }
+    }
+
     if (runStatus.status === "COMPLETED" || runStatus.status === "FAILED") {
+      lastStageRef.current = null;
       setActiveRun(null);
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
       queryClient.invalidateQueries({ queryKey: ["analyses"] });
+      queryClient.invalidateQueries({ queryKey: ["transcripts"] });
+      queryClient.invalidateQueries({ queryKey: ["orchestration-runs"] });
     }
   }, [runStatus, queryClient]);
 
@@ -406,20 +420,24 @@ export function NewPipeline2View() {
                 <th className="px-5 py-3">ID</th>
                 <th className="px-5 py-3">Customer</th>
                 <th className="px-5 py-3">Topic</th>
-                <th className="px-5 py-3">Priority</th>
                 <th className="px-5 py-3">Analyze</th>
-                <th className="px-5 py-3">Workflows</th>
+                <th className="px-5 py-3">Plan</th>
+                <th className="px-5 py-3">Workflow</th>
                 <th className="px-5 py-3">Execute</th>
-                <th className="px-5 py-3">Approvals</th>
-                <th className="px-5 py-3">Reason</th>
                 <th className="px-5 py-3">Time</th>
               </tr>
             </thead>
             <tbody className="bg-white text-[13px]">
               {rows.map((row) => {
                 const isExpanded = expandedTranscript === row.transcript.id;
-                const workflowLabel = pluralize(row.workflowCount, "Workflow");
-                const approvalsLabel = pluralize(row.approvalsPending, "pending");
+                const workflowLabel = row.workflowCount
+                  ? `${row.workflowCount} ${row.workflowCount === 1 ? "Workflow" : "Workflows"}${
+                      row.approvalsPending ? ` (${row.approvalsPending} pending)` : ""
+                    }`
+                  : "—";
+                const executionLabel = row.workflowCount
+                  ? `${row.executedCount}/${row.workflowCount}`
+                  : "—";
                 return (
                   <React.Fragment key={row.transcript.id}>
                     <tr
@@ -443,9 +461,6 @@ export function NewPipeline2View() {
                       </td>
                       <td className="px-5 py-3">{row.transcript.customer || "—"}</td>
                       <td className="px-5 py-3 text-slate-700">{row.transcript.topic || "—"}</td>
-                      <td className={`px-5 py-3 font-semibold ${priorityToneStyles[row.priority.tone]}`}>
-                        {row.priority.label}
-                      </td>
                       <td className="px-5 py-3">
                         {row.analyzeDone ? (
                           <Check className="h-4 w-4 text-green-500" aria-hidden="true" />
@@ -453,30 +468,22 @@ export function NewPipeline2View() {
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3 text-slate-700">{workflowLabel}</td>
-                      <td className="px-5 py-3 text-center text-lg text-slate-500">‖</td>
-                      <td className="px-5 py-3 text-slate-700">{approvalsLabel}</td>
                       <td className="px-5 py-3">
-                        <input
-                          type="text"
-                          value={approvalNotes[row.transcript.id] || ""}
-                          onChange={(event) =>
-                            setApprovalNotes((prev) => ({
-                              ...prev,
-                              [row.transcript.id]: event.target.value,
-                            }))
-                          }
-                          placeholder="Add reason..."
-                          className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700"
-                        />
+                        {row.planReady ? (
+                          <Check className="h-4 w-4 text-green-500" aria-hidden="true" />
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
+                      <td className="px-5 py-3 text-slate-700">{workflowLabel}</td>
+                      <td className="px-5 py-3 text-slate-700">{executionLabel}</td>
                       <td className="px-5 py-3 text-slate-700">
                         {formatMinutes(row.transcript.duration_sec, row.transcript.created_at)}
                       </td>
                     </tr>
                     {isExpanded ? (
                       <tr className="border-t bg-slate-50">
-                        <td colSpan={10} className="px-5 pb-4 pt-0">
+                        <td colSpan={8} className="px-5 pb-4 pt-0">
                           <div className="space-y-3 py-3">
                             <div className="grid gap-4 text-xs text-slate-600 md:grid-cols-3">
                               {Object.entries(WF_LABELS).map(([type, label]) => {
@@ -645,4 +652,3 @@ export function NewPipeline2View() {
     </div>
   );
 }
-
