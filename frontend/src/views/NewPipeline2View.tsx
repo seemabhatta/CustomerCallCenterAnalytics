@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   analysisApi,
@@ -36,28 +36,12 @@ const stageTargetForStatus = (
     case "WORKFLOWS_COMPLETED":
       return 75;
     case "EXECUTION_COMPLETED":
-      if (
-        typeof run?.workflow_count === "number" &&
-        typeof run?.executed_count === "number" &&
-        run.workflow_count > 0 &&
-        run.executed_count === run.workflow_count
-      ) {
-        return 100;
-      }
-      return 75;
+      return 100;
     case "COMPLETE":
       return 100;
     default:
       return null;
   }
-};
-
-const arraysEqual = (a: string[], b: string[]) => {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 };
 
 const formatMinutes = (durationSec?: number, createdAt?: string) => {
@@ -116,8 +100,37 @@ export function NewPipeline2View() {
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({});
   const [activeTranscripts, setActiveTranscripts] = useState<string[]>([]);
   const [transcriptProgress, setTranscriptProgress] = useState<Record<string, number>>({});
-  const [displayProgress, setDisplayProgress] = useState<Record<string, number>>({});
   const lastStageRef = useRef<string | null>(null);
+  const processingTranscriptRef = useRef<string | null>(null);
+
+  const ensureTranscriptsTracked = useCallback((ids: string[] = []) => {
+    if (!ids.length) return;
+    setActiveTranscripts((prev) => {
+      const merged = new Set(prev);
+      ids.forEach((id) => merged.add(id));
+      const next = Array.from(merged);
+      if (next.length === prev.length && next.every((id) => prev.includes(id))) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
+
+  const updateProgressFor = useCallback((ids: string[], milestone: number) => {
+    if (!ids.length) return;
+    setTranscriptProgress((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      ids.forEach((id) => {
+        const current = next[id] ?? 0;
+        if (current < milestone) {
+          next[id] = milestone;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, []);
 
   const { data: transcripts = [] } = useQuery({
     queryKey: ["transcripts"],
@@ -156,35 +169,13 @@ export function NewPipeline2View() {
         (currentRun.status === "RUNNING" || currentRun.status === "STARTED");
       if (isActive && currentRun) {
         const ids = currentRun.transcript_ids || [];
-        setActiveTranscripts((prev) =>
-          arraysEqual(prev, ids) ? prev : ids
-        );
-        setTranscriptProgress((prev) => {
-          const next = { ...prev };
-          let changed = false;
-          ids.forEach((id) => {
-            if (next[id] !== 5) {
-              next[id] = 5;
-              changed = true;
-            }
-          });
-          return changed ? next : prev;
-        });
-        setDisplayProgress((prev) => {
-          const next = { ...prev };
-          let changed = false;
-          ids.forEach((id) => {
-            if (next[id] !== 5) {
-              next[id] = 5;
-              changed = true;
-            }
-          });
-          return changed ? next : prev;
-        });
+        ensureTranscriptsTracked(ids);
+        updateProgressFor(ids, 5);
       }
       if (!isActive) {
         setActiveRun(null);
         setActiveTranscripts([]);
+        processingTranscriptRef.current = null;
         lastStageRef.current = null;
       }
     } else {
@@ -194,35 +185,17 @@ export function NewPipeline2View() {
       if (runningRun) {
         const ids = runningRun.transcript_ids || [];
         setActiveRun(runningRun.id);
-        setActiveTranscripts((prev) =>
-          arraysEqual(prev, ids) ? prev : ids
-        );
-        setTranscriptProgress((prev) => {
-          const next = { ...prev };
-          let changed = false;
-          ids.forEach((id) => {
-            if (next[id] !== 5) {
-              next[id] = 5;
-              changed = true;
-            }
-          });
-          return changed ? next : prev;
-        });
-        setDisplayProgress((prev) => {
-          const next = { ...prev };
-          let changed = false;
-          ids.forEach((id) => {
-            if (next[id] !== 5) {
-              next[id] = 5;
-              changed = true;
-            }
-          });
-          return changed ? next : prev;
-        });
+        ensureTranscriptsTracked(ids);
+        updateProgressFor(ids, 5);
         lastStageRef.current = null;
       }
     }
-  }, [runs, activeRun]);
+  }, [
+    runs,
+    activeRun,
+    ensureTranscriptsTracked,
+    updateProgressFor,
+  ]);
 
   const analysisByTranscript = useMemo(() => {
     const map: Record<string, Analysis> = {};
@@ -256,122 +229,21 @@ export function NewPipeline2View() {
     return map;
   }, [workflows]);
 
-  useEffect(() => {
-    if (activeTranscripts.length === 0) return;
-    setTranscriptProgress((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      activeTranscripts.forEach((id) => {
-        const analysis = analysisByTranscript[id];
-        const plan = planByTranscript[id];
-        const transcriptWorkflows = workflowsByTranscript[id] || [];
-        const executedCount = transcriptWorkflows.filter(
-          (workflow) => workflow.status === "EXECUTED"
-        ).length;
-        let target = 0;
-        if (analyzeComplete(analysis)) target = 25;
-        if (plan) target = Math.max(target, 50);
-        if (transcriptWorkflows.length > 0) target = Math.max(target, 75);
-        if (
-          transcriptWorkflows.length > 0 &&
-          executedCount === transcriptWorkflows.length &&
-          transcriptWorkflows.length > 0
-        ) {
-          target = 100;
-        }
-        const current = next[id] ?? 0;
-        const updated = Math.max(current, target);
-        if (updated !== current) {
-          next[id] = updated;
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [
-    activeTranscripts,
-    analysisByTranscript,
-    planByTranscript,
-    workflowsByTranscript,
-  ]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (Object.keys(transcriptProgress).length === 0) return;
-
-    let frame: number | null = null;
-
-    const animate = () => {
-      let needsNextFrame = false;
-      setDisplayProgress((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        Object.entries(transcriptProgress).forEach(([id, target]) => {
-          const current = next[id] ?? 0;
-          const distance = target - current;
-          if (distance > 0.2) {
-            const step = Math.max(distance / 10, 0.8);
-            next[id] = Math.min(target, current + step);
-            changed = true;
-            needsNextFrame = true;
-          } else if (distance < -0.2) {
-            next[id] = target;
-            changed = true;
-          }
-        });
-        if (!changed) {
-          return prev;
-        }
-        return next;
-      });
-
-      if (needsNextFrame) {
-        frame = window.requestAnimationFrame(animate);
-      }
-    };
-
-    frame = window.requestAnimationFrame(animate);
-
-    return () => {
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-    };
-  }, [transcriptProgress]);
-
   const rows: TranscriptRow[] = useMemo(() => {
     return transcripts.map((transcript) => {
-      const analysis = analysisByTranscript[transcript.id];
-      const plan = planByTranscript[transcript.id];
       const transcriptWorkflows = workflowsByTranscript[transcript.id] || [];
       const executedCount = transcriptWorkflows.filter(
         (workflow) => workflow.status === "EXECUTED"
       ).length;
-      let stageProgress = 0;
-      if (analyzeComplete(analysis)) stageProgress = 25;
-      if (plan) stageProgress = Math.max(stageProgress, 50);
-      if (transcriptWorkflows.length > 0) stageProgress = Math.max(stageProgress, 75);
-      if (
-        transcriptWorkflows.length > 0 &&
-        executedCount === transcriptWorkflows.length &&
-        transcriptWorkflows.length > 0
-      ) {
-        stageProgress = 100;
-      }
-      const targetProgress = transcriptProgress[transcript.id] ?? stageProgress;
-      const storedProgress = displayProgress[transcript.id];
-      const progress =
-        storedProgress !== undefined ? storedProgress : stageProgress;
-      const analyzeReady = targetProgress >= 25 || analyzeComplete(analysis);
-      const planReady = targetProgress >= 50 || Boolean(plan);
-      const workflowReady =
-        targetProgress >= 75 || transcriptWorkflows.length > 0;
-      const executeComplete = targetProgress >= 100 ||
-        (workflowReady && executedCount === transcriptWorkflows.length);
+      const progress = transcriptProgress[transcript.id] ?? 0;
+      const analyzeReady = progress >= 25;
+      const planReady = progress >= 50;
+      const workflowReady = progress >= 75;
+      const executeComplete = progress >= 100;
       return {
         transcript,
-        analysis,
-        plan,
+        analysis: analysisByTranscript[transcript.id],
+        plan: planByTranscript[transcript.id],
         workflows: transcriptWorkflows,
         analyzeDone: analyzeReady,
         planReady,
@@ -389,7 +261,43 @@ export function NewPipeline2View() {
     planByTranscript,
     workflowsByTranscript,
     transcriptProgress,
-    displayProgress,
+  ]);
+
+  useEffect(() => {
+    setTranscriptProgress((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      transcripts.forEach((transcript) => {
+        const analysis = analysisByTranscript[transcript.id];
+        const plan = planByTranscript[transcript.id];
+        const transcriptWorkflows = workflowsByTranscript[transcript.id] || [];
+        const executedCount = transcriptWorkflows.filter(
+          (workflow) => workflow.status === "EXECUTED"
+        ).length;
+        let baseline = 0;
+        if (analysis) baseline = 25;
+        if (plan) baseline = Math.max(baseline, 50);
+        if (transcriptWorkflows.length > 0) baseline = Math.max(baseline, 75);
+        if (
+          transcriptWorkflows.length > 0 &&
+          executedCount === transcriptWorkflows.length &&
+          transcriptWorkflows.length > 0
+        ) {
+          baseline = 100;
+        }
+        const current = next[transcript.id] ?? 0;
+        if (baseline > current) {
+          next[transcript.id] = baseline;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [
+    transcripts,
+    analysisByTranscript,
+    planByTranscript,
+    workflowsByTranscript,
   ]);
 
   const metrics = useMemo(() => {
@@ -446,29 +354,8 @@ export function NewPipeline2View() {
     onSuccess: (data, variables) => {
       setActiveRun(data.run_id);
       const transcriptIds = variables.transcript_ids || [];
-      setActiveTranscripts(transcriptIds);
-      setTranscriptProgress((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        transcriptIds.forEach((id) => {
-          if (next[id] !== 5) {
-            next[id] = 5;
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
-      setDisplayProgress((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        transcriptIds.forEach((id) => {
-          if (next[id] !== 5) {
-            next[id] = 5;
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
+      ensureTranscriptsTracked(transcriptIds);
+      updateProgressFor(transcriptIds, 5);
       lastStageRef.current = null;
       setSelectedTranscripts([]);
       queryClient.invalidateQueries({ queryKey: ["orchestration-runs"] });
@@ -509,27 +396,47 @@ export function NewPipeline2View() {
     if (!runStatus) return;
 
     if (Array.isArray(runStatus.transcript_ids)) {
-      setActiveTranscripts((prev) =>
-        arraysEqual(prev, runStatus.transcript_ids || [])
-          ? prev
-          : runStatus.transcript_ids || []
-      );
+      ensureTranscriptsTracked(runStatus.transcript_ids);
     }
 
-    const stageTarget = stageTargetForStatus(runStatus.stage, runStatus);
-    if (Array.isArray(runStatus.transcript_ids) && stageTarget !== null) {
-      setTranscriptProgress((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        runStatus.transcript_ids.forEach((id) => {
-          const current = next[id] ?? 0;
-          if (current < stageTarget) {
-            next[id] = stageTarget;
-            changed = true;
-          }
-        });
-        return changed ? next : prev;
-      });
+    const stageRaw = runStatus.stage || "";
+    if (stageRaw.startsWith("PROCESSING_")) {
+      const id = stageRaw.slice("PROCESSING_".length);
+      if (id) {
+        processingTranscriptRef.current = id;
+        ensureTranscriptsTracked([id]);
+        updateProgressFor([id], 5);
+      }
+    }
+
+    const stageTarget = stageTargetForStatus(stageRaw, runStatus);
+    if (stageTarget !== null) {
+      let targetIds: string[] = [];
+      if (stageRaw === "COMPLETE") {
+        targetIds = runStatus.transcript_ids || activeTranscripts;
+      } else if (processingTranscriptRef.current) {
+        targetIds = [processingTranscriptRef.current];
+      } else if (Array.isArray(runStatus.transcript_ids)) {
+        targetIds = runStatus.transcript_ids;
+      } else {
+        targetIds = activeTranscripts;
+      }
+      updateProgressFor(targetIds, stageTarget);
+    }
+
+    if (Array.isArray(runStatus.results)) {
+      const completedIds = runStatus.results
+        .map((result) => result?.transcript_id)
+        .filter((id): id is string => Boolean(id));
+      if (completedIds.length) {
+        ensureTranscriptsTracked(completedIds);
+        updateProgressFor(completedIds, 100);
+      }
+    }
+
+    if (runStatus.status === "COMPLETED") {
+      updateProgressFor(runStatus.transcript_ids || activeTranscripts, 100);
+      processingTranscriptRef.current = null;
     }
 
     if (runStatus.stage && runStatus.stage !== lastStageRef.current) {
@@ -550,13 +457,20 @@ export function NewPipeline2View() {
       lastStageRef.current = null;
       setActiveRun(null);
       setActiveTranscripts([]);
+      processingTranscriptRef.current = null;
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
       queryClient.invalidateQueries({ queryKey: ["analyses"] });
       queryClient.invalidateQueries({ queryKey: ["transcripts"] });
       queryClient.invalidateQueries({ queryKey: ["orchestration-runs"] });
     }
-  }, [runStatus, queryClient]);
+  }, [
+    runStatus,
+    queryClient,
+    ensureTranscriptsTracked,
+    updateProgressFor,
+    activeTranscripts,
+  ]);
 
   const toggleTranscript = (id: string) => {
     setSelectedTranscripts((prev) =>
