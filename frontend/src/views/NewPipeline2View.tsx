@@ -491,6 +491,14 @@ export function NewPipeline2View() {
     rejectWorkflow.mutate({ id: workflowId, reason });
   };
 
+  const openWorkflowDetails = (workflowId: string) => {
+    window.dispatchEvent(
+      new CustomEvent("ccan:open-workflow-details", {
+        detail: { workflowId },
+      })
+    );
+  };
+
   return (
     <div className="space-y-6 bg-gray-50 p-6 font-mono text-sm">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -662,6 +670,28 @@ export function NewPipeline2View() {
                                         const noteKey = workflow.id;
                                         const note = approvalNotes[noteKey] || "";
                                         const statusLabel = normalizeStatusLabel(workflow.status);
+                                        const description =
+                                          workflow.workflow_data?.description ||
+                                          workflow.workflow_data?.actions?.[0] ||
+                                          workflow.workflow_type;
+                                        const priority = workflow.workflow_data?.priority || "";
+                                        const risk = workflow.risk_level || "";
+                                        const priorityStyle =
+                                          priority.toLowerCase() === "high"
+                                            ? "bg-red-100 text-red-700 border-red-200"
+                                            : priority.toLowerCase() === "medium"
+                                            ? "bg-orange-100 text-orange-700 border-orange-200"
+                                            : priority.toLowerCase() === "low"
+                                            ? "bg-green-100 text-green-700 border-green-200"
+                                            : "bg-slate-100 text-slate-600 border-slate-200";
+                                        const riskStyle =
+                                          risk === "HIGH"
+                                            ? "bg-red-100 text-red-700 border-red-200"
+                                            : risk === "MEDIUM"
+                                            ? "bg-orange-100 text-orange-700 border-orange-200"
+                                            : risk === "LOW"
+                                            ? "bg-green-100 text-green-700 border-green-200"
+                                            : "bg-slate-100 text-slate-600 border-slate-200";
                                         return (
                                           <li
                                             key={workflow.id}
@@ -670,10 +700,29 @@ export function NewPipeline2View() {
                                             <div className="flex items-start justify-between gap-3">
                                               <div>
                                                 <div className="font-semibold text-slate-700">
-                                                  {workflow.workflow_data?.actions?.[0] || workflow.workflow_type}
+                                                  {description}
                                                 </div>
-                                                <div className="text-[11px] text-slate-500">
-                                                  Status: {statusLabel}
+                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                                  <span className="uppercase tracking-wide text-slate-400">
+                                                    {statusLabel}
+                                                  </span>
+                                                  {priority ? (
+                                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${priorityStyle}`}>
+                                                      Priority: {priority}
+                                                    </span>
+                                                  ) : null}
+                                                  {risk ? (
+                                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] ${riskStyle}`}>
+                                                      Risk: {risk}
+                                                    </span>
+                                                  ) : null}
+                                                  <button
+                                                    type="button"
+                                                    className="text-blue-600 underline"
+                                                    onClick={() => openWorkflowDetails(workflow.id)}
+                                                  >
+                                                    Details
+                                                  </button>
                                                 </div>
                                               </div>
                                               <CheckCircle2

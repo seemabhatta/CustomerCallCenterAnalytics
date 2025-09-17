@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/api/client';
 import { WorkflowFilterParams, GranularWorkflow, Workflow } from '@/types';
@@ -18,13 +18,14 @@ import {
 
 interface WorkflowViewProps {
   goToPlan?: (planId: string) => void;
+  focusWorkflowId?: string | null;
 }
 
-export function WorkflowView({ goToPlan }: WorkflowViewProps) {
+export function WorkflowView({ goToPlan, focusWorkflowId }: WorkflowViewProps) {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [riskLevelFilter, setRiskLevelFilter] = useState<string>("");
   const [limitFilter, setLimitFilter] = useState<string>("50");
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(focusWorkflowId ?? null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
@@ -117,6 +118,12 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     queryFn: () => workflowApi.getById(selectedWorkflowId!),
     enabled: !!selectedWorkflowId,
   });
+
+  useEffect(() => {
+    if (focusWorkflowId) {
+      setSelectedWorkflowId(focusWorkflowId);
+    }
+  }, [focusWorkflowId]);
 
   // Delete workflow mutation
   const deleteWorkflowMutation = useMutation({

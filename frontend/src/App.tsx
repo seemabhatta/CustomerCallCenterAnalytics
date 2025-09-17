@@ -50,6 +50,7 @@ const mockRun = {
 export default function App() {
   const [tab, setTab] = useState<TabValue>("dashboard");
   const [env, setEnv] = useState<Environment>("dev");
+  const [workflowFocusId, setWorkflowFocusId] = useState<string | null>(null);
 
   // Dialog state for transcript details
   const [isTranscriptDialogOpen, setIsTranscriptDialogOpen] = useState(false);
@@ -68,6 +69,28 @@ export default function App() {
   const navigateToTab = (tabValue: TabValue) => {
     setTab(tabValue);
   };
+
+  useEffect(() => {
+    const handleWorkflowOpen = (event: Event) => {
+      const detail = (event as CustomEvent<{ workflowId?: string }>).detail;
+      if (detail?.workflowId) {
+        setWorkflowFocusId(detail.workflowId);
+        setTab("workflow");
+      }
+    };
+
+    window.addEventListener(
+      "ccan:open-workflow-details",
+      handleWorkflowOpen as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "ccan:open-workflow-details",
+        handleWorkflowOpen as EventListener
+      );
+    };
+  }, []);
 
   return (
     <div className="p-6 space-y-6 min-h-screen bg-background">
@@ -166,7 +189,10 @@ export default function App() {
         </TabsContent>
 
         <TabsContent value="workflow">
-          <WorkflowView goToPlan={(planId) => navigateToTab("plan")} />
+          <WorkflowView
+            goToPlan={(planId) => navigateToTab("plan")}
+            focusWorkflowId={workflowFocusId}
+          />
         </TabsContent>
 
         <TabsContent value="execution">
