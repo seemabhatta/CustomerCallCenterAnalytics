@@ -444,18 +444,83 @@ export interface LegacyWorkflow {
   executed_at?: string;
 }
 
+// Orchestration Types
+export interface OrchestrationRun {
+  id: string;                          // RUN_XXXXX
+  transcript_ids: string[];            // Array of transcripts being processed
+  auto_approve: boolean;               // Whether workflows auto-approve
+  status: 'STARTED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  stage: string;                       // Current stage or "COMPLETE"
+  started_at: string;                  // ISO timestamp
+  completed_at?: string;               // ISO timestamp when done
+  results: OrchestrationResult[];      // Results per transcript
+  errors: OrchestrationError[];        // Any errors encountered
+  summary?: {
+    total_transcripts: number;
+    successful: number;
+    failed: number;
+    success_rate: number;
+  };
+  // Real-time status fields from our granular updates
+  analysis_id?: string;                // When analysis completes
+  plan_id?: string;                    // When plan completes
+  workflow_count?: number;             // When workflows generated
+  executed_count?: number;             // Successful executions
+  failed_count?: number;               // Failed executions
+}
+
+export interface OrchestrationResult {
+  transcript_id: string;
+  analysis_id: string;
+  plan_id: string;
+  workflow_count: number;
+  approved_count: number;
+  executed_count: number;
+  failed_count: number;
+  execution_results: any[];
+  stage: string;
+  success: boolean;
+  partial_success?: boolean;
+}
+
+export interface OrchestrationError {
+  transcript_id: string;
+  error: string;
+  timestamp: string;
+}
+
+export interface OrchestrationRunRequest {
+  transcript_ids: string[];
+  auto_approve?: boolean;
+}
+
+export interface OrchestrationRunResponse {
+  run_id: string;
+  status: string;
+  message: string;
+}
+
+export type PipelineStage =
+  | 'PROCESSING'
+  | 'ANALYSIS_COMPLETED'
+  | 'PLAN_COMPLETED'
+  | 'WORKFLOWS_COMPLETED'
+  | 'EXECUTION_COMPLETED'
+  | 'COMPLETE';
+
 // UI State Types
-export type TabValue = 
-  | 'transcripts' 
-  | 'analysis' 
-  | 'plan' 
-  | 'workflow' 
-  | 'execution' 
-  | 'dashboard' 
-  | 'insights' 
-  | 'runs' 
+export type TabValue =
+  | 'transcripts'
+  | 'analysis'
+  | 'plan'
+  | 'workflow'
+  | 'execution'
+  | 'dashboard'
+  | 'insights'
+  | 'runs'
   | 'governance'
-  | 'generator';
+  | 'generator'
+  | 'pipeline';
 
 export type Environment = 'dev' | 'staging' | 'prod';
 

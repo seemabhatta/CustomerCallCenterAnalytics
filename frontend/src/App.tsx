@@ -30,6 +30,7 @@ import { InsightsView } from "@/views/InsightsView";
 import { RunsExplorer } from "@/views/RunsExplorer";
 import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
+import { PipelineView } from "@/views/PipelineView";
 
 import { TabValue, Environment } from "@/types";
 
@@ -128,6 +129,10 @@ export default function App() {
             <Lightbulb className="h-3.5 w-3.5 mr-1" />
             Insights
           </TabsTrigger>
+          <TabsTrigger value="pipeline">
+            <Rocket className="h-3.5 w-3.5 mr-1" />
+            Pipeline
+          </TabsTrigger>
           <TabsTrigger value="runs">Runs</TabsTrigger>
           <TabsTrigger value="governance">Governance</TabsTrigger>
         </TabsList>
@@ -171,6 +176,10 @@ export default function App() {
 
         <TabsContent value="insights">
           <InsightsView />
+        </TabsContent>
+
+        <TabsContent value="pipeline">
+          <PipelineView />
         </TabsContent>
 
         <TabsContent value="runs">
