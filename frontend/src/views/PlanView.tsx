@@ -158,7 +158,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
       <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Plan Details • {selectedPlanId}</h2>
+            <h2 className="view-header">Plan Details • {selectedPlanId}</h2>
             <p className="text-xs text-slate-500">Action plan structure and implementation details</p>
           </div>
           <div className="flex items-center gap-1">
@@ -594,7 +594,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
     <div className="page-shell">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Plans</h2>
+          <h2 className="view-header">Plans</h2>
           <p className="text-xs text-slate-500">Strategic action plans generated from transcript analysis</p>
         </div>
       </div>

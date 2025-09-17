@@ -72,14 +72,14 @@ export default function App() {
   return (
     <div className="page-shell min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="app-header">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Customer Call Center Analytics</h1>
-          <p className="text-xs text-slate-500">AI-powered mortgage servicing analytics and workflow automation</p>
+          <h1 className="app-header-title">Customer Call Center Analytics</h1>
+          <p className="app-header-subtitle">AI-powered mortgage servicing analytics and workflow automation</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={env} onValueChange={(value: Environment) => setEnv(value)}>
-            <SelectTrigger className="w-32 h-8 text-xs">
+            <SelectTrigger className="env-selector">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -102,7 +102,7 @@ export default function App() {
             <Activity className="h-3 w-3 mr-1" />
             Analytics
           </TabsTrigger>
-          <TabsTrigger value="generator" className="text-xs px-2 py-1">
+          <TabsTrigger value="generator" className="text-xs px-2 py-1 ml-3">
             <Plus className="h-3 w-3 mr-1" />
             Generator
           </TabsTrigger>
@@ -126,7 +126,7 @@ export default function App() {
             <PlayCircle className="h-3 w-3 mr-1" />
             Execution
           </TabsTrigger>
-          <TabsTrigger value="governance" className="text-xs px-2 py-1">Governance</TabsTrigger>
+          <TabsTrigger value="governance" className="text-xs px-2 py-1 ml-3">Governance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics">

@@ -94,7 +94,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
       <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Transcript Generator</h2>
+            <h2 className="view-header">Transcript Generator</h2>
             <p className="text-xs text-slate-500">
               Generate new customer service transcripts for analysis
             </p>

@@ -116,9 +116,9 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   };
 
   const getUrgencyBadgeVariant = (urgency: string) => {
-    if (urgency === 'high') return 'destructive';
-    if (urgency === 'medium') return 'default';
-    return 'secondary';
+    if (urgency === 'high') return 'danger';
+    if (urgency === 'medium') return 'warning';
+    return 'success';
   };
 
   if (isLoading) {
@@ -149,7 +149,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
       <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Analysis Details • {selectedAnalysisId}</h2>
+            <h2 className="view-header">Analysis Details • {selectedAnalysisId}</h2>
             <p className="text-xs text-slate-500">Comprehensive call intelligence and analysis insights</p>
           </div>
           <div className="flex items-center gap-1">
@@ -217,19 +217,19 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Issue Resolved</span>
-                  <Badge variant={analysis.issue_resolved ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                  <Badge variant={analysis.issue_resolved ? 'success' : 'warning'} className="text-xs px-1 py-0">
                     {analysis.issue_resolved ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">First Call Resolution</span>
-                  <Badge variant={analysis.first_call_resolution ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                  <Badge variant={analysis.first_call_resolution ? 'success' : 'info'} className="text-xs px-1 py-0">
                     {analysis.first_call_resolution ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Escalation Needed</span>
-                  <Badge variant={analysis.escalation_needed ? 'destructive' : 'secondary'} className="text-xs px-1 py-0">
+                  <Badge variant={analysis.escalation_needed ? 'danger' : 'success'} className="text-xs px-1 py-0">
                     {analysis.escalation_needed ? 'Yes' : 'No'}
                   </Badge>
                 </div>
@@ -268,7 +268,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Trend</span>
-                    <Badge variant={analysis.borrower_sentiment.trend === 'improving' ? 'default' : analysis.borrower_sentiment.trend === 'declining' ? 'destructive' : 'secondary'} className="text-xs px-1 py-0">
+                    <Badge variant={analysis.borrower_sentiment.trend === 'improving' ? 'success' : analysis.borrower_sentiment.trend === 'declining' ? 'danger' : 'info'} className="text-xs px-1 py-0">
                       {analysis.borrower_sentiment.trend || 'N/A'}
                     </Badge>
                   </div>
@@ -476,7 +476,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
     <div className="page-shell">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Analysis</h2>
+          <h2 className="view-header">Analysis</h2>
           <p className="text-xs text-slate-500">AI-powered analysis of customer interactions and sentiment</p>
         </div>
       </div>
@@ -552,7 +552,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
                     </Badge>
                   </td>
                   <td className="py-1 px-2">
-                    <Badge variant={analysis.issue_resolved ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                    <Badge variant={analysis.issue_resolved ? 'success' : 'warning'} className="text-xs px-1 py-0">
                       {analysis.issue_resolved ? 'Done' : 'Pending'}
                     </Badge>
                   </td>

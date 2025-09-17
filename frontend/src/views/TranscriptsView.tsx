@@ -162,7 +162,7 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
       <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Live Transcript • {selectedTranscriptId}</h2>
+            <h2 className="view-header">Live Transcript • {selectedTranscriptId}</h2>
             <p className="text-xs text-slate-500">Customer transcript details and conversation flow</p>
           </div>
           <div className="flex items-center gap-1">
@@ -250,7 +250,7 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
     <div className="page-shell">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Transcripts</h2>
+          <h2 className="view-header">Transcripts</h2>
           <p className="text-xs text-slate-500">View and manage customer service transcript records</p>
         </div>
       </div>

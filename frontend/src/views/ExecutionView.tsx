@@ -476,7 +476,7 @@ export function ExecutionView() {
     <div className="page-shell">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Execution</h2>
+          <h2 className="view-header">Execution</h2>
           <p className="text-xs text-slate-500">Track and manage workflow execution status</p>
         </div>
       </div>

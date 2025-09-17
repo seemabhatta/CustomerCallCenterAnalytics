@@ -160,7 +160,7 @@ function MetricCard({ metric }: { metric: Metric }) {
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-2">
-          <div className="text-2xl font-semibold text-slate-900">{metric.value}</div>
+          <div className="text-2xl metric-value text-slate-900">{metric.value}</div>
           <div className={`text-xs font-semibold ${DELTA_COLOR[metric.direction]}`}>
             {metric.direction === "up" ? "^" : "v"} {metric.delta}
           </div>
@@ -260,7 +260,7 @@ export function AnalyticsView() {
     <div className="space-y-6 bg-gray-50 p-6 font-mono text-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Analytics</h1>
+          <h1 className="view-header">Analytics</h1>
           <p className="text-xs text-slate-500">
             Predictive insights and prescriptive playbooks aligned with Borrower, Advisor, Supervisor, Leadership flows.
           </p>

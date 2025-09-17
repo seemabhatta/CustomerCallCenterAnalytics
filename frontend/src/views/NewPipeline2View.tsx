@@ -503,7 +503,7 @@ export function NewPipeline2View() {
     <div className="space-y-6 bg-gray-50 p-6 font-mono text-sm">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-slate-900">Pipeline</h1>
+          <h1 className="view-header">Pipeline</h1>
           <p className="text-xs text-slate-500">
             Real-time orchestration and workflow processing pipeline
           </p>
@@ -512,42 +512,42 @@ export function NewPipeline2View() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Today's Metrics</h2>
+          <h2 className="card-title">Today's Metrics</h2>
           <div className="mt-3 space-y-1 text-[13px] text-slate-700">
-            <div>Processed: <span className="font-semibold">{metrics.processed}</span></div>
-            <div>Auto-Approved: <span className="font-semibold">{metrics.autoApproved}</span></div>
-            <div>Manual Review: <span className="font-semibold">{metrics.manualReview}</span></div>
+            <div>Processed: <span className="metric-value">{metrics.processed}</span></div>
+            <div>Auto-Approved: <span className="metric-value">{metrics.autoApproved}</span></div>
+            <div>Manual Review: <span className="metric-value">{metrics.manualReview}</span></div>
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Performance</h2>
+          <h2 className="card-title">Performance</h2>
           <div className="mt-3 space-y-1 text-[13px] text-slate-700">
-            <div>Avg Time: <span className="font-semibold">{metrics.avgDuration}</span></div>
-            <div>Success: <span className="font-semibold">{metrics.successRate}</span></div>
-            <div>Errors: <span className="font-semibold">{metrics.errorsRate}</span></div>
+            <div>Avg Time: <span className="metric-value">{metrics.avgDuration}</span></div>
+            <div>Success: <span className="metric-percentage">{metrics.successRate}</span></div>
+            <div>Errors: <span className="metric-percentage">{metrics.errorsRate}</span></div>
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Compliance</h2>
+          <h2 className="card-title">Compliance</h2>
           <div className="mt-3 space-y-1 text-[13px] text-slate-700">
-            <div>SLA Met: <span className="font-semibold">98.7%</span></div>
-            <div>Audit: <span className="font-semibold">100%</span></div>
-            <div>Policy: <span className="font-semibold">✓</span></div>
+            <div>SLA Met: <span className="metric-percentage">98.7%</span></div>
+            <div>Audit: <span className="metric-percentage">100%</span></div>
+            <div>Policy: <span className="metric-value">✓</span></div>
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Queue Status</h2>
+          <h2 className="card-title">Queue Status</h2>
           <div className="mt-3 space-y-1 text-[13px] text-slate-700">
-            <div>Pending: <span className="font-semibold">{metrics.pending}</span></div>
-            <div>Critical: <span className="font-semibold">{metrics.critical}</span></div>
-            <div>Overdue: <span className="font-semibold">{metrics.overdue}</span></div>
+            <div>Pending: <span className="metric-number">{metrics.pending}</span></div>
+            <div>Critical: <span className="metric-number">{metrics.critical}</span></div>
+            <div>Overdue: <span className="metric-number">{metrics.overdue}</span></div>
           </div>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="px-5 py-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="table-section-header">
             Transcript Pipeline Manager
           </div>
         </div>
