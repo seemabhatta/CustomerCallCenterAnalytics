@@ -1749,8 +1749,25 @@ def orchestrate_run(
             status = client.get_orchestration_status(run_id)
 
             current_stage = status.get("stage", "")
-            if current_stage != last_stage and verbose:
-                console.print(f"🔄 [dim]Stage: {current_stage}[/dim]")
+            if current_stage != last_stage:
+                # Display user-friendly stage messages
+                if current_stage == "ANALYSIS_COMPLETED":
+                    analysis_id = status.get("analysis_id", "N/A")
+                    console.print(f"✅ [bold green]Analysis Completed[/bold green] (ID: {analysis_id})")
+                elif current_stage == "PLAN_COMPLETED":
+                    plan_id = status.get("plan_id", "N/A")
+                    console.print(f"✅ [bold green]Plan Completed[/bold green] (ID: {plan_id})")
+                elif current_stage == "WORKFLOWS_COMPLETED":
+                    workflow_count = status.get("workflow_count", 0)
+                    console.print(f"✅ [bold green]Workflows Generated[/bold green] ({workflow_count} items)")
+                elif current_stage == "EXECUTION_COMPLETED":
+                    executed = status.get("executed_count", 0)
+                    failed = status.get("failed_count", 0)
+                    console.print(f"✅ [bold green]Execution Completed[/bold green] ({executed} successful, {failed} failed)")
+                elif current_stage == "COMPLETE":
+                    console.print(f"🎉 [bold green]Pipeline Complete![/bold green]")
+                elif verbose:
+                    console.print(f"🔄 [dim]Stage: {current_stage}[/dim]")
                 last_stage = current_stage
 
             if status["status"] == "COMPLETED":

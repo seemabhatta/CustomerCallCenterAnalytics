@@ -633,7 +633,12 @@ async def orchestrate_run(request: Dict):
         for transcript_id in transcript_ids:
             try:
                 orchestration_runs[run_id]["stage"] = f"PROCESSING_{transcript_id}"
-                result = await run_simple_pipeline(transcript_id, auto_approve)
+                # Pass the status dict so SimplePipeline can update it in real-time
+                result = await run_simple_pipeline(
+                    transcript_id,
+                    auto_approve,
+                    status_dict=orchestration_runs[run_id]
+                )
                 orchestration_runs[run_id]["results"].append(result)
             except Exception as e:
                 # NO FALLBACK - record failure and continue
