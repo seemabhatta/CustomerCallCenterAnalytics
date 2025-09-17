@@ -94,11 +94,11 @@ export function GovernanceSimulator() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="rounded-2xl">
+    <div className="page-shell">
+      <Card className="panel">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Approval Policy — What‑if Simulator</CardTitle>
-          <p className="text-sm text-slate-600">
+          <CardTitle className="text-xs font-bold uppercase tracking-wide text-slate-500">Approval Policy — What‑if Simulator</CardTitle>
+          <p className="text-xs text-slate-600">
             Configure approval rules and see projected execution rates in real-time.
           </p>
         </CardHeader>
@@ -242,29 +242,29 @@ export function GovernanceSimulator() {
       </Card>
 
       {/* Policy Impact Analysis */}
-      <Card className="rounded-2xl">
+      <Card className="panel">
         <CardHeader className="pb-4">
-          <CardTitle className="text-sm">Policy Impact Analysis</CardTitle>
+          <CardTitle className="text-xs font-semibold uppercase tracking-wide text-slate-500">Policy Impact Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-lg font-semibold text-green-700">
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-lg font-semibold text-slate-700">
                 {Math.round(((projected - mockRun.funnel.executed) / mockRun.funnel.generated) * 100)}%
               </div>
-              <div className="text-sm text-green-600">Efficiency Gain</div>
+              <div className="text-sm text-slate-600">Efficiency Gain</div>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-lg font-semibold text-blue-700">
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-lg font-semibold text-slate-700">
                 {mockRun.funnel.generated - projected}
               </div>
-              <div className="text-sm text-blue-600">Manual Reviews</div>
+              <div className="text-sm text-slate-600">Manual Reviews</div>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-lg font-semibold text-purple-700">
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-lg font-semibold text-slate-700">
                 {Math.round((projected / mockRun.funnel.generated) * 1440)}
               </div>
-              <div className="text-sm text-purple-600">Minutes Saved/Day</div>
+              <div className="text-sm text-slate-600">Minutes Saved/Day</div>
             </div>
           </div>
         </CardContent>

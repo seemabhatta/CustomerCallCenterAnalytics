@@ -561,11 +561,11 @@ export function WorkflowView({ goToPlan, focusWorkflowId }: WorkflowViewProps) {
   if (selectedWorkflowId && selectedWorkflow) {
     const workflow = selectedWorkflow as any; // Cast to any for comprehensive API fields
     return (
-      <div className="space-y-2">
+      <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">Workflow Details • {selectedWorkflowId}</h2>
-            <p className="text-xs text-slate-600">Comprehensive workflow intelligence and execution details</p>
+            <h2 className="text-lg font-semibold text-slate-900">Workflow Details • {selectedWorkflowId}</h2>
+            <p className="text-xs text-slate-500">Comprehensive workflow intelligence and execution details</p>
           </div>
           <div className="flex items-center gap-1">
             <Button 
@@ -1114,12 +1114,12 @@ export function WorkflowView({ goToPlan, focusWorkflowId }: WorkflowViewProps) {
 
 
   return (
-    <div className="space-y-3">
+    <div className="page-shell">
       {/* Header with filters */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-bold">Workflow Management</h2>
-          <p className="text-xs text-slate-600">Orchestration and approval processes for action plans</p>
+          <h2 className="text-lg font-semibold text-slate-900">Workflow Management</h2>
+          <p className="text-xs text-slate-500">Orchestration and approval processes for action plans</p>
         </div>
         <div className="flex items-center gap-1">
           <Button onClick={() => refetch()} variant="outline" size="sm" className="h-7 text-xs px-2">

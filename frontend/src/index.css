@@ -57,3 +57,45 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .page-shell {
+    @apply space-y-6 bg-gray-50 p-6 font-mono text-sm min-h-full;
+  }
+
+  .panel {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .panel-muted {
+    @apply rounded-xl border border-slate-100 bg-slate-50/80;
+  }
+
+  .page-header {
+    @apply flex flex-wrap items-center justify-between gap-3;
+  }
+
+  .metric-delta-up {
+    @apply text-emerald-500;
+  }
+
+  .metric-delta-down {
+    @apply text-rose-500;
+  }
+
+  .pill-muted {
+    @apply inline-flex items-center gap-1 rounded-full border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-500;
+  }
+
+  .table-header {
+    @apply bg-slate-100 text-[12px] uppercase tracking-wide text-slate-600;
+  }
+
+  .table-cell-dense {
+    @apply py-1 px-2 text-xs;
+  }
+
+  .table-row-hover {
+    @apply border-b hover:bg-slate-50;
+  }
+}

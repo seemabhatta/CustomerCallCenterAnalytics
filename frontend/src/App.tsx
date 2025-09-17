@@ -70,18 +70,16 @@ export default function App() {
   }, []);
 
   return (
-    <div className="p-6 space-y-6 min-h-screen bg-background">
+    <div className="page-shell min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Customer Call Center Analytics</h1>
-          <p className="text-sm text-slate-500">
-            Linear Tables: Transcript → Analysis → Plan → Workflow → Execution
-          </p>
+          <h1 className="text-lg font-semibold text-slate-900">Customer Call Center Analytics</h1>
+          <p className="text-xs text-slate-500">AI-powered mortgage servicing analytics and workflow automation</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={env} onValueChange={(value: Environment) => setEnv(value)}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-32 h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -95,40 +93,40 @@ export default function App() {
 
       {/* Main Content */}
       <Tabs value={tab} onValueChange={(value: TabValue) => setTab(value)}>
-        <TabsList className="inline-flex flex-wrap gap-2">
-          <TabsTrigger value="pipeline">
-            <Settings2 className="h-3.5 w-3.5 mr-1" />
+        <TabsList className="inline-flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg text-xs">
+          <TabsTrigger value="pipeline" className="text-xs px-2 py-1">
+            <Settings2 className="h-3 w-3 mr-1" />
             Pipeline
           </TabsTrigger>
-          <TabsTrigger value="analytics">
-            <Activity className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="analytics" className="text-xs px-2 py-1">
+            <Activity className="h-3 w-3 mr-1" />
             Analytics
           </TabsTrigger>
-          <TabsTrigger value="generator">
-            <Plus className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="generator" className="text-xs px-2 py-1">
+            <Plus className="h-3 w-3 mr-1" />
             Generator
           </TabsTrigger>
-          <TabsTrigger value="transcripts">
-            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="transcripts" className="text-xs px-2 py-1">
+            <MessageSquare className="h-3 w-3 mr-1" />
             Transcripts
           </TabsTrigger>
-          <TabsTrigger value="analysis">
-            <ClipboardList className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="analysis" className="text-xs px-2 py-1">
+            <ClipboardList className="h-3 w-3 mr-1" />
             Analysis
           </TabsTrigger>
-          <TabsTrigger value="plan">
-            <Settings className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="plan" className="text-xs px-2 py-1">
+            <Settings className="h-3 w-3 mr-1" />
             Plan
           </TabsTrigger>
-          <TabsTrigger value="workflow">
-            <WorkflowIcon className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="workflow" className="text-xs px-2 py-1">
+            <WorkflowIcon className="h-3 w-3 mr-1" />
             Workflow
           </TabsTrigger>
-          <TabsTrigger value="execution">
-            <PlayCircle className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="execution" className="text-xs px-2 py-1">
+            <PlayCircle className="h-3 w-3 mr-1" />
             Execution
           </TabsTrigger>
-          <TabsTrigger value="governance">Governance</TabsTrigger>
+          <TabsTrigger value="governance" className="text-xs px-2 py-1">Governance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analytics">

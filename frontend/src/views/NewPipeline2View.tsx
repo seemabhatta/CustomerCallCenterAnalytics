@@ -501,6 +501,15 @@ export function NewPipeline2View() {
 
   return (
     <div className="space-y-6 bg-gray-50 p-6 font-mono text-sm">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold text-slate-900">Pipeline</h1>
+          <p className="text-xs text-slate-500">
+            Real-time orchestration and workflow processing pipeline
+          </p>
+        </div>
+      </header>
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Today's Metrics</h2>
