@@ -105,7 +105,7 @@ export function GovernanceSimulator() {
         <CardContent className="space-y-6">
           {/* Auto-approval Settings */}
           <div>
-            <h3 className="text-sm font-medium mb-3">Auto-Approval Rules</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Auto-Approval Rules</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Checkbox 
                 checked={autoLow} 
@@ -139,7 +139,7 @@ export function GovernanceSimulator() {
 
           {/* Risk Thresholds */}
           <div>
-            <h3 className="text-sm font-medium mb-3">Risk Thresholds</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Risk Thresholds</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-xs text-slate-500">Risk Score Threshold</label>
@@ -170,26 +170,26 @@ export function GovernanceSimulator() {
 
           {/* Simulation Results */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium mb-3">Simulation Results</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Simulation Results</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{projected}</div>
+                <div className="text-lg font-semibold text-slate-700">{projected}</div>
                 <div className="text-xs text-slate-500">Projected Executed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-slate-600">
+                <div className="text-lg font-semibold text-slate-700">
                   {mockRun.funnel.executed}
                 </div>
                 <div className="text-xs text-slate-500">Baseline Executed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-lg font-semibold text-slate-700">
                   +{projected - mockRun.funnel.executed}
                 </div>
                 <div className="text-xs text-slate-500">Improvement</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-xl font-semibold text-slate-900">
                   {((projected / mockRun.funnel.generated) * 100).toFixed(0)}%
                 </div>
                 <div className="text-xs text-slate-500">Execution Rate</div>
@@ -199,7 +199,7 @@ export function GovernanceSimulator() {
 
           {/* Current Policy Summary */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium mb-3">Current Policy Summary</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Current Policy Summary</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-xs text-slate-500 mb-1">Auto-Approved</div>

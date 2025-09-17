@@ -98,4 +98,37 @@
   .table-row-hover {
     @apply border-b hover:bg-slate-50;
   }
+
+  /* Global Typography Patterns */
+  .section-header {
+    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  .card-title {
+    @apply text-xs font-bold uppercase tracking-wide text-slate-500;
+  }
+
+  .view-header {
+    @apply text-lg font-semibold text-slate-900;
+  }
+
+  .view-description {
+    @apply text-xs text-slate-500;
+  }
+
+  .form-label {
+    @apply text-xs font-medium text-slate-600;
+  }
+
+  .metric-primary {
+    @apply text-xl font-semibold text-slate-900;
+  }
+
+  .metric-secondary {
+    @apply text-lg font-semibold text-slate-700;
+  }
+
+  .metric-label {
+    @apply text-xs text-slate-500;
+  }
 }
