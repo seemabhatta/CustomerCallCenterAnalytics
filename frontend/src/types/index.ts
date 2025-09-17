@@ -510,14 +510,12 @@ export type PipelineStage =
 
 // UI State Types
 export type TabValue =
+  | 'analytics'
   | 'transcripts'
   | 'analysis'
   | 'plan'
   | 'workflow'
   | 'execution'
-  | 'dashboard'
-  | 'insights'
-  | 'runs'
   | 'governance'
   | 'generator'
   | 'pipeline';

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   MessageSquare,
@@ -10,12 +8,8 @@ import {
   Settings,
   Workflow as WorkflowIcon,
   PlayCircle,
-  Lightbulb,
   Activity,
   Settings2,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldCheck,
   Plus,
 } from "lucide-react";
 
@@ -24,31 +18,15 @@ import { AnalysisView } from "@/views/AnalysisView";
 import { PlanView } from "@/views/PlanView";
 import { WorkflowView } from "@/views/WorkflowView";
 import { ExecutionView } from "@/views/ExecutionView";
-import { Dashboard } from "@/views/Dashboard";
-import { InsightsView } from "@/views/InsightsView";
-import { RunsExplorer } from "@/views/RunsExplorer";
 import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
+import { AnalyticsView } from "@/views/AnalyticsView";
 
 import { TabValue, Environment } from "@/types";
 
-// Mock data - will be replaced with real API calls
-const mockRun = {
-  id: "RUN_CALL_27FF315B",
-  started_at: "2025-09-12T16:41:34Z",
-  durations: [
-    { stage: "analysis", seconds: 9.7 },
-    { stage: "plan", seconds: 24.4 },
-    { stage: "workflows", seconds: 110.4 },
-    { stage: "approval", seconds: 0.0 },
-    { stage: "execution", seconds: 0.0 },
-  ],
-  funnel: { generated: 10, approved: 0, executed: 0, failed: 0 },
-};
-
 export default function App() {
-  const [tab, setTab] = useState<TabValue>("dashboard");
+  const [tab, setTab] = useState<TabValue>("pipeline");
   const [env, setEnv] = useState<Environment>("dev");
   const [workflowFocusId, setWorkflowFocusId] = useState<string | null>(null);
 
@@ -57,7 +35,6 @@ export default function App() {
   const [activeTranscriptId, setActiveTranscriptId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load initial data for environment
     console.log(`Environment changed to: ${env}`);
   }, [env]);
 
@@ -123,9 +100,9 @@ export default function App() {
             <Settings2 className="h-3.5 w-3.5 mr-1" />
             Pipeline
           </TabsTrigger>
-          <TabsTrigger value="dashboard">
+          <TabsTrigger value="analytics">
             <Activity className="h-3.5 w-3.5 mr-1" />
-            Dashboard
+            Analytics
           </TabsTrigger>
           <TabsTrigger value="generator">
             <Plus className="h-3.5 w-3.5 mr-1" />
@@ -151,16 +128,11 @@ export default function App() {
             <PlayCircle className="h-3.5 w-3.5 mr-1" />
             Execution
           </TabsTrigger>
-          <TabsTrigger value="insights">
-            <Lightbulb className="h-3.5 w-3.5 mr-1" />
-            Insights
-          </TabsTrigger>
-          <TabsTrigger value="runs">Runs</TabsTrigger>
           <TabsTrigger value="governance">Governance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard">
-          <Dashboard />
+        <TabsContent value="analytics">
+          <AnalyticsView />
         </TabsContent>
 
         <TabsContent value="generator">
@@ -199,16 +171,8 @@ export default function App() {
           <ExecutionView />
         </TabsContent>
 
-        <TabsContent value="insights">
-          <InsightsView />
-        </TabsContent>
-
         <TabsContent value="pipeline">
           <NewPipeline2View />
-        </TabsContent>
-
-        <TabsContent value="runs">
-          <RunsExplorer />
         </TabsContent>
 
         <TabsContent value="governance">
