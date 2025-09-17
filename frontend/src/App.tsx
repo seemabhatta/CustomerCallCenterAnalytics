@@ -12,7 +12,6 @@ import {
   PlayCircle,
   Lightbulb,
   Activity,
-  Rocket,
   Settings2,
   CheckCircle2,
   AlertTriangle,
@@ -30,7 +29,7 @@ import { InsightsView } from "@/views/InsightsView";
 import { RunsExplorer } from "@/views/RunsExplorer";
 import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
-import { PipelineView } from "@/views/PipelineView";
+import { NewPipeline2View } from "@/views/NewPipeline2View";
 
 import { TabValue, Environment } from "@/types";
 
@@ -97,6 +96,10 @@ export default function App() {
       {/* Main Content */}
       <Tabs value={tab} onValueChange={(value: TabValue) => setTab(value)}>
         <TabsList className="inline-flex flex-wrap gap-2">
+          <TabsTrigger value="pipeline">
+            <Settings2 className="h-3.5 w-3.5 mr-1" />
+            Pipeline
+          </TabsTrigger>
           <TabsTrigger value="dashboard">
             <Activity className="h-3.5 w-3.5 mr-1" />
             Dashboard
@@ -128,10 +131,6 @@ export default function App() {
           <TabsTrigger value="insights">
             <Lightbulb className="h-3.5 w-3.5 mr-1" />
             Insights
-          </TabsTrigger>
-          <TabsTrigger value="pipeline">
-            <Rocket className="h-3.5 w-3.5 mr-1" />
-            Pipeline
           </TabsTrigger>
           <TabsTrigger value="runs">Runs</TabsTrigger>
           <TabsTrigger value="governance">Governance</TabsTrigger>
@@ -179,7 +178,7 @@ export default function App() {
         </TabsContent>
 
         <TabsContent value="pipeline">
-          <PipelineView />
+          <NewPipeline2View />
         </TabsContent>
 
         <TabsContent value="runs">
