@@ -14,13 +14,50 @@ import {
   Transcript,
   Workflow,
 } from "@/types";
-import { Play, Pause, BarChart2, Check, X, CheckCircle2 } from "lucide-react";
+import { Play, Pause, BarChart2, Check, CheckCircle2 } from "lucide-react";
 
 const WF_LABELS: Record<string, string> = {
   BORROWER: "Borrower",
   ADVISOR: "Advisor",
   SUPERVISOR: "Supervisor",
   LEADERSHIP: "Leadership",
+};
+
+const stageTargetForStatus = (
+  stage?: string,
+  run?: OrchestrationRun
+): number | null => {
+  if (!stage) return null;
+  switch (stage) {
+    case "ANALYSIS_COMPLETED":
+      return 25;
+    case "PLAN_COMPLETED":
+      return 50;
+    case "WORKFLOWS_COMPLETED":
+      return 75;
+    case "EXECUTION_COMPLETED":
+      if (
+        typeof run?.workflow_count === "number" &&
+        typeof run?.executed_count === "number" &&
+        run.workflow_count > 0 &&
+        run.executed_count === run.workflow_count
+      ) {
+        return 100;
+      }
+      return 75;
+    case "COMPLETE":
+      return 100;
+    default:
+      return null;
+  }
+};
+
+const arraysEqual = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 };
 
 const formatMinutes = (durationSec?: number, createdAt?: string) => {
@@ -64,7 +101,10 @@ interface TranscriptRow {
   planReady: boolean;
   workflowCount: number;
   executedCount: number;
+  workflowReady: boolean;
+  executeComplete: boolean;
   approvalsPending: number;
+  progress: number;
 }
 
 export function NewPipeline2View() {
@@ -74,6 +114,9 @@ export function NewPipeline2View() {
   const [expandedTranscript, setExpandedTranscript] = useState<string | null>(null);
   const [activeRun, setActiveRun] = useState<string | null>(null);
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({});
+  const [activeTranscripts, setActiveTranscripts] = useState<string[]>([]);
+  const [transcriptProgress, setTranscriptProgress] = useState<Record<string, number>>({});
+  const [displayProgress, setDisplayProgress] = useState<Record<string, number>>({});
   const lastStageRef = useRef<string | null>(null);
 
   const { data: transcripts = [] } = useQuery({
@@ -107,20 +150,76 @@ export function NewPipeline2View() {
 
   useEffect(() => {
     if (activeRun) {
-      const stillActive = runs.some(
-        (run) =>
-          run.id === activeRun &&
-          (run.status === "RUNNING" || run.status === "STARTED")
-      );
-      if (!stillActive) {
-        return;
+      const currentRun = runs.find((run) => run.id === activeRun);
+      const isActive =
+        currentRun &&
+        (currentRun.status === "RUNNING" || currentRun.status === "STARTED");
+      if (isActive && currentRun) {
+        const ids = currentRun.transcript_ids || [];
+        setActiveTranscripts((prev) =>
+          arraysEqual(prev, ids) ? prev : ids
+        );
+        setTranscriptProgress((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          ids.forEach((id) => {
+            if (next[id] !== 5) {
+              next[id] = 5;
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
+        });
+        setDisplayProgress((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          ids.forEach((id) => {
+            if (next[id] !== 5) {
+              next[id] = 5;
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
+        });
+      }
+      if (!isActive) {
+        setActiveRun(null);
+        setActiveTranscripts([]);
+        lastStageRef.current = null;
       }
     } else {
       const runningRun = runs.find(
         (run) => run.status === "RUNNING" || run.status === "STARTED"
       );
       if (runningRun) {
+        const ids = runningRun.transcript_ids || [];
         setActiveRun(runningRun.id);
+        setActiveTranscripts((prev) =>
+          arraysEqual(prev, ids) ? prev : ids
+        );
+        setTranscriptProgress((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          ids.forEach((id) => {
+            if (next[id] !== 5) {
+              next[id] = 5;
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
+        });
+        setDisplayProgress((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          ids.forEach((id) => {
+            if (next[id] !== 5) {
+              next[id] = 5;
+              changed = true;
+            }
+          });
+          return changed ? next : prev;
+        });
+        lastStageRef.current = null;
       }
     }
   }, [runs, activeRun]);
@@ -157,6 +256,89 @@ export function NewPipeline2View() {
     return map;
   }, [workflows]);
 
+  useEffect(() => {
+    if (activeTranscripts.length === 0) return;
+    setTranscriptProgress((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      activeTranscripts.forEach((id) => {
+        const analysis = analysisByTranscript[id];
+        const plan = planByTranscript[id];
+        const transcriptWorkflows = workflowsByTranscript[id] || [];
+        const executedCount = transcriptWorkflows.filter(
+          (workflow) => workflow.status === "EXECUTED"
+        ).length;
+        let target = 0;
+        if (analyzeComplete(analysis)) target = 25;
+        if (plan) target = Math.max(target, 50);
+        if (transcriptWorkflows.length > 0) target = Math.max(target, 75);
+        if (
+          transcriptWorkflows.length > 0 &&
+          executedCount === transcriptWorkflows.length &&
+          transcriptWorkflows.length > 0
+        ) {
+          target = 100;
+        }
+        const current = next[id] ?? 0;
+        const updated = Math.max(current, target);
+        if (updated !== current) {
+          next[id] = updated;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [
+    activeTranscripts,
+    analysisByTranscript,
+    planByTranscript,
+    workflowsByTranscript,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (Object.keys(transcriptProgress).length === 0) return;
+
+    let frame: number | null = null;
+
+    const animate = () => {
+      let needsNextFrame = false;
+      setDisplayProgress((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        Object.entries(transcriptProgress).forEach(([id, target]) => {
+          const current = next[id] ?? 0;
+          const distance = target - current;
+          if (distance > 0.2) {
+            const step = Math.max(distance / 10, 0.8);
+            next[id] = Math.min(target, current + step);
+            changed = true;
+            needsNextFrame = true;
+          } else if (distance < -0.2) {
+            next[id] = target;
+            changed = true;
+          }
+        });
+        if (!changed) {
+          return prev;
+        }
+        return next;
+      });
+
+      if (needsNextFrame) {
+        frame = window.requestAnimationFrame(animate);
+      }
+    };
+
+    frame = window.requestAnimationFrame(animate);
+
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
+  }, [transcriptProgress]);
+
   const rows: TranscriptRow[] = useMemo(() => {
     return transcripts.map((transcript) => {
       const analysis = analysisByTranscript[transcript.id];
@@ -165,19 +347,50 @@ export function NewPipeline2View() {
       const executedCount = transcriptWorkflows.filter(
         (workflow) => workflow.status === "EXECUTED"
       ).length;
+      let stageProgress = 0;
+      if (analyzeComplete(analysis)) stageProgress = 25;
+      if (plan) stageProgress = Math.max(stageProgress, 50);
+      if (transcriptWorkflows.length > 0) stageProgress = Math.max(stageProgress, 75);
+      if (
+        transcriptWorkflows.length > 0 &&
+        executedCount === transcriptWorkflows.length &&
+        transcriptWorkflows.length > 0
+      ) {
+        stageProgress = 100;
+      }
+      const targetProgress = transcriptProgress[transcript.id] ?? stageProgress;
+      const storedProgress = displayProgress[transcript.id];
+      const progress =
+        storedProgress !== undefined ? storedProgress : stageProgress;
+      const analyzeReady = targetProgress >= 25 || analyzeComplete(analysis);
+      const planReady = targetProgress >= 50 || Boolean(plan);
+      const workflowReady =
+        targetProgress >= 75 || transcriptWorkflows.length > 0;
+      const executeComplete = targetProgress >= 100 ||
+        (workflowReady && executedCount === transcriptWorkflows.length);
       return {
         transcript,
         analysis,
         plan,
         workflows: transcriptWorkflows,
-        analyzeDone: analyzeComplete(analysis),
-        planReady: Boolean(plan),
+        analyzeDone: analyzeReady,
+        planReady,
         workflowCount: transcriptWorkflows.length,
         executedCount,
+        workflowReady,
+        executeComplete,
         approvalsPending: workflowsNeedingApproval(transcriptWorkflows).length,
+        progress,
       };
     });
-  }, [transcripts, analysisByTranscript, planByTranscript, workflowsByTranscript]);
+  }, [
+    transcripts,
+    analysisByTranscript,
+    planByTranscript,
+    workflowsByTranscript,
+    transcriptProgress,
+    displayProgress,
+  ]);
 
   const metrics = useMemo(() => {
     const processed = runs.reduce((acc, run) => acc + run.transcript_ids.length, 0);
@@ -227,17 +440,36 @@ export function NewPipeline2View() {
     };
   }, [runs, workflows]);
 
-  const totals = useMemo(() => {
-    const totalWorkflows = rows.reduce((acc, row) => acc + row.workflowCount, 0);
-    const approvals = rows.reduce((acc, row) => acc + row.approvalsPending, 0);
-    return { totalWorkflows, approvals };
-  }, [rows]);
-
   const runPipeline = useMutation({
     mutationFn: (params: { transcript_ids: string[]; auto_approve: boolean }) =>
       orchestrationApi.runPipeline(params.transcript_ids, params.auto_approve),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setActiveRun(data.run_id);
+      const transcriptIds = variables.transcript_ids || [];
+      setActiveTranscripts(transcriptIds);
+      setTranscriptProgress((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        transcriptIds.forEach((id) => {
+          if (next[id] !== 5) {
+            next[id] = 5;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+      setDisplayProgress((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        transcriptIds.forEach((id) => {
+          if (next[id] !== 5) {
+            next[id] = 5;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+      lastStageRef.current = null;
       setSelectedTranscripts([]);
       queryClient.invalidateQueries({ queryKey: ["orchestration-runs"] });
     },
@@ -276,6 +508,30 @@ export function NewPipeline2View() {
   useEffect(() => {
     if (!runStatus) return;
 
+    if (Array.isArray(runStatus.transcript_ids)) {
+      setActiveTranscripts((prev) =>
+        arraysEqual(prev, runStatus.transcript_ids || [])
+          ? prev
+          : runStatus.transcript_ids || []
+      );
+    }
+
+    const stageTarget = stageTargetForStatus(runStatus.stage, runStatus);
+    if (Array.isArray(runStatus.transcript_ids) && stageTarget !== null) {
+      setTranscriptProgress((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        runStatus.transcript_ids.forEach((id) => {
+          const current = next[id] ?? 0;
+          if (current < stageTarget) {
+            next[id] = stageTarget;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    }
+
     if (runStatus.stage && runStatus.stage !== lastStageRef.current) {
       lastStageRef.current = runStatus.stage;
       if (runStatus.stage.includes("ANALYSIS")) {
@@ -287,11 +543,13 @@ export function NewPipeline2View() {
       if (runStatus.stage.includes("WORKFLOW") || runStatus.stage.includes("EXECUTION")) {
         queryClient.invalidateQueries({ queryKey: ["workflows"] });
       }
+      queryClient.invalidateQueries({ queryKey: ["orchestration-runs"] });
     }
 
     if (runStatus.status === "COMPLETED" || runStatus.status === "FAILED") {
       lastStageRef.current = null;
       setActiveRun(null);
+      setActiveTranscripts([]);
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
       queryClient.invalidateQueries({ queryKey: ["analyses"] });
@@ -319,59 +577,8 @@ export function NewPipeline2View() {
     rejectWorkflow.mutate({ id: workflowId, reason });
   };
 
-  const activeRunSummary = runStatus
-    ? {
-        status: normalizeStatusLabel(runStatus.status),
-        stage: normalizeStatusLabel(runStatus.stage),
-        progress: runStatus.progress,
-        workflowCount: runStatus.workflow_count,
-        executed: runStatus.executed_count,
-      }
-    : null;
-
-  const devTests = useMemo(() => {
-    const firstRow = rows[0];
-    const firstApprovals = firstRow ? workflowsNeedingApproval(firstRow.workflows).length : 0;
-    const approvalsPhrase = firstRow ? `T${firstRow.transcript.id?.slice(-3)}` : "N/A";
-
-    const totalGrouped = rows.reduce((acc, row) => acc + row.workflowCount, 0);
-    const totalDerived = workflows.length;
-
-    const allowedTypesOnly = workflows.every((workflow) => workflow.workflow_type in WF_LABELS);
-
-    return [
-      {
-        label: `${approvalsPhrase} pending approvals = ${firstRow ? firstRow.approvalsPending : 0}`,
-        expected: firstApprovals,
-        pass: firstRow ? firstRow.approvalsPending === firstApprovals : true,
-      },
-      {
-        label: `Grouped count equals total workflows (sum ${totalGrouped} vs total ${totalDerived})`,
-        expected: totalDerived,
-        pass: totalGrouped === totalDerived,
-      },
-      {
-        label: "All workflows use allowed types",
-        expected: workflows.length,
-        pass: allowedTypesOnly,
-      },
-    ];
-  }, [rows, workflows]);
-
   return (
     <div className="space-y-6 bg-gray-50 p-6 font-mono text-sm">
-      <header className="rounded-2xl bg-slate-900 px-6 py-5 text-slate-100 shadow">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold tracking-wide">PIPELINE ORCHESTRATION DASHBOARD</h1>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-semibold">[Live]</span>
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
-          </div>
-        </div>
-      </header>
-
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Today's Metrics</h2>
@@ -420,6 +627,7 @@ export function NewPipeline2View() {
                 <th className="px-5 py-3">ID</th>
                 <th className="px-5 py-3">Customer</th>
                 <th className="px-5 py-3">Topic</th>
+                <th className="px-5 py-3">Progress</th>
                 <th className="px-5 py-3">Analyze</th>
                 <th className="px-5 py-3">Plan</th>
                 <th className="px-5 py-3">Workflow</th>
@@ -438,6 +646,11 @@ export function NewPipeline2View() {
                 const executionLabel = row.workflowCount
                   ? `${row.executedCount}/${row.workflowCount}`
                   : "—";
+                const clampedProgress = Math.min(
+                  Math.max(row.progress, 0),
+                  100
+                );
+                const progressLabel = Math.round(clampedProgress);
                 return (
                   <React.Fragment key={row.transcript.id}>
                     <tr
@@ -462,6 +675,20 @@ export function NewPipeline2View() {
                       <td className="px-5 py-3">{row.transcript.customer || "—"}</td>
                       <td className="px-5 py-3 text-slate-700">{row.transcript.topic || "—"}</td>
                       <td className="px-5 py-3">
+                        <div className="w-28">
+                          <div className="h-2 w-full rounded-full bg-slate-200">
+                            <div
+                              className="h-2 rounded-full bg-blue-500"
+                              style={{
+                                width: `${clampedProgress}%`,
+                                transition: "width 0.8s ease-in-out",
+                              }}
+                            />
+                          </div>
+                          <div className="mt-1 text-[11px] text-slate-500">{progressLabel}%</div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
                         {row.analyzeDone ? (
                           <Check className="h-4 w-4 text-green-500" aria-hidden="true" />
                         ) : (
@@ -475,15 +702,35 @@ export function NewPipeline2View() {
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3 text-slate-700">{workflowLabel}</td>
-                      <td className="px-5 py-3 text-slate-700">{executionLabel}</td>
+                      <td className="px-5 py-3">
+                        {row.workflowReady ? (
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Check className="h-4 w-4 text-green-500" aria-hidden="true" />
+                            <span>{workflowLabel}</span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3">
+                        {row.executeComplete ? (
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Check className="h-4 w-4 text-green-500" aria-hidden="true" />
+                            <span>{executionLabel}</span>
+                          </div>
+                        ) : row.workflowCount ? (
+                          <span className="text-slate-500">{executionLabel}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
                       <td className="px-5 py-3 text-slate-700">
                         {formatMinutes(row.transcript.duration_sec, row.transcript.created_at)}
                       </td>
                     </tr>
                     {isExpanded ? (
                       <tr className="border-t bg-slate-50">
-                        <td colSpan={8} className="px-5 pb-4 pt-0">
+                        <td colSpan={9} className="px-5 pb-4 pt-0">
                           <div className="space-y-3 py-3">
                             <div className="grid gap-4 text-xs text-slate-600 md:grid-cols-3">
                               {Object.entries(WF_LABELS).map(([type, label]) => {
@@ -606,49 +853,6 @@ export function NewPipeline2View() {
         </div>
       </section>
 
-      {activeRun && activeRunSummary ? (
-        <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-800">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="font-semibold">Pipeline Running • {activeRun}</div>
-            <div>Status: {activeRunSummary.status}</div>
-            <div>Stage: {activeRunSummary.stage}</div>
-            {activeRunSummary.progress ? (
-              <div>
-                Progress: {activeRunSummary.progress.processed}/{activeRunSummary.progress.total} ·
-                {" "}
-                {activeRunSummary.progress.percentage}%
-              </div>
-            ) : null}
-            {typeof activeRunSummary.executed === "number" && typeof activeRunSummary.workflowCount === "number" ? (
-              <div>
-                Executed: {activeRunSummary.executed}/{activeRunSummary.workflowCount}
-              </div>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dev Tests</div>
-        <ul className="mt-3 space-y-2 text-[13px]">
-          {devTests.map((test, index) => (
-            <li key={index} className="flex items-center gap-2">
-              {test.pass ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <X className="h-4 w-4 text-red-500" />
-              )}
-              <span className="text-slate-700">{test.label}</span>
-              {!test.pass ? (
-                <span className="text-slate-500">expected {test.expected}</span>
-              ) : null}
-            </li>
-          ))}
-          <li className="flex items-center gap-2 text-slate-500">
-            <Check className="h-4 w-4 text-green-500" /> Total workflows tracked: {totals.totalWorkflows}
-          </li>
-        </ul>
-      </section>
     </div>
   );
 }
