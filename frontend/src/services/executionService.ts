@@ -73,6 +73,9 @@ class ExecutionService {
         throw new Error(`Failed to fetch execution: ${response.statusText}`);
       }
       return await response.json();
+    } catch (error) {
+      console.error('Error fetching execution:', error);
+      throw error;
     }
   }
 
@@ -93,6 +96,9 @@ class ExecutionService {
       }
 
       return await response.json();
+    } catch (error) {
+      console.error('Error executing step:', error);
+      throw error;
     }
   }
 
@@ -113,6 +119,9 @@ class ExecutionService {
       }
 
       return await response.json();
+    } catch (error) {
+      console.error('Error executing workflow:', error);
+      throw error;
     }
   }
 
@@ -133,6 +142,9 @@ class ExecutionService {
       }
 
       return await response.json();
+    } catch (error) {
+      console.error('Error approving workflow:', error);
+      throw error;
     }
   }
 
@@ -152,6 +164,9 @@ class ExecutionService {
       if (!response.ok) {
         throw new Error(`Failed to reject workflow: ${response.statusText}`);
       }
+    } catch (error) {
+      console.error('Error rejecting workflow:', error);
+      throw error;
     }
   }
 

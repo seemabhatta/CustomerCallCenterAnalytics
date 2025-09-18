@@ -518,9 +518,19 @@ export type TabValue =
   | 'execution'
   | 'governance'
   | 'generator'
-  | 'pipeline';
+  | 'pipeline'
+  | 'insights'
+  | 'dashboard'
+  | 'approvals'
+  | 'reviews'
+  | 'monitoring'
+  | 'calls'
+  | 'actions';
 
 export type Environment = 'dev' | 'staging' | 'prod';
+
+// User Role Types
+export type UserRole = 'leadership' | 'supervisor' | 'advisor' | 'admin';
 
 // Error Types
 export interface ApiError {

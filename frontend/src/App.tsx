@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -11,6 +11,14 @@ import {
   Activity,
   Settings2,
   Plus,
+  Shield,
+  Headphones,
+  Database,
+  BarChart3,
+  MessageCircle,
+  CheckCircle,
+  Eye,
+  Target,
 } from "lucide-react";
 
 import { TranscriptsView } from "@/views/TranscriptsView";
@@ -22,12 +30,14 @@ import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
 import { AnalyticsView } from "@/views/AnalyticsView";
+import { InsightsView } from "@/views/InsightsView";
 
-import { TabValue, Environment } from "@/types";
+import { TabValue, Environment, UserRole } from "@/types";
 
 export default function App() {
-  const [tab, setTab] = useState<TabValue>("pipeline");
+  const [tab, setTab] = useState<TabValue>("analytics");
   const [env, setEnv] = useState<Environment>("dev");
+  const [userRole, setUserRole] = useState<UserRole>("admin");
   const [workflowFocusId, setWorkflowFocusId] = useState<string | null>(null);
 
   // Dialog state for transcript details
@@ -37,6 +47,18 @@ export default function App() {
   useEffect(() => {
     console.log(`Environment changed to: ${env}`);
   }, [env]);
+
+  // Switch to appropriate default tab when role changes
+  useEffect(() => {
+    const roleDefaultTabs: Record<UserRole, TabValue> = {
+      leadership: "analytics",
+      supervisor: "dashboard",
+      advisor: "calls",
+      admin: "pipeline"
+    };
+
+    setTab(roleDefaultTabs[userRole]);
+  }, [userRole]);
 
   const handleOpenTranscript = (id: string) => {
     setActiveTranscriptId(id);
@@ -78,103 +100,218 @@ export default function App() {
           <p className="app-header-subtitle">AI-powered mortgage servicing analytics and workflow automation</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={env} onValueChange={(value: Environment) => setEnv(value)}>
-            <SelectTrigger className="env-selector">
+          <Select value={userRole} onValueChange={(value: UserRole) => setUserRole(value)}>
+            <SelectTrigger className="role-selector">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="dev">Dev</SelectItem>
-              <SelectItem value="staging">Staging</SelectItem>
-              <SelectItem value="prod">Prod</SelectItem>
+              <SelectItem value="leadership">Leadership</SelectItem>
+              <SelectItem value="supervisor">Supervisor</SelectItem>
+              <SelectItem value="advisor">Advisor</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* Main Content */}
-      <Tabs value={tab} onValueChange={(value: TabValue) => setTab(value)}>
+      <Tabs value={tab} onValueChange={(value) => setTab(value as TabValue)}>
         <TabsList className="inline-flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg text-xs">
-          <TabsTrigger value="pipeline" className="text-xs px-2 py-1">
-            <Settings2 className="h-3 w-3 mr-1" />
-            Pipeline
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="text-xs px-2 py-1">
-            <Activity className="h-3 w-3 mr-1" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="generator" className="text-xs px-2 py-1 ml-3">
-            <Plus className="h-3 w-3 mr-1" />
-            Generator
-          </TabsTrigger>
-          <TabsTrigger value="transcripts" className="text-xs px-2 py-1">
-            <MessageSquare className="h-3 w-3 mr-1" />
-            Transcripts
-          </TabsTrigger>
-          <TabsTrigger value="analysis" className="text-xs px-2 py-1">
-            <ClipboardList className="h-3 w-3 mr-1" />
-            Analysis
-          </TabsTrigger>
-          <TabsTrigger value="plan" className="text-xs px-2 py-1">
-            <Settings className="h-3 w-3 mr-1" />
-            Plan
-          </TabsTrigger>
-          <TabsTrigger value="workflow" className="text-xs px-2 py-1">
-            <WorkflowIcon className="h-3 w-3 mr-1" />
-            Workflow
-          </TabsTrigger>
-          <TabsTrigger value="execution" className="text-xs px-2 py-1">
-            <PlayCircle className="h-3 w-3 mr-1" />
-            Execution
-          </TabsTrigger>
-          <TabsTrigger value="governance" className="text-xs px-2 py-1 ml-3">Governance</TabsTrigger>
+          {/* Leadership View: Analytics, Insights, Governance */}
+          {userRole === "leadership" && (
+            <>
+              <TabsTrigger value="analytics" className="text-xs px-2 py-1">
+                <BarChart3 className="h-3 w-3 mr-1" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="text-xs px-2 py-1">
+                <MessageCircle className="h-3 w-3 mr-1" />
+                Insights
+              </TabsTrigger>
+              <TabsTrigger value="governance" className="text-xs px-2 py-1">
+                <Shield className="h-3 w-3 mr-1" />
+                Governance
+              </TabsTrigger>
+            </>
+          )}
+
+          {/* Supervisor View: Dashboard, Approvals, Reviews, Monitoring */}
+          {userRole === "supervisor" && (
+            <>
+              <TabsTrigger value="dashboard" className="text-xs px-2 py-1">
+                <Database className="h-3 w-3 mr-1" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="approvals" className="text-xs px-2 py-1">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Approvals
+              </TabsTrigger>
+              <TabsTrigger value="reviews" className="text-xs px-2 py-1">
+                <Eye className="h-3 w-3 mr-1" />
+                Reviews
+              </TabsTrigger>
+              <TabsTrigger value="monitoring" className="text-xs px-2 py-1">
+                <Activity className="h-3 w-3 mr-1" />
+                Monitoring
+              </TabsTrigger>
+            </>
+          )}
+
+          {/* Advisor View: My Calls, Actions, Execute */}
+          {userRole === "advisor" && (
+            <>
+              <TabsTrigger value="calls" className="text-xs px-2 py-1">
+                <Headphones className="h-3 w-3 mr-1" />
+                My Calls
+              </TabsTrigger>
+              <TabsTrigger value="actions" className="text-xs px-2 py-1">
+                <Target className="h-3 w-3 mr-1" />
+                Actions
+              </TabsTrigger>
+              <TabsTrigger value="execution" className="text-xs px-2 py-1">
+                <PlayCircle className="h-3 w-3 mr-1" />
+                Execute
+              </TabsTrigger>
+            </>
+          )}
+
+          {/* Admin View: All tabs available */}
+          {userRole === "admin" && (
+            <>
+              <TabsTrigger value="pipeline" className="text-xs px-2 py-1">
+                <Settings2 className="h-3 w-3 mr-1" />
+                Pipeline
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs px-2 py-1">
+                <Activity className="h-3 w-3 mr-1" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="generator" className="text-xs px-2 py-1 ml-3">
+                <Plus className="h-3 w-3 mr-1" />
+                Generator
+              </TabsTrigger>
+              <TabsTrigger value="transcripts" className="text-xs px-2 py-1">
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Transcripts
+              </TabsTrigger>
+              <TabsTrigger value="analysis" className="text-xs px-2 py-1">
+                <ClipboardList className="h-3 w-3 mr-1" />
+                Analysis
+              </TabsTrigger>
+              <TabsTrigger value="plan" className="text-xs px-2 py-1">
+                <Settings className="h-3 w-3 mr-1" />
+                Plan
+              </TabsTrigger>
+              <TabsTrigger value="workflow" className="text-xs px-2 py-1">
+                <WorkflowIcon className="h-3 w-3 mr-1" />
+                Workflow
+              </TabsTrigger>
+              <TabsTrigger value="execution" className="text-xs px-2 py-1">
+                <PlayCircle className="h-3 w-3 mr-1" />
+                Execution
+              </TabsTrigger>
+              <TabsTrigger value="governance" className="text-xs px-2 py-1 ml-3">
+                <Shield className="h-3 w-3 mr-1" />
+                Governance
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
+        {/* Analytics - Available for Leadership and Admin */}
         <TabsContent value="analytics">
           <AnalyticsView />
         </TabsContent>
 
+        {/* Insights - Leadership only */}
+        <TabsContent value="insights">
+          <InsightsView />
+        </TabsContent>
+
+        {/* Governance - Leadership and Admin */}
+        <TabsContent value="governance">
+          <GovernanceSimulator />
+        </TabsContent>
+
+        {/* Dashboard - Supervisor only (reuse Analytics) */}
+        <TabsContent value="dashboard">
+          <AnalyticsView />
+        </TabsContent>
+
+        {/* Approvals - Supervisor only (reuse Workflow) */}
+        <TabsContent value="approvals">
+          <WorkflowView
+            goToPlan={() => navigateToTab("plan")}
+            focusWorkflowId={workflowFocusId}
+          />
+        </TabsContent>
+
+        {/* Reviews - Supervisor only (reuse Analysis) */}
+        <TabsContent value="reviews">
+          <AnalysisView
+            goToPlan={() => navigateToTab("plan")}
+          />
+        </TabsContent>
+
+        {/* Monitoring - Supervisor only (reuse Execution) */}
+        <TabsContent value="monitoring">
+          <ExecutionView />
+        </TabsContent>
+
+        {/* My Calls - Advisor only (reuse Transcripts) */}
+        <TabsContent value="calls">
+          <TranscriptsView
+            goToAnalysis={() => navigateToTab("analysis")}
+          />
+        </TabsContent>
+
+        {/* Actions - Advisor only (reuse Workflow) */}
+        <TabsContent value="actions">
+          <WorkflowView
+            goToPlan={() => navigateToTab("plan")}
+            focusWorkflowId={workflowFocusId}
+          />
+        </TabsContent>
+
+        {/* Execute - Advisor and Admin (reuse Execution) */}
+        <TabsContent value="execution">
+          <ExecutionView />
+        </TabsContent>
+
+        {/* Admin-only tabs */}
+        <TabsContent value="pipeline">
+          <NewPipeline2View />
+        </TabsContent>
+
         <TabsContent value="generator">
-          <TranscriptGeneratorView 
+          <TranscriptGeneratorView
             goToTranscripts={() => navigateToTab("transcripts")}
           />
         </TabsContent>
 
         <TabsContent value="transcripts">
-          <TranscriptsView 
-            onOpenTranscript={handleOpenTranscript}
+          <TranscriptsView
             goToAnalysis={() => navigateToTab("analysis")}
           />
         </TabsContent>
 
         <TabsContent value="analysis">
-          <AnalysisView 
+          <AnalysisView
             goToPlan={() => navigateToTab("plan")}
           />
         </TabsContent>
 
         <TabsContent value="plan">
-          <PlanView 
+          <PlanView
             goToWorkflow={() => navigateToTab("workflow")}
           />
         </TabsContent>
 
         <TabsContent value="workflow">
           <WorkflowView
-            goToPlan={(planId) => navigateToTab("plan")}
+            goToPlan={() => navigateToTab("plan")}
             focusWorkflowId={workflowFocusId}
           />
-        </TabsContent>
-
-        <TabsContent value="execution">
-          <ExecutionView />
-        </TabsContent>
-
-        <TabsContent value="pipeline">
-          <NewPipeline2View />
-        </TabsContent>
-
-        <TabsContent value="governance">
-          <GovernanceSimulator />
         </TabsContent>
       </Tabs>
 
