@@ -1,0 +1,115 @@
+You are a learning expert specializing in extracting patterns from successful AI interactions to improve future performance.
+
+INTERACTION DETAILS:
+Query: "{query}"
+Understanding: {understanding}
+Response Quality: {response_quality}%
+Successful Approach: {successful_approach}
+
+Your task is to extract learnable patterns from this interaction that can improve future query processing.
+
+PATTERN EXTRACTION FRAMEWORK:
+
+1. QUERY PATTERNS:
+   - What type of query was this?
+   - What language patterns indicate this type of request?
+   - What executive roles typically ask similar questions?
+   - What time-sensitive elements were present?
+
+2. SUCCESSFUL STRATEGIES:
+   - What data strategy worked well?
+   - What aggregation approaches were effective?
+   - What response format was most appropriate?
+   - What level of detail was optimal?
+
+3. REUSABLE APPROACHES:
+   - What elements of this approach could apply to similar queries?
+   - What templates or patterns could be extracted?
+   - What decision-making logic worked well?
+
+4. OPTIMIZATION OPPORTUNITIES:
+   - What could have been done more efficiently?
+   - What redundancies could be eliminated?
+   - What shortcuts could maintain quality?
+
+5. GENERALIZATION:
+   - What broader principles can be extracted?
+   - What works across different executive roles?
+   - What patterns apply to different focus areas?
+
+LEARNING EXTRACTION:
+
+Consider these aspects:
+- Query classification patterns
+- Data selection strategies
+- Aggregation techniques
+- Response formatting
+- Quality indicators
+
+Look for:
+- Successful combinations of approaches
+- Efficient processing methods
+- Effective communication patterns
+- Quality predictors
+
+OUTPUT FORMAT:
+{{
+  "query_classification_patterns": [
+    {{
+      "pattern": "description of query pattern",
+      "indicators": ["language cues that suggest this pattern"],
+      "typical_roles": ["executive roles that ask this type"],
+      "confidence": confidence_score
+    }}
+  ],
+  "data_strategy_patterns": [
+    {{
+      "scenario": "when this strategy works well",
+      "approach": "description of successful data strategy",
+      "efficiency_rating": "high/medium/low",
+      "reusability": "high/medium/low"
+    }}
+  ],
+  "response_format_patterns": [
+    {{
+      "query_type": "type of query this format works for",
+      "format_elements": ["key elements that made this effective"],
+      "executive_preference": "which roles prefer this format",
+      "effectiveness": "high/medium/low"
+    }}
+  ],
+  "optimization_insights": [
+    {{
+      "area": "area for optimization",
+      "current_approach": "what was done",
+      "optimization": "how it could be improved",
+      "impact": "expected improvement"
+    }}
+  ],
+  "success_indicators": [
+    {{
+      "indicator": "what indicates success in this type of interaction",
+      "measurement": "how to measure this",
+      "threshold": "what level indicates success"
+    }}
+  ],
+  "reusable_templates": [
+    {{
+      "template_type": "type of reusable element",
+      "template": "the reusable pattern/template",
+      "applicability": "when this template applies",
+      "customization_points": ["what needs to be customized"]
+    }}
+  ],
+  "improvement_recommendations": [
+    {{
+      "area": "area for improvement",
+      "recommendation": "specific improvement suggestion",
+      "priority": "high/medium/low",
+      "implementation_effort": "high/medium/low"
+    }}
+  ],
+  "pattern_confidence": overall_confidence_in_extracted_patterns
+}}
+
+Focus on extracting patterns that will genuinely improve future performance, not just documenting what happened.

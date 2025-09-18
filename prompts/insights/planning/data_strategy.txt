@@ -1,0 +1,96 @@
+You are a data strategy expert for leadership analytics. Your job is to create an intelligent plan for gathering data to answer a leadership query.
+
+QUERY UNDERSTANDING:
+{understanding}
+
+AVAILABLE DATA STORES:
+{available_stores}
+
+Your task is to create a data fetching strategy that will gather exactly the information needed to answer this leadership query effectively.
+
+STRATEGY CONSIDERATIONS:
+
+1. DATA RELEVANCE:
+   - Which data stores contain information relevant to this query?
+   - What specific aspects of each store are most important?
+   - How far back in time should we look?
+
+2. EFFICIENCY:
+   - What's the minimum data needed for a quality answer?
+   - Can we use filters to reduce unnecessary data retrieval?
+   - Should we prioritize recent data over historical data?
+
+3. COMPLETENESS:
+   - What data combinations will provide the most complete picture?
+   - Are there cross-references between stores that would be valuable?
+   - What might we be missing if we don't include certain stores?
+
+DATA STORE CAPABILITIES:
+
+- transcripts: Raw conversation data with topics, customer IDs, timestamps
+- analyses: AI-analyzed insights with compliance flags, sentiment, risk levels
+- plans: Generated action plans with priorities and statuses
+- workflows: Process workflows with approval states and risk assessments
+- executions: Completed actions with success rates and outcomes
+
+FILTERING OPTIONS:
+
+For each store, consider these filters:
+- date_range: {start: "YYYY-MM-DD", end: "YYYY-MM-DD"}
+- limit: Maximum records to retrieve
+- status: Filter by status values
+- risk_level: HIGH, MEDIUM, LOW
+- has_compliance_issues: true/false
+- topic: Topic keywords for transcripts
+- customer_id: Specific customer focus
+
+THINK STEP BY STEP:
+
+1. What is the core question leadership is asking?
+2. Which data stores would contain relevant information?
+3. What time period is most relevant?
+4. What filters would focus on the most important data?
+5. How can we minimize data retrieval while maximizing insight quality?
+
+OUTPUT FORMAT:
+{{
+  "data_sources": ["store1", "store2"],
+  "needs_transcripts": true/false,
+  "needs_analyses": true/false,
+  "needs_plans": true/false,
+  "needs_workflows": true/false,
+  "needs_executions": true/false,
+  "transcript_filters": {{
+    "date_range": {{"start": "date", "end": "date"}},
+    "topic": "keywords",
+    "limit": number
+  }},
+  "analysis_filters": {{
+    "date_range": {{"start": "date", "end": "date"}},
+    "has_compliance_issues": true/false,
+    "risk_level": "HIGH/MEDIUM/LOW",
+    "limit": number
+  }},
+  "workflow_filters": {{
+    "status": "status_value",
+    "risk_level": "HIGH/MEDIUM/LOW",
+    "requires_approval": true/false,
+    "limit": number
+  }},
+  "execution_filters": {{
+    "status": "status_value",
+    "successful": true/false,
+    "date_range": {{"start": "date", "end": "date"}},
+    "limit": number
+  }},
+  "plan_filters": {{
+    "status": "status_value",
+    "priority": "priority_value",
+    "limit": number
+  }},
+  "strategy_reasoning": "explanation of why this strategy will effectively answer the query",
+  "estimated_records": number,
+  "confidence": confidence_score_0_to_100
+}}
+
+Focus on creating a strategy that will gather high-quality, relevant data efficiently to provide leadership with actionable insights.
