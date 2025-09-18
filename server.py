@@ -36,6 +36,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 import uvicorn
 
 # Import service abstractions - NO business logic in routes
@@ -587,6 +588,136 @@ async def get_execution_statistics():
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get execution statistics: {str(e)}")
+
+# ===============================================
+# ORCHESTRATION ENDPOINTS
+# ===============================================
+
+# In-memory storage for orchestration runs (NO FALLBACK - fails if not found)
+orchestration_runs: Dict[str, Dict] = {}
+
+@app.post("/api/v1/orchestrate/run")
+async def orchestrate_run(request: Dict):
+    """Run orchestration pipeline for transcripts - NO FALLBACK.
+
+    Pipeline stages: Transcript → Analysis → Plan → Workflows → Execution
+    """
+    import uuid
+    import asyncio
+    from src.services.orchestration.simple_pipeline import run_simple_pipeline
+
+    # Extract parameters (fail fast if missing)
+    transcript_ids = request.get("transcript_ids", [])
+    auto_approve = request.get("auto_approve", False)
+
+    if not transcript_ids:
+        raise HTTPException(status_code=400, detail="transcript_ids required - NO FALLBACK")
+
+    # Generate run ID
+    run_id = f"RUN_{uuid.uuid4().hex[:8].upper()}"
+
+    # Initialize run status
+    orchestration_runs[run_id] = {
+        "id": run_id,
+        "transcript_ids": transcript_ids,
+        "auto_approve": auto_approve,
+        "status": "RUNNING",
+        "stage": "INITIALIZING",
+        "started_at": datetime.utcnow().isoformat(),
+        "results": [],
+        "errors": []
+    }
+
+    # Run pipeline asynchronously for each transcript
+    async def run_pipelines():
+        for transcript_id in transcript_ids:
+            try:
+                orchestration_runs[run_id]["stage"] = f"PROCESSING_{transcript_id}"
+                # Pass the status dict so SimplePipeline can update it in real-time
+                result = await run_simple_pipeline(
+                    transcript_id,
+                    auto_approve,
+                    status_dict=orchestration_runs[run_id]
+                )
+                orchestration_runs[run_id]["results"].append(result)
+            except Exception as e:
+                # NO FALLBACK - record failure and continue
+                orchestration_runs[run_id]["errors"].append({
+                    "transcript_id": transcript_id,
+                    "error": str(e),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+
+        # Update final status
+        orchestration_runs[run_id]["status"] = "COMPLETED"
+        orchestration_runs[run_id]["stage"] = "COMPLETE"
+        orchestration_runs[run_id]["completed_at"] = datetime.utcnow().isoformat()
+
+        # Calculate summary
+        total_results = len(orchestration_runs[run_id]["results"])
+        total_errors = len(orchestration_runs[run_id]["errors"])
+        orchestration_runs[run_id]["summary"] = {
+            "total_transcripts": len(transcript_ids),
+            "successful": total_results,
+            "failed": total_errors,
+            "success_rate": total_results / len(transcript_ids) if transcript_ids else 0
+        }
+
+    # Start pipeline in background
+    asyncio.create_task(run_pipelines())
+
+    return {
+        "run_id": run_id,
+        "status": "STARTED",
+        "transcript_count": len(transcript_ids),
+        "auto_approve": auto_approve
+    }
+
+@app.get("/api/v1/orchestrate/status/{run_id}")
+async def get_orchestration_status(run_id: str):
+    """Get orchestration run status - NO FALLBACK."""
+    if run_id not in orchestration_runs:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found - NO FALLBACK")
+
+    run = orchestration_runs[run_id]
+
+    # Calculate current progress
+    total_transcripts = len(run["transcript_ids"])
+    processed = len(run["results"]) + len(run["errors"])
+    progress_percentage = (processed / total_transcripts * 100) if total_transcripts > 0 else 0
+
+    return {
+        **run,
+        "progress": {
+            "total": total_transcripts,
+            "processed": processed,
+            "percentage": round(progress_percentage, 2)
+        }
+    }
+
+@app.get("/api/v1/orchestrate/runs")
+async def list_orchestration_runs(
+    limit: Optional[int] = Query(None, description="Limit the number of results"),
+    status: Optional[str] = Query(None, description="Filter by status (RUNNING, COMPLETED)")
+):
+    """List all orchestration runs."""
+    runs = list(orchestration_runs.values())
+
+    # Filter by status if provided
+    if status:
+        runs = [r for r in runs if r["status"] == status]
+
+    # Sort by started_at descending (most recent first)
+    runs.sort(key=lambda x: x["started_at"], reverse=True)
+
+    # Apply limit if provided
+    if limit:
+        runs = runs[:limit]
+
+    return {
+        "runs": runs,
+        "total": len(runs)
+    }
 
 # ===============================================
 # MAIN ENTRY POINT

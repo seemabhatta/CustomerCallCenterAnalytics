@@ -171,7 +171,7 @@ export function ExecutionView() {
           <h3 className="text-sm font-medium">Execution Details: {execution.id}</h3>
         </div>
 
-        <Card>
+        <Card className="panel">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">Execution Record</CardTitle>
           </CardHeader>
@@ -235,7 +235,7 @@ export function ExecutionView() {
         </Card>
 
         {details.audit_trail && details.audit_trail.length > 0 && (
-          <Card>
+          <Card className="panel">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Audit Trail</CardTitle>
             </CardHeader>
@@ -331,16 +331,16 @@ export function ExecutionView() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="border-b bg-slate-50">
+              <thead className="table-header border-b">
                 <tr>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">ID</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">Workflow</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">Type</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">Status</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">Executed By</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">Duration</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">Created</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-600">Actions</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">ID</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Workflow</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Type</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Status</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Executed By</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Duration</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Created</th>
+                  <th className="text-left py-1 px-2 font-medium text-slate-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -352,8 +352,8 @@ export function ExecutionView() {
                   </tr>
                 ) : (
                   filteredExecutions.map((execution: Execution) => (
-                    <tr key={execution.id} className="border-b hover:bg-slate-50">
-                      <td className="py-2 px-3">
+                    <tr key={execution.id} className="table-row-hover">
+                      <td className="py-1 px-2">
                         <button
                           onClick={() => handleExecutionClick(execution.id)}
                           className="font-mono text-blue-600 hover:text-blue-800 hover:underline"
@@ -361,25 +361,25 @@ export function ExecutionView() {
                           {execution.id}
                         </button>
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-1 px-2">
                         <span className="font-mono text-xs">{execution.workflow_id}</span>
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-1 px-2">
                         <Badge variant={getExecutorTypeBadge(execution.executor_type)} className="text-xs">
                           {execution.executor_type}
                         </Badge>
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-1 px-2">
                         <Badge variant={getStatusBadgeVariant(execution.execution_status)} className="text-xs">
                           {execution.execution_status}
                         </Badge>
                       </td>
-                      <td className="py-2 px-3">{execution.executed_by}</td>
-                      <td className="py-2 px-3">{execution.execution_duration_ms}ms</td>
-                      <td className="py-2 px-3">
+                      <td className="py-1 px-2">{execution.executed_by}</td>
+                      <td className="py-1 px-2">{execution.execution_duration_ms}ms</td>
+                      <td className="py-1 px-2">
                         {new Date(execution.created_at).toLocaleDateString()}
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-1 px-2">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -473,7 +473,14 @@ export function ExecutionView() {
 
   // Main component return
   return (
-    <div className="space-y-4">
+    <div className="page-shell">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="view-header">Execution</h2>
+          <p className="text-xs text-slate-500">Track and manage workflow execution status</p>
+        </div>
+      </div>
+
       {/* View Mode Toggle */}
       <div className="flex items-center justify-between">
         <Tabs value={viewMode} onValueChange={(value: "tree" | "table") => setViewMode(value)}>

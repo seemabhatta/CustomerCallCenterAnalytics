@@ -155,11 +155,11 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   // Render plan details view for any selected plan
   if (selectedPlanId && selectedPlan) {
     return (
-      <div className="space-y-2">
+      <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">Plan Details • {selectedPlanId}</h2>
-            <p className="text-xs text-slate-600">Action plan structure and implementation details</p>
+            <h2 className="view-header">Plan Details • {selectedPlanId}</h2>
+            <p className="text-xs text-slate-500">Action plan structure and implementation details</p>
           </div>
           <div className="flex items-center gap-1">
             <Button 
@@ -175,7 +175,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {/* Plan Overview */}
-          <Card>
+          <Card className="panel">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Plan Overview</CardTitle>
             </CardHeader>
@@ -231,7 +231,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
           </Card>
 
           {/* Approval Status */}
-          <Card>
+          <Card className="panel">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Approval Status</CardTitle>
             </CardHeader>
@@ -265,7 +265,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {/* Borrower Plan */}
           {selectedPlan.borrower_plan && (
-            <Card>
+            <Card className="panel">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-medium">Borrower Plan</CardTitle>
               </CardHeader>
@@ -338,7 +338,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
 
           {/* Advisor Plan */}
           {selectedPlan.advisor_plan && (
-            <Card>
+            <Card className="panel">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-medium">Advisor Plan</CardTitle>
               </CardHeader>
@@ -430,7 +430,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
 
           {/* Supervisor Plan */}
           {selectedPlan.supervisor_plan && (
-            <Card>
+            <Card className="panel">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="flex items-center justify-between text-xs font-medium">
                   <span>Supervisor Plan</span>
@@ -509,7 +509,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
 
           {/* Leadership Plan */}
           {selectedPlan.leadership_plan && (
-            <Card>
+            <Card className="panel">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-medium">Leadership Plan</CardTitle>
               </CardHeader>
@@ -591,7 +591,14 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="page-shell">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="view-header">Plans</h2>
+          <p className="text-xs text-slate-500">Strategic action plans generated from transcript analysis</p>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <Input 
           className="w-64 h-7 text-xs" 
@@ -613,9 +620,9 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="panel overflow-hidden">
         <table className="w-full text-xs">
-          <thead className="bg-slate-50 border-b">
+          <thead className="table-header border-b">
             <tr>
               <th className="text-left py-1 px-2 text-xs font-medium">Plan</th>
               <th className="text-left py-1 px-2 text-xs font-medium">Analysis</th>
@@ -630,7 +637,7 @@ export function PlanView({ goToWorkflow }: PlanViewProps) {
           </thead>
           <tbody>
             {filteredPlans.map((plan: any) => (
-              <tr key={plan.plan_id} className="border-b hover:bg-slate-50">
+              <tr key={plan.plan_id} className="table-row-hover">
                 <td className="py-1 px-2 text-xs font-medium text-slate-900">
                   <button 
                     className="underline hover:text-blue-600 text-xs" 

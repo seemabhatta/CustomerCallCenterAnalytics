@@ -1,9 +1,9 @@
 import axios, { AxiosResponse } from 'axios';
-import { 
-  Transcript, 
-  Analysis, 
-  Plan, 
-  Workflow, 
+import {
+  Transcript,
+  Analysis,
+  Plan,
+  Workflow,
   Execution,
   ExecutionDetails,
   TranscriptCreateRequest,
@@ -19,7 +19,10 @@ import {
   SearchParams,
   ListParams,
   FilterParams,
-  ApiError
+  ApiError,
+  OrchestrationRun,
+  OrchestrationRunRequest,
+  OrchestrationRunResponse
 } from '@/types';
 
 // Create axios instance with base configuration
@@ -404,6 +407,30 @@ export const insightsApi = {
   getVisualizationStats: () => 
     apiCall<any>(() => 
       api.get('/api/v1/insights/visualization/stats')
+    ),
+};
+
+// Orchestration API
+export const orchestrationApi = {
+  // Start a new pipeline run
+  runPipeline: (transcript_ids: string[], auto_approve: boolean = false) =>
+    apiCall<OrchestrationRunResponse>(() =>
+      api.post('/api/v1/orchestrate/run', {
+        transcript_ids,
+        auto_approve
+      })
+    ),
+
+  // Get status of a specific run
+  getStatus: (run_id: string) =>
+    apiCall<OrchestrationRun>(() =>
+      api.get(`/api/v1/orchestrate/status/${run_id}`)
+    ),
+
+  // List all orchestration runs
+  listRuns: () =>
+    apiCall<{ runs: OrchestrationRun[] }>(() =>
+      api.get('/api/v1/orchestrate/runs')
     ),
 };
 

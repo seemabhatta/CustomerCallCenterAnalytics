@@ -4,7 +4,7 @@ Connects: Transcript → Analysis → Plan → Workflows → Execution
 NO FALLBACK LOGIC - fails fast on any errors
 """
 import asyncio
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -23,10 +23,11 @@ from src.services.workflow_execution_engine import WorkflowExecutionEngine
 class SimplePipeline:
     """Simple pipeline using native Python async/await without external dependencies"""
     
-    def __init__(self, api_key: str, db_path: str):
+    def __init__(self, api_key: str, db_path: str, status_dict: Optional[Dict[str, Any]] = None):
         self.api_key = api_key
         self.db_path = db_path
         self.current_stage = PipelineStage.TRANSCRIPT
+        self.status_dict = status_dict  # For real-time status updates
         
         # Initialize tracing to ensure OpenAI instrumentation is active
         from src.infrastructure.telemetry import initialize_tracing
@@ -41,7 +42,15 @@ class SimplePipeline:
         self.plan_service = PlanService(api_key, db_path)
         self.workflow_service = WorkflowService(db_path)
         self.execution_engine = WorkflowExecutionEngine(db_path)
-    
+
+    def _update_status(self, stage: str, **kwargs):
+        """Update the status dict with current stage and additional data."""
+        if self.status_dict is not None:
+            self.status_dict["stage"] = stage
+            # Update any additional fields passed as kwargs
+            for key, value in kwargs.items():
+                self.status_dict[key] = value
+
     async def run_complete_pipeline(
         self, 
         transcript_id: str, 
@@ -80,6 +89,9 @@ class SimplePipeline:
 
                     analysis_span.set_attribute("analysis_id", analysis["id"])
                     add_span_event("stage.completed", stage="analysis", analysis_id=analysis["id"])
+
+                    # Update status for real-time tracking
+                    self._update_status("ANALYSIS_COMPLETED", analysis_id=analysis["id"])
                 
                 # Stage 2: Create Plan (1:1)
                 with tracer.start_as_current_span("pipeline.stage.plan") as plan_span:
@@ -87,9 +99,12 @@ class SimplePipeline:
                     add_span_event("stage.started", stage="plan")
 
                     plan = await self._create_plan_task(analysis["id"])
-                    
+
                     plan_span.set_attribute("plan_id", plan["id"])
                     add_span_event("stage.completed", stage="plan", plan_id=plan["id"])
+
+                    # Update status for real-time tracking
+                    self._update_status("PLAN_COMPLETED", plan_id=plan["id"])
                 
                 # Stage 3: Extract Workflows (1:n) - THE BOTTLENECK
                 with tracer.start_as_current_span("pipeline.stage.workflows") as workflows_span:
@@ -101,6 +116,9 @@ class SimplePipeline:
                     workflows_span.set_attribute("workflow_count", len(workflows))
                     workflows_span.set_attribute("plan_id", plan["id"])
                     add_span_event("stage.completed", stage="workflows", workflow_count=len(workflows))
+
+                    # Update status for real-time tracking
+                    self._update_status("WORKFLOWS_COMPLETED", workflow_count=len(workflows))
             
                 # Stage 4: Process approvals
                 with tracer.start_as_current_span("pipeline.stage.approval") as approval_span:
@@ -156,11 +174,17 @@ class SimplePipeline:
                     
                     execution_span.set_attribute("successful_executions", len(execution_results))
                     execution_span.set_attribute("failed_executions", len(failed_executions))
-                    add_span_event("stage.completed", stage="execution", 
+                    add_span_event("stage.completed", stage="execution",
                                   successful=len(execution_results), failed=len(failed_executions))
-                
+
+                    # Update status for real-time tracking
+                    self._update_status("EXECUTION_COMPLETED",
+                                      executed_count=len(execution_results),
+                                      failed_count=len(failed_executions))
+
                 # Stage 6: Complete
                 self.current_stage = PipelineStage.COMPLETE
+                self._update_status("COMPLETE")
             
                 # Build final result
                 pipeline_result = {
@@ -307,7 +331,8 @@ async def run_simple_pipeline(
     transcript_id: str,
     auto_approve: bool = False,
     api_key: str = None,
-    db_path: str = "data/call_center.db"
+    db_path: str = "data/call_center.db",
+    status_dict: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Convenience function to run the simple pipeline.
@@ -327,5 +352,5 @@ async def run_simple_pipeline(
     if not api_key:
         raise ValueError("OpenAI API key required")
     
-    pipeline = SimplePipeline(api_key, db_path)
+    pipeline = SimplePipeline(api_key, db_path, status_dict=status_dict)
     return await pipeline.run_complete_pipeline(transcript_id, auto_approve)

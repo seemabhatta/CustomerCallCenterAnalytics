@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { workflowApi } from '@/api/client';
 import { WorkflowFilterParams, GranularWorkflow, Workflow } from '@/types';
@@ -18,13 +18,14 @@ import {
 
 interface WorkflowViewProps {
   goToPlan?: (planId: string) => void;
+  focusWorkflowId?: string | null;
 }
 
-export function WorkflowView({ goToPlan }: WorkflowViewProps) {
+export function WorkflowView({ goToPlan, focusWorkflowId }: WorkflowViewProps) {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [riskLevelFilter, setRiskLevelFilter] = useState<string>("");
   const [limitFilter, setLimitFilter] = useState<string>("50");
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(focusWorkflowId ?? null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
@@ -83,13 +84,13 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   const isGranularWorkflow = (workflow: any): workflow is GranularWorkflow =>
     Boolean(workflow.workflow_data?.steps);
 
-  // Helper function for priority colors
-  const getPriorityColor = (priority: string) => {
+  // Helper function for priority badge variants
+  const getPriorityVariant = (priority: string) => {
     switch (priority?.toLowerCase()) {
-      case 'high': return 'bg-red-100 text-red-700 border-red-200';
-      case 'medium': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'low': return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+      case 'high': return 'danger';
+      case 'medium': return 'warning';
+      case 'low': return 'success';
+      default: return 'info';
     }
   };
 
@@ -117,6 +118,12 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     queryFn: () => workflowApi.getById(selectedWorkflowId!),
     enabled: !!selectedWorkflowId,
   });
+
+  useEffect(() => {
+    if (focusWorkflowId) {
+      setSelectedWorkflowId(focusWorkflowId);
+    }
+  }, [focusWorkflowId]);
 
   // Delete workflow mutation
   const deleteWorkflowMutation = useMutation({
@@ -352,7 +359,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
     <Card>
       <CardHeader className="py-2 px-3">
         <CardTitle className="text-xs font-medium flex items-center gap-2">
-          <Badge className={`text-xs h-5 ${getPriorityColor(workflow.workflow_data?.priority || 'normal')}`}>
+          <Badge variant={getPriorityVariant(workflow.workflow_data?.priority || 'normal')} className="text-xs h-5">
             {(workflow.workflow_data?.priority || 'normal').toUpperCase()}
           </Badge>
           Action Details
@@ -554,11 +561,11 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
   if (selectedWorkflowId && selectedWorkflow) {
     const workflow = selectedWorkflow as any; // Cast to any for comprehensive API fields
     return (
-      <div className="space-y-2">
+      <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">Workflow Details • {selectedWorkflowId}</h2>
-            <p className="text-xs text-slate-600">Comprehensive workflow intelligence and execution details</p>
+            <h2 className="view-header">Workflow Details • {selectedWorkflowId}</h2>
+            <p className="text-xs text-slate-500">Comprehensive workflow intelligence and execution details</p>
           </div>
           <div className="flex items-center gap-1">
             <Button 
@@ -796,7 +803,7 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
               <div className="space-y-2 text-xs">
                 <div>
                   <div className="text-slate-600">Priority</div>
-                  <Badge variant={workflow.workflow_data?.priority === 'high' ? 'destructive' : 'secondary'} className="text-xs h-5">
+                  <Badge variant={getPriorityVariant(workflow.workflow_data?.priority || 'normal')} className="text-xs h-5">
                     {workflow.workflow_data?.priority || 'normal'}
                   </Badge>
                 </div>
@@ -1107,12 +1114,12 @@ export function WorkflowView({ goToPlan }: WorkflowViewProps) {
 
 
   return (
-    <div className="space-y-3">
+    <div className="page-shell">
       {/* Header with filters */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-bold">Workflow Management</h2>
-          <p className="text-xs text-slate-600">Orchestration and approval processes for action plans</p>
+          <h2 className="view-header">Workflow Management</h2>
+          <p className="text-xs text-slate-500">Orchestration and approval processes for action plans</p>
         </div>
         <div className="flex items-center gap-1">
           <Button onClick={() => refetch()} variant="outline" size="sm" className="h-7 text-xs px-2">

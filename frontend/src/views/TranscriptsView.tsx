@@ -159,11 +159,11 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
   // Render live transcript view for any selected transcript
   if (selectedTranscriptId && selectedTranscript) {
     return (
-      <div className="space-y-2">
+      <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">Live Transcript • {selectedTranscriptId}</h2>
-            <p className="text-xs text-slate-600">Customer transcript details and conversation flow</p>
+            <h2 className="view-header">Live Transcript • {selectedTranscriptId}</h2>
+            <p className="text-xs text-slate-500">Customer transcript details and conversation flow</p>
           </div>
           <div className="flex items-center gap-1">
             <Button 
@@ -177,9 +177,9 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
           </div>
         </div>
 
-        <Card>
+        <Card className="panel">
           <CardHeader className="py-2 px-3">
-            <CardTitle className="flex items-center justify-between text-xs">
+            <CardTitle className="flex items-center justify-between text-sm font-bold">
               <span>Transcript Details</span>
               <Badge variant="secondary" className="text-xs px-1 py-0">
                 Connected to GET /api/v1/transcripts/{selectedTranscriptId}
@@ -247,7 +247,14 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="page-shell">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="view-header">Transcripts</h2>
+          <p className="text-xs text-slate-500">View and manage customer service transcript records</p>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <Input 
           className="w-64 h-7 text-xs" 
@@ -269,9 +276,9 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="panel overflow-hidden">
         <table className="w-full text-xs">
-          <thead className="bg-slate-50 border-b">
+          <thead className="table-header border-b">
             <tr>
               <th className="text-left py-1 px-2 text-xs font-medium">Transcript</th>
               <th className="text-left py-1 px-2 text-xs font-medium">Customer</th>
@@ -286,7 +293,7 @@ export function TranscriptsView({ goToAnalysis }: TranscriptsViewProps) {
           </thead>
           <tbody>
             {filteredTranscripts.map((transcript: Transcript) => (
-              <tr key={transcript.id} className="border-b hover:bg-slate-50">
+              <tr key={transcript.id} className="table-row-hover">
                 <td className="py-1 px-2 text-xs font-medium text-slate-900">
                   <button 
                     className="underline hover:text-blue-600 text-xs" 

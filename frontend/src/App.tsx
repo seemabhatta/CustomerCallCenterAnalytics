@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
   MessageSquare,
@@ -10,13 +8,8 @@ import {
   Settings,
   Workflow as WorkflowIcon,
   PlayCircle,
-  Lightbulb,
   Activity,
-  Rocket,
   Settings2,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldCheck,
   Plus,
 } from "lucide-react";
 
@@ -25,38 +18,23 @@ import { AnalysisView } from "@/views/AnalysisView";
 import { PlanView } from "@/views/PlanView";
 import { WorkflowView } from "@/views/WorkflowView";
 import { ExecutionView } from "@/views/ExecutionView";
-import { Dashboard } from "@/views/Dashboard";
-import { InsightsView } from "@/views/InsightsView";
-import { RunsExplorer } from "@/views/RunsExplorer";
 import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
+import { NewPipeline2View } from "@/views/NewPipeline2View";
+import { AnalyticsView } from "@/views/AnalyticsView";
 
 import { TabValue, Environment } from "@/types";
 
-// Mock data - will be replaced with real API calls
-const mockRun = {
-  id: "RUN_CALL_27FF315B",
-  started_at: "2025-09-12T16:41:34Z",
-  durations: [
-    { stage: "analysis", seconds: 9.7 },
-    { stage: "plan", seconds: 24.4 },
-    { stage: "workflows", seconds: 110.4 },
-    { stage: "approval", seconds: 0.0 },
-    { stage: "execution", seconds: 0.0 },
-  ],
-  funnel: { generated: 10, approved: 0, executed: 0, failed: 0 },
-};
-
 export default function App() {
-  const [tab, setTab] = useState<TabValue>("dashboard");
+  const [tab, setTab] = useState<TabValue>("pipeline");
   const [env, setEnv] = useState<Environment>("dev");
+  const [workflowFocusId, setWorkflowFocusId] = useState<string | null>(null);
 
   // Dialog state for transcript details
   const [isTranscriptDialogOpen, setIsTranscriptDialogOpen] = useState(false);
   const [activeTranscriptId, setActiveTranscriptId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load initial data for environment
     console.log(`Environment changed to: ${env}`);
   }, [env]);
 
@@ -69,19 +47,39 @@ export default function App() {
     setTab(tabValue);
   };
 
+  useEffect(() => {
+    const handleWorkflowOpen = (event: Event) => {
+      const detail = (event as CustomEvent<{ workflowId?: string }>).detail;
+      if (detail?.workflowId) {
+        setWorkflowFocusId(detail.workflowId);
+        setTab("workflow");
+      }
+    };
+
+    window.addEventListener(
+      "ccan:open-workflow-details",
+      handleWorkflowOpen as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "ccan:open-workflow-details",
+        handleWorkflowOpen as EventListener
+      );
+    };
+  }, []);
+
   return (
-    <div className="p-6 space-y-6 min-h-screen bg-background">
+    <div className="page-shell min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="app-header">
         <div>
-          <h1 className="text-xl font-semibold">Customer Call Center Analytics</h1>
-          <p className="text-sm text-slate-500">
-            Linear Tables: Transcript → Analysis → Plan → Workflow → Execution
-          </p>
+          <h1 className="app-header-title">Customer Call Center Analytics</h1>
+          <p className="app-header-subtitle">AI-powered mortgage servicing analytics and workflow automation</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={env} onValueChange={(value: Environment) => setEnv(value)}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="env-selector">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -95,45 +93,44 @@ export default function App() {
 
       {/* Main Content */}
       <Tabs value={tab} onValueChange={(value: TabValue) => setTab(value)}>
-        <TabsList className="inline-flex flex-wrap gap-2">
-          <TabsTrigger value="dashboard">
-            <Activity className="h-3.5 w-3.5 mr-1" />
-            Dashboard
+        <TabsList className="inline-flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg text-xs">
+          <TabsTrigger value="pipeline" className="text-xs px-2 py-1">
+            <Settings2 className="h-3 w-3 mr-1" />
+            Pipeline
           </TabsTrigger>
-          <TabsTrigger value="generator">
-            <Plus className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="analytics" className="text-xs px-2 py-1">
+            <Activity className="h-3 w-3 mr-1" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="generator" className="text-xs px-2 py-1 ml-3">
+            <Plus className="h-3 w-3 mr-1" />
             Generator
           </TabsTrigger>
-          <TabsTrigger value="transcripts">
-            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="transcripts" className="text-xs px-2 py-1">
+            <MessageSquare className="h-3 w-3 mr-1" />
             Transcripts
           </TabsTrigger>
-          <TabsTrigger value="analysis">
-            <ClipboardList className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="analysis" className="text-xs px-2 py-1">
+            <ClipboardList className="h-3 w-3 mr-1" />
             Analysis
           </TabsTrigger>
-          <TabsTrigger value="plan">
-            <Settings className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="plan" className="text-xs px-2 py-1">
+            <Settings className="h-3 w-3 mr-1" />
             Plan
           </TabsTrigger>
-          <TabsTrigger value="workflow">
-            <WorkflowIcon className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="workflow" className="text-xs px-2 py-1">
+            <WorkflowIcon className="h-3 w-3 mr-1" />
             Workflow
           </TabsTrigger>
-          <TabsTrigger value="execution">
-            <PlayCircle className="h-3.5 w-3.5 mr-1" />
+          <TabsTrigger value="execution" className="text-xs px-2 py-1">
+            <PlayCircle className="h-3 w-3 mr-1" />
             Execution
           </TabsTrigger>
-          <TabsTrigger value="insights">
-            <Lightbulb className="h-3.5 w-3.5 mr-1" />
-            Insights
-          </TabsTrigger>
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-          <TabsTrigger value="governance">Governance</TabsTrigger>
+          <TabsTrigger value="governance" className="text-xs px-2 py-1 ml-3">Governance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard">
-          <Dashboard />
+        <TabsContent value="analytics">
+          <AnalyticsView />
         </TabsContent>
 
         <TabsContent value="generator">
@@ -162,19 +159,18 @@ export default function App() {
         </TabsContent>
 
         <TabsContent value="workflow">
-          <WorkflowView goToPlan={(planId) => navigateToTab("plan")} />
+          <WorkflowView
+            goToPlan={(planId) => navigateToTab("plan")}
+            focusWorkflowId={workflowFocusId}
+          />
         </TabsContent>
 
         <TabsContent value="execution">
           <ExecutionView />
         </TabsContent>
 
-        <TabsContent value="insights">
-          <InsightsView />
-        </TabsContent>
-
-        <TabsContent value="runs">
-          <RunsExplorer />
+        <TabsContent value="pipeline">
+          <NewPipeline2View />
         </TabsContent>
 
         <TabsContent value="governance">

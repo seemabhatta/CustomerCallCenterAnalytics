@@ -91,21 +91,21 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
 
   if (showSuccess && (createdTranscriptId || createdTranscripts)) {
     return (
-      <div className="space-y-6">
+      <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Transcript Generator</h2>
-            <p className="text-muted-foreground">
+            <h2 className="view-header">Transcript Generator</h2>
+            <p className="text-xs text-slate-500">
               Generate new customer service transcripts for analysis
             </p>
           </div>
         </div>
 
-        <Card>
+        <Card className="panel">
           <CardContent className="pt-6">
-            <div className="border border-green-200 bg-green-50 p-4 rounded-lg flex items-start gap-3">
+            <div className="border border-slate-200 bg-slate-50 p-3 rounded-lg flex items-start gap-2">
               <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-              <div className="text-green-800">
+              <div className="text-slate-700">
                 {createdTranscriptId ? (
                   <>
                     <strong>Transcript created successfully!</strong>
@@ -157,21 +157,21 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Transcript Generator</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-lg font-semibold text-slate-900">Transcript Generator</h2>
+          <p className="text-xs text-slate-500">
             Generate new customer service transcripts for analysis
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="panel">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm font-bold">
+              <Plus className="h-4 w-4" />
               Create Single Transcript
             </CardTitle>
             <CardDescription>
@@ -179,19 +179,19 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {createTranscriptMutation.error && (
-                <div className="border border-red-200 bg-red-50 p-4 rounded-lg flex items-start gap-3">
+                <div className="border border-slate-200 bg-slate-50 p-3 rounded-lg flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
-                  <div className="text-red-800">
+                  <div className="text-slate-700">
                     Failed to create transcript. Please try again.
                   </div>
                 </div>
               )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="topic" className="text-sm font-medium">Topic</label>
+                <label htmlFor="topic" className="text-xs font-medium">Topic</label>
                 <Select
                   value={formData.topic}
                   onValueChange={(value) => handleInputChange('topic', value)}
@@ -213,7 +213,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="urgency" className="text-sm font-medium">Urgency Level</label>
+                <label htmlFor="urgency" className="text-xs font-medium">Urgency Level</label>
                 <Select
                   value={formData.urgency}
                   onValueChange={(value) => handleInputChange('urgency', value)}
@@ -231,7 +231,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="customer_sentiment" className="text-sm font-medium">Customer Sentiment</label>
+                <label htmlFor="customer_sentiment" className="text-xs font-medium">Customer Sentiment</label>
                 <Select
                   value={formData.customer_sentiment}
                   onValueChange={(value) => handleInputChange('customer_sentiment', value)}
@@ -249,7 +249,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="customer_id" className="text-sm font-medium">Customer ID</label>
+                <label htmlFor="customer_id" className="text-xs font-medium">Customer ID</label>
                 <Input
                   id="customer_id"
                   value={formData.customer_id}
@@ -267,7 +267,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                 onChange={(e) => handleInputChange('financial_impact', e.target.checked)}
                 className="rounded border-gray-300"
               />
-              <label htmlFor="financial_impact" className="text-sm font-medium">Financial Impact</label>
+              <label htmlFor="financial_impact" className="text-xs font-medium">Financial Impact</label>
               <span className="text-sm text-gray-500">
                 Indicates if this transcript involves financial matters
               </span>
@@ -281,7 +281,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                 onChange={(e) => handleInputChange('store', e.target.checked)}
                 className="rounded border-gray-300"
               />
-              <label htmlFor="store" className="text-sm font-medium">Store Transcript</label>
+              <label htmlFor="store" className="text-xs font-medium">Store Transcript</label>
               <span className="text-sm text-gray-500">
                 Save the generated transcript to the database
               </span>
@@ -298,10 +298,10 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
         </CardContent>
       </Card>
 
-        <Card>
+        <Card className="panel">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm font-bold">
+              <Plus className="h-4 w-4" />
               Bulk Generate Transcripts
             </CardTitle>
             <CardDescription>
@@ -309,18 +309,18 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleBulkSubmit} className="space-y-6">
+            <form onSubmit={handleBulkSubmit} className="space-y-4">
               {createBulkTranscriptsMutation.error && (
-                <div className="border border-red-200 bg-red-50 p-4 rounded-lg flex items-start gap-3">
+                <div className="border border-slate-200 bg-slate-50 p-3 rounded-lg flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
-                  <div className="text-red-800">
+                  <div className="text-slate-700">
                     Failed to create bulk transcripts. Please try again.
                   </div>
                 </div>
               )}
 
               <div className="space-y-2">
-                <label htmlFor="bulk_count" className="text-sm font-medium">Number of Transcripts</label>
+                <label htmlFor="bulk_count" className="text-xs font-medium">Number of Transcripts</label>
                 <Input
                   id="bulk_count"
                   type="number"
@@ -336,7 +336,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                <h4 className="text-sm font-medium">Template Configuration</h4>
+                <h4 className="text-xs font-medium">Template Configuration</h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="font-medium">Topic:</span> {formData.topic?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'N/A'}

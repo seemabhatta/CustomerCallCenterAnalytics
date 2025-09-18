@@ -94,18 +94,18 @@ export function GovernanceSimulator() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="rounded-2xl">
+    <div className="page-shell">
+      <Card className="panel">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Approval Policy — What‑if Simulator</CardTitle>
-          <p className="text-sm text-slate-600">
+          <CardTitle className="text-xs font-bold uppercase tracking-wide text-slate-500">Approval Policy — What‑if Simulator</CardTitle>
+          <p className="text-xs text-slate-600">
             Configure approval rules and see projected execution rates in real-time.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Auto-approval Settings */}
           <div>
-            <h3 className="text-sm font-medium mb-3">Auto-Approval Rules</h3>
+            <h3 className="section-header mb-3">Auto-Approval Rules</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Checkbox 
                 checked={autoLow} 
@@ -139,7 +139,7 @@ export function GovernanceSimulator() {
 
           {/* Risk Thresholds */}
           <div>
-            <h3 className="text-sm font-medium mb-3">Risk Thresholds</h3>
+            <h3 className="section-header mb-3">Risk Thresholds</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-xs text-slate-500">Risk Score Threshold</label>
@@ -170,26 +170,26 @@ export function GovernanceSimulator() {
 
           {/* Simulation Results */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium mb-3">Simulation Results</h3>
+            <h3 className="section-header mb-3">Simulation Results</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{projected}</div>
+                <div className="text-lg metric-value text-slate-700">{projected}</div>
                 <div className="text-xs text-slate-500">Projected Executed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-slate-600">
+                <div className="text-lg metric-value text-slate-700">
                   {mockRun.funnel.executed}
                 </div>
                 <div className="text-xs text-slate-500">Baseline Executed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-lg metric-value text-slate-700">
                   +{projected - mockRun.funnel.executed}
                 </div>
                 <div className="text-xs text-slate-500">Improvement</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-xl metric-percentage text-slate-900">
                   {((projected / mockRun.funnel.generated) * 100).toFixed(0)}%
                 </div>
                 <div className="text-xs text-slate-500">Execution Rate</div>
@@ -199,14 +199,14 @@ export function GovernanceSimulator() {
 
           {/* Current Policy Summary */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-medium mb-3">Current Policy Summary</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Current Policy Summary</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-xs text-slate-500 mb-1">Auto-Approved</div>
                 <div className="space-y-1">
-                  {autoLow && <Badge variant="secondary" className="mr-1">LOW (All)</Badge>}
-                  {autoMediumBorrower && <Badge variant="default" className="mr-1">MEDIUM (Borrower)</Badge>}
-                  {autoMediumAdvisor && <Badge variant="default" className="mr-1">MEDIUM (Advisor)</Badge>}
+                  {autoLow && <Badge variant="success" className="mr-1">LOW (All)</Badge>}
+                  {autoMediumBorrower && <Badge variant="warning" className="mr-1">MEDIUM (Borrower)</Badge>}
+                  {autoMediumAdvisor && <Badge variant="warning" className="mr-1">MEDIUM (Advisor)</Badge>}
                   {!autoLow && !autoMediumBorrower && !autoMediumAdvisor && (
                     <span className="text-slate-400">None</span>
                   )}
@@ -215,11 +215,11 @@ export function GovernanceSimulator() {
               <div>
                 <div className="text-xs text-slate-500 mb-1">Manual Approval Required</div>
                 <div className="space-y-1">
-                  <Badge variant="destructive" className="mr-1">
+                  <Badge variant="danger" className="mr-1">
                     HIGH ({requireTwoPersonHigh ? "2-person" : "1-person"})
                   </Badge>
                   {!autoMediumBorrower && (
-                    <Badge variant="outline" className="mr-1">MEDIUM (Others)</Badge>
+                    <Badge variant="info" className="mr-1">MEDIUM (Others)</Badge>
                   )}
                 </div>
               </div>
@@ -231,10 +231,10 @@ export function GovernanceSimulator() {
             <Button variant="outline" onClick={handlePreviewPolicy}>
               Preview Policy JSON
             </Button>
-            <Button onClick={handleSavePolicy}>
+            <Button onClick={handleSavePolicy} className="btn-success">
               Save Policy
             </Button>
-            <Button variant="outline" onClick={handleResetToDefaults}>
+            <Button variant="outline" onClick={handleResetToDefaults} className="btn-warning">
               Reset to Defaults
             </Button>
           </div>
@@ -242,29 +242,29 @@ export function GovernanceSimulator() {
       </Card>
 
       {/* Policy Impact Analysis */}
-      <Card className="rounded-2xl">
+      <Card className="panel">
         <CardHeader className="pb-4">
-          <CardTitle className="text-sm">Policy Impact Analysis</CardTitle>
+          <CardTitle className="text-xs font-semibold uppercase tracking-wide text-slate-500">Policy Impact Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-lg font-semibold text-green-700">
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-lg font-semibold text-slate-700">
                 {Math.round(((projected - mockRun.funnel.executed) / mockRun.funnel.generated) * 100)}%
               </div>
-              <div className="text-sm text-green-600">Efficiency Gain</div>
+              <div className="text-sm text-slate-600">Efficiency Gain</div>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-lg font-semibold text-blue-700">
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-lg font-semibold text-slate-700">
                 {mockRun.funnel.generated - projected}
               </div>
-              <div className="text-sm text-blue-600">Manual Reviews</div>
+              <div className="text-sm text-slate-600">Manual Reviews</div>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-lg font-semibold text-purple-700">
+            <div className="text-center p-4 bg-slate-50 rounded-lg">
+              <div className="text-lg font-semibold text-slate-700">
                 {Math.round((projected / mockRun.funnel.generated) * 1440)}
               </div>
-              <div className="text-sm text-purple-600">Minutes Saved/Day</div>
+              <div className="text-sm text-slate-600">Minutes Saved/Day</div>
             </div>
           </div>
         </CardContent>

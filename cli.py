@@ -298,6 +298,28 @@ class CLIRestClient:
         """Get system metrics via GET /api/v1/metrics."""
         return self._make_request('GET', '/api/v1/metrics')
 
+    # Orchestration operations
+    def orchestrate_run(self, transcript_ids: List[str], auto_approve: bool = False) -> Dict[str, Any]:
+        """Start orchestration pipeline via POST /api/v1/orchestrate/run."""
+        json_data = {
+            'transcript_ids': transcript_ids,
+            'auto_approve': auto_approve
+        }
+        return self._make_request('POST', '/api/v1/orchestrate/run', json_data=json_data, timeout=10)
+
+    def get_orchestration_status(self, run_id: str) -> Dict[str, Any]:
+        """Get orchestration run status via GET /api/v1/orchestrate/status/{run_id}."""
+        return self._make_request('GET', f'/api/v1/orchestrate/status/{run_id}')
+
+    def list_orchestration_runs(self, limit: Optional[int] = None, status: Optional[str] = None) -> Dict[str, Any]:
+        """List orchestration runs via GET /api/v1/orchestrate/runs."""
+        params = {}
+        if limit:
+            params['limit'] = limit
+        if status:
+            params['status'] = status
+        return self._make_request('GET', '/api/v1/orchestrate/runs', params=params)
+
 
 def get_client() -> CLIRestClient:
     """Get configured REST client instance."""
@@ -1706,60 +1728,117 @@ def orchestrate_run(
 ):
     """Run complete orchestration pipeline: Transcript → Analysis → Plan → Workflows → Execution."""
     try:
+        client = get_client()
+
         console.print(f"🚀 [bold cyan]Starting orchestration pipeline for transcript: {transcript_id}[/bold cyan]")
 
-        # Import here to avoid issues with missing dependencies
-        import asyncio
-        from src.services.orchestration.simple_pipeline import run_simple_pipeline
-
-        # Run the pipeline
         if verbose:
             console.print("🔄 Pipeline stages: Transcript → Analysis → Plan → Workflows → Execution")
 
-        result = asyncio.run(run_simple_pipeline(
-            transcript_id=transcript_id,
-            auto_approve=auto_approve
-        ))
+        # Start orchestration via API
+        start_result = client.orchestrate_run([transcript_id], auto_approve)
+        run_id = start_result["run_id"]
 
-        # Display pipeline results in table format
+        console.print(f"📝 [bold blue]Run ID: {run_id}[/bold blue]")
+        console.print(f"🚀 Status: {start_result['status']}")
+
+        # Poll for completion with progress updates
+        import time
+        last_stage = ""
+        while True:
+            status = client.get_orchestration_status(run_id)
+
+            current_stage = status.get("stage", "")
+            if current_stage != last_stage:
+                # Display user-friendly stage messages
+                if current_stage == "ANALYSIS_COMPLETED":
+                    analysis_id = status.get("analysis_id", "N/A")
+                    console.print(f"✅ [bold green]Analysis Completed[/bold green] (ID: {analysis_id})")
+                elif current_stage == "PLAN_COMPLETED":
+                    plan_id = status.get("plan_id", "N/A")
+                    console.print(f"✅ [bold green]Plan Completed[/bold green] (ID: {plan_id})")
+                elif current_stage == "WORKFLOWS_COMPLETED":
+                    workflow_count = status.get("workflow_count", 0)
+                    console.print(f"✅ [bold green]Workflows Generated[/bold green] ({workflow_count} items)")
+                elif current_stage == "EXECUTION_COMPLETED":
+                    executed = status.get("executed_count", 0)
+                    failed = status.get("failed_count", 0)
+                    console.print(f"✅ [bold green]Execution Completed[/bold green] ({executed} successful, {failed} failed)")
+                elif current_stage == "COMPLETE":
+                    console.print(f"🎉 [bold green]Pipeline Complete![/bold green]")
+                elif verbose:
+                    console.print(f"🔄 [dim]Stage: {current_stage}[/dim]")
+                last_stage = current_stage
+
+            if status["status"] == "COMPLETED":
+                break
+            elif status["status"] == "FAILED":
+                print_error("Pipeline failed!")
+                raise typer.Exit(1)
+
+            # Show progress if available
+            progress = status.get("progress", {})
+            if progress.get("percentage") is not None:
+                console.print(f"⏳ Progress: {progress['percentage']:.1f}% ({progress['processed']}/{progress['total']})")
+
+            time.sleep(2)  # Poll every 2 seconds
+
+        # Get final results
+        final_status = client.get_orchestration_status(run_id)
+
+        # Display results in table format
         table = Table(title="Pipeline Execution Results")
         table.add_column("Stage", style="cyan")
         table.add_column("Result", style="green")
 
-        table.add_row("Transcript ID", result["transcript_id"])
-        table.add_row("Analysis ID", result["analysis_id"])
-        table.add_row("Plan ID", result["plan_id"])
-        table.add_row("Workflows Generated", str(result["workflow_count"]))
-        table.add_row("Workflows Approved", str(result.get("approved_count", "N/A")))
-        table.add_row("Workflows Executed", str(result["executed_count"]))
-        table.add_row("Workflows Failed", str(result.get("failed_count", 0)))
-        table.add_row("Stage", result["stage"])
+        table.add_row("Run ID", run_id)
+        table.add_row("Transcript ID", transcript_id)
+        table.add_row("Status", final_status["status"])
+        table.add_row("Final Stage", final_status["stage"])
 
-        if result.get("partial_success"):
-            table.add_row("Status", "⚠️ Partial Success")
-        elif result["success"]:
-            table.add_row("Status", "✅ Success")
-        else:
-            table.add_row("Status", "❌ Failed")
+        # Results summary
+        results = final_status.get("results", [])
+        errors = final_status.get("errors", [])
+        summary = final_status.get("summary", {})
+
+        table.add_row("Successful Results", str(len(results)))
+        table.add_row("Failed Results", str(len(errors)))
+
+        if summary:
+            table.add_row("Success Rate", f"{summary.get('success_rate', 0)*100:.0f}%")
 
         console.print(table)
 
-        # Show execution summary if verbose
-        if verbose and "execution_summary" in result:
-            summary = result["execution_summary"]
-            console.print(f"\n📊 [bold blue]Execution Summary:[/bold blue]")
-            console.print(f"   Total tasks: {summary['total_tasks']}")
-            console.print(f"   Completed: {summary['completed']}")
-            console.print(f"   Failed: {summary['failed']}")
-            console.print(f"   Success rate: {summary['success_rate']:.2%}")
+        # Show individual results if verbose
+        if verbose and results:
+            console.print(f"\n📊 [bold blue]Pipeline Results:[/bold blue]")
+            for i, result in enumerate(results, 1):
+                console.print(f"   Result {i}:")
+                console.print(f"     Transcript: {result.get('transcript_id')}")
+                console.print(f"     Analysis: {result.get('analysis_id')}")
+                console.print(f"     Plan: {result.get('plan_id')}")
+                console.print(f"     Workflows: {result.get('workflow_count', 0)}")
+                console.print(f"     Executed: {result.get('executed_count', 0)}")
 
-        if result.get("partial_success"):
-            print_warning(f"Pipeline completed with partial success! Executed {result['executed_count']}, failed {result.get('failed_count', 0)} workflows")
-        elif result["success"]:
-            print_success(f"Pipeline completed successfully! Executed {result['executed_count']} workflows")
-        else:
-            print_error(f"Pipeline failed! Executed {result['executed_count']}, failed {result.get('failed_count', 0)} workflows")
+        # Show errors if any
+        if errors:
+            console.print(f"\n❌ [bold red]Errors:[/bold red]")
+            for error in errors:
+                console.print(f"   Transcript {error.get('transcript_id')}: {error.get('error')}")
 
+        # Final status message
+        if summary:
+            success_rate = summary.get('success_rate', 0)
+            if success_rate == 1.0:
+                print_success(f"Pipeline completed successfully! Success rate: 100%")
+            elif success_rate > 0.5:
+                print_warning(f"Pipeline completed with partial success! Success rate: {success_rate*100:.0f}%")
+            else:
+                print_error(f"Pipeline failed! Success rate: {success_rate*100:.0f}%")
+
+    except CLIError as e:
+        print_error(f"Pipeline orchestration failed: {str(e)}")
+        raise typer.Exit(1)
     except Exception as e:
         print_error(f"Pipeline orchestration failed: {str(e)}")
         if verbose:

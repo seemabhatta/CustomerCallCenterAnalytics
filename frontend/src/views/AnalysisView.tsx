@@ -116,9 +116,9 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   };
 
   const getUrgencyBadgeVariant = (urgency: string) => {
-    if (urgency === 'high') return 'destructive';
-    if (urgency === 'medium') return 'default';
-    return 'secondary';
+    if (urgency === 'high') return 'danger';
+    if (urgency === 'medium') return 'warning';
+    return 'success';
   };
 
   if (isLoading) {
@@ -146,11 +146,11 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   if (selectedAnalysisId && selectedAnalysis) {
     const analysis = selectedAnalysis as any; // Cast to any for comprehensive API fields
     return (
-      <div className="space-y-2">
+      <div className="page-shell">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold">Analysis Details • {selectedAnalysisId}</h2>
-            <p className="text-xs text-slate-600">Comprehensive call intelligence and analysis insights</p>
+            <h2 className="view-header">Analysis Details • {selectedAnalysisId}</h2>
+            <p className="text-xs text-slate-500">Comprehensive call intelligence and analysis insights</p>
           </div>
           <div className="flex items-center gap-1">
             <Button 
@@ -166,7 +166,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {/* Call Intelligence Overview */}
-          <Card>
+          <Card className="panel">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Call Intelligence</CardTitle>
             </CardHeader>
@@ -209,7 +209,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
           </Card>
 
           {/* Resolution Status */}
-          <Card>
+          <Card className="panel">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Resolution Status</CardTitle>
             </CardHeader>
@@ -217,19 +217,19 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-slate-600">Issue Resolved</span>
-                  <Badge variant={analysis.issue_resolved ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                  <Badge variant={analysis.issue_resolved ? 'success' : 'warning'} className="text-xs px-1 py-0">
                     {analysis.issue_resolved ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">First Call Resolution</span>
-                  <Badge variant={analysis.first_call_resolution ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                  <Badge variant={analysis.first_call_resolution ? 'success' : 'info'} className="text-xs px-1 py-0">
                     {analysis.first_call_resolution ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">Escalation Needed</span>
-                  <Badge variant={analysis.escalation_needed ? 'destructive' : 'secondary'} className="text-xs px-1 py-0">
+                  <Badge variant={analysis.escalation_needed ? 'danger' : 'success'} className="text-xs px-1 py-0">
                     {analysis.escalation_needed ? 'Yes' : 'No'}
                   </Badge>
                 </div>
@@ -242,7 +242,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {/* Borrower Sentiment */}
           {analysis.borrower_sentiment && (
-            <Card>
+            <Card className="panel">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-medium">Borrower Sentiment</CardTitle>
               </CardHeader>
@@ -268,7 +268,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Trend</span>
-                    <Badge variant={analysis.borrower_sentiment.trend === 'improving' ? 'default' : analysis.borrower_sentiment.trend === 'declining' ? 'destructive' : 'secondary'} className="text-xs px-1 py-0">
+                    <Badge variant={analysis.borrower_sentiment.trend === 'improving' ? 'success' : analysis.borrower_sentiment.trend === 'declining' ? 'danger' : 'info'} className="text-xs px-1 py-0">
                       {analysis.borrower_sentiment.trend || 'N/A'}
                     </Badge>
                   </div>
@@ -279,7 +279,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
 
           {/* Risk Assessment */}
           {analysis.borrower_risks && (
-            <Card>
+            <Card className="panel">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-medium">Risk Assessment</CardTitle>
               </CardHeader>
@@ -311,7 +311,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {/* Advisor Performance */}
           {analysis.advisor_metrics && (
-            <Card>
+            <Card className="panel">
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-medium">Advisor Performance</CardTitle>
               </CardHeader>
@@ -348,7 +348,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
           )}
 
           {/* Compliance & Flags */}
-          <Card>
+          <Card className="panel">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Compliance & Flags</CardTitle>
             </CardHeader>
@@ -392,7 +392,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
         {/* Topics & Opportunities */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {/* Topics Discussed */}
-          <Card>
+          <Card className="panel">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Topics & Issues</CardTitle>
             </CardHeader>
@@ -442,7 +442,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
           </Card>
 
           {/* Product Opportunities */}
-          <Card>
+          <Card className="panel">
             <CardHeader className="py-2 px-3">
               <CardTitle className="text-xs font-medium">Opportunities</CardTitle>
             </CardHeader>
@@ -473,7 +473,14 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="page-shell">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="view-header">Analysis</h2>
+          <p className="text-xs text-slate-500">AI-powered analysis of customer interactions and sentiment</p>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <Input 
           className="w-64 h-7 text-xs" 
@@ -495,9 +502,9 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="panel overflow-hidden">
         <table className="w-full text-xs">
-          <thead className="bg-slate-50 border-b">
+          <thead className="table-header border-b">
             <tr>
               <th className="text-left py-1 px-2 text-xs font-medium">Analysis</th>
               <th className="text-left py-1 px-2 text-xs font-medium">Transcript</th>
@@ -516,7 +523,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
               const borrowerRisks = analysis.borrower_risks || {};
               
               return (
-                <tr key={analysis.analysis_id} className="border-b hover:bg-slate-50">
+                <tr key={analysis.analysis_id} className="table-row-hover">
                   <td className="py-1 px-2 text-xs font-medium text-slate-900">
                     <button 
                       className="underline hover:text-blue-600 text-xs" 
@@ -545,7 +552,7 @@ export function AnalysisView({ goToPlan }: AnalysisViewProps) {
                     </Badge>
                   </td>
                   <td className="py-1 px-2">
-                    <Badge variant={analysis.issue_resolved ? 'default' : 'secondary'} className="text-xs px-1 py-0">
+                    <Badge variant={analysis.issue_resolved ? 'success' : 'warning'} className="text-xs px-1 py-0">
                       {analysis.issue_resolved ? 'Done' : 'Pending'}
                     </Badge>
                   </td>
