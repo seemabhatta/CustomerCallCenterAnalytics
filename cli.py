@@ -41,12 +41,9 @@ try:
     sys.path.insert(0, '.')
     from src.agents.transcript_agent import TranscriptAgent
     from src.storage.transcript_store import TranscriptStore
-    from src.services.leadership_insights_service import LeadershipInsightsService
     DIRECT_MODE_AVAILABLE = True
-    INSIGHTS_AVAILABLE = True
 except ImportError as e:
     DIRECT_MODE_AVAILABLE = False
-    INSIGHTS_AVAILABLE = False
 
 # Default API configuration
 DEFAULT_API_URL = os.getenv("CCANALYTICS_API_URL", "http://localhost:8000")
@@ -2001,55 +1998,28 @@ def leadership_chat(
     query: str = typer.Argument(..., help="Leadership query"),
     executive_id: str = typer.Option(..., "--exec-id", "-e", help="Executive identifier"),
     executive_role: str = typer.Option("Manager", "--role", "-r", help="Executive role (VP, CCO, Manager, etc.)"),
-    session_id: Optional[str] = typer.Option(None, "--session", "-s", help="Continue existing session"),
-    direct: bool = typer.Option(False, "--direct", "-d", help="Use direct mode (bypass API)")
+    session_id: Optional[str] = typer.Option(None, "--session", "-s", help="Continue existing session")
 ):
     """Chat with Leadership Insights Agent for strategic intelligence."""
     try:
-        if direct and INSIGHTS_AVAILABLE:
-            console.print("🎯 [bold blue]Leadership Insights (Direct Mode)[/bold blue]")
-            console.print(f"Query: [cyan]{query}[/cyan]")
-            console.print(f"Role: [yellow]{executive_role}[/yellow]")
-            console.print(f"Executive: [green]{executive_id}[/green]")
-            if session_id:
-                console.print(f"Session: [magenta]{session_id}[/magenta]")
-            console.print()
+        # Use API mode only - no direct bypass allowed
+        console.print("🎯 [bold blue]Leadership Insights[/bold blue]")
+        console.print(f"Query: [cyan]{query}[/cyan]")
+        console.print(f"Role: [yellow]{executive_role}[/yellow]")
+        console.print(f"Executive: [green]{executive_id}[/green]")
+        if session_id:
+            console.print(f"Session: [magenta]{session_id}[/magenta]")
+        console.print()
 
-            # Use direct service call
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if not api_key:
-                raise CLIError("OPENAI_API_KEY not found in environment")
+        payload = {
+            "query": query,
+            "executive_id": executive_id,
+            "executive_role": executive_role
+        }
+        if session_id:
+            payload["session_id"] = session_id
 
-            async def run_direct_chat():
-                service = LeadershipInsightsService(api_key=api_key)
-                return await service.chat(
-                    query=query,
-                    executive_id=executive_id,
-                    executive_role=executive_role,
-                    session_id=session_id
-                )
-
-            response = asyncio.run(run_direct_chat())
-
-        else:
-            # Use API mode
-            console.print("🎯 [bold blue]Leadership Insights (API Mode)[/bold blue]")
-            console.print(f"Query: [cyan]{query}[/cyan]")
-            console.print(f"Role: [yellow]{executive_role}[/yellow]")
-            console.print(f"Executive: [green]{executive_id}[/green]")
-            if session_id:
-                console.print(f"Session: [magenta]{session_id}[/magenta]")
-            console.print()
-
-            payload = {
-                "query": query,
-                "executive_id": executive_id,
-                "executive_role": executive_role
-            }
-            if session_id:
-                payload["session_id"] = session_id
-
-            response = make_api_request("POST", "leadership/chat", payload)
+        response = make_api_request("POST", "leadership/chat", payload)
 
         # Display response
         console.print(Panel(

@@ -260,17 +260,8 @@ class LeadershipInsightsAgent:
             Exception: If fetching fails (NO FALLBACK)
         """
         if not self.data_reader:
-            # Return mock data structure for testing
-            return {
-                'analyses': [],
-                'workflows': [],
-                'executions': [],
-                '_metadata': {
-                    'total_records': 0,
-                    'fetch_timestamp': datetime.now().isoformat(),
-                    'data_sources': []
-                }
-            }
+            # NO FALLBACK: Fail fast on missing dependencies
+            raise Exception("DataReaderService is required - NO FALLBACK LOGIC")
 
         try:
             # Use data reader service to fetch according to plan

@@ -298,20 +298,9 @@ async def get_insights_dashboard():
 async def populate_insights_graph(request: dict):
     """Populate knowledge graph from analysis data - proxies to insights service."""
     try:
-        analysis_id = request.get("analysis_id")
-        analysis_ids = request.get("analysis_ids")
-        from_date = request.get("from_date")
-        populate_all = request.get("all", False)
-
-        if analysis_id:
-            return await insights_service.populate_from_analysis(analysis_id)
-        elif analysis_ids:
-            return await insights_service.populate_batch(analysis_ids)
-        elif populate_all or from_date:
-            return await insights_service.populate_all(from_date)
-        else:
-            raise HTTPException(status_code=400, detail="Must provide analysis_id, analysis_ids, or all=true")
-
+        return await insights_service.populate_insights(request)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to populate insights: {str(e)}")
 
