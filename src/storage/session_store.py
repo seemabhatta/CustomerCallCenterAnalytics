@@ -344,6 +344,37 @@ class SessionStore:
         finally:
             conn.close()
 
+    def update_session_focus_area(self, session_id: str, focus_area: str):
+        """Update session focus area determined by agent.
+
+        Args:
+            session_id: Session identifier
+            focus_area: Focus area determined by agent
+        """
+        if not session_id:
+            raise ValueError("session_id cannot be empty")
+
+        if not focus_area:
+            raise ValueError("focus_area cannot be empty")
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute('''
+                UPDATE leadership_sessions
+                SET focus_area = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE session_id = ?
+            ''', (focus_area, session_id))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Session focus area update failed: {str(e)}")
+        finally:
+            conn.close()
+
     def archive_session(self, session_id: str):
         """Archive session.
 
@@ -401,5 +432,52 @@ class SessionStore:
 
         except Exception as e:
             raise Exception(f"Executive sessions retrieval failed: {str(e)}")
+        finally:
+            conn.close()
+
+    def delete_session(self, session_id: str) -> bool:
+        """Delete a session and all associated messages.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            True if session was deleted, False if not found
+
+        Raises:
+            Exception: If deletion fails (NO FALLBACK)
+        """
+        if not session_id:
+            raise ValueError("session_id cannot be empty")
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # First check if session exists
+            cursor.execute('''
+                SELECT COUNT(*) FROM leadership_sessions WHERE session_id = ?
+            ''', (session_id,))
+
+            count = cursor.fetchone()[0]
+            if count == 0:
+                return False
+
+            # Delete messages first (due to foreign key constraints)
+            cursor.execute('''
+                DELETE FROM session_messages WHERE session_id = ?
+            ''', (session_id,))
+
+            # Delete the session
+            cursor.execute('''
+                DELETE FROM leadership_sessions WHERE session_id = ?
+            ''', (session_id,))
+
+            conn.commit()
+            return True
+
+        except Exception as e:
+            conn.rollback()
+            raise Exception(f"Session deletion failed: {str(e)}")
         finally:
             conn.close()

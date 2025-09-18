@@ -37,12 +37,16 @@ from urllib.parse import urljoin, urlencode
 # Direct mode imports (for bypassing server)
 try:
     import sys
+    import asyncio
     sys.path.insert(0, '.')
     from src.agents.transcript_agent import TranscriptAgent
     from src.storage.transcript_store import TranscriptStore
+    from src.services.leadership_insights_service import LeadershipInsightsService
     DIRECT_MODE_AVAILABLE = True
+    INSIGHTS_AVAILABLE = True
 except ImportError as e:
     DIRECT_MODE_AVAILABLE = False
+    INSIGHTS_AVAILABLE = False
 
 # Default API configuration
 DEFAULT_API_URL = os.getenv("CCANALYTICS_API_URL", "http://localhost:8000")
@@ -372,6 +376,7 @@ workflow_app = typer.Typer(name="workflow", help="Workflow operations")
 execution_app = typer.Typer(name="execution", help="Execution operations")
 system_app = typer.Typer(name="system", help="System operations")
 orchestrate_app = typer.Typer(name="orchestrate", help="Core orchestration operations")
+leadership_app = typer.Typer(name="leadership", help="Leadership insights operations")
 
 # Add subapps to main app
 app.add_typer(transcript_app)
@@ -381,6 +386,7 @@ app.add_typer(plan_app)
 app.add_typer(workflow_app)
 app.add_typer(execution_app)
 app.add_typer(orchestrate_app)
+app.add_typer(leadership_app)
 app.add_typer(system_app)
 
 
@@ -1983,6 +1989,260 @@ def system_metrics():
 
     except CLIError as e:
         print_error(f"Metrics failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+# ====================================================================
+# LEADERSHIP COMMANDS
+# ====================================================================
+
+@leadership_app.command("chat")
+def leadership_chat(
+    query: str = typer.Argument(..., help="Leadership query"),
+    executive_id: str = typer.Option(..., "--exec-id", "-e", help="Executive identifier"),
+    executive_role: str = typer.Option("Manager", "--role", "-r", help="Executive role (VP, CCO, Manager, etc.)"),
+    session_id: Optional[str] = typer.Option(None, "--session", "-s", help="Continue existing session"),
+    direct: bool = typer.Option(False, "--direct", "-d", help="Use direct mode (bypass API)")
+):
+    """Chat with Leadership Insights Agent for strategic intelligence."""
+    try:
+        if direct and INSIGHTS_AVAILABLE:
+            console.print("🎯 [bold blue]Leadership Insights (Direct Mode)[/bold blue]")
+            console.print(f"Query: [cyan]{query}[/cyan]")
+            console.print(f"Role: [yellow]{executive_role}[/yellow]")
+            console.print(f"Executive: [green]{executive_id}[/green]")
+            if session_id:
+                console.print(f"Session: [magenta]{session_id}[/magenta]")
+            console.print()
+
+            # Use direct service call
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise CLIError("OPENAI_API_KEY not found in environment")
+
+            async def run_direct_chat():
+                service = LeadershipInsightsService(api_key=api_key)
+                return await service.chat(
+                    query=query,
+                    executive_id=executive_id,
+                    executive_role=executive_role,
+                    session_id=session_id
+                )
+
+            response = asyncio.run(run_direct_chat())
+
+        else:
+            # Use API mode
+            console.print("🎯 [bold blue]Leadership Insights (API Mode)[/bold blue]")
+            console.print(f"Query: [cyan]{query}[/cyan]")
+            console.print(f"Role: [yellow]{executive_role}[/yellow]")
+            console.print(f"Executive: [green]{executive_id}[/green]")
+            if session_id:
+                console.print(f"Session: [magenta]{session_id}[/magenta]")
+            console.print()
+
+            payload = {
+                "query": query,
+                "executive_id": executive_id,
+                "executive_role": executive_role
+            }
+            if session_id:
+                payload["session_id"] = session_id
+
+            response = make_api_request("POST", "leadership/chat", payload)
+
+        # Display response
+        console.print(Panel(
+            response.get('content', 'No content generated'),
+            title="[bold green]Strategic Insights[/bold green]",
+            border_style="green"
+        ))
+
+        # Display session info
+        if response.get('session_id'):
+            console.print(f"\n📝 Session ID: [cyan]{response['session_id']}[/cyan]")
+
+        # Display metadata
+        metadata = response.get('metadata', {})
+        if metadata:
+            console.print(f"\n📊 Confidence: [yellow]{metadata.get('overall_confidence', 'N/A')}%[/yellow]")
+            console.print(f"⏱️  Processing: [blue]{metadata.get('total_processing_time_ms', 'N/A')}ms[/blue]")
+            if response.get('cache_hit'):
+                console.print("💾 [green]Cache Hit[/green]")
+
+    except CLIError as e:
+        print_error(f"Leadership chat failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@leadership_app.command("sessions")
+def list_sessions(
+    executive_id: str = typer.Option(..., "--exec-id", "-e", help="Executive identifier"),
+    limit: int = typer.Option(10, "--limit", "-l", help="Maximum sessions to return")
+):
+    """List sessions for an executive."""
+    try:
+        console.print(f"📋 [bold blue]Sessions for Executive[/bold blue]: [cyan]{executive_id}[/cyan]")
+        console.print()
+
+        params = {"executive_id": executive_id, "limit": limit}
+        response = make_api_request("GET", "leadership/sessions", params=params)
+
+        sessions = response.get('sessions', [])
+        if not sessions:
+            console.print("[yellow]No sessions found[/yellow]")
+            return
+
+        # Create table
+        table = Table(title="Executive Sessions")
+        table.add_column("Session ID", style="cyan", no_wrap=True)
+        table.add_column("Focus Area", style="green")
+        table.add_column("Started", style="yellow")
+        table.add_column("Status", style="magenta")
+
+        for session in sessions:
+            table.add_row(
+                session.get('session_id', 'N/A'),
+                session.get('focus_area', 'N/A'),
+                session.get('started_at', 'N/A'),
+                session.get('status', 'active')
+            )
+
+        console.print(table)
+        console.print(f"\n📊 Total: [cyan]{len(sessions)}[/cyan] sessions")
+
+    except CLIError as e:
+        print_error(f"Failed to list sessions: {str(e)}")
+        raise typer.Exit(1)
+
+
+@leadership_app.command("history")
+def session_history(
+    session_id: str = typer.Argument(..., help="Session identifier"),
+    limit: int = typer.Option(50, "--limit", "-l", help="Maximum messages to return")
+):
+    """Get conversation history for a session."""
+    try:
+        console.print(f"📜 [bold blue]Session History[/bold blue]: [cyan]{session_id}[/cyan]")
+        console.print()
+
+        response = make_api_request("GET", f"leadership/sessions/{session_id}/history", params={"limit": limit})
+
+        session = response.get('session', {})
+        messages = response.get('messages', [])
+
+        if not messages:
+            console.print("[yellow]No messages found[/yellow]")
+            return
+
+        # Display session info
+        console.print(f"🎯 Focus Area: [green]{session.get('focus_area', 'N/A')}[/green]")
+        console.print(f"👤 Executive: [yellow]{session.get('executive_role', 'N/A')}[/yellow]")
+        console.print(f"📅 Started: [blue]{session.get('started_at', 'N/A')}[/blue]")
+        console.print()
+
+        # Display messages
+        for msg in messages:
+            role = msg.get('role', 'unknown')
+            content = msg.get('content', '')
+            timestamp = msg.get('created_at', '')
+
+            if role == 'user':
+                console.print(f"[bold cyan]👤 {timestamp}[/bold cyan]")
+                console.print(Panel(content, border_style="cyan"))
+            else:
+                console.print(f"[bold green]🤖 {timestamp}[/bold green]")
+                console.print(Panel(content, border_style="green"))
+            console.print()
+
+        console.print(f"📊 Total messages: [cyan]{len(messages)}[/cyan]")
+
+    except CLIError as e:
+        print_error(f"Failed to get session history: {str(e)}")
+        raise typer.Exit(1)
+
+
+@leadership_app.command("dashboard")
+def leadership_dashboard(
+    executive_role: Optional[str] = typer.Option(None, "--role", "-r", help="Filter by executive role")
+):
+    """Get pre-computed insights dashboard."""
+    try:
+        console.print("📊 [bold blue]Leadership Dashboard[/bold blue]")
+        console.print()
+
+        params = {}
+        if executive_role:
+            params["executive_role"] = executive_role
+
+        response = make_api_request("GET", "leadership/dashboard", params=params)
+
+        # Display data overview
+        data_overview = response.get('data_overview', {})
+        if data_overview:
+            console.print("📈 [bold yellow]Data Overview[/bold yellow]")
+            for key, value in data_overview.items():
+                console.print(f"   {key}: [cyan]{value}[/cyan]")
+            console.print()
+
+        # Display cache performance
+        cache_perf = response.get('cache_performance', {})
+        if cache_perf:
+            console.print("💾 [bold yellow]Cache Performance[/bold yellow]")
+            for key, value in cache_perf.items():
+                console.print(f"   {key}: [cyan]{value}[/cyan]")
+            console.print()
+
+        # Display learning progress
+        learning = response.get('learning_progress', {})
+        if learning:
+            console.print("🧠 [bold yellow]Learning Progress[/bold yellow]")
+            for key, value in learning.items():
+                console.print(f"   {key}: [cyan]{value}[/cyan]")
+            console.print()
+
+        # Display system status
+        system_status = response.get('system_status', {})
+        if system_status:
+            console.print("⚙️  [bold yellow]System Status[/bold yellow]")
+            for key, value in system_status.items():
+                if isinstance(value, dict):
+                    console.print(f"   {key}:")
+                    for sub_key, sub_value in value.items():
+                        console.print(f"      {sub_key}: [cyan]{sub_value}[/cyan]")
+                else:
+                    console.print(f"   {key}: [cyan]{value}[/cyan]")
+
+    except CLIError as e:
+        print_error(f"Failed to get dashboard: {str(e)}")
+        raise typer.Exit(1)
+
+
+@leadership_app.command("status")
+def leadership_status():
+    """Get leadership service health and component status."""
+    try:
+        console.print("⚙️  [bold blue]Leadership Service Status[/bold blue]")
+        console.print()
+
+        response = make_api_request("GET", "leadership/status")
+
+        console.print(f"🏢 Service: [green]{response.get('service_name', 'N/A')}[/green]")
+        console.print(f"📦 Version: [yellow]{response.get('version', 'N/A')}[/yellow]")
+        console.print(f"🟢 Status: [green]{response.get('status', 'N/A')}[/green]")
+        console.print(f"🕐 Last Checked: [blue]{response.get('last_checked', 'N/A')}[/blue]")
+        console.print()
+
+        # Display component status
+        components = response.get('components', {})
+        if components:
+            console.print("🔧 [bold yellow]Components[/bold yellow]")
+            for component, status in components.items():
+                color = "green" if status == "ready" else "red"
+                console.print(f"   {component}: [{color}]{status}[/{color}]")
+
+    except CLIError as e:
+        print_error(f"Failed to get status: {str(e)}")
         raise typer.Exit(1)
 
 

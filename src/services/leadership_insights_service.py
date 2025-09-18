@@ -92,8 +92,8 @@ class LeadershipInsightsService:
                 if not session:
                     raise ValueError(f"Session {session_id} not found")
             else:
-                # Infer focus area from query for new sessions
-                focus_area = await self._infer_focus_area(query)
+                # Let agent determine focus area during processing
+                focus_area = None
                 session = self.session_store.create_session(
                     executive_id=executive_id,
                     executive_role=executive_role,
@@ -156,7 +156,6 @@ class LeadershipInsightsService:
                     'query_classification': response['metadata']['query_understanding'],
                     'data_sources_used': response['metadata']['data_sources_used'],
                     'confidence_score': response['metadata']['overall_confidence'],
-                    'token_count': self._estimate_tokens(response['content']),
                     'response_time_ms': round(processing_time * 1000),
                     'cache_hit': False
                 }
@@ -168,12 +167,19 @@ class LeadershipInsightsService:
             # Step 8: Store learning patterns (async, non-blocking)
             await self._store_learning_patterns(response)
 
-            # Step 9: Update session context
+            # Step 9: Update session context and focus area
+            query_understanding = response['metadata']['query_understanding']
+            agent_focus_area = query_understanding.get('focus_area')
+
+            # Update session with agent-determined focus area
+            if agent_focus_area:
+                self.session_store.update_session_focus_area(session_id, agent_focus_area)
+
             self.session_store.update_session_context(
                 session_id=session_id,
                 context_data={
-                    'last_query_type': response['metadata']['query_understanding']['core_intent'],
-                    'focus_area': response['metadata']['query_understanding']['focus_area'],
+                    'last_query_type': query_understanding.get('core_intent'),
+                    'focus_area': agent_focus_area,
                     'recent_topics': [query]  # Could expand to track more topics
                 }
             )
@@ -245,6 +251,37 @@ class LeadershipInsightsService:
         except Exception as e:
             raise Exception(f"Executive sessions retrieval failed: {str(e)}")
 
+    async def delete_session(self, session_id: str) -> bool:
+        """Delete a leadership session.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            True if session was deleted, False if not found
+
+        Raises:
+            Exception: If deletion fails (NO FALLBACK)
+        """
+        if not session_id:
+            raise ValueError("Session ID cannot be empty")
+
+        try:
+            # Check if session exists first
+            session = self.session_store.get_session(session_id)
+            if not session:
+                return False
+
+            # Delete session and all associated messages
+            success = self.session_store.delete_session(session_id)
+            if not success:
+                raise Exception(f"Failed to delete session {session_id}")
+
+            return True
+
+        except Exception as e:
+            raise Exception(f"Session deletion failed: {str(e)}")
+
     async def get_insights_dashboard(self, executive_role: str = None) -> Dict[str, Any]:
         """Get pre-computed insights dashboard.
 
@@ -283,28 +320,6 @@ class LeadershipInsightsService:
         except Exception as e:
             raise Exception(f"Dashboard generation failed: {str(e)}")
 
-    async def _infer_focus_area(self, query: str) -> str:
-        """Infer focus area from query for session creation.
-
-        Args:
-            query: Query string
-
-        Returns:
-            Focus area string
-        """
-        # Simple keyword-based inference
-        query_lower = query.lower()
-
-        if any(word in query_lower for word in ['compliance', 'violation', 'fdcpa', 'respa', 'tila']):
-            return 'compliance'
-        elif any(word in query_lower for word in ['risk', 'exposure', 'threat']):
-            return 'risk'
-        elif any(word in query_lower for word in ['performance', 'efficiency', 'quality']):
-            return 'performance'
-        elif any(word in query_lower for word in ['strategic', 'plan', 'future']):
-            return 'strategic'
-        else:
-            return 'operational'
 
     async def _check_cache(self, query: str, executive_role: str) -> Optional[Dict[str, Any]]:
         """Check cache for similar recent queries.
@@ -412,17 +427,28 @@ class LeadershipInsightsService:
             # Learning errors shouldn't fail the main process
             print(f"Pattern storage failed: {str(e)}")
 
-    def _estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text.
 
-        Args:
-            text: Text to estimate
+    def get_cache_statistics(self) -> Dict[str, Any]:
+        """Get cache performance statistics.
 
         Returns:
-            Estimated token count
+            Cache statistics dictionary
         """
-        # Simple estimation: roughly 4 characters per token
-        return len(text) // 4
+        try:
+            return self.cache_store.get_cache_statistics()
+        except Exception as e:
+            raise Exception(f"Failed to get cache statistics: {str(e)}")
+
+    def get_pattern_statistics(self) -> Dict[str, Any]:
+        """Get learning pattern statistics.
+
+        Returns:
+            Pattern statistics dictionary
+        """
+        try:
+            return self.pattern_store.get_pattern_statistics()
+        except Exception as e:
+            raise Exception(f"Failed to get pattern statistics: {str(e)}")
 
     def get_service_status(self) -> Dict[str, Any]:
         """Get service status and health.

@@ -1,0 +1,31 @@
+You are a focus area classifier for executive queries in a call center analytics system.
+
+QUERY: "{query}"
+
+Your task is to determine the primary focus area for this query based on its content and intent.
+
+AVAILABLE FOCUS AREAS:
+
+1. COMPLIANCE: Queries about regulatory compliance, violations, FDCPA, RESPA, TILA, legal requirements
+2. RISK: Queries about risk exposure, threats, vulnerabilities, potential issues
+3. PERFORMANCE: Queries about efficiency, quality metrics, KPIs, agent performance
+4. STRATEGIC: Queries about future planning, long-term strategy, market positioning
+5. OPERATIONAL: General operational queries, daily operations, process questions
+
+ANALYSIS INSTRUCTIONS:
+
+Analyze the query to identify:
+- Key terms and concepts mentioned
+- The executive's likely intent
+- The urgency or priority implied
+- The business domain being addressed
+
+OUTPUT FORMAT:
+{{
+  "focus_area": "one of: compliance, risk, performance, strategic, operational",
+  "confidence": confidence_score_0_to_100,
+  "reasoning": "brief explanation of why this focus area was selected",
+  "secondary_areas": ["other relevant focus areas if applicable"]
+}}
+
+Provide ONLY the JSON output, no additional text.
