@@ -32,11 +32,10 @@ import { NewPipeline2View } from "@/views/NewPipeline2View";
 import { AnalyticsView } from "@/views/AnalyticsView";
 import { InsightsView } from "@/views/InsightsView";
 
-import { TabValue, Environment, UserRole } from "@/types";
+import { TabValue, UserRole } from "@/types";
 
 export default function App() {
   const [tab, setTab] = useState<TabValue>("analytics");
-  const [env, setEnv] = useState<Environment>("dev");
   const [userRole, setUserRole] = useState<UserRole>("admin");
   const [workflowFocusId, setWorkflowFocusId] = useState<string | null>(null);
 
@@ -44,9 +43,6 @@ export default function App() {
   const [isTranscriptDialogOpen, setIsTranscriptDialogOpen] = useState(false);
   const [activeTranscriptId, setActiveTranscriptId] = useState<string | null>(null);
 
-  useEffect(() => {
-    console.log(`Environment changed to: ${env}`);
-  }, [env]);
 
   // Switch to appropriate default tab when role changes
   useEffect(() => {
@@ -120,15 +116,15 @@ export default function App() {
           {/* Leadership View: Analytics, Insights, Governance */}
           {userRole === "leadership" && (
             <>
-              <TabsTrigger value="analytics" className="text-xs px-2 py-1">
+              <TabsTrigger value="analytics" className="tab-trigger">
                 <BarChart3 className="h-3 w-3 mr-1" />
                 Analytics
               </TabsTrigger>
-              <TabsTrigger value="insights" className="text-xs px-2 py-1">
+              <TabsTrigger value="insights" className="tab-trigger">
                 <MessageCircle className="h-3 w-3 mr-1" />
                 Insights
               </TabsTrigger>
-              <TabsTrigger value="governance" className="text-xs px-2 py-1">
+              <TabsTrigger value="governance" className="tab-trigger">
                 <Shield className="h-3 w-3 mr-1" />
                 Governance
               </TabsTrigger>
@@ -138,19 +134,19 @@ export default function App() {
           {/* Supervisor View: Dashboard, Approvals, Reviews, Monitoring */}
           {userRole === "supervisor" && (
             <>
-              <TabsTrigger value="dashboard" className="text-xs px-2 py-1">
+              <TabsTrigger value="dashboard" className="tab-trigger">
                 <Database className="h-3 w-3 mr-1" />
                 Dashboard
               </TabsTrigger>
-              <TabsTrigger value="approvals" className="text-xs px-2 py-1">
+              <TabsTrigger value="approvals" className="tab-trigger">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Approvals
               </TabsTrigger>
-              <TabsTrigger value="reviews" className="text-xs px-2 py-1">
+              <TabsTrigger value="reviews" className="tab-trigger">
                 <Eye className="h-3 w-3 mr-1" />
                 Reviews
               </TabsTrigger>
-              <TabsTrigger value="monitoring" className="text-xs px-2 py-1">
+              <TabsTrigger value="monitoring" className="tab-trigger">
                 <Activity className="h-3 w-3 mr-1" />
                 Monitoring
               </TabsTrigger>
@@ -160,15 +156,15 @@ export default function App() {
           {/* Advisor View: My Calls, Actions, Execute */}
           {userRole === "advisor" && (
             <>
-              <TabsTrigger value="calls" className="text-xs px-2 py-1">
+              <TabsTrigger value="calls" className="tab-trigger">
                 <Headphones className="h-3 w-3 mr-1" />
                 My Calls
               </TabsTrigger>
-              <TabsTrigger value="actions" className="text-xs px-2 py-1">
+              <TabsTrigger value="actions" className="tab-trigger">
                 <Target className="h-3 w-3 mr-1" />
                 Actions
               </TabsTrigger>
-              <TabsTrigger value="execution" className="text-xs px-2 py-1">
+              <TabsTrigger value="execution" className="tab-trigger">
                 <PlayCircle className="h-3 w-3 mr-1" />
                 Execute
               </TabsTrigger>
@@ -178,39 +174,39 @@ export default function App() {
           {/* Admin View: All tabs available */}
           {userRole === "admin" && (
             <>
-              <TabsTrigger value="pipeline" className="text-xs px-2 py-1">
+              <TabsTrigger value="pipeline" className="tab-trigger">
                 <Settings2 className="h-3 w-3 mr-1" />
                 Pipeline
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="text-xs px-2 py-1">
+              <TabsTrigger value="analytics" className="tab-trigger">
                 <Activity className="h-3 w-3 mr-1" />
                 Analytics
               </TabsTrigger>
-              <TabsTrigger value="generator" className="text-xs px-2 py-1 ml-3">
+              <TabsTrigger value="generator" className="tab-trigger ml-3">
                 <Plus className="h-3 w-3 mr-1" />
                 Generator
               </TabsTrigger>
-              <TabsTrigger value="transcripts" className="text-xs px-2 py-1">
+              <TabsTrigger value="transcripts" className="tab-trigger">
                 <MessageSquare className="h-3 w-3 mr-1" />
                 Transcripts
               </TabsTrigger>
-              <TabsTrigger value="analysis" className="text-xs px-2 py-1">
+              <TabsTrigger value="analysis" className="tab-trigger">
                 <ClipboardList className="h-3 w-3 mr-1" />
                 Analysis
               </TabsTrigger>
-              <TabsTrigger value="plan" className="text-xs px-2 py-1">
+              <TabsTrigger value="plan" className="tab-trigger">
                 <Settings className="h-3 w-3 mr-1" />
                 Plan
               </TabsTrigger>
-              <TabsTrigger value="workflow" className="text-xs px-2 py-1">
+              <TabsTrigger value="workflow" className="tab-trigger">
                 <WorkflowIcon className="h-3 w-3 mr-1" />
                 Workflow
               </TabsTrigger>
-              <TabsTrigger value="execution" className="text-xs px-2 py-1">
+              <TabsTrigger value="execution" className="tab-trigger">
                 <PlayCircle className="h-3 w-3 mr-1" />
                 Execution
               </TabsTrigger>
-              <TabsTrigger value="governance" className="text-xs px-2 py-1 ml-3">
+              <TabsTrigger value="governance" className="tab-trigger ml-3">
                 <Shield className="h-3 w-3 mr-1" />
                 Governance
               </TabsTrigger>
