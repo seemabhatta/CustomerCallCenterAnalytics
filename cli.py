@@ -321,6 +321,43 @@ class CLIRestClient:
             params['status'] = status
         return self._make_request('GET', '/api/v1/orchestrate/runs', params=params)
 
+    # ===============================================
+    # LEADERSHIP METHODS
+    # ===============================================
+
+    def leadership_chat(self, query: str, executive_id: str, executive_role: str = "Manager",
+                       session_id: Optional[str] = None) -> Dict[str, Any]:
+        """Chat with Leadership Insights Agent."""
+        payload = {
+            "query": query,
+            "executive_id": executive_id,
+            "executive_role": executive_role
+        }
+        if session_id:
+            payload["session_id"] = session_id
+        return self._make_request('POST', '/api/v1/leadership/chat', json_data=payload)
+
+    def leadership_sessions(self, executive_id: str, limit: int = 10) -> Dict[str, Any]:
+        """List sessions for an executive."""
+        params = {"executive_id": executive_id, "limit": limit}
+        return self._make_request('GET', '/api/v1/leadership/sessions', params=params)
+
+    def leadership_session_history(self, session_id: str, limit: int = 50) -> Dict[str, Any]:
+        """Get conversation history for a session."""
+        params = {"limit": limit}
+        return self._make_request('GET', f'/api/v1/leadership/sessions/{session_id}/history', params=params)
+
+    def leadership_dashboard(self, executive_role: Optional[str] = None) -> Dict[str, Any]:
+        """Get pre-computed insights dashboard."""
+        params = {}
+        if executive_role:
+            params["executive_role"] = executive_role
+        return self._make_request('GET', '/api/v1/leadership/dashboard', params=params)
+
+    def leadership_status(self) -> Dict[str, Any]:
+        """Get leadership service health and component status."""
+        return self._make_request('GET', '/api/v1/leadership/status')
+
 
 def get_client() -> CLIRestClient:
     """Get configured REST client instance."""
@@ -2011,15 +2048,8 @@ def leadership_chat(
             console.print(f"Session: [magenta]{session_id}[/magenta]")
         console.print()
 
-        payload = {
-            "query": query,
-            "executive_id": executive_id,
-            "executive_role": executive_role
-        }
-        if session_id:
-            payload["session_id"] = session_id
-
-        response = make_api_request("POST", "leadership/chat", payload)
+        client = get_client()
+        response = client.leadership_chat(query, executive_id, executive_role, session_id)
 
         # Display response
         console.print(Panel(
@@ -2055,8 +2085,8 @@ def list_sessions(
         console.print(f"📋 [bold blue]Sessions for Executive[/bold blue]: [cyan]{executive_id}[/cyan]")
         console.print()
 
-        params = {"executive_id": executive_id, "limit": limit}
-        response = make_api_request("GET", "leadership/sessions", params=params)
+        client = get_client()
+        response = client.leadership_sessions(executive_id, limit)
 
         sessions = response.get('sessions', [])
         if not sessions:
@@ -2096,7 +2126,8 @@ def session_history(
         console.print(f"📜 [bold blue]Session History[/bold blue]: [cyan]{session_id}[/cyan]")
         console.print()
 
-        response = make_api_request("GET", f"leadership/sessions/{session_id}/history", params={"limit": limit})
+        client = get_client()
+        response = client.leadership_session_history(session_id, limit)
 
         session = response.get('session', {})
         messages = response.get('messages', [])
@@ -2141,11 +2172,8 @@ def leadership_dashboard(
         console.print("📊 [bold blue]Leadership Dashboard[/bold blue]")
         console.print()
 
-        params = {}
-        if executive_role:
-            params["executive_role"] = executive_role
-
-        response = make_api_request("GET", "leadership/dashboard", params=params)
+        client = get_client()
+        response = client.leadership_dashboard(executive_role)
 
         # Display data overview
         data_overview = response.get('data_overview', {})
@@ -2195,7 +2223,8 @@ def leadership_status():
         console.print("⚙️  [bold blue]Leadership Service Status[/bold blue]")
         console.print()
 
-        response = make_api_request("GET", "leadership/status")
+        client = get_client()
+        response = client.leadership_status()
 
         console.print(f"🏢 Service: [green]{response.get('service_name', 'N/A')}[/green]")
         console.print(f"📦 Version: [yellow]{response.get('version', 'N/A')}[/yellow]")
