@@ -244,7 +244,7 @@ class OpenAIProvider(LLMProvider):
             "temperature": spec.options.temperature,
             "max_output_tokens": spec.options.max_output_tokens,
             "top_p": spec.options.top_p,
-            "seed": spec.options.seed,
+            # "seed": spec.options.seed,  # Not supported by current OpenAI client
         }
         if schema_payload:
             kwargs["response_format"] = schema_payload
