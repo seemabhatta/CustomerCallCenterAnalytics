@@ -58,6 +58,7 @@ class WorkflowExecutionStore:
                 CREATE TABLE IF NOT EXISTS workflow_executions (
                     id TEXT PRIMARY KEY,
                     workflow_id TEXT NOT NULL,
+                    step_number INTEGER,  -- For step-by-step execution tracking
                     executor_type TEXT NOT NULL,
                     execution_status TEXT NOT NULL,
                     execution_payload TEXT NOT NULL,  -- JSON
@@ -168,13 +169,14 @@ class WorkflowExecutionStore:
             # Insert execution record
             cursor.execute('''
                 INSERT INTO workflow_executions (
-                    id, workflow_id, executor_type, execution_status, 
-                    execution_payload, executed_at, executed_by, 
+                    id, workflow_id, step_number, executor_type, execution_status,
+                    execution_payload, executed_at, executed_by,
                     execution_duration_ms, mock_execution, error_message, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 execution_id,
                 execution_data['workflow_id'],
+                execution_data.get('step_number'),  # Optional for backward compatibility
                 execution_data['executor_type'],
                 execution_data['execution_status'],
                 payload_json,
@@ -273,11 +275,11 @@ class WorkflowExecutionStore:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, workflow_id, executor_type, execution_status, 
-                       execution_payload, executed_at, executed_by, 
-                       execution_duration_ms, mock_execution, error_message, 
+                SELECT id, workflow_id, step_number, executor_type, execution_status,
+                       execution_payload, executed_at, executed_by,
+                       execution_duration_ms, mock_execution, error_message,
                        metadata, created_at
-                FROM workflow_executions 
+                FROM workflow_executions
                 WHERE workflow_id = ?
                 ORDER BY executed_at DESC
             ''', (workflow_id,))
@@ -291,7 +293,52 @@ class WorkflowExecutionStore:
             # Only close if not using persistent connection
             if not self._persistent_conn:
                 conn.close()
-    
+
+    async def get_by_workflow_and_step(self, workflow_id: str, step_number: int) -> Optional[Dict[str, Any]]:
+        """Get execution record for a specific workflow step.
+
+        Args:
+            workflow_id: Workflow ID
+            step_number: Step number to query
+
+        Returns:
+            Execution record if found, None if not executed
+
+        Raises:
+            ValueError: Invalid parameters (NO FALLBACK)
+            Exception: Database operation failure (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+
+        if not isinstance(step_number, int) or step_number <= 0:
+            raise ValueError("step_number must be a positive integer")
+
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT id, workflow_id, step_number, executor_type, execution_status,
+                       execution_payload, executed_at, executed_by,
+                       execution_duration_ms, mock_execution, error_message,
+                       metadata, created_at
+                FROM workflow_executions
+                WHERE workflow_id = ? AND step_number = ?
+                ORDER BY executed_at DESC
+                LIMIT 1
+            ''', (workflow_id, step_number))
+
+            row = cursor.fetchone()
+            return self._row_to_dict(row) if row else None
+
+        except Exception as e:
+            raise Exception(f"Failed to retrieve step execution: {e}")
+        finally:
+            # Only close if not using persistent connection
+            if not self._persistent_conn:
+                conn.close()
+
     async def get_by_executor_type(self, executor_type: str, limit: int = 100) -> List[Dict[str, Any]]:
         """Get execution records by executor type.
         
@@ -622,16 +669,17 @@ class WorkflowExecutionStore:
             return {
                 'id': row[0],
                 'workflow_id': row[1],
-                'executor_type': row[2],
-                'execution_status': row[3],
-                'execution_payload': json.loads(row[4]),
-                'executed_at': row[5],
-                'executed_by': row[6],
-                'execution_duration_ms': row[7],
-                'mock_execution': bool(row[8]),
-                'error_message': row[9],
-                'metadata': json.loads(row[10]) if row[10] else {},
-                'created_at': row[11]
+                'step_number': row[2],  # New field for step tracking
+                'executor_type': row[3],
+                'execution_status': row[4],
+                'execution_payload': json.loads(row[5]),
+                'executed_at': row[6],
+                'executed_by': row[7],
+                'execution_duration_ms': row[8],
+                'mock_execution': bool(row[9]),
+                'error_message': row[10],
+                'metadata': json.loads(row[11]) if row[11] else {},
+                'created_at': row[12]
             }
         except json.JSONDecodeError as e:
             raise Exception(f"Failed to parse execution record JSON: {e}")

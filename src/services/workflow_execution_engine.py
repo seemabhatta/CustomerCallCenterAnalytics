@@ -72,7 +72,128 @@ class WorkflowExecutionEngine:
             'compliance_api': ComplianceAPIMockAdapter(),
             'accounting_api': AccountingAPIMockAdapter()
         }
-    
+
+    async def execute_single_step(self, workflow_id: str, step_number: int, executed_by: str = "system") -> Dict[str, Any]:
+        """Execute a single workflow step.
+
+        Args:
+            workflow_id: ID of workflow to execute
+            step_number: Which step to execute (1-based)
+            executed_by: Who is executing the step
+
+        Returns:
+            Step execution result with metadata
+
+        Raises:
+            ValueError: Invalid workflow, step, or state (NO FALLBACK)
+            Exception: Execution failure (NO FALLBACK)
+        """
+        step_start_time = time.time()
+        self.logger.info(f"Starting single step execution: workflow_id={workflow_id}, step_number={step_number}, executed_by={executed_by}")
+
+        try:
+            # Step 1: Get and validate workflow - FAIL FAST
+            workflow = self.workflow_store.get_by_id(workflow_id)
+            if not workflow:
+                self.logger.error(f"Workflow not found: workflow_id={workflow_id}")
+                raise ValueError(f"Workflow not found: {workflow_id}")
+
+            # Step 2: Validate workflow status - FAIL FAST
+            if workflow['status'] not in ['APPROVED', 'AUTO_APPROVED']:
+                self.logger.error(f"Workflow must be approved for execution: workflow_id={workflow_id}, status={workflow['status']}")
+                raise ValueError(f"Workflow must be approved for execution. Current status: {workflow['status']}")
+
+            # Step 3: Extract workflow steps - FAIL FAST if no steps
+            workflow_data = workflow.get('workflow_data', {})
+            workflow_steps = workflow_data.get('steps', [])
+
+            if not workflow_steps:
+                self.logger.error(f"No workflow steps found: workflow_id={workflow_id}")
+                raise ValueError(f"Workflow {workflow_id} has no steps defined")
+
+            # Step 4: Find the specific step - FAIL FAST if not found
+            target_step = None
+            for step in workflow_steps:
+                if step.get('step_number') == step_number:
+                    target_step = step
+                    break
+
+            if not target_step:
+                self.logger.error(f"Step {step_number} not found in workflow {workflow_id}")
+                raise ValueError(f"Step {step_number} not found in workflow {workflow_id}")
+
+            # Step 5: Extract step details - FAIL FAST if missing required fields
+            step_action = target_step.get('action', '')
+            executor_type = target_step.get('tool_needed', '').strip()
+            step_details = target_step.get('details', '')
+
+            if not executor_type:
+                self.logger.error(f"Step missing tool_needed field: workflow_id={workflow_id}, step_number={step_number}")
+                raise ValueError(f"Step {step_number} missing tool_needed field")
+
+            # Step 6: Check if executor exists - FAIL FAST if missing
+            if executor_type not in self.adapters:
+                self.logger.error(f"No executor available for type: {executor_type}")
+                raise Exception(f"No executor available for type: {executor_type}. Available: {list(self.adapters.keys())}")
+
+            # Step 7: Execute the step
+            executor = self.adapters[executor_type]
+            self.logger.info(f"Executing step {step_number} with executor: {executor_type}")
+
+            step_parameters = {
+                'step_number': step_number,
+                'step_action': step_action,
+                'step_details': step_details,
+                'loan_id': 'LN-784523',  # Default from examples
+                'workflow_id': workflow_id
+            }
+
+            # Execute using the adapter - FAIL FAST on execution error
+            step_result = executor.execute(workflow, step_parameters)
+
+            # Step 8: Calculate timing
+            step_duration = int((time.time() - step_start_time) * 1000)
+
+            # Step 9: Store execution result with step_number - FAIL FAST if storage fails
+            step_execution_record = {
+                'workflow_id': workflow_id,
+                'step_number': step_number,  # NEW: Store step number
+                'executor_type': executor_type,
+                'execution_payload': step_result['payload'],
+                'execution_status': 'executed',
+                'executed_at': datetime.now(timezone.utc).isoformat(),
+                'executed_by': executed_by,
+                'execution_duration_ms': step_duration,
+                'mock_execution': True,
+                'metadata': {
+                    'step_details': step_details,
+                    'executor_result': step_result,
+                    'workflow_type': workflow.get('workflow_type'),
+                    'plan_id': workflow.get('plan_id'),
+                    'single_step_execution': True  # Flag to identify single step executions
+                }
+            }
+
+            step_execution_id = await self.execution_store.create(step_execution_record)
+
+            # Step 10: Return structured result
+            return {
+                'workflow_id': workflow_id,
+                'step_number': step_number,
+                'status': 'success',
+                'executor_type': executor_type,
+                'execution_id': step_execution_id,
+                'result': step_result['payload'],
+                'executed_at': step_execution_record['executed_at'],
+                'executed_by': executed_by,
+                'duration_ms': step_duration
+            }
+
+        except Exception as e:
+            self.logger.exception(f"Single step execution failed: workflow_id={workflow_id}, step_number={step_number}")
+            # NO FALLBACK - re-raise the error immediately
+            raise
+
     async def execute_workflow(self, workflow_id: str, executed_by: str = "system_executor") -> Dict[str, Any]:
         """Execute a single approved workflow.
         
