@@ -9,6 +9,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 import json
 
+from ..infrastructure.telemetry import trace_async_function, set_span_attributes, add_span_event
 from ..storage.transcript_store import TranscriptStore
 from ..storage.analysis_store import AnalysisStore
 from ..storage.action_plan_store import ActionPlanStore
@@ -24,7 +25,7 @@ class DataReaderService:
     """
 
     def __init__(self, db_path: str):
-        """Initialize with database path.
+        """Initialize with database path only - no API key needed for read-only analytics.
 
         Args:
             db_path: SQLite database file path
@@ -37,13 +38,14 @@ class DataReaderService:
 
         self.db_path = db_path
 
-        # Initialize all existing stores for read access
+        # Direct storage access for analytics queries (read-only)
         self.transcript_store = TranscriptStore(db_path)
         self.analysis_store = AnalysisStore(db_path)
         self.plan_store = ActionPlanStore(db_path)
         self.workflow_store = WorkflowStore(db_path)
         self.execution_store = WorkflowExecutionStore(db_path)
 
+    @trace_async_function("data.fetch_by_plan")
     async def fetch_by_plan(self, data_plan: Dict[str, Any]) -> Dict[str, Any]:
         """Fetch data according to LLM-generated plan.
 
@@ -60,6 +62,15 @@ class DataReaderService:
             raise ValueError("data_plan cannot be empty")
 
         fetched_data = {}
+
+        # Add tracing attributes
+        set_span_attributes(
+            needs_transcripts=data_plan.get('needs_transcripts', False),
+            needs_analyses=data_plan.get('needs_analyses', False),
+            needs_plans=data_plan.get('needs_plans', False),
+            needs_workflows=data_plan.get('needs_workflows', False),
+            needs_executions=data_plan.get('needs_executions', False)
+        )
 
         try:
             # Fetch transcripts if needed
@@ -114,15 +125,52 @@ class DataReaderService:
             List of transcript dictionaries
         """
         try:
-            # Get basic transcripts
+            import time
+
+            # Add span attributes for observability
+            set_span_attributes(
+                operation="fetch_transcripts",
+                has_date_filter=bool(filters.get('date_range')),
+                has_topic_filter=bool(filters.get('topic')),
+                has_customer_filter=bool(filters.get('customer_id')),
+                limit=filters.get('limit', 'unlimited')
+            )
+
+            # Add event for fetch start
+            add_span_event("transcripts.fetch_start", filters=str(filters))
+
+            # Get transcripts with timing
+            start = time.time()
             transcripts = self.transcript_store.get_all()
+            fetch_time = time.time() - start
 
             # Convert to dicts if needed
             if transcripts and hasattr(transcripts[0], 'to_dict'):
                 transcripts = [t.to_dict() for t in transcripts]
 
-            # Apply filters
+            # Add event with fetch results
+            add_span_event("transcripts.fetched",
+                          count=len(transcripts),
+                          duration_ms=round(fetch_time * 1000))
+
+            # Apply filters with timing
+            start = time.time()
             filtered = self._apply_transcript_filters(transcripts, filters)
+            filter_time = time.time() - start
+
+            # Add event with filter results
+            add_span_event("transcripts.filtered",
+                          original_count=len(transcripts),
+                          filtered_count=len(filtered),
+                          duration_ms=round(filter_time * 1000))
+
+            # Add final span attributes
+            set_span_attributes(
+                transcripts_fetched=len(transcripts),
+                transcripts_after_filter=len(filtered),
+                fetch_duration_ms=round(fetch_time * 1000),
+                filter_duration_ms=round(filter_time * 1000)
+            )
 
             return filtered
 
@@ -139,8 +187,25 @@ class DataReaderService:
             List of analysis dictionaries
         """
         try:
-            # Get all analyses
+            import time
+
+            # Add span attributes for observability
+            set_span_attributes(
+                operation="fetch_analyses",
+                has_date_filter=bool(filters.get('date_range')),
+                has_compliance_filter=bool(filters.get('has_compliance_issues')),
+                risk_level_filter=filters.get('risk_level', 'any'),
+                sentiment_filter=filters.get('sentiment', 'any'),
+                limit=filters.get('limit', 'unlimited')
+            )
+
+            # Add event for fetch start
+            add_span_event("analyses.fetch_start", filters=str(filters))
+
+            # Get analyses with timing
+            start = time.time()
             analyses = self.analysis_store.get_all()
+            fetch_time = time.time() - start
 
             # Convert to dicts if needed
             result = []
@@ -153,8 +218,29 @@ class DataReaderService:
                     # Fail fast if unexpected type
                     raise ValueError(f"Unexpected analysis type: {type(a)}")
 
-            # Apply filters
+            # Add event with fetch results
+            add_span_event("analyses.fetched",
+                          count=len(result),
+                          duration_ms=round(fetch_time * 1000))
+
+            # Apply filters with timing
+            start = time.time()
             filtered = self._apply_analysis_filters(result, filters)
+            filter_time = time.time() - start
+
+            # Add event with filter results
+            add_span_event("analyses.filtered",
+                          original_count=len(result),
+                          filtered_count=len(filtered),
+                          duration_ms=round(filter_time * 1000))
+
+            # Add final span attributes
+            set_span_attributes(
+                analyses_fetched=len(result),
+                analyses_after_filter=len(filtered),
+                fetch_duration_ms=round(fetch_time * 1000),
+                filter_duration_ms=round(filter_time * 1000)
+            )
 
             return filtered
 
@@ -290,8 +376,14 @@ class DataReaderService:
 
         # Risk level filter
         if filters.get('risk_level'):
-            risk_level = filters['risk_level'].upper()
-            filtered = [a for a in filtered if a.get('risk_level') == risk_level]
+            risk_level_value = filters['risk_level']
+            # Handle both string and list cases
+            if isinstance(risk_level_value, list):
+                risk_levels = [rl.upper() if isinstance(rl, str) else str(rl).upper() for rl in risk_level_value]
+                filtered = [a for a in filtered if a.get('risk_level') in risk_levels]
+            else:
+                risk_level = risk_level_value.upper() if isinstance(risk_level_value, str) else str(risk_level_value).upper()
+                filtered = [a for a in filtered if a.get('risk_level') == risk_level]
 
         # Sentiment filter
         if filters.get('sentiment'):

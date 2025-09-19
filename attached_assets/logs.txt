@@ -1,0 +1,160 @@
+🧠 THINKING: Understanding query...
+[22:44:04] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:44:04] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:44:04] ✓ leadership.check_cache | 0.0s | querylength=42 executiverole=CCO cachehit=False
+[22:44:04] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+INFO:     127.0.0.1:33464 - "POST /api/v1/leadership/chat HTTP/1.1" 500 Internal Server Error
+[22:44:04] ✓ POST | 12.3s | http.method=POST http.url=https://api.... http.statuscode=200
+[22:44:04] ✓ openai.response | 12.4s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc37... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=990
+[22:44:04] ✓ openai.llm.arun | 12.4s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=12351.921909... llm.responseid=resp_68ccc37...
+[22:44:04] ✗ insights.process_query | 12.4s | querylength=42 executiverole=CCO hassessioncontext=True error=Leadership i...
+[22:44:17]   📝 exception | exception.type=Exception exception.message=Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
+    from ..infrastructure.telemetry import set_span_attributes, add_span_event
+ModuleNotFoundError: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
+    understanding = await self.thinking_agent.understand_query(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
+    raise Exception(f"Query understanding failed: {str(e)}")
+Exception: Query understanding failed: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
+    result = await func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
+    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
+Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
+
+[22:44:17]   📝 exception | exception.type=Exception exception.message=Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
+    from ..infrastructure.telemetry import set_span_attributes, add_span_event
+ModuleNotFoundError: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
+    understanding = await self.thinking_agent.understand_query(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
+    raise Exception(f"Query understanding failed: {str(e)}")
+Exception: Query understanding failed: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/trace/__init__.py", line 589, in use_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/__init__.py", line 1105, in start_as_current_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
+    result = await func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
+    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
+Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
+
+[22:44:04] ✗ leadership.chat | 12.4s | executiverole=CCO executiveid=john.doe querylength=42 hassession=False error=Chat process...
+[22:44:17]   📝 exception | exception.type=Exception exception.message=Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
+    from ..infrastructure.telemetry import set_span_attributes, add_span_event
+ModuleNotFoundError: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
+    understanding = await self.thinking_agent.understand_query(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
+    raise Exception(f"Query understanding failed: {str(e)}")
+Exception: Query understanding failed: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 153, in chat
+    response = await self.insights_agent.process_query(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
+    result = await func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
+    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
+Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
+    result = await func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 205, in chat
+    raise Exception(f"Chat processing failed after {processing_time:.2f}s: {str(e)}")
+Exception: Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
+
+[22:44:17]   📝 exception | exception.type=Exception exception.message=Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
+    from ..infrastructure.telemetry import set_span_attributes, add_span_event
+ModuleNotFoundError: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
+    understanding = await self.thinking_agent.understand_query(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
+    raise Exception(f"Query understanding failed: {str(e)}")
+Exception: Query understanding failed: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 153, in chat
+    response = await self.insights_agent.process_query(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
+    result = await func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
+    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
+Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/trace/__init__.py", line 589, in use_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/__init__.py", line 1105, in start_as_current_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
+    result = await func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 205, in chat
+    raise Exception(f"Chat processing failed after {processing_time:.2f}s: {str(e)}")
+Exception: Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
+
+----------------------------------------------------
+
+
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python cli.py leadership chat "Show me all violations in the last 30 days" --exec-id "john.doe" --role "CCO"
+🎯 Leadership Insights
+Query: Show me all violations in the last 30 days
+Role: CCO
+Executive: john.doe
+
+❌ Leadership chat failed: API error (500): Leadership chat failed: Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query
+understanding failed: No module named 'src.agents.infrastructure'
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$

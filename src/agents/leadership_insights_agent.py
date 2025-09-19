@@ -11,6 +11,7 @@ import time
 from datetime import datetime
 
 from ..infrastructure.llm.llm_client_v2 import LLMClientV2, RequestSpec, RequestOptions
+from ..infrastructure.telemetry import trace_async_function, set_span_attributes, add_span_event
 from ..utils.prompt_loader import prompt_loader
 from .insights.thinking_agent import ThinkingAgent, QueryUnderstanding
 
@@ -44,6 +45,7 @@ class LeadershipInsightsAgent:
         # Initialize sub-agents
         self.thinking_agent = ThinkingAgent(llm_client)
 
+    @trace_async_function("insights.process_query")
     async def process_query(self, query: str, executive_role: str = None,
                            session_context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process leadership query through full agentic workflow.
@@ -64,6 +66,13 @@ class LeadershipInsightsAgent:
 
         start_time = time.time()
         processing_steps = []
+
+        # Add tracing attributes for observability
+        set_span_attributes(
+            query_length=len(query),
+            executive_role=executive_role or "unknown",
+            has_session_context=bool(session_context)
+        )
 
         try:
             # STEP 1: THINK - Understand the query
@@ -199,6 +208,7 @@ class LeadershipInsightsAgent:
             processing_time = time.time() - start_time
             raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
 
+    @trace_async_function("insights.planning")
     async def _create_data_plan(self, understanding: QueryUnderstanding) -> Dict[str, Any]:
         """Create data fetching plan based on understanding.
 
@@ -247,6 +257,7 @@ class LeadershipInsightsAgent:
         except Exception as e:
             raise Exception(f"Data planning failed: {str(e)}")
 
+    @trace_async_function("insights.fetching")
     async def _fetch_data(self, data_plan: Dict[str, Any]) -> Dict[str, Any]:
         """Fetch data according to plan.
 
@@ -275,6 +286,7 @@ class LeadershipInsightsAgent:
         except Exception as e:
             raise Exception(f"Data fetching failed: {str(e)}")
 
+    @trace_async_function("insights.aggregating")
     async def _aggregate_data(self, raw_data: Dict[str, Any],
                              understanding: QueryUnderstanding) -> Dict[str, Any]:
         """Aggregate raw data into leadership insights.
@@ -290,12 +302,40 @@ class LeadershipInsightsAgent:
             Exception: If aggregation fails (NO FALLBACK)
         """
         try:
+            import json
+
+            # Add span attributes for data size and complexity
+            data_size = len(json.dumps(raw_data))
+            total_records = raw_data.get('_metadata', {}).get('total_records', 0)
+            data_sources = raw_data.get('_metadata', {}).get('data_sources', [])
+
+            set_span_attributes(
+                operation="aggregate_data",
+                data_size_bytes=data_size,
+                total_records=total_records,
+                data_sources_count=len(data_sources),
+                data_sources=str(data_sources)
+            )
+
+            # Add warning event if data is large
+            if data_size > 10000:
+                add_span_event("aggregation.large_dataset_warning",
+                              size_bytes=data_size,
+                              recommendation="Consider pre-aggregation or chunking")
+
+            # Add event for aggregation start
+            add_span_event("aggregation.context_building",
+                          record_count=total_records)
+
             # Build aggregation context
             context = {
                 'raw_data_summary': self._summarize_raw_data(raw_data),
                 'understanding': understanding.to_dict(),
-                'record_count': raw_data.get('_metadata', {}).get('total_records', 0)
+                'record_count': total_records
             }
+
+            # Add event for prompt loading
+            add_span_event("aggregation.prompt_loading")
 
             # Load aggregation prompt
             prompt = prompt_loader.format(
@@ -324,6 +364,7 @@ class LeadershipInsightsAgent:
         except Exception as e:
             raise Exception(f"Data aggregation failed: {str(e)}")
 
+    @trace_async_function("insights.synthesizing")
     async def _synthesize_response(self, aggregated_data: Dict[str, Any],
                                   understanding: QueryUnderstanding,
                                   original_query: str) -> Dict[str, Any]:

@@ -27,7 +27,7 @@ ANALYSIS FRAMEWORK:
    - customer_experience: Understanding customer satisfaction and pain points
 
 2. FOCUS AREA (choose one):
-   - compliance: FDCPA, RESPA, TILA, regulatory requirements
+   - compliance: FDCPA, RESPA, TILA, TRID, HMDA, CFPB, regulatory requirements
    - performance: Efficiency, quality, productivity metrics
    - risk: Financial, operational, regulatory, reputation risks
    - strategic: Long-term planning, resource allocation, growth
@@ -72,6 +72,16 @@ Provide your step-by-step reasoning about why you classified the query this way.
 - What clues in the language suggest intent?
 - What would a {executive_role} typically need this information for?
 - How does this fit with typical leadership concerns?
+
+HANDLING UNCLEAR TERMS:
+If the query contains unfamiliar compliance terms or acronyms:
+- Still classify to the best of your ability
+- Assume compliance-related terms likely relate to regulatory requirements
+- TRID = Truth in Lending Act - Real Estate Settlement Procedures Act Integrated Disclosure
+- HMDA = Home Mortgage Disclosure Act
+- CFPB = Consumer Financial Protection Bureau
+- Provide reasonable confidence (30-60%) rather than very low (<20%)
+- Include guidance for clarification in reasoning if needed
 
 CONFIDENCE SCORE (0-100):
 How confident are you in this understanding?

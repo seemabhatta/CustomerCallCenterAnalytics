@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 
 from ..infrastructure.llm.llm_client_v2 import LLMClientV2, OpenAIProvider
+from ..infrastructure.telemetry import trace_async_function, set_span_attributes
 from ..storage.session_store import SessionStore
 from ..storage.insights_cache_store import InsightsCacheStore
 from ..storage.insights_pattern_store import InsightsPatternStore
@@ -52,7 +53,7 @@ class LeadershipInsightsService:
         provider = OpenAIProvider(api_key=api_key)
         self.llm_client = LLMClientV2(provider=provider)
 
-        # Initialize data reader
+        # Initialize data reader (read-only, no API key needed)
         self.data_reader = DataReaderService(db_path)
 
         # Initialize the main agent
@@ -61,6 +62,7 @@ class LeadershipInsightsService:
             data_reader=self.data_reader
         )
 
+    @trace_async_function("leadership.chat")
     async def chat(self, query: str, executive_id: str, executive_role: str = "Manager",
                    session_id: str = None) -> Dict[str, Any]:
         """Main chat interface for leadership insights.
@@ -84,6 +86,14 @@ class LeadershipInsightsService:
             raise ValueError("Executive ID cannot be empty")
 
         start_time = time.time()
+
+        # Add tracing attributes for observability
+        set_span_attributes(
+            executive_role=executive_role,
+            executive_id=executive_id,
+            query_length=len(query),
+            has_session=bool(session_id)
+        )
 
         try:
             # Step 1: Get or create session
@@ -321,6 +331,7 @@ class LeadershipInsightsService:
             raise Exception(f"Dashboard generation failed: {str(e)}")
 
 
+    @trace_async_function("leadership.check_cache")
     async def _check_cache(self, query: str, executive_role: str) -> Optional[Dict[str, Any]]:
         """Check cache for similar recent queries.
 
@@ -332,6 +343,12 @@ class LeadershipInsightsService:
             Cached response or None
         """
         try:
+            # Add tracing attributes
+            set_span_attributes(
+                query_length=len(query),
+                executive_role=executive_role
+            )
+
             # Check for exact or similar cached queries
             cached = self.cache_store.get_cached_aggregation(
                 query=query,
@@ -339,6 +356,7 @@ class LeadershipInsightsService:
             )
 
             if cached:
+                set_span_attributes(cache_hit=True)
                 return {
                     'response': cached['aggregated_data'],
                     'cache_metadata': {
@@ -347,6 +365,7 @@ class LeadershipInsightsService:
                     }
                 }
 
+            set_span_attributes(cache_hit=False)
             return None
 
         except Exception:
@@ -380,6 +399,7 @@ class LeadershipInsightsService:
 
         return context
 
+    @trace_async_function("leadership.cache_response")
     async def _cache_response(self, query: str, response: Dict[str, Any], executive_role: str):
         """Cache response for future use.
 
@@ -404,6 +424,7 @@ class LeadershipInsightsService:
             # Cache errors shouldn't fail the main process
             print(f"Cache storage failed: {str(e)}")
 
+    @trace_async_function("leadership.store_patterns")
     async def _store_learning_patterns(self, response: Dict[str, Any]):
         """Store learning patterns from successful responses.
 

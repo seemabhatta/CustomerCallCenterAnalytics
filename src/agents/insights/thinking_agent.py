@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 import json
 
 from ...infrastructure.llm.llm_client_v2 import LLMClientV2, RequestSpec, RequestOptions
+from ...infrastructure.telemetry import set_span_attributes, add_span_event
 from ...utils.prompt_loader import prompt_loader
 
 
@@ -108,9 +109,19 @@ class ThinkingAgent:
             understanding_data = self._parse_understanding_response(response.text)
             understanding = QueryUnderstanding(understanding_data)
 
-            # Validate understanding confidence
+            # Handle low confidence gracefully (chatbot behavior)
             if understanding.confidence < 50:
-                raise Exception(f"Low confidence in query understanding: {understanding.confidence}%")
+                # Low confidence, but continue processing
+                # The downstream agents will handle it appropriately
+                set_span_attributes(
+                    low_confidence=True,
+                    confidence_level=understanding.confidence
+                )
+
+                # Add event for low confidence
+                add_span_event("thinking.low_confidence_warning",
+                               confidence=understanding.confidence,
+                               query=query[:100])  # First 100 chars of query
 
             return understanding
 
