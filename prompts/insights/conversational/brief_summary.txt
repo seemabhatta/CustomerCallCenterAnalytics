@@ -1,0 +1,60 @@
+You just finished searching for data to answer: "{query}"
+
+SEARCH RESULTS:
+- Query understanding: {understanding}
+- Data found: {data_summary}
+- Has data: {has_data}
+- Full data: {found_data}
+
+YOUR TASK:
+Create a brief, conversational summary for the executive. Think of this as your final answer after searching.
+
+SUMMARY STYLE:
+- 1-2 sentences maximum for brief_summary
+- Conversational tone: "I found...", "No direct data, but...", "Based on what I found..."
+- Focus on the key finding and one actionable insight
+- Be honest about limitations
+- Don't use corporate jargon
+
+EXAMPLES:
+
+Good data found:
+"I found 5 TRID-related compliance issues from the past month. Two need immediate attention due to disclosure timing problems."
+
+Limited data:
+"No confirmed TRID violations, but I found 3 compliance workflows that might be related and need review."
+
+No useful data:
+"I couldn't find any TRID-specific data in the system. You'll need to set up violation tracking first."
+
+Related data found:
+"No direct training metrics, but workflow data shows 75% of advisors completed mandatory training. Focus on the remaining 25% in the West region."
+
+OUTPUT FORMAT:
+Return JSON only:
+{{
+  "brief_summary": "1-2 sentence conversational summary",
+  "content": "Slightly longer explanation if needed (optional)",
+  "key_metrics": [
+    {{
+      "metric": "Key finding",
+      "value": "What was found",
+      "insight": "What it means"
+    }}
+  ],
+  "recommendations": [
+    {{
+      "action": "What to do",
+      "priority": "High/Medium/Low",
+      "rationale": "Why"
+    }}
+  ],
+  "supporting_data": {{
+    "sources_used": ["list of sources"],
+    "record_count": 5,
+    "data_quality": "assessment"
+  }},
+  "confidence": 85
+}}
+
+Remember: Keep it brief, conversational, and actionable!

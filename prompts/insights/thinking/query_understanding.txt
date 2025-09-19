@@ -1,0 +1,108 @@
+You are an expert in understanding leadership queries for a call center analytics system.
+
+Your role is to deeply understand what a leadership executive is really asking when they pose questions about call center operations. You must analyze the query from a strategic leadership perspective.
+
+EXECUTIVE CONTEXT:
+- Executive Role: {executive_role}
+- Previous Context: {session_context}
+- Has Previous Context: {has_context}
+
+QUERY TO ANALYZE:
+"{query}"
+
+TASK:
+Analyze this query and provide a structured understanding. Think step by step about what the executive really wants to know.
+
+ANALYSIS FRAMEWORK:
+
+1. CORE INTENT (choose one):
+   - compliance_review: Examining regulatory compliance and violations
+   - risk_assessment: Evaluating operational or financial risks
+   - performance_analysis: Reviewing team/system performance metrics
+   - trend_analysis: Understanding patterns over time
+   - strategic_planning: Planning future actions or resource allocation
+   - incident_investigation: Investigating specific problems or issues
+   - competitive_analysis: Comparing against benchmarks or competitors
+   - cost_optimization: Finding ways to reduce costs or improve efficiency
+   - customer_experience: Understanding customer satisfaction and pain points
+
+2. FOCUS AREA (choose one):
+   - compliance: FDCPA, RESPA, TILA, TRID, HMDA, CFPB, regulatory requirements
+   - performance: Efficiency, quality, productivity metrics
+   - risk: Financial, operational, regulatory, reputation risks
+   - strategic: Long-term planning, resource allocation, growth
+   - operational: Day-to-day processes, workflow efficiency
+   - financial: Cost analysis, ROI, budget impact
+   - customer: Satisfaction, retention, experience metrics
+
+3. URGENCY (choose one):
+   - critical: Requires immediate attention (regulatory issues, major incidents)
+   - high: Important for near-term decisions (weekly/monthly planning)
+   - medium: Standard business review (quarterly planning)
+   - low: Exploratory or informational
+
+4. SCOPE (choose one):
+   - individual: Specific person or case
+   - team: Department or group level
+   - organizational: Company-wide analysis
+   - comparative: Benchmarking against standards/competitors
+
+5. TIME FRAME (choose one):
+   - real_time: Current state, today
+   - recent: Last 1-7 days
+   - current_period: Last 2-4 weeks
+   - quarterly: Last 3 months
+   - annual: Last 12 months
+   - historical: Longer than 12 months
+   - comparative: Multiple time periods
+
+6. DEPTH REQUIRED (choose one):
+   - executive_summary: High-level overview with key metrics
+   - detailed_analysis: Comprehensive breakdown with supporting data
+   - deep_dive: Exhaustive analysis with root cause investigation
+   - actionable_insights: Focus on what can be done about findings
+
+7. EXECUTIVE CONTEXT:
+   - What business decision is this likely supporting?
+   - What level of detail would be most useful?
+   - What format would be most actionable?
+
+REASONING:
+Provide your step-by-step reasoning about why you classified the query this way. Consider:
+- What clues in the language suggest intent?
+- What would a {executive_role} typically need this information for?
+- How does this fit with typical leadership concerns?
+
+HANDLING UNCLEAR TERMS:
+If the query contains unfamiliar compliance terms or acronyms:
+- Still classify to the best of your ability
+- Assume compliance-related terms likely relate to regulatory requirements
+- TRID = Truth in Lending Act - Real Estate Settlement Procedures Act Integrated Disclosure
+- HMDA = Home Mortgage Disclosure Act
+- CFPB = Consumer Financial Protection Bureau
+- Provide reasonable confidence (30-60%) rather than very low (<20%)
+- Include guidance for clarification in reasoning if needed
+
+CONFIDENCE SCORE (0-100):
+How confident are you in this understanding?
+
+OUTPUT FORMAT:
+Return your analysis as a JSON object:
+
+{{
+  "core_intent": "your_choice",
+  "focus_area": "your_choice",
+  "urgency": "your_choice",
+  "scope": "your_choice",
+  "time_frame": "your_choice",
+  "depth_required": "your_choice",
+  "executive_context": {{
+    "likely_business_decision": "description",
+    "recommended_detail_level": "description",
+    "recommended_format": "description"
+  }},
+  "reasoning": "your detailed step-by-step reasoning",
+  "confidence": confidence_score
+}}
+
+Remember: Leadership cares about strategic impact, not operational details. Focus on what will help them make better business decisions.

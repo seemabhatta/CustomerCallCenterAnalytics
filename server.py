@@ -46,6 +46,7 @@ from src.services.insights_service import InsightsService
 from src.services.plan_service import PlanService
 from src.services.workflow_service import WorkflowService
 from src.services.system_service import SystemService
+from src.services.leadership_insights_service import LeadershipInsightsService
 
 api_key = os.environ.get("OPENAI_API_KEY")
 if not api_key:
@@ -60,6 +61,7 @@ insights_service = InsightsService()
 plan_service = PlanService(api_key=api_key)
 workflow_service = WorkflowService(db_path=db_path)
 system_service = SystemService(api_key=api_key)
+leadership_insights_service = LeadershipInsightsService(api_key=api_key, db_path=db_path)
 
 print("✅ All services initialized successfully")
 
@@ -112,6 +114,19 @@ class WorkflowApprovalRequest(BaseModel):
 class WorkflowExecutionRequest(BaseModel):
     executed_by: str
 
+class LeadershipChatRequest(BaseModel):
+    query: str
+    executive_id: str
+    executive_role: Optional[str] = "Manager"
+    session_id: Optional[str] = None
+
+class LeadershipSessionRequest(BaseModel):
+    executive_id: str
+    limit: Optional[int] = 10
+
+class LeadershipDashboardRequest(BaseModel):
+    executive_role: Optional[str] = None
+
 
 @app.get("/")
 async def root():
@@ -130,7 +145,8 @@ async def root():
             "workflows": "/api/v1/workflows",
             "executions": "/api/v1/executions",
             "metrics": "/api/v1/metrics",
-            "health": "/api/v1/health"
+            "health": "/api/v1/health",
+            "leadership": "/api/v1/leadership"
         }
     }
 
@@ -282,20 +298,9 @@ async def get_insights_dashboard():
 async def populate_insights_graph(request: dict):
     """Populate knowledge graph from analysis data - proxies to insights service."""
     try:
-        analysis_id = request.get("analysis_id")
-        analysis_ids = request.get("analysis_ids")
-        from_date = request.get("from_date")
-        populate_all = request.get("all", False)
-
-        if analysis_id:
-            return await insights_service.populate_from_analysis(analysis_id)
-        elif analysis_ids:
-            return await insights_service.populate_batch(analysis_ids)
-        elif populate_all or from_date:
-            return await insights_service.populate_all(from_date)
-        else:
-            raise HTTPException(status_code=400, detail="Must provide analysis_id, analysis_ids, or all=true")
-
+        return await insights_service.populate_insights(request)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to populate insights: {str(e)}")
 
@@ -718,6 +723,120 @@ async def list_orchestration_runs(
         "runs": runs,
         "total": len(runs)
     }
+
+# ===============================================
+# LEADERSHIP INSIGHTS ENDPOINTS
+# ===============================================
+
+@app.post("/api/v1/leadership/chat")
+async def leadership_chat(request: LeadershipChatRequest):
+    """Main chat interface for leadership insights - proxies to leadership service."""
+    try:
+        result = await leadership_insights_service.chat(
+            query=request.query,
+            executive_id=request.executive_id,
+            executive_role=request.executive_role,
+            session_id=request.session_id
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Leadership chat failed: {str(e)}")
+
+@app.get("/api/v1/leadership/sessions/{session_id}/history")
+async def get_session_history(
+    session_id: str,
+    limit: Optional[int] = Query(50, description="Maximum messages to return")
+):
+    """Get conversation history for a session - proxies to leadership service."""
+    try:
+        result = await leadership_insights_service.get_session_history(session_id, limit)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get session history: {str(e)}")
+
+@app.get("/api/v1/leadership/sessions")
+async def list_executive_sessions(
+    executive_id: str = Query(..., description="Executive identifier"),
+    limit: Optional[int] = Query(10, description="Maximum sessions to return")
+):
+    """List sessions for an executive - proxies to leadership service."""
+    try:
+        result = await leadership_insights_service.get_executive_sessions(executive_id, limit)
+        return {"sessions": result, "total": len(result)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list executive sessions: {str(e)}")
+
+@app.get("/api/v1/leadership/sessions/{session_id}")
+async def get_session_details(session_id: str):
+    """Get session details including metadata - proxies to leadership service."""
+    try:
+        result = await leadership_insights_service.get_session_history(session_id, limit=1)
+        if not result or not result.get('session'):
+            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+        return result['session']
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get session details: {str(e)}")
+
+@app.delete("/api/v1/leadership/sessions/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a leadership session - proxies to leadership service."""
+    try:
+        success = await leadership_insights_service.delete_session(session_id)
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+        return {"message": f"Session {session_id} deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete session: {str(e)}")
+
+@app.get("/api/v1/leadership/dashboard")
+async def get_leadership_dashboard(
+    executive_role: Optional[str] = Query(None, description="Filter by executive role")
+):
+    """Get pre-computed insights dashboard - proxies to leadership service."""
+    try:
+        result = await leadership_insights_service.get_insights_dashboard(executive_role)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get leadership dashboard: {str(e)}")
+
+@app.get("/api/v1/leadership/cache/stats")
+async def get_cache_statistics():
+    """Get cache performance metrics - proxies to leadership service."""
+    try:
+        cache_stats = leadership_insights_service.get_cache_statistics()
+        return cache_stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cache statistics: {str(e)}")
+
+@app.get("/api/v1/leadership/patterns")
+async def get_pattern_statistics():
+    """Get learning patterns statistics - proxies to leadership service."""
+    try:
+        pattern_stats = leadership_insights_service.get_pattern_statistics()
+        return pattern_stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get pattern statistics: {str(e)}")
+
+@app.get("/api/v1/leadership/status")
+async def get_leadership_service_status():
+    """Get leadership service health and component status."""
+    try:
+        result = leadership_insights_service.get_service_status()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get leadership service status: {str(e)}")
 
 # ===============================================
 # MAIN ENTRY POINT

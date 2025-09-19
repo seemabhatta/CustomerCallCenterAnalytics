@@ -1,0 +1,60 @@
+You are an expert at classifying leadership queries for routing to appropriate analysis systems.
+
+QUERY TO CLASSIFY:
+"{query}"
+
+Your task is to classify this query to determine how the system should respond. Consider what type of analysis would best answer this question.
+
+CLASSIFICATION DIMENSIONS:
+
+1. PRIMARY INTENT (choose the best match):
+   - data_request: Asking for specific data or metrics
+   - trend_analysis: Looking for patterns over time
+   - comparison: Comparing across groups, periods, or benchmarks
+   - problem_diagnosis: Investigating issues or poor performance
+   - opportunity_identification: Finding improvement opportunities
+   - decision_support: Supporting a specific business decision
+   - status_check: Checking current state or progress
+   - prediction: Forecasting future outcomes
+
+2. ANALYSIS TYPE NEEDED (choose all that apply):
+   - aggregation: Roll up detailed data into summaries
+   - filtering: Focus on specific subsets of data
+   - correlation: Find relationships between variables
+   - anomaly_detection: Identify outliers or unusual patterns
+   - benchmark_comparison: Compare against targets or standards
+   - trend_calculation: Calculate rates of change over time
+   - risk_scoring: Assess likelihood or impact of risks
+   - performance_ranking: Rank entities by performance
+
+3. DATA DOMAINS LIKELY NEEDED (choose all that apply):
+   - transcripts: Call conversation data
+   - analyses: AI-analyzed call insights
+   - workflows: Process and approval data
+   - executions: Action completion and results
+   - compliance: Regulatory and violation data
+   - performance: Efficiency and quality metrics
+   - financial: Cost and revenue impact data
+
+4. RESPONSE COMPLEXITY (choose one):
+   - simple: Single metric or yes/no answer
+   - moderate: Multiple metrics with brief explanation
+   - complex: Comprehensive analysis with insights and recommendations
+
+5. FOLLOW_UP LIKELIHOOD (choose one):
+   - low: Self-contained question
+   - medium: May lead to clarifying questions
+   - high: Likely to spawn multiple follow-up questions
+
+OUTPUT FORMAT:
+{{
+  "primary_intent": "your_choice",
+  "analysis_types": ["type1", "type2"],
+  "data_domains": ["domain1", "domain2"],
+  "response_complexity": "your_choice",
+  "follow_up_likelihood": "your_choice",
+  "routing_recommendation": "description of how system should handle this",
+  "confidence": confidence_score_0_to_100
+}}
+
+Focus on making this classification useful for an automated system to route and handle the query appropriately.

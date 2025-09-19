@@ -410,7 +410,38 @@ class InsightsService:
     # ===============================================
     # POPULATE OPERATIONS
     # ===============================================
-    
+
+    async def populate_insights(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Generic populate method that handles all population types.
+
+        Args:
+            request: Request dict with populate parameters
+
+        Returns:
+            Dict with populate status and details
+
+        Raises:
+            ValueError: If invalid request parameters (NO FALLBACK)
+            Exception: If population fails (NO FALLBACK)
+        """
+        if not request:
+            raise ValueError("Request cannot be empty")
+
+        analysis_id = request.get("analysis_id")
+        analysis_ids = request.get("analysis_ids")
+        from_date = request.get("from_date")
+        populate_all = request.get("all", False)
+
+        # Delegate to appropriate method based on request
+        if analysis_id:
+            return await self.populate_from_analysis(analysis_id)
+        elif analysis_ids:
+            return await self.populate_batch(analysis_ids)
+        elif populate_all or from_date:
+            return await self.populate_all(from_date)
+        else:
+            raise ValueError("Must provide analysis_id, analysis_ids, or all=true")
+
     async def populate_from_analysis(self, analysis_id: str) -> Dict[str, Any]:
         """
         Populate knowledge graph from a specific analysis ID.

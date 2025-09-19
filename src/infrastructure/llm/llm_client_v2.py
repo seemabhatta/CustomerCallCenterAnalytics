@@ -205,16 +205,24 @@ class OpenAIProvider(LLMProvider):
                 span.set_attribute("llm.provider", "openai")
                 span.set_attribute("llm.model", self.model)
 
-            response = await self._aclient.responses.stream(
-                model=self.model,
-                input=messages,
-                response_format=schema_payload,
-                temperature=spec.options.temperature,
-                max_output_tokens=spec.options.max_output_tokens,
-                top_p=spec.options.top_p,
-                seed=spec.options.seed,
+            params = {
+                "model": self.model,
+                "input": messages,
+                "response_format": schema_payload,
+                "max_output_tokens": spec.options.max_output_tokens,
+                "top_p": spec.options.top_p,
                 **(spec.provider_overrides or {}),
-            )
+            }
+
+            # Only add temperature if not gpt-5-nano (which doesn't support it)
+            if self.model != "gpt-5-nano":
+                params["temperature"] = spec.options.temperature
+
+            # Seed parameter not supported by current OpenAI client version
+            # if spec.options.seed is not None:
+            #     params["seed"] = spec.options.seed
+
+            response = await self._aclient.responses.stream(**params)
 
             async with response as stream:
                 async for event in stream:
@@ -236,11 +244,14 @@ class OpenAIProvider(LLMProvider):
         kwargs = {
             "model": self.model,
             "input": messages,
-            "temperature": spec.options.temperature,
             "max_output_tokens": spec.options.max_output_tokens,
             "top_p": spec.options.top_p,
-            "seed": spec.options.seed,
+            # "seed": spec.options.seed,  # Not supported by current OpenAI client
         }
+
+        # Only add temperature if not gpt-5-nano (which doesn't support it)
+        if self.model != "gpt-5-nano":
+            kwargs["temperature"] = spec.options.temperature
         if schema_payload:
             kwargs["response_format"] = schema_payload
         if spec.provider_overrides:
