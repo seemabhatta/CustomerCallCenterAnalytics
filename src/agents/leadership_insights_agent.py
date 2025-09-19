@@ -71,64 +71,61 @@ class LeadershipInsightsAgent:
         )
 
         try:
-            # STEP 1: UNDERSTAND - Query analysis and data check
-            print("🧠 UNDERSTANDING: Query analysis and data check...")
+            # STEP 1: STRATEGY - Let LLM agent decide everything
+            print("🧠 STRATEGIZING: Analyzing query and creating action plan...")
             step_start = time.time()
 
-            understanding = await self.thinking_agent.understand_query(
-                query=query,
-                executive_role=executive_role,
-                session_context=session_context
-            )
+            # Create strategy using LLM agent (not hardcoded logic)
+            strategy = await self._create_strategy(query, executive_role, session_context)
 
-            # Quick data availability check
-            data_summary = await self.data_reader.get_data_summary()
+            # Display strategy-driven visibility messages (agent decides what to show)
+            for message in strategy.get('visibility_messages', []):
+                print(message)
 
-            thinking_time = time.time() - step_start
+            understanding = strategy['understanding']
+
+            strategy_time = time.time() - step_start
             processing_steps.append({
-                'step': 'understanding',
-                'duration_ms': round(thinking_time * 1000),
+                'step': 'strategy',
+                'duration_ms': round(strategy_time * 1000),
                 'confidence': understanding.confidence,
-                'data_available': data_summary.get('total_records', 0) > 0
+                'strategy_type': strategy.get('approach', 'unknown')
             })
 
-            # Fast exit for no data - generate helpful response immediately
-            if data_summary.get('total_records', 0) == 0:
-                print("💭 NO DATA: Generating helpful guidance...")
-                response = await self._generate_no_data_response(understanding, query)
-
-                total_time = time.time() - start_time
-                response['metadata'] = {
-                    'query_understanding': understanding.to_dict(),
-                    'processing_steps': processing_steps,
-                    'total_processing_time_ms': round(total_time * 1000),
-                    'overall_confidence': 70,  # Default confidence for guidance
-                    'data_sources_used': [],
-                    'records_analyzed': 0,
-                    'response_timestamp': datetime.now().isoformat()
-                }
-
-                print(f"✅ COMPLETE: No-data response in {total_time:.2f}s")
-                return response
-
-            # STEP 2: GENERATE - Fetch data and create response
-            print("📊 GENERATING: Fetching data and creating response...")
+            # STEP 2: DATA SEARCH - Use strategy-driven data finder
+            print("📊 SEARCHING: Following strategy-defined data search plan...")
             step_start = time.time()
 
-            # Fetch relevant data based on understanding
-            relevant_data = await self._fetch_relevant_data(understanding)
+            # Let the data finder agent execute the strategy
+            data_result = await self._find_data_with_strategy(strategy)
 
-            # Generate complete response with all context
-            response = await self._generate_response(understanding, relevant_data, query)
+            # Display data search results (agent decides what to show)
+            for message in data_result.get('search_messages', []):
+                print(message)
+
+            search_time = time.time() - step_start
+            processing_steps.append({
+                'step': 'data_search',
+                'duration_ms': round(search_time * 1000),
+                'records_found': data_result.get('total_records', 0),
+                'sources_searched': len(data_result.get('sources_tried', []))
+            })
+
+            # STEP 3: RESPONSE GENERATION - Let response agent decide how to respond
+            print("✨ GENERATING: Creating strategic response...")
+            step_start = time.time()
+
+            # Generate response using strategy + data (agent decides format and content)
+            response = await self._generate_strategic_response(strategy, data_result, query)
 
             generation_time = time.time() - step_start
             processing_steps.append({
-                'step': 'generation',
+                'step': 'response_generation',
                 'duration_ms': round(generation_time * 1000),
-                'records_processed': relevant_data.get('_metadata', {}).get('total_records', 0)
+                'response_type': response.get('response_type', 'standard')
             })
 
-            # Compile final response
+            # Compile final response with strategy context
             total_time = time.time() - start_time
 
             final_response = {
@@ -141,16 +138,17 @@ class LeadershipInsightsAgent:
                 # Metadata for transparency
                 'metadata': {
                     'query_understanding': understanding.to_dict(),
+                    'strategy_used': strategy.get('approach', 'unknown'),
                     'processing_steps': processing_steps,
                     'total_processing_time_ms': round(total_time * 1000),
                     'overall_confidence': response.get('confidence', 80),
-                    'data_sources_used': list(relevant_data.keys()) if relevant_data else [],
-                    'records_analyzed': relevant_data.get('_metadata', {}).get('total_records', 0),
+                    'data_sources_used': data_result.get('sources_used', []),
+                    'records_analyzed': data_result.get('total_records', 0),
                     'response_timestamp': datetime.now().isoformat()
                 }
             }
 
-            print(f"✅ COMPLETE: Processed in {total_time:.2f}s with {response.get('confidence', 80)}% confidence")
+            print(f"✅ COMPLETE: {strategy.get('goal', 'Query')} processed in {total_time:.2f}s")
 
             return final_response
 
@@ -158,152 +156,162 @@ class LeadershipInsightsAgent:
             processing_time = time.time() - start_time
             raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
 
-    async def _generate_no_data_response(self, understanding: QueryUnderstanding, query: str) -> Dict[str, Any]:
-        """Generate helpful response when no data is available.
+    async def _create_strategy(self, query: str, executive_role: str, session_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Strategy Agent: Create comprehensive strategy for query processing.
 
         Args:
-            understanding: Query understanding
             query: Original query
+            executive_role: Executive role
+            session_context: Session context
 
         Returns:
-            Response dictionary
+            Strategy dictionary with understanding, approach, visibility messages
         """
         try:
-            # Build context for no-data response
+            # Build strategy context
             context = {
                 'query': query,
-                'understanding': understanding.to_dict(),
-                'executive_role': understanding.executive_context
+                'executive_role': executive_role or 'Manager',
+                'session_context': session_context or {}
             }
 
-            # Load no-data response prompt
+            # Load strategy prompt
             prompt = prompt_loader.format(
-                'insights/responses/no_data_guidance.txt',
+                'insights/strategy/query_strategy.txt',
                 **context
             )
 
-            # Get LLM response
+            # Get strategy from LLM
+            response = await self.llm.arun(
+                messages=[{"role": "user", "content": prompt}],
+                options=RequestOptions(temperature=0.3)
+            )
+
+            if not response.text:
+                raise Exception("Strategy agent returned no response")
+
+            strategy = self._parse_json_response(response.text)
+
+            # Add understanding from thinking agent
+            understanding = await self.thinking_agent.understand_query(
+                query=query,
+                executive_role=executive_role,
+                session_context=session_context
+            )
+            strategy['understanding'] = understanding
+
+            return strategy
+
+        except Exception as e:
+            raise Exception(f"Strategy creation failed: {str(e)}")
+
+    async def _find_data_with_strategy(self, strategy: Dict[str, Any]) -> Dict[str, Any]:
+        """Data Finder Agent: Execute strategy-driven data search.
+
+        Args:
+            strategy: Strategy from strategy agent
+
+        Returns:
+            Data search results with messages and findings
+        """
+        try:
+            # Build data search context
+            context = {
+                'strategy': strategy,
+                'understanding': strategy['understanding'].to_dict()
+            }
+
+            # Load data search prompt
+            prompt = prompt_loader.format(
+                'insights/data/strategic_search.txt',
+                **context
+            )
+
+            # Get search plan from LLM
+            response = await self.llm.arun(
+                messages=[{"role": "user", "content": prompt}],
+                options=RequestOptions(temperature=0.2)
+            )
+
+            if not response.text:
+                raise Exception("Data finder agent returned no response")
+
+            search_plan = self._parse_json_response(response.text)
+
+            # Execute the search plan
+            data_result = {
+                'search_messages': search_plan.get('search_messages', []),
+                'sources_tried': [],
+                'sources_used': [],
+                'total_records': 0,
+                'data': {}
+            }
+
+            # Execute each search in the plan
+            for search in search_plan.get('searches', []):
+                try:
+                    if search['source'] == 'transcripts':
+                        data = await self.data_reader.get_transcripts(search.get('filters', {}))
+                        if data:
+                            data_result['data']['transcripts'] = data
+                            data_result['sources_used'].append('transcripts')
+                            data_result['total_records'] += len(data)
+
+                    elif search['source'] == 'analyses':
+                        data = await self.data_reader.get_analyses(search.get('filters', {}))
+                        if data:
+                            data_result['data']['analyses'] = data
+                            data_result['sources_used'].append('analyses')
+                            data_result['total_records'] += len(data)
+
+                    data_result['sources_tried'].append(search['source'])
+
+                except Exception as search_error:
+                    # Continue with other searches if one fails
+                    print(f"Search failed for {search['source']}: {search_error}")
+
+            return data_result
+
+        except Exception as e:
+            raise Exception(f"Strategic data search failed: {str(e)}")
+
+    async def _generate_strategic_response(self, strategy: Dict[str, Any],
+                                          data_result: Dict[str, Any], query: str) -> Dict[str, Any]:
+        """Response Generator Agent: Create strategic response based on strategy and data.
+
+        Args:
+            strategy: Strategy from strategy agent
+            data_result: Data search results
+            query: Original query
+
+        Returns:
+            Strategic response dictionary
+        """
+        try:
+            # Build response context
+            context = {
+                'query': query,
+                'strategy': strategy,
+                'data_result': data_result,
+                'understanding': strategy['understanding'].to_dict()
+            }
+
+            # Load strategic response prompt
+            prompt = prompt_loader.format(
+                'insights/response/strategic_executive_response.txt',
+                **context
+            )
+
+            # Get strategic response from LLM
             response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.4)
             )
 
             if not response.text:
-                raise Exception("LLM returned no response")
+                raise Exception("Response generator agent returned no response")
 
-            # Parse response
-            parsed = self._parse_json_response(response.text)
-
-            return {
-                'content': parsed.get('content', 'No data available for analysis.'),
-                'executive_summary': parsed.get('executive_summary', ''),
-                'recommendations': parsed.get('recommendations', []),
-                'key_metrics': [],
-                'supporting_data': {}
-            }
-
-        except Exception as e:
-            # Fallback response for no data
-            return {
-                'content': f"I understand you're asking about {understanding.focus_area} matters. However, there's currently no data available in the system to analyze. I recommend setting up data collection processes and returning to this analysis once data is available.",
-                'executive_summary': 'No data available for analysis',
-                'recommendations': [
-                    'Implement data collection processes',
-                    'Verify data pipeline functionality',
-                    'Return to analysis once data is available'
-                ],
-                'key_metrics': [],
-                'supporting_data': {}
-            }
-
-    async def _fetch_relevant_data(self, understanding: QueryUnderstanding) -> Dict[str, Any]:
-        """Fetch data relevant to the query understanding.
-
-        Args:
-            understanding: Query understanding
-
-        Returns:
-            Relevant data dictionary
-        """
-        try:
-            # Build filters based on understanding
-            filters = {
-                'focus_area': understanding.focus_area,
-                'time_frame': understanding.time_frame,
-                'limit': 1000  # Reasonable limit for analysis
-            }
-
-            # Add specific filters based on query type
-            if understanding.core_intent == 'compliance_review':
-                filters['has_compliance_issues'] = True
-
-            if understanding.urgency == 'critical':
-                filters['urgency'] = ['high', 'critical']
-
-            # Fetch data from multiple sources
-            relevant_data = {}
-
-            # Always get transcripts as primary data source
-            transcripts = await self.data_reader.get_transcripts(filters)
-            if transcripts:
-                relevant_data['transcripts'] = transcripts
-
-            # Get analyses if available
-            analyses = await self.data_reader.get_analyses(filters)
-            if analyses:
-                relevant_data['analyses'] = analyses
-
-            # Add metadata
-            total_records = sum(len(data) if isinstance(data, list) else 1 for data in relevant_data.values())
-            relevant_data['_metadata'] = {
-                'total_records': total_records,
-                'filters_applied': filters,
-                'data_sources': list(relevant_data.keys())
-            }
-
-            return relevant_data
-
-        except Exception as e:
-            raise Exception(f"Data fetching failed: {str(e)}")
-
-    async def _generate_response(self, understanding: QueryUnderstanding,
-                               data: Dict[str, Any], query: str) -> Dict[str, Any]:
-        """Generate complete executive response with all context.
-
-        Args:
-            understanding: Query understanding
-            data: Relevant data
-            query: Original query
-
-        Returns:
-            Complete response dictionary
-        """
-        try:
-            # Build comprehensive context
-            context = {
-                'query': query,
-                'understanding': understanding.to_dict(),
-                'data': data,
-                'has_data': len(data) > 1,  # More than just metadata
-                'record_count': data.get('_metadata', {}).get('total_records', 0)
-            }
-
-            # Load unified response prompt
-            prompt = prompt_loader.format(
-                'insights/responses/unified_executive_response.txt',
-                **context
-            )
-
-            # Get comprehensive LLM response
-            response = await self.llm.arun(
-                messages=[{"role": "user", "content": prompt}],
-                options=RequestOptions(temperature=0.4)
-            )
-
-            if not response.text:
-                raise Exception("LLM returned no response")
-
-            # Parse comprehensive response
+            # Parse strategic response
             parsed = self._parse_json_response(response.text)
 
             return {
@@ -312,11 +320,13 @@ class LeadershipInsightsAgent:
                 'key_metrics': parsed.get('key_metrics', []),
                 'recommendations': parsed.get('recommendations', []),
                 'supporting_data': parsed.get('supporting_data', {}),
-                'confidence': parsed.get('confidence', 80)
+                'confidence': parsed.get('confidence', 80),
+                'response_type': parsed.get('response_type', 'strategic')
             }
 
         except Exception as e:
-            raise Exception(f"Response generation failed: {str(e)}")
+            raise Exception(f"Strategic response generation failed: {str(e)}")
+
 
     def _parse_json_response(self, response_text: str) -> Dict[str, Any]:
         """Parse JSON response from LLM.
