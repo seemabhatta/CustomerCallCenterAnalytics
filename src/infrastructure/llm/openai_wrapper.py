@@ -110,9 +110,8 @@ class OpenAIWrapper:
                 model=model_name,
                 input=messages,
                 temperature=temperature,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": schema_payload,
+                text={
+                    "format": schema_payload,
                 },
             )
 
@@ -175,9 +174,8 @@ class OpenAIWrapper:
                 model=model_name,
                 input=messages,
                 temperature=temperature,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": schema_payload,
+                text={
+                    "format": schema_payload,
                 },
             )
 
@@ -378,6 +376,7 @@ class OpenAIWrapper:
             schema["additionalProperties"] = False
 
         return {
+            "type": "json_schema",
             "name": schema_model.__name__,
             "schema": schema,
             "strict": True,
