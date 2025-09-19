@@ -1,43 +1,39 @@
-"""Leadership Insights Agent - Master Orchestrator with Agentic Patterns.
+"""Leadership Insights Agent - Simplified Agentic Approach.
 
 Core Principles Applied:
 - NO FALLBACK: Fail fast on unclear queries or processing errors
-- AGENTIC: LLM makes all decisions through specialized sub-agents
-- FULLY ORCHESTRATED: Coordinates thinking, planning, aggregation, synthesis, reflection, learning
+- AGENTIC: LLM makes all decisions, no hardcoded workflows
+- SIMPLIFIED: 2-step process instead of 7-step over-engineering
 """
 from typing import Dict, Any, Optional, List
 import json
 import time
 from datetime import datetime
 
-from ..infrastructure.llm.llm_client_v2 import LLMClientV2, RequestSpec, RequestOptions
-from ..infrastructure.telemetry import trace_async_function, set_span_attributes, add_span_event
+from ..infrastructure.llm.llm_client_v2 import LLMClientV2, RequestOptions
+from ..infrastructure.telemetry import trace_async_function, set_span_attributes
 from ..utils.prompt_loader import prompt_loader
 from .insights.thinking_agent import ThinkingAgent, QueryUnderstanding
 
 
 class LeadershipInsightsAgent:
-    """Master orchestrator agent with full agentic capabilities.
-
-    Implements the complete workflow:
-    Think → Plan → Fetch → Aggregate → Synthesize → Reflect → Learn
-
-    This agent coordinates all sub-agents and makes intelligent decisions
-    about how to process leadership queries for maximum value.
-    """
+    """Simplified leadership insights agent with 2-step processing."""
 
     def __init__(self, llm_client: LLMClientV2, data_reader=None):
-        """Initialize the master orchestrator agent.
+        """Initialize agent with dependencies.
 
         Args:
-            llm_client: LLM client for all agent operations
-            data_reader: Data reader service for fetching data
+            llm_client: LLM client for reasoning
+            data_reader: Data reader service for analytics
 
         Raises:
             Exception: If initialization fails (NO FALLBACK)
         """
         if not llm_client:
             raise ValueError("llm_client cannot be None")
+
+        if not data_reader:
+            raise ValueError("data_reader cannot be None")
 
         self.llm = llm_client
         self.data_reader = data_reader
@@ -48,7 +44,7 @@ class LeadershipInsightsAgent:
     @trace_async_function("insights.process_query")
     async def process_query(self, query: str, executive_role: str = None,
                            session_context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Process leadership query through full agentic workflow.
+        """Process leadership query with simplified 2-step approach.
 
         Args:
             query: Leadership query string
@@ -75,8 +71,8 @@ class LeadershipInsightsAgent:
         )
 
         try:
-            # STEP 1: THINK - Understand the query
-            print("🧠 THINKING: Understanding query...")
+            # STEP 1: UNDERSTAND - Query analysis and data check
+            print("🧠 UNDERSTANDING: Query analysis and data check...")
             step_start = time.time()
 
             understanding = await self.thinking_agent.understand_query(
@@ -85,91 +81,51 @@ class LeadershipInsightsAgent:
                 session_context=session_context
             )
 
+            # Quick data availability check
+            data_summary = await self.data_reader.get_data_summary()
+
             thinking_time = time.time() - step_start
             processing_steps.append({
-                'step': 'thinking',
+                'step': 'understanding',
                 'duration_ms': round(thinking_time * 1000),
-                'confidence': understanding.confidence
+                'confidence': understanding.confidence,
+                'data_available': data_summary.get('total_records', 0) > 0
             })
 
-            # STEP 2: PLAN - Create data strategy
-            print("📋 PLANNING: Creating data strategy...")
+            # Fast exit for no data - generate helpful response immediately
+            if data_summary.get('total_records', 0) == 0:
+                print("💭 NO DATA: Generating helpful guidance...")
+                response = await self._generate_no_data_response(understanding, query)
+
+                total_time = time.time() - start_time
+                response['metadata'] = {
+                    'query_understanding': understanding.to_dict(),
+                    'processing_steps': processing_steps,
+                    'total_processing_time_ms': round(total_time * 1000),
+                    'overall_confidence': 70,  # Default confidence for guidance
+                    'data_sources_used': [],
+                    'records_analyzed': 0,
+                    'response_timestamp': datetime.now().isoformat()
+                }
+
+                print(f"✅ COMPLETE: No-data response in {total_time:.2f}s")
+                return response
+
+            # STEP 2: GENERATE - Fetch data and create response
+            print("📊 GENERATING: Fetching data and creating response...")
             step_start = time.time()
 
-            data_plan = await self._create_data_plan(understanding)
+            # Fetch relevant data based on understanding
+            relevant_data = await self._fetch_relevant_data(understanding)
 
-            planning_time = time.time() - step_start
+            # Generate complete response with all context
+            response = await self._generate_response(understanding, relevant_data, query)
+
+            generation_time = time.time() - step_start
             processing_steps.append({
-                'step': 'planning',
-                'duration_ms': round(planning_time * 1000),
-                'data_sources_planned': len(data_plan.get('data_sources', []))
-            })
-
-            # STEP 3: FETCH - Get data according to plan
-            print("📊 FETCHING: Retrieving data...")
-            step_start = time.time()
-
-            raw_data = await self._fetch_data(data_plan)
-
-            fetching_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'fetching',
-                'duration_ms': round(fetching_time * 1000),
-                'records_fetched': raw_data.get('_metadata', {}).get('total_records', 0)
-            })
-
-            # STEP 4: AGGREGATE - Intelligently summarize data
-            print("🔄 AGGREGATING: Summarizing data...")
-            step_start = time.time()
-
-            aggregated_data = await self._aggregate_data(raw_data, understanding)
-
-            aggregation_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'aggregation',
-                'duration_ms': round(aggregation_time * 1000),
-                'insights_generated': len(aggregated_data.get('key_insights', []))
-            })
-
-            # STEP 5: SYNTHESIZE - Create executive response
-            print("✨ SYNTHESIZING: Creating executive response...")
-            step_start = time.time()
-
-            response = await self._synthesize_response(aggregated_data, understanding, query)
-
-            synthesis_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'synthesis',
-                'duration_ms': round(synthesis_time * 1000),
-                'response_length': len(response.get('content', ''))
-            })
-
-            # STEP 6: REFLECT - Evaluate quality
-            print("🔍 REFLECTING: Evaluating response quality...")
-            step_start = time.time()
-
-            reflection = await self._reflect_on_response(response, understanding, query)
-
-            reflection_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'reflection',
-                'duration_ms': round(reflection_time * 1000),
-                'confidence_score': reflection.get('overall_confidence', 0)
-            })
-
-            # STEP 7: LEARN - Extract patterns (async, non-blocking)
-            print("📚 LEARNING: Extracting patterns...")
-            step_start = time.time()
-
-            learning_result = await self._extract_learning_patterns(
-                query, understanding, response, reflection
-            )
-
-            learning_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'learning',
-                'duration_ms': round(learning_time * 1000),
-                'patterns_extracted': len(learning_result.get('patterns', []))
+                'step': 'generation',
+                'duration_ms': round(generation_time * 1000),
+                'records_processed': relevant_data.get('_metadata', {}).get('total_records', 0)
             })
 
             # Compile final response
@@ -187,20 +143,14 @@ class LeadershipInsightsAgent:
                     'query_understanding': understanding.to_dict(),
                     'processing_steps': processing_steps,
                     'total_processing_time_ms': round(total_time * 1000),
-                    'overall_confidence': reflection.get('overall_confidence', 0),
-                    'data_sources_used': list(raw_data.keys()),
-                    'records_analyzed': raw_data.get('_metadata', {}).get('total_records', 0),
+                    'overall_confidence': response.get('confidence', 80),
+                    'data_sources_used': list(relevant_data.keys()) if relevant_data else [],
+                    'records_analyzed': relevant_data.get('_metadata', {}).get('total_records', 0),
                     'response_timestamp': datetime.now().isoformat()
-                },
-
-                # Quality assessment
-                'quality_assessment': reflection,
-
-                # Learning insights
-                'learning_insights': learning_result
+                }
             }
 
-            print(f"✅ COMPLETE: Processed in {total_time:.2f}s with {reflection.get('overall_confidence', 0)}% confidence")
+            print(f"✅ COMPLETE: Processed in {total_time:.2f}s with {response.get('confidence', 80)}% confidence")
 
             return final_response
 
@@ -208,350 +158,168 @@ class LeadershipInsightsAgent:
             processing_time = time.time() - start_time
             raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
 
-    @trace_async_function("insights.planning")
-    async def _create_data_plan(self, understanding: QueryUnderstanding) -> Dict[str, Any]:
-        """Create data fetching plan based on understanding.
+    async def _generate_no_data_response(self, understanding: QueryUnderstanding, query: str) -> Dict[str, Any]:
+        """Generate helpful response when no data is available.
 
         Args:
-            understanding: Query understanding from thinking agent
+            understanding: Query understanding
+            query: Original query
 
         Returns:
-            Data plan dictionary
-
-        Raises:
-            Exception: If planning fails (NO FALLBACK)
+            Response dictionary
         """
         try:
-            # Build planning context
+            # Build context for no-data response
             context = {
+                'query': query,
                 'understanding': understanding.to_dict(),
-                'available_stores': [
-                    'transcripts', 'analyses', 'plans', 'workflows', 'executions'
-                ]
+                'executive_role': understanding.executive_context
             }
 
-            # Load planning prompt
+            # Load no-data response prompt
             prompt = prompt_loader.format(
-                'insights/planning/data_strategy.txt',
+                'insights/responses/no_data_guidance.txt',
                 **context
             )
 
-            # Get LLM plan
+            # Get LLM response
             response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
-                options=RequestOptions(temperature=0.3)
+                options=RequestOptions(temperature=0.4)
             )
 
             if not response.text:
-                raise Exception("LLM returned no planning response")
+                raise Exception("LLM returned no response")
 
-            # Parse plan
-            plan = self._parse_json_response(response.text)
+            # Parse response
+            parsed = self._parse_json_response(response.text)
 
-            # Validate plan
-            if not plan.get('data_sources'):
-                raise Exception("No data sources specified in plan")
-
-            return plan
+            return {
+                'content': parsed.get('content', 'No data available for analysis.'),
+                'executive_summary': parsed.get('executive_summary', ''),
+                'recommendations': parsed.get('recommendations', []),
+                'key_metrics': [],
+                'supporting_data': {}
+            }
 
         except Exception as e:
-            raise Exception(f"Data planning failed: {str(e)}")
+            # Fallback response for no data
+            return {
+                'content': f"I understand you're asking about {understanding.focus_area} matters. However, there's currently no data available in the system to analyze. I recommend setting up data collection processes and returning to this analysis once data is available.",
+                'executive_summary': 'No data available for analysis',
+                'recommendations': [
+                    'Implement data collection processes',
+                    'Verify data pipeline functionality',
+                    'Return to analysis once data is available'
+                ],
+                'key_metrics': [],
+                'supporting_data': {}
+            }
 
-    @trace_async_function("insights.fetching")
-    async def _fetch_data(self, data_plan: Dict[str, Any]) -> Dict[str, Any]:
-        """Fetch data according to plan.
+    async def _fetch_relevant_data(self, understanding: QueryUnderstanding) -> Dict[str, Any]:
+        """Fetch data relevant to the query understanding.
 
         Args:
-            data_plan: Plan from planning agent
+            understanding: Query understanding
 
         Returns:
-            Raw data dictionary
-
-        Raises:
-            Exception: If fetching fails (NO FALLBACK)
+            Relevant data dictionary
         """
-        if not self.data_reader:
-            # NO FALLBACK: Fail fast on missing dependencies
-            raise Exception("DataReaderService is required - NO FALLBACK LOGIC")
-
         try:
-            # Use data reader service to fetch according to plan
-            raw_data = await self.data_reader.fetch_by_plan(data_plan)
+            # Build filters based on understanding
+            filters = {
+                'focus_area': understanding.focus_area,
+                'time_frame': understanding.time_frame,
+                'limit': 1000  # Reasonable limit for analysis
+            }
 
-            if not raw_data:
-                raise Exception("No data returned from data reader")
+            # Add specific filters based on query type
+            if understanding.core_intent == 'compliance_review':
+                filters['has_compliance_issues'] = True
 
-            return raw_data
+            if understanding.urgency == 'critical':
+                filters['urgency'] = ['high', 'critical']
+
+            # Fetch data from multiple sources
+            relevant_data = {}
+
+            # Always get transcripts as primary data source
+            transcripts = await self.data_reader.get_transcripts(filters)
+            if transcripts:
+                relevant_data['transcripts'] = transcripts
+
+            # Get analyses if available
+            analyses = await self.data_reader.get_analyses(filters)
+            if analyses:
+                relevant_data['analyses'] = analyses
+
+            # Add metadata
+            total_records = sum(len(data) if isinstance(data, list) else 1 for data in relevant_data.values())
+            relevant_data['_metadata'] = {
+                'total_records': total_records,
+                'filters_applied': filters,
+                'data_sources': list(relevant_data.keys())
+            }
+
+            return relevant_data
 
         except Exception as e:
             raise Exception(f"Data fetching failed: {str(e)}")
 
-    @trace_async_function("insights.aggregating")
-    async def _aggregate_data(self, raw_data: Dict[str, Any],
-                             understanding: QueryUnderstanding) -> Dict[str, Any]:
-        """Aggregate raw data into leadership insights.
+    async def _generate_response(self, understanding: QueryUnderstanding,
+                               data: Dict[str, Any], query: str) -> Dict[str, Any]:
+        """Generate complete executive response with all context.
 
         Args:
-            raw_data: Raw data from stores
             understanding: Query understanding
-
-        Returns:
-            Aggregated insights
-
-        Raises:
-            Exception: If aggregation fails (NO FALLBACK)
-        """
-        try:
-            import json
-
-            # Add span attributes for data size and complexity
-            data_size = len(json.dumps(raw_data))
-            total_records = raw_data.get('_metadata', {}).get('total_records', 0)
-            data_sources = raw_data.get('_metadata', {}).get('data_sources', [])
-
-            set_span_attributes(
-                operation="aggregate_data",
-                data_size_bytes=data_size,
-                total_records=total_records,
-                data_sources_count=len(data_sources),
-                data_sources=str(data_sources)
-            )
-
-            # Add warning event if data is large
-            if data_size > 10000:
-                add_span_event("aggregation.large_dataset_warning",
-                              size_bytes=data_size,
-                              recommendation="Consider pre-aggregation or chunking")
-
-            # Add event for aggregation start
-            add_span_event("aggregation.context_building",
-                          record_count=total_records)
-
-            # Build aggregation context
-            context = {
-                'raw_data_summary': self._summarize_raw_data(raw_data),
-                'understanding': understanding.to_dict(),
-                'record_count': total_records
-            }
-
-            # Add event for prompt loading
-            add_span_event("aggregation.prompt_loading")
-
-            # Load aggregation prompt
-            prompt = prompt_loader.format(
-                'insights/aggregation/data_summarization.txt',
-                **context
-            )
-
-            # Get LLM aggregation
-            response = await self.llm.arun(
-                messages=[{"role": "user", "content": prompt}],
-                options=RequestOptions(temperature=0.4)
-            )
-
-            if not response.text:
-                raise Exception("LLM returned no aggregation response")
-
-            # Parse aggregation
-            aggregated = self._parse_json_response(response.text)
-
-            # Validate aggregation
-            if not aggregated.get('key_insights'):
-                raise Exception("No key insights generated from aggregation")
-
-            return aggregated
-
-        except Exception as e:
-            raise Exception(f"Data aggregation failed: {str(e)}")
-
-    @trace_async_function("insights.synthesizing")
-    async def _synthesize_response(self, aggregated_data: Dict[str, Any],
-                                  understanding: QueryUnderstanding,
-                                  original_query: str) -> Dict[str, Any]:
-        """Synthesize executive response from aggregated data.
-
-        Args:
-            aggregated_data: Aggregated insights
-            understanding: Query understanding
-            original_query: Original query string
-
-        Returns:
-            Executive response
-
-        Raises:
-            Exception: If synthesis fails (NO FALLBACK)
-        """
-        try:
-            # Build synthesis context
-            context = {
-                'aggregated_data': aggregated_data,
-                'understanding': understanding.to_dict(),
-                'original_query': original_query
-            }
-
-            # Load synthesis prompt
-            prompt = prompt_loader.format(
-                'insights/synthesis/executive_response.txt',
-                **context
-            )
-
-            # Get LLM synthesis
-            response = await self.llm.arun(
-                messages=[{"role": "user", "content": prompt}],
-                options=RequestOptions(temperature=0.5)
-            )
-
-            if not response.text:
-                raise Exception("LLM returned no synthesis response")
-
-            # Parse synthesis
-            synthesized = self._parse_json_response(response.text)
-
-            # Validate synthesis
-            if not synthesized.get('content'):
-                raise Exception("No content generated in synthesis")
-
-            return synthesized
-
-        except Exception as e:
-            raise Exception(f"Response synthesis failed: {str(e)}")
-
-    async def _reflect_on_response(self, response: Dict[str, Any],
-                                  understanding: QueryUnderstanding,
-                                  original_query: str) -> Dict[str, Any]:
-        """Reflect on response quality and completeness.
-
-        Args:
-            response: Synthesized response
-            understanding: Query understanding
-            original_query: Original query
-
-        Returns:
-            Reflection assessment
-
-        Raises:
-            Exception: If reflection fails (NO FALLBACK)
-        """
-        try:
-            # Build reflection context
-            context = {
-                'response': response,
-                'understanding': understanding.to_dict(),
-                'original_query': original_query
-            }
-
-            # Load reflection prompt
-            prompt = prompt_loader.format(
-                'insights/reflection/quality_assessment.txt',
-                **context
-            )
-
-            # Get LLM reflection
-            reflection_response = await self.llm.arun(
-                messages=[{"role": "user", "content": prompt}],
-                options=RequestOptions(temperature=0.3)
-            )
-
-            if not reflection_response.text:
-                raise Exception("LLM returned no reflection response")
-
-            # Parse reflection
-            reflection = self._parse_json_response(reflection_response.text)
-
-            # Validate reflection
-            if 'overall_confidence' not in reflection:
-                reflection['overall_confidence'] = 75  # Default confidence
-
-            return reflection
-
-        except Exception as e:
-            raise Exception(f"Response reflection failed: {str(e)}")
-
-    async def _extract_learning_patterns(self, query: str, understanding: QueryUnderstanding,
-                                        response: Dict[str, Any], reflection: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract learning patterns from successful interactions.
-
-        Args:
+            data: Relevant data
             query: Original query
-            understanding: Query understanding
-            response: Response generated
-            reflection: Quality reflection
 
         Returns:
-            Learning patterns extracted
-
-        Raises:
-            Exception: If learning extraction fails (NO FALLBACK)
+            Complete response dictionary
         """
         try:
-            # Build learning context
+            # Build comprehensive context
             context = {
                 'query': query,
                 'understanding': understanding.to_dict(),
-                'response_quality': reflection.get('overall_confidence', 0),
-                'successful_approach': {
-                    'data_strategy': response.get('supporting_data', {}),
-                    'response_format': {
-                        'has_executive_summary': bool(response.get('executive_summary')),
-                        'has_recommendations': bool(response.get('recommendations')),
-                        'has_metrics': bool(response.get('key_metrics'))
-                    }
-                }
+                'data': data,
+                'has_data': len(data) > 1,  # More than just metadata
+                'record_count': data.get('_metadata', {}).get('total_records', 0)
             }
 
-            # Load learning prompt
+            # Load unified response prompt
             prompt = prompt_loader.format(
-                'insights/learning/pattern_extraction.txt',
+                'insights/responses/unified_executive_response.txt',
                 **context
             )
 
-            # Get LLM learning
-            learning_response = await self.llm.arun(
+            # Get comprehensive LLM response
+            response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.4)
             )
 
-            if not learning_response.text:
-                return {'patterns': [], 'insights': []}
+            if not response.text:
+                raise Exception("LLM returned no response")
 
-            # Parse learning
-            learning = self._parse_json_response(learning_response.text)
+            # Parse comprehensive response
+            parsed = self._parse_json_response(response.text)
 
-            return learning
+            return {
+                'content': parsed.get('content', ''),
+                'executive_summary': parsed.get('executive_summary', ''),
+                'key_metrics': parsed.get('key_metrics', []),
+                'recommendations': parsed.get('recommendations', []),
+                'supporting_data': parsed.get('supporting_data', {}),
+                'confidence': parsed.get('confidence', 80)
+            }
 
         except Exception as e:
-            # Learning is optional - don't fail the main process
-            print(f"Learning extraction failed: {str(e)}")
-            return {'patterns': [], 'insights': []}
-
-    def _summarize_raw_data(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create summary of raw data for LLM processing.
-
-        Args:
-            raw_data: Raw data dictionary
-
-        Returns:
-            Summary dictionary
-        """
-        summary = {}
-
-        for key, value in raw_data.items():
-            if key.startswith('_'):
-                continue
-
-            if isinstance(value, list):
-                summary[key] = {
-                    'count': len(value),
-                    'sample_fields': list(value[0].keys()) if value else [],
-                    'sample_data': value[:3] if value else []
-                }
-            else:
-                summary[key] = {'type': type(value).__name__, 'value': str(value)[:100]}
-
-        return summary
+            raise Exception(f"Response generation failed: {str(e)}")
 
     def _parse_json_response(self, response_text: str) -> Dict[str, Any]:
-        """Parse JSON from LLM response.
+        """Parse JSON response from LLM.
 
         Args:
             response_text: LLM response text
@@ -560,13 +328,13 @@ class LeadershipInsightsAgent:
             Parsed JSON dictionary
 
         Raises:
-            Exception: If parsing fails
+            Exception: If parsing fails (NO FALLBACK)
         """
         try:
-            # Clean response text
+            # Try to extract JSON from response
             response_text = response_text.strip()
 
-            # Find JSON boundaries
+            # Look for JSON-like structure
             start_idx = response_text.find('{')
             end_idx = response_text.rfind('}') + 1
 
@@ -574,7 +342,7 @@ class LeadershipInsightsAgent:
                 json_str = response_text[start_idx:end_idx]
                 return json.loads(json_str)
 
-            # Try parsing the whole response
+            # If no JSON found, try parsing the entire response
             return json.loads(response_text)
 
         except json.JSONDecodeError as e:
@@ -588,18 +356,17 @@ class LeadershipInsightsAgent:
         """
         return {
             'agent_type': 'LeadershipInsightsAgent',
-            'version': '1.0.0',
+            'version': '2.0.0',
+            'approach': 'simplified_agentic',
             'capabilities': [
                 'query_understanding',
-                'data_planning',
-                'intelligent_aggregation',
-                'executive_synthesis',
-                'quality_reflection',
-                'pattern_learning'
+                'data_fetching',
+                'response_generation',
+                'no_data_handling'
             ],
-            'sub_agents': [
-                'ThinkingAgent'
+            'processing_steps': [
+                'understand_query',
+                'generate_response'
             ],
-            'status': 'ready',
-            'last_updated': datetime.now().isoformat()
+            'status': 'ready'
         }

@@ -1,160 +1,65 @@
+[22:55:09] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=CREATE INDEX...
 🧠 THINKING: Understanding query...
-[22:44:04] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+[22:55:14] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
            ...
-[22:44:04] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
+[22:55:14] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
            ...
-[22:44:04] ✓ leadership.check_cache | 0.0s | querylength=42 executiverole=CCO cachehit=False
-[22:44:04] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+[22:55:14] ✓ leadership.check_cache | 0.0s | querylength=47 executiverole=CCO cachehit=False
+[22:55:14] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
            ...
-INFO:     127.0.0.1:33464 - "POST /api/v1/leadership/chat HTTP/1.1" 500 Internal Server Error
-[22:44:04] ✓ POST | 12.3s | http.method=POST http.url=https://api.... http.statuscode=200
-[22:44:04] ✓ openai.response | 12.4s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc37... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=990
-[22:44:04] ✓ openai.llm.arun | 12.4s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=12351.921909... llm.responseid=resp_68ccc37...
-[22:44:04] ✗ insights.process_query | 12.4s | querylength=42 executiverole=CCO hassessioncontext=True error=Leadership i...
-[22:44:17]   📝 exception | exception.type=Exception exception.message=Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
-    from ..infrastructure.telemetry import set_span_attributes, add_span_event
-ModuleNotFoundError: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
-    understanding = await self.thinking_agent.understand_query(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
-    raise Exception(f"Query understanding failed: {str(e)}")
-Exception: Query understanding failed: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
-    result = await func(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
-    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
-Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
-
-[22:44:17]   📝 exception | exception.type=Exception exception.message=Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
-    from ..infrastructure.telemetry import set_span_attributes, add_span_event
-ModuleNotFoundError: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
-    understanding = await self.thinking_agent.understand_query(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
-    raise Exception(f"Query understanding failed: {str(e)}")
-Exception: Query understanding failed: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/trace/__init__.py", line 589, in use_span
-    yield span
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/__init__.py", line 1105, in start_as_current_span
-    yield span
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
-    result = await func(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
-    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
-Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
-
-[22:44:04] ✗ leadership.chat | 12.4s | executiverole=CCO executiveid=john.doe querylength=42 hassession=False error=Chat process...
-[22:44:17]   📝 exception | exception.type=Exception exception.message=Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
-    from ..infrastructure.telemetry import set_span_attributes, add_span_event
-ModuleNotFoundError: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
-    understanding = await self.thinking_agent.understand_query(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
-    raise Exception(f"Query understanding failed: {str(e)}")
-Exception: Query understanding failed: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 153, in chat
-    response = await self.insights_agent.process_query(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
-    result = await func(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
-    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
-Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
-    result = await func(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 205, in chat
-    raise Exception(f"Chat processing failed after {processing_time:.2f}s: {str(e)}")
-Exception: Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
-
-[22:44:17]   📝 exception | exception.type=Exception exception.message=Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure' exception.stacktrace=Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 115, in understand_query
-    from ..infrastructure.telemetry import set_span_attributes, add_span_event
-ModuleNotFoundError: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 82, in process_query
-    understanding = await self.thinking_agent.understand_query(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/insights/thinking_agent.py", line 130, in understand_query
-    raise Exception(f"Query understanding failed: {str(e)}")
-Exception: Query understanding failed: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 153, in chat
-    response = await self.insights_agent.process_query(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
-    result = await func(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/agents/leadership_insights_agent.py", line 209, in process_query
-    raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
-Exception: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/trace/__init__.py", line 589, in use_span
-    yield span
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/__init__.py", line 1105, in start_as_current_span
-    yield span
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/telemetry/tracer.py", line 270, in wrapper
-    result = await func(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/leadership_insights_service.py", line 205, in chat
-    raise Exception(f"Chat processing failed after {processing_time:.2f}s: {str(e)}")
-Exception: Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query understanding failed: No module named 'src.agents.infrastructure'
-
-----------------------------------------------------
-
-
-(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python cli.py leadership chat "Show me all violations in the last 30 days" --exec-id "john.doe" --role "CCO"
-🎯 Leadership Insights
-Query: Show me all violations in the last 30 days
-Role: CCO
-Executive: john.doe
-
-❌ Leadership chat failed: API error (500): Leadership chat failed: Chat processing failed after 12.38s: Leadership insights processing failed after 12.35s: Query
-understanding failed: No module named 'src.agents.infrastructure'
-(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$
+📋 PLANNING: Creating data strategy...
+[22:55:14] ✓ POST | 16.2s | http.method=POST http.url=https://api.... http.statuscode=200
+[22:55:14] ✓ openai.response | 16.3s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc61... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=992
+[22:55:14] ✓ openai.llm.arun | 16.3s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=16304.139424... llm.responseid=resp_68ccc61...
+📊 FETCHING: Retrieving data...
+🔄 AGGREGATING: Summarizing data...
+[22:55:31] ✓ POST | 24.1s | http.method=POST http.url=https://api.... http.statuscode=200
+[22:55:31] ✓ openai.response | 24.1s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc62... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=1151
+[22:55:31] ✓ openai.llm.arun | 24.1s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=21674.427416... llm.responseid=resp_68ccc62...
+[22:55:31] ✓ insights.planning | 24.1s
+[22:55:55] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:55:55] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:55:55] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:55:55] ✓ data.fetch_by_plan | 0.0s | needstranscripts=False needsanalyses=True needsplans=True needsworkflows=True needsexecutions=True
+[22:55:55]   📝 analyses.fetch_start | filters={'date_range': {'start': '2025-08-20', 'end': '2025-09-18'}, 'has_compliance_issues': True, 'risk_level': 'ALL', 'limit': 1000}
+[22:55:55]   📝 analyses.fetched | count=3 duration_ms=1
+[22:55:55]   📝 analyses.filtered | original_count=3 filtered_count=0 duration_ms=0
+[22:55:55] ✓ insights.fetching | 0.0s
+✨ SYNTHESIZING: Creating executive response...
+[22:55:55] ✓ POST | 21.5s | http.method=POST http.url=https://api.... http.statuscode=200
+[22:55:55] ✓ openai.response | 21.5s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc63... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=1279
+[22:55:55] ✓ openai.llm.arun | 21.5s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=19099.386945... llm.responseid=resp_68ccc63...
+[22:55:55] ✓ insights.aggregating | 21.5s | datasizebytes=214 totalrecords=0 datasourcescount=4 datasources=['analyses',...
+[22:55:55]   📝 aggregation.context_building | record_count=0
+[22:55:55]   📝 aggregation.prompt_loading
+🔍 REFLECTING: Evaluating response quality...
+[22:56:16] ✓ POST | 28.2s | http.method=POST http.url=https://api.... http.statuscode=200
+[22:56:16] ✓ openai.response | 28.2s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc65... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=2011
+[22:56:16] ✓ openai.llm.arun | 28.2s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=25807.150441... llm.responseid=resp_68ccc65...
+[22:56:16] ✓ insights.synthesizing | 28.2s
+📚 LEARNING: Extracting patterns...
+[22:56:45] ✓ POST | 16.9s | http.method=POST http.url=https://api.... http.statuscode=200
+[22:56:45] ✓ openai.response | 16.9s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc66... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=2779
+[22:56:45] ✓ openai.llm.arun | 16.9s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=16924.187331... llm.responseid=resp_68ccc66...
+✅ COMPLETE: Processed in 127.36s with 81% confidence
+INFO:     127.0.0.1:56942 - "POST /api/v1/leadership/chat HTTP/1.1" 200 OK
+[22:57:02] ✓ POST | 20.3s | http.method=POST http.url=https://api.... http.statuscode=200
+[22:57:02] ✓ openai.response | 20.3s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc67... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=1247
+[22:57:02] ✓ openai.llm.arun | 20.3s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=17917.912625... llm.responseid=resp_68ccc67...
+[22:55:14] ✓ insights.process_query | 127.4s | querylength=47 executiverole=CCO hassessioncontext=True
+[22:57:22] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:57:22] ✓ DELETE | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:57:22] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:57:22] ✓ leadership.cache_response | 0.1s
+[22:57:22] ✓ leadership.store_patterns | 0.0s
+[22:57:22] ✓ UPDATE | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:57:22] ✓ UPDATE | 0.0s | db.system=sqlite db.name= db.statement=
+           ...
+[22:55:14] ✓ leadership.chat | 127.6s | executiverole=CCO executiveid=cco_001 querylength=47 hassession=False
