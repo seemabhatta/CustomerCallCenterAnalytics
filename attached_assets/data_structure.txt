@@ -1,0 +1,3363 @@
+
+APIS: and sequence of operation
+
+http://localhost:8000/api/v1/transcripts/CALL_46F4C703 --- Output is in Line 9
+http://localhost:8000/api/v1/analyses/ANALYSIS_CALL_46F4C7 -- Output is in Line 186
+http://localhost:8000/api/v1/plans/PLAN_ANALYSIS_CALL_4 -- Output is in Line 239
+http://localhost:8000/api/v1/workflows?plan_id=PLAN_ANALYSIS_CALL_4  -- Output is in line 359 ends at 3364
+
+==== Call transcripts ===
+{
+  "id": "CALL_46F4C703",
+  "messages": [
+    {
+      "speaker": "**Call Transcript",
+      "text": "Mortgage Servicing Customer Care**",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Date",
+      "text": "** October 10, 2023",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Time",
+      "text": "** 2:15 PM",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Customer ID",
+      "text": "** UB_001",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Customer Name",
+      "text": "** John Smith",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Property Address",
+      "text": "** 123 Maple Lane, Springfield, IL 62701",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Loan Number",
+      "text": "** 4567890123",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Representative Name",
+      "text": "** Sarah Johnson",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** Thank you for calling Mortgage Servicing, this is Sarah. How can I assist you today?",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** Hi Sarah, this is John Smith. I’m calling about the Private Mortgage Insurance on my loan. It’s getting out of hand. My loan number is 4567890123.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** I’m sorry to hear that, John. Let me pull up your account. Just a moment, please.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** It’s not just a concern; it’s critical! I’ve been trying to get this PMI removed for months now. I’ve met the requirements, and I’m tired of paying for something I shouldn’t have to.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** I understand your frustration, John. Let’s see what we can do to resolve this issue. Can you remind me what requirements you believe you’ve met for PMI removal?",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** I’ve paid down my balance to below 80% of the original loan amount. I even sent in the appraisal showing my home value. I don’t understand why it’s taking so long.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** I completely understand. Let me check the status of the appraisal and your request.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** Under review? It’s been a month! This is costing me $150 a month, which adds up. That’s $1,800 a year! I can’t keep waiting.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** I truly apologize for the delay, John. I can escalate this matter for you right now. Would you like me to do that?",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** Yes, please! I want this resolved today. I can’t afford to keep throwing money away.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** Absolutely, I’ll mark this as urgent and escalate it to our underwriting department. They typically respond within 24 to 48 hours. I’ll also follow up personally to ensure your case is prioritized.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** Thank you. I just don’t understand why it’s so complicated. I thought once I met the criteria, it would be automatic.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** I get it, John. Sometimes the process can be lengthy due to internal reviews and documentation requirements. But I assure you, I’ll do everything I can to expedite this for you.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** I appreciate that, but I’m really losing patience here. I’ve been a good customer, and I just want what’s fair.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** And you deserve that, John. I’ve made a note of your concerns, and I’ll make sure to keep you updated on the progress. Is there anything else I can help you with while I have you on the line?",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** No, that’s it for now. Just get this sorted out, please.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** I will, John. You can expect a call from us in the next day or so. Thank you for your patience, and I apologize for any inconvenience this has caused.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**John",
+      "text": "** Thanks, Sarah. I hope to hear from you soon.",
+      "timestamp": "",
+      "sentiment": null
+    },
+    {
+      "speaker": "**Sarah",
+      "text": "** You will, John. Have a great day!",
+      "timestamp": "",
+      "sentiment": null
+    }
+  ],
+  "customer_id": "UB_001",
+  "advisor_id": "",
+  "timestamp": "2025-09-19T13:34:35.385495Z",
+  "topic": "pmi_removal",
+  "duration": 0,
+  "compliance_flags": [],
+  "outcome": null,
+  "urgency": "critical"
+}
+
+===== Analysis =====
+{
+  "call_summary": "John Smith called regarding the removal of his Private Mortgage Insurance (PMI) due to frustration over delays despite meeting the necessary requirements. The representative, Sarah Johnson, acknowledged his concerns and escalated the issue for urgent review.",
+  "primary_intent": "John's primary intent was to expedite the removal of his PMI, which he felt was unjustified given his loan balance and appraisal.",
+  "urgency_level": "High",
+  "borrower_sentiment": {
+    "overall": "Frustrated and anxious",
+    "start": "Frustrated",
+    "end": "Hopeful after escalation",
+    "trend": "Improving after escalation"
+  },
+  "borrower_risks": {
+    "delinquency_risk": 0.3,
+    "churn_risk": 0.7,
+    "complaint_risk": 0.8,
+    "refinance_likelihood": 0.4
+  },
+  "advisor_metrics": {
+    "empathy_score": 4.5,
+    "compliance_adherence": 4,
+    "solution_effectiveness": 4.5,
+    "coaching_opportunities": [
+      "Improve knowledge of PMI removal process",
+      "Enhance escalation protocols",
+      "Develop strategies for managing customer frustration"
+    ]
+  },
+  "compliance_flags": [
+    "Ensure timely communication regarding PMI removal status",
+    "Verify adherence to PMI removal guidelines"
+  ],
+  "required_disclosures": [],
+  "issue_resolved": false,
+  "first_call_resolution": false,
+  "escalation_needed": true,
+  "topics_discussed": [
+    "PMI removal",
+    "Loan balance",
+    "Home appraisal",
+    "Escalation of request"
+  ],
+  "confidence_score": 0.85,
+  "product_opportunities": [],
+  "payment_concerns": [
+    "High PMI costs",
+    "Financial strain due to unnecessary payments"
+  ],
+  "property_related_issues": [],
+  "transcript_id": "CALL_46F4C703",
+  "analysis_id": "ANALYSIS_CALL_46F4C7",
+  "analyzer_version": "1.0"
+}
+
+===== Plan =====
+{
+  "borrower_plan": {
+    "immediate_actions": [
+      {
+        "action": "Initiate PMI removal process based on John's request and provided documentation.",
+        "timeline": "Within 24 hours",
+        "priority": "High",
+        "auto_executable": false,
+        "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+      },
+      {
+        "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+        "timeline": "Within 24 hours",
+        "priority": "High",
+        "auto_executable": false,
+        "description": "Mark the request as urgent and ensure it is prioritized."
+      }
+    ],
+    "follow_ups": [
+      {
+        "action": "Provide John with an update on the status of his PMI removal request.",
+        "due_date": "October 11, 2023",
+        "owner": "Sarah Johnson",
+        "trigger_condition": "After escalation to underwriting department."
+      }
+    ],
+    "personalized_offers": [],
+    "risk_mitigation": [
+      "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+    ]
+  },
+  "advisor_plan": {
+    "coaching_items": [
+      {
+        "action": "Enhance communication skills regarding customer frustrations and urgency.",
+        "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+        "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+        "priority": "High"
+      },
+      {
+        "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+        "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+        "expected_improvement": "Faster resolution times and fewer escalations.",
+        "priority": "Medium"
+      }
+    ],
+    "performance_feedback": {
+      "strengths": [
+        "Demonstrated empathy and understanding of the customer's frustration.",
+        "Took immediate action to escalate the issue."
+      ],
+      "improvements": [
+        "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+      ],
+      "score_explanations": [
+        "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+      ]
+    },
+    "training_recommendations": [
+      "Conduct a training session on PMI removal processes and customer communication strategies."
+    ],
+    "next_actions": [
+      "Schedule a follow-up training session on compliance and customer service best practices."
+    ]
+  },
+  "supervisor_plan": {
+    "escalation_items": [
+      {
+        "item": "John's PMI removal request",
+        "reason": "Customer has met criteria for removal but is experiencing delays.",
+        "priority": "High",
+        "action_required": "Review and expedite the underwriting process."
+      }
+    ],
+    "team_patterns": [
+      "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+    ],
+    "compliance_review": [
+      "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+    ],
+    "approval_required": false,
+    "process_improvements": [
+      "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+    ]
+  },
+  "leadership_plan": {
+    "portfolio_insights": [
+      "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+      "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+    ],
+    "strategic_opportunities": [
+      "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+    ],
+    "risk_indicators": [
+      "High complaint risk associated with PMI removal requests.",
+      "Increased churn risk among customers who feel their concerns are not addressed promptly."
+    ],
+    "trend_analysis": [
+      "Notable increase in customer complaints regarding PMI removal over the last quarter."
+    ],
+    "resource_allocation": [
+      "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+    ]
+  },
+  "plan_id": "PLAN_ANALYSIS_CALL_4",
+  "analysis_id": "ANALYSIS_CALL_46F4C7",
+  "transcript_id": "CALL_46F4C703",
+  "generator_version": "1.0",
+  "risk_level": null,
+  "approval_route": null,
+  "queue_status": null,
+  "auto_executable": 0,
+  "routing_reason": null,
+  "created_at": "2025-09-19 17:35:57",
+  "approved_at": null,
+  "approved_by": null
+}
+
+===== Wokflow Breakdown ====
+[
+  {
+    "id": "6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Initiate PMI removal process based on John's request and provided documentation.",
+      "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal.",
+      "priority": "high",
+      "timeline": "Within 24 hours",
+      "workflow_type": "BORROWER",
+      "item_metadata": {
+        "plan_source": "borrower_plan.immediate_actions[0]",
+        "auto_executable": false,
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.431031",
+        "workflow_type": "BORROWER"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Retrieve current loan balance for PMI evaluation",
+          "tool_needed": "servicing_api",
+          "details": "Call GET /api/servicing/loan/{loan_id}/balance",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.920024",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Retrieve recent appraisal value for PMI evaluation",
+          "tool_needed": "servicing_api",
+          "details": "Call GET /api/servicing/loan/{loan_id}/appraisal",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.920035",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Calculate eligibility for PMI removal based on loan balance and appraisal",
+          "tool_needed": "underwriting_api",
+          "details": "Call POST /api/underwriting/pmi-eligibility with loan balance and appraisal value",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.920055",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Generate PMI removal notification document",
+          "tool_needed": "document_api",
+          "details": "Call POST /api/document/generate with document type 'PMI Removal Notification' and relevant details",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.920059",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Send PMI removal notification to borrower",
+          "tool_needed": "email",
+          "details": "Email PMI removal notification document to borrower with next steps",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.920062",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 6,
+          "action": "Update borrower account status regarding PMI removal",
+          "tool_needed": "crm",
+          "details": "Update borrower's account status in CRM system to reflect PMI removal eligibility",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.920066",
+            "workflow_type": "BORROWER"
+          }
+        }
+      ]
+    },
+    "risk_level": "HIGH",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "BORROWER",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves initiating the PMI removal process based on a borrower's request, which is a critical step that directly impacts the borrower's financial obligations. The complexity arises from the need to verify that the borrower meets specific criteria for PMI removal, including loan balance and appraisal. Any errors in this process could lead to significant customer dissatisfaction and potential regulatory compliance issues if the removal is not handled within the required timeframes. Additionally, the high priority and 24-hour timeline add urgency, increasing the risk of oversight or mistakes. Given these factors, the potential impact on the customer and the operational consequences warrant a HIGH risk assessment.",
+    "approval_reasoning": "The action item involves initiating the PMI removal process based on a borrower's request, which is classified as high risk due to the complexity of verifying the borrower's eligibility for PMI removal. This process directly impacts the borrower's financial obligations and requires careful review of documentation, including loan balance and appraisal. Given the urgency of the 24-hour timeline and the potential for significant customer dissatisfaction and regulatory compliance issues if not handled correctly, human oversight is necessary. Therefore, this action item requires supervisor approval to ensure that all criteria are met and to mitigate any risks associated with errors in the process.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "BORROWER",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Retrieve current loan balance for PMI evaluation",
+        "tool_needed": "servicing_api",
+        "details": "Call GET /api/servicing/loan/{loan_id}/balance",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.920024",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Retrieve recent appraisal value for PMI evaluation",
+        "tool_needed": "servicing_api",
+        "details": "Call GET /api/servicing/loan/{loan_id}/appraisal",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.920035",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Calculate eligibility for PMI removal based on loan balance and appraisal",
+        "tool_needed": "underwriting_api",
+        "details": "Call POST /api/underwriting/pmi-eligibility with loan balance and appraisal value",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.920055",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Generate PMI removal notification document",
+        "tool_needed": "document_api",
+        "details": "Call POST /api/document/generate with document type 'PMI Removal Notification' and relevant details",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.920059",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Send PMI removal notification to borrower",
+        "tool_needed": "email",
+        "details": "Email PMI removal notification document to borrower with next steps",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.920062",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 6,
+        "action": "Update borrower account status regarding PMI removal",
+        "tool_needed": "crm",
+        "details": "Update borrower's account status in CRM system to reflect PMI removal eligibility",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.920066",
+          "workflow_type": "BORROWER"
+        }
+      }
+    ]
+  },
+  {
+    "id": "e1528d68-a66c-455f-9d40-7c95f0dec4de",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Contact underwriting department to expedite review of John's PMI removal request.",
+      "description": "Mark the request as urgent and ensure it is prioritized.",
+      "priority": "high",
+      "timeline": "Within 24 hours",
+      "workflow_type": "BORROWER",
+      "item_metadata": {
+        "plan_source": "borrower_plan.immediate_actions[1]",
+        "auto_executable": false,
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.431031",
+        "workflow_type": "BORROWER"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Mark the request as urgent in the system",
+          "tool_needed": "crm",
+          "details": "Update the status of the request associated with Transcript ID CALL_46F4C703 to 'Urgent' in the CRM System.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.817214",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Notify the servicing team about the urgent request",
+          "tool_needed": "email",
+          "details": "Send an email to the servicing team with the subject 'Urgent Request - CALL_46F4C703' and include a note to prioritize this request within 24 hours.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.817228",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Create a task for the servicing team to address the urgent request",
+          "tool_needed": "task",
+          "details": "Create an internal task for the servicing team to ensure the request is handled within 24 hours, referencing Transcript ID CALL_46F4C703.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.817233",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Log the urgency status change in compliance records",
+          "tool_needed": "compliance_api",
+          "details": "Call POST /api/compliance/log-urgency with body { 'transcript_id': 'CALL_46F4C703', 'priority': 'high' }.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.817240",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Confirm urgency status with the borrower",
+          "tool_needed": "email",
+          "details": "Send a confirmation email to the borrower stating that their request has been marked as urgent and will be addressed within 24 hours.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.817249",
+            "workflow_type": "BORROWER"
+          }
+        }
+      ]
+    },
+    "risk_level": "HIGH",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "BORROWER",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves contacting the underwriting department to expedite the review of a borrower's PMI removal request, which is marked as urgent. This situation is classified as high risk due to several factors: 1) **Action Complexity**: The PMI removal process involves specific criteria that must be met, and expediting this review requires careful coordination with underwriting, which can be complex. 2) **Customer Impact**: The borrower, John, has already expressed urgency and dissatisfaction regarding the delays in his PMI removal, indicating that any further delays could lead to increased frustration and potential churn. 3) **Operational Consequences**: Failing to expedite this request could result in operational inefficiencies and a backlog of similar requests, further impacting customer satisfaction. 4) **Regulatory Compliance**: There are regulatory timeframes for processing PMI removal requests, and any failure to comply could lead to compliance violations and penalties. 5) **Timeline Constraints**: The request must be addressed within 24 hours, adding pressure to ensure that the action is executed correctly and promptly. Given these factors, the risk associated with this action item is deemed high.",
+    "approval_reasoning": "The action item involves contacting the underwriting department to expedite the review of John's PMI removal request, which is marked as urgent. This is classified as high risk due to the complexity of the PMI removal process, the potential for customer dissatisfaction, and the need for regulatory compliance. Given these factors, human oversight is necessary to ensure that the action is executed correctly and promptly, and to mitigate any operational risks associated with delays. Therefore, it requires supervisor approval to ensure proper handling of the urgency and complexity involved.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "BORROWER",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Mark the request as urgent in the system",
+        "tool_needed": "crm",
+        "details": "Update the status of the request associated with Transcript ID CALL_46F4C703 to 'Urgent' in the CRM System.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.817214",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Notify the servicing team about the urgent request",
+        "tool_needed": "email",
+        "details": "Send an email to the servicing team with the subject 'Urgent Request - CALL_46F4C703' and include a note to prioritize this request within 24 hours.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.817228",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Create a task for the servicing team to address the urgent request",
+        "tool_needed": "task",
+        "details": "Create an internal task for the servicing team to ensure the request is handled within 24 hours, referencing Transcript ID CALL_46F4C703.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.817233",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Log the urgency status change in compliance records",
+        "tool_needed": "compliance_api",
+        "details": "Call POST /api/compliance/log-urgency with body { 'transcript_id': 'CALL_46F4C703', 'priority': 'high' }.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.817240",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Confirm urgency status with the borrower",
+        "tool_needed": "email",
+        "details": "Send a confirmation email to the borrower stating that their request has been marked as urgent and will be addressed within 24 hours.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.817249",
+          "workflow_type": "BORROWER"
+        }
+      }
+    ]
+  },
+  {
+    "id": "20767832-fa24-46be-b062-ca25625fa481",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Provide John with an update on the status of his PMI removal request.",
+      "description": "Follow-up: Provide John with an update on the status of his PMI removal request.",
+      "priority": "medium",
+      "timeline": "October 11, 2023",
+      "workflow_type": "BORROWER",
+      "item_metadata": {
+        "plan_source": "borrower_plan.follow_ups[0]",
+        "trigger_condition": "After escalation to underwriting department.",
+        "owner": "Sarah Johnson",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.431031",
+        "workflow_type": "BORROWER"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Retrieve the status of John’s PMI removal request",
+          "tool_needed": "servicing_api",
+          "details": "Call GET /api/servicing/loan/{loan_id}/pmi-status",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.105324",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Prepare an update message for John regarding his PMI status",
+          "tool_needed": "task",
+          "details": "Create a task to draft an email update for John based on PMI status retrieved",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.105336",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Send the update to John via email",
+          "tool_needed": "email",
+          "details": "Email John with the update on his PMI removal request status",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.105341",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Document the communication with John in the CRM",
+          "tool_needed": "crm",
+          "details": "Log the email sent to John regarding his PMI status in the CRM system",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.105346",
+            "workflow_type": "BORROWER"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Set a follow-up reminder for John’s PMI request",
+          "tool_needed": "task",
+          "details": "Create a follow-up task to check back with John in 30 days regarding his PMI status",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:12.105350",
+            "workflow_type": "BORROWER"
+          }
+        }
+      ]
+    },
+    "risk_level": "MEDIUM",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "BORROWER",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves providing an update on the status of John's PMI removal request, which is a follow-up after escalation to the underwriting department. While this task is not highly complex, it carries moderate risk due to the potential impact on customer satisfaction and the operational implications of delays in the PMI removal process. Given that John has already expressed urgency and dissatisfaction, failing to provide timely and accurate updates could exacerbate his frustration and lead to increased complaints or churn. Additionally, there are regulatory compliance considerations regarding the timely processing of PMI removal requests, which adds to the risk. The timeline for this action is set for October 11, 2023, indicating a need for prompt execution, further emphasizing the importance of careful communication and execution to avoid operational consequences. Overall, while the action is routine, the context and potential customer impact elevate the risk level to medium.",
+    "approval_reasoning": "The action item involves providing an update on John's PMI removal request, which is classified as medium risk due to the potential impact on customer satisfaction and operational implications. Given that this task follows an escalation to the underwriting department, it indicates prior complications and the need for careful communication. The urgency expressed by John and the regulatory compliance considerations regarding timely updates further necessitate human oversight to ensure accuracy and appropriateness of the communication. Therefore, it requires advisor-level approval to ensure that the update is handled with the necessary attention and care.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "BORROWER",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Retrieve the status of John’s PMI removal request",
+        "tool_needed": "servicing_api",
+        "details": "Call GET /api/servicing/loan/{loan_id}/pmi-status",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.105324",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Prepare an update message for John regarding his PMI status",
+        "tool_needed": "task",
+        "details": "Create a task to draft an email update for John based on PMI status retrieved",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.105336",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Send the update to John via email",
+        "tool_needed": "email",
+        "details": "Email John with the update on his PMI removal request status",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.105341",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Document the communication with John in the CRM",
+        "tool_needed": "crm",
+        "details": "Log the email sent to John regarding his PMI status in the CRM system",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.105346",
+          "workflow_type": "BORROWER"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Set a follow-up reminder for John’s PMI request",
+        "tool_needed": "task",
+        "details": "Create a follow-up task to check back with John in 30 days regarding his PMI status",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:12.105350",
+          "workflow_type": "BORROWER"
+        }
+      }
+    ]
+  },
+  {
+    "id": "4e3076d1-b2e3-48d1-99f2-00193ef42eee",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Enhance communication skills regarding customer frustrations and urgency.",
+      "description": "Coaching: Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+      "priority": "high",
+      "timeline": "ongoing",
+      "workflow_type": "ADVISOR",
+      "item_metadata": {
+        "plan_source": "advisor_plan.coaching_items[0]",
+        "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.431478",
+        "workflow_type": "ADVISOR"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Assign empathy training module to advisor",
+          "tool_needed": "training",
+          "details": "Assign module TRAIN-EMPATHY-101 to advisor with 30-day completion deadline",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.356716",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Schedule a coaching session focused on empathy in customer interactions",
+          "tool_needed": "task",
+          "details": "Create task for supervisor to conduct a coaching session on empathy within 14 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.356728",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Create performance improvement task for advisor",
+          "tool_needed": "task",
+          "details": "Create task to monitor advisor's call transcripts for empathy assessment over the next month",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.356732",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Update advisor's performance record with empathy training completion",
+          "tool_needed": "crm",
+          "details": "Add note to advisor's performance record indicating completion of empathy training module",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.356736",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Assign skill development activities related to customer empathy",
+          "tool_needed": "training",
+          "details": "Assign module TRAIN-CUSTOMER-EMPATHY-102 to advisor with 30-day completion deadline",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.356740",
+            "workflow_type": "ADVISOR"
+          }
+        }
+      ]
+    },
+    "risk_level": "HIGH",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "ADVISOR",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item focuses on enhancing communication skills regarding customer frustrations and urgency, which is critical in a mortgage servicing context where customers may be experiencing financial strain. Given the high priority of this coaching item and the ongoing timeline, there is significant potential for operational consequences if the advisor fails to effectively convey empathy and urgency during calls. This could lead to increased customer complaints, escalations, and potential compliance violations if customer concerns are not addressed appropriately. The complexity of the action lies in the need for the advisor to navigate sensitive customer emotions while adhering to company policies and regulatory requirements. Additionally, the high volume of customer inquiries related to PMI removal indicates a pressing need for improvement in communication, further elevating the risk associated with this action. Overall, the potential impact on customer satisfaction and the operational effectiveness of the mortgage servicing process categorizes this action as high risk.",
+    "approval_reasoning": "The action item focuses on enhancing communication skills regarding customer frustrations and urgency, which is critical in a mortgage servicing context. Given the high priority and ongoing nature of this coaching item, it poses significant operational risks if not addressed properly. The high risk level indicates potential compliance violations and increased customer complaints if the advisor fails to effectively convey empathy during calls. Therefore, it requires human oversight to ensure that the advisor receives appropriate coaching and support to navigate these sensitive interactions. This aligns with the ADVISOR-specific approval pattern for performance coaching, necessitating advisor approval before proceeding.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "ADVISOR",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Assign empathy training module to advisor",
+        "tool_needed": "training",
+        "details": "Assign module TRAIN-EMPATHY-101 to advisor with 30-day completion deadline",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.356716",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Schedule a coaching session focused on empathy in customer interactions",
+        "tool_needed": "task",
+        "details": "Create task for supervisor to conduct a coaching session on empathy within 14 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.356728",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Create performance improvement task for advisor",
+        "tool_needed": "task",
+        "details": "Create task to monitor advisor's call transcripts for empathy assessment over the next month",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.356732",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Update advisor's performance record with empathy training completion",
+        "tool_needed": "crm",
+        "details": "Add note to advisor's performance record indicating completion of empathy training module",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.356736",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Assign skill development activities related to customer empathy",
+        "tool_needed": "training",
+        "details": "Assign module TRAIN-CUSTOMER-EMPATHY-102 to advisor with 30-day completion deadline",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.356740",
+          "workflow_type": "ADVISOR"
+        }
+      }
+    ]
+  },
+  {
+    "id": "a85c279b-2c7d-447e-a4f5-6a0b6d01d5f0",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Provide training: Conduct a training session on PMI removal processes and customer communication strategies.",
+      "description": "Training recommendation: Conduct a training session on PMI removal processes and customer communication strategies.",
+      "priority": "medium",
+      "timeline": "within 30 days",
+      "workflow_type": "ADVISOR",
+      "item_metadata": {
+        "plan_source": "advisor_plan.training_recommendations[0]",
+        "training_type": "Conduct a training session on PMI removal processes and customer communication strategies.",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.431478",
+        "workflow_type": "ADVISOR"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Assign PMI removal training module",
+          "tool_needed": "training",
+          "details": "Assign module TRAIN-PMI-REMOVAL-101 to advisor with 30-day completion deadline",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.760699",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Schedule coaching session on customer communication strategies",
+          "tool_needed": "task",
+          "details": "Create task for supervisor to conduct a coaching session on customer communication strategies related to PMI removal within 30 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.760727",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Create performance improvement task for advisor",
+          "tool_needed": "task",
+          "details": "Create task to review advisor's performance on PMI removal communication with specific feedback points within 30 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.760732",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Update training completion status in advisor's record",
+          "tool_needed": "crm",
+          "details": "Update advisor's training record in CRM System to reflect assigned PMI removal training module",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.760735",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Assign skill development activities related to PMI",
+          "tool_needed": "training",
+          "details": "Assign skill development activities focusing on PMI removal processes to advisor with a 30-day completion deadline",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:14.760739",
+            "workflow_type": "ADVISOR"
+          }
+        }
+      ]
+    },
+    "risk_level": "MEDIUM",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "ADVISOR",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves conducting a training session on PMI removal processes and customer communication strategies. While training is generally a proactive measure aimed at improving advisor skills and customer interactions, the context indicates that there are existing issues with PMI removal requests that have led to customer dissatisfaction. The training session is necessary to address these gaps, but it also carries a moderate level of risk due to the following factors: 1) **Action Complexity**: The training session requires careful planning and execution to ensure that advisors fully understand the PMI removal process and can communicate effectively with customers. 2) **Customer Impact**: Given the high volume of customer inquiries and frustrations regarding PMI removals, any miscommunication or lack of understanding from advisors could exacerbate customer dissatisfaction. 3) **Operational Consequences**: If the training does not adequately prepare advisors, it could lead to further delays in PMI removals, impacting overall operational efficiency. 4) **Regulatory Implications**: There are compliance considerations tied to the timely processing of PMI removal requests, and inadequate training could lead to violations if advisors are not fully informed of the guidelines. 5) **Timeline Constraints**: The training is to be conducted within 30 days, which is a reasonable timeframe, but it requires coordination and resource allocation to ensure it is effective. Overall, while the training is a positive step, the existing issues and the need for effective execution elevate the risk to a medium level.",
+    "approval_reasoning": "The action item involves conducting a training session on PMI removal processes and customer communication strategies, which is classified as medium risk due to existing customer dissatisfaction and the need for effective communication. Given the complexity of the training and its potential impact on customer satisfaction and compliance, it requires human approval from an advisor. This ensures that the training is adequately planned and executed to address the identified gaps and improve advisor performance. The urgency of conducting the training within 30 days further emphasizes the need for oversight to ensure it meets operational and regulatory standards.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "ADVISOR",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Assign PMI removal training module",
+        "tool_needed": "training",
+        "details": "Assign module TRAIN-PMI-REMOVAL-101 to advisor with 30-day completion deadline",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.760699",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Schedule coaching session on customer communication strategies",
+        "tool_needed": "task",
+        "details": "Create task for supervisor to conduct a coaching session on customer communication strategies related to PMI removal within 30 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.760727",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Create performance improvement task for advisor",
+        "tool_needed": "task",
+        "details": "Create task to review advisor's performance on PMI removal communication with specific feedback points within 30 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.760732",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Update training completion status in advisor's record",
+        "tool_needed": "crm",
+        "details": "Update advisor's training record in CRM System to reflect assigned PMI removal training module",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.760735",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Assign skill development activities related to PMI",
+        "tool_needed": "training",
+        "details": "Assign skill development activities focusing on PMI removal processes to advisor with a 30-day completion deadline",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:14.760739",
+          "workflow_type": "ADVISOR"
+        }
+      }
+    ]
+  },
+  {
+    "id": "07f954ec-2549-4acb-b1c1-a93fa692ce35",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Schedule a follow-up training session on compliance and customer service best practices.",
+      "description": "Next action: Schedule a follow-up training session on compliance and customer service best practices.",
+      "priority": "medium",
+      "timeline": "within 7 days",
+      "workflow_type": "ADVISOR",
+      "item_metadata": {
+        "plan_source": "advisor_plan.next_actions[0]",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.431478",
+        "workflow_type": "ADVISOR"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Assign compliance training module to advisor",
+          "tool_needed": "training",
+          "details": "Assign module TRAIN-COMPLIANCE-101 to advisor with a 7-day completion deadline",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.127654",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Schedule a follow-up coaching session on customer service best practices",
+          "tool_needed": "task",
+          "details": "Create task for supervisor to schedule a coaching session within 7 days focusing on customer service best practices",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.127689",
+            "workflow_type": "ADVISOR"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Update advisor's training record",
+          "tool_needed": "crm",
+          "details": "Add note to advisor's training record indicating the assignment of compliance training module and scheduled coaching session",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.127703",
+            "workflow_type": "ADVISOR"
+          }
+        }
+      ]
+    },
+    "risk_level": "MEDIUM",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "ADVISOR",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves scheduling a follow-up training session on compliance and customer service best practices. While this is a proactive step towards improving advisor performance and customer satisfaction, it carries moderate complexity due to the need for effective execution and coordination. The training session is essential to address identified weaknesses in communication and compliance, which have been highlighted in the performance feedback. Given the timeline of within 7 days, there is some urgency, but it is manageable. The potential impact on customers is significant, as improved training can lead to better handling of customer inquiries and reduced complaint risks. However, the action does not directly involve compliance violations or immediate customer escalations, which would elevate the risk to high. Therefore, the overall risk level is assessed as medium, reflecting the importance of careful execution and the potential for positive outcomes if done correctly.",
+    "approval_reasoning": "The action item involves scheduling a follow-up training session on compliance and customer service best practices, which is categorized as medium risk. This training is essential for addressing performance deficiencies and improving customer satisfaction. Given the medium risk level, it is necessary to have advisor approval to ensure that the training is aligned with performance coaching and adequately addresses the identified weaknesses. The urgency of scheduling within 7 days adds to the importance of careful planning and execution, making human oversight essential to ensure the training's effectiveness and compliance with operational standards.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "ADVISOR",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Assign compliance training module to advisor",
+        "tool_needed": "training",
+        "details": "Assign module TRAIN-COMPLIANCE-101 to advisor with a 7-day completion deadline",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.127654",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Schedule a follow-up coaching session on customer service best practices",
+        "tool_needed": "task",
+        "details": "Create task for supervisor to schedule a coaching session within 7 days focusing on customer service best practices",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.127689",
+          "workflow_type": "ADVISOR"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Update advisor's training record",
+        "tool_needed": "crm",
+        "details": "Add note to advisor's training record indicating the assignment of compliance training module and scheduled coaching session",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.127703",
+          "workflow_type": "ADVISOR"
+        }
+      }
+    ]
+  },
+  {
+    "id": "49f68f35-c270-48ed-810e-003a0fa1835e",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "John's PMI removal request",
+      "description": "Escalation: Customer has met criteria for removal but is experiencing delays.",
+      "priority": "high",
+      "timeline": "immediate",
+      "workflow_type": "SUPERVISOR",
+      "item_metadata": {
+        "plan_source": "supervisor_plan.escalation_items[0]",
+        "reason": "Customer has met criteria for removal but is experiencing delays.",
+        "action_required": "Review and expedite the underwriting process.",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.432040",
+        "workflow_type": "SUPERVISOR"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Retrieve customer loan details to assess removal criteria status",
+          "tool_needed": "servicing_api",
+          "details": "Call GET /api/servicing/loan/{loan_id}/full-details",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:16.084789",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Check compliance with removal criteria",
+          "tool_needed": "compliance_api",
+          "details": "Call POST /api/compliance/check-removal-criteria with customer loan details",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:16.084816",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Create internal task for team to expedite removal process",
+          "tool_needed": "task",
+          "details": "Create task for servicing team to prioritize removal for customer with ID {customer_id} within 24 hours",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:16.084820",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Notify relevant team members about the escalation",
+          "tool_needed": "email",
+          "details": "Send email to servicing and compliance teams regarding the customer's removal status and urgency",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:16.084825",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Document the escalation in the CRM system",
+          "tool_needed": "crm",
+          "details": "Update customer record with escalation notes and actions taken",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:16.084828",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 6,
+          "action": "Schedule a follow-up review of the case",
+          "tool_needed": "task",
+          "details": "Create a follow-up task to review the status of the removal process in 3 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:16.084832",
+            "workflow_type": "SUPERVISOR"
+          }
+        }
+      ]
+    },
+    "risk_level": "HIGH",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "SUPERVISOR",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves an escalation regarding a customer's PMI removal request, which has already been delayed despite the customer meeting the necessary criteria. This situation presents several critical risks: \n1. **Action Complexity and Potential for Errors**: The need to expedite the underwriting process adds complexity, as it requires coordination with multiple departments and careful management to ensure compliance with internal and regulatory standards. Any errors in this process could lead to further delays or incorrect handling of the request.\n2. **Customer Impact and Operational Consequences**: The customer is already experiencing frustration due to delays, which could lead to dissatisfaction and potential churn if not addressed promptly. The urgency of the request (immediate timeline) heightens the stakes, as failure to act quickly could exacerbate the situation.\n3. **Regulatory and Compliance Implications**: PMI removal requests are subject to regulatory timeframes. Delays could result in non-compliance, leading to potential penalties or reputational damage for the organization. This adds a layer of risk that must be managed carefully.\n4. **Timeline and Resource Constraints**: The immediate nature of the request requires swift action, which may strain resources, especially if the underwriting department is already handling a high volume of requests. This could lead to further delays if not managed effectively.\nOverall, the combination of these factors indicates a high risk level for this supervisor action item, necessitating careful oversight and prompt execution to mitigate potential negative outcomes.",
+    "approval_reasoning": "The action item involves an escalation regarding a customer's PMI removal request, which has already faced delays despite the customer meeting the necessary criteria. Given the high risk level associated with this request, including potential regulatory compliance issues, customer dissatisfaction, and operational complexities, it necessitates careful oversight. The immediate timeline for action further emphasizes the need for human intervention to ensure that the underwriting process is expedited appropriately. Therefore, this action item requires supervisor approval to mitigate risks effectively and ensure compliance with regulatory standards.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "SUPERVISOR",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Retrieve customer loan details to assess removal criteria status",
+        "tool_needed": "servicing_api",
+        "details": "Call GET /api/servicing/loan/{loan_id}/full-details",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:16.084789",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Check compliance with removal criteria",
+        "tool_needed": "compliance_api",
+        "details": "Call POST /api/compliance/check-removal-criteria with customer loan details",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:16.084816",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Create internal task for team to expedite removal process",
+        "tool_needed": "task",
+        "details": "Create task for servicing team to prioritize removal for customer with ID {customer_id} within 24 hours",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:16.084820",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Notify relevant team members about the escalation",
+        "tool_needed": "email",
+        "details": "Send email to servicing and compliance teams regarding the customer's removal status and urgency",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:16.084825",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Document the escalation in the CRM system",
+        "tool_needed": "crm",
+        "details": "Update customer record with escalation notes and actions taken",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:16.084828",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 6,
+        "action": "Schedule a follow-up review of the case",
+        "tool_needed": "task",
+        "details": "Create a follow-up task to review the status of the removal process in 3 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:16.084832",
+          "workflow_type": "SUPERVISOR"
+        }
+      }
+    ]
+  },
+  {
+    "id": "1c3f394c-ec96-4783-bf9a-63a680cb40db",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Compliance review: Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction.",
+      "description": "Ensure compliance: Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction.",
+      "priority": "high",
+      "timeline": "within 24 hours",
+      "workflow_type": "SUPERVISOR",
+      "item_metadata": {
+        "plan_source": "supervisor_plan.compliance_review[0]",
+        "compliance_area": "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction.",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.432040",
+        "workflow_type": "SUPERVISOR"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Retrieve all pending PMI removal requests",
+          "tool_needed": "servicing_api",
+          "details": "Call GET /api/servicing/pmi-removal/requests/pending",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.154197",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Check compliance deadlines for each request",
+          "tool_needed": "compliance_api",
+          "details": "Call GET /api/compliance/pmi-removal/deadlines",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.154237",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Create internal task for team to process overdue requests",
+          "tool_needed": "task",
+          "details": "Create task to prioritize processing of overdue PMI removal requests within 24 hours",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.154259",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Send reminder notifications to processing team",
+          "tool_needed": "email",
+          "details": "Email processing team to remind them of the urgency in handling PMI removal requests",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.154276",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Document compliance checks and actions taken",
+          "tool_needed": "document_api",
+          "details": "Call POST /api/documentation/compliance-checks to log actions taken for PMI removal requests",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.154292",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 6,
+          "action": "Review compliance report for PMI removals",
+          "tool_needed": "compliance_api",
+          "details": "Call GET /api/compliance/pmi-removal/report to review compliance status and actions",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:11.154308",
+            "workflow_type": "SUPERVISOR"
+          }
+        }
+      ]
+    },
+    "risk_level": "HIGH",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "SUPERVISOR",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves ensuring compliance with regulatory timeframes for processing PMI removal requests, which is critical to avoid customer dissatisfaction. Given the high priority and the 24-hour timeline, there is significant pressure to execute this action correctly. The complexity arises from the need to coordinate with the underwriting department and ensure that all criteria for PMI removal are met without delays. Failure to comply with regulatory requirements could lead to serious repercussions, including customer complaints, potential legal issues, and damage to the company's reputation. Additionally, the increased volume of customer inquiries and complaints regarding PMI removals indicates a heightened risk environment, further elevating the risk level of this action. Overall, the combination of regulatory compliance, customer impact, and operational urgency categorizes this action as high risk.",
+    "approval_reasoning": "The action item involves a compliance review for PMI removal requests, which is categorized as high risk due to regulatory requirements and the potential for significant customer dissatisfaction. Given the urgency of processing these requests within a 24-hour timeframe and the complexity of coordinating with the underwriting department, it is critical that this action is reviewed by a supervisor. The potential repercussions of failing to comply with regulatory standards could lead to legal issues and damage to the company's reputation, necessitating a thorough review before proceeding.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "SUPERVISOR",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Retrieve all pending PMI removal requests",
+        "tool_needed": "servicing_api",
+        "details": "Call GET /api/servicing/pmi-removal/requests/pending",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.154197",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Check compliance deadlines for each request",
+        "tool_needed": "compliance_api",
+        "details": "Call GET /api/compliance/pmi-removal/deadlines",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.154237",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Create internal task for team to process overdue requests",
+        "tool_needed": "task",
+        "details": "Create task to prioritize processing of overdue PMI removal requests within 24 hours",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.154259",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Send reminder notifications to processing team",
+        "tool_needed": "email",
+        "details": "Email processing team to remind them of the urgency in handling PMI removal requests",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.154276",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Document compliance checks and actions taken",
+        "tool_needed": "document_api",
+        "details": "Call POST /api/documentation/compliance-checks to log actions taken for PMI removal requests",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.154292",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 6,
+        "action": "Review compliance report for PMI removals",
+        "tool_needed": "compliance_api",
+        "details": "Call GET /api/compliance/pmi-removal/report to review compliance status and actions",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:11.154308",
+          "workflow_type": "SUPERVISOR"
+        }
+      }
+    ]
+  },
+  {
+    "id": "16bbb93d-88d7-40c8-8483-0065ca60786e",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Implement process improvement: Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews.",
+      "description": "Process improvement: Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews.",
+      "priority": "medium",
+      "timeline": "within 30 days",
+      "workflow_type": "SUPERVISOR",
+      "item_metadata": {
+        "plan_source": "supervisor_plan.process_improvements[0]",
+        "improvement_type": "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews.",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.432040",
+        "workflow_type": "SUPERVISOR"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Create a tracking system for PMI removal requests",
+          "tool_needed": "task",
+          "details": "Create an internal task to develop a tracking system for PMI removal requests, assign to the IT team with a deadline of 30 days.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:18.837838",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Define metrics for tracking PMI removal timelines",
+          "tool_needed": "task",
+          "details": "Create a task for the compliance team to define and document metrics for tracking PMI removal timelines within 15 days.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:18.837892",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Schedule a review meeting to discuss progress",
+          "tool_needed": "task",
+          "details": "Create a task to schedule a review meeting with the team to discuss the implementation status of the tracking system within 10 days.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:18.837924",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Update team on PMI removal tracking system",
+          "tool_needed": "email",
+          "details": "Send an email to the team outlining the new tracking system for PMI removal requests and its importance for expediting reviews.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:18.837954",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Monitor compliance with the new tracking system",
+          "tool_needed": "task",
+          "details": "Create a task to monitor compliance with the new tracking system and report findings to management every two weeks.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:18.837987",
+            "workflow_type": "SUPERVISOR"
+          }
+        },
+        {
+          "step_number": 6,
+          "action": "Gather feedback on the tracking system",
+          "tool_needed": "task",
+          "details": "Create a task to gather feedback from staff on the effectiveness of the new tracking system after its implementation.",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:18.838015",
+            "workflow_type": "SUPERVISOR"
+          }
+        }
+      ]
+    },
+    "risk_level": "MEDIUM",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "SUPERVISOR",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action item involves implementing a tracking system for PMI removal requests, which is a process improvement aimed at enhancing operational efficiency. While the task is not overly complex, it does require careful execution to ensure that the system effectively monitors timelines and expedites reviews. The potential impact on customers is significant, as delays in PMI removal can lead to dissatisfaction and increased complaints. Additionally, there are compliance implications, as timely processing of PMI requests is necessary to adhere to regulatory requirements. The 30-day timeline adds a layer of urgency, necessitating resource allocation and coordination among team members. Overall, while the action is manageable, the potential for operational errors and customer impact elevates the risk to a medium level.",
+    "approval_reasoning": "The action item involves implementing a tracking system for PMI removal requests, which is classified as a medium risk due to its potential impact on operational efficiency and customer satisfaction. Given that this is a process improvement initiative, it requires careful execution to ensure compliance with regulatory timelines and to avoid operational errors that could lead to customer dissatisfaction. The supervisor-specific approval pattern indicates that such operational changes necessitate supervisor approval, especially when they could significantly affect customer interactions and compliance. Therefore, human approval is required to ensure that all aspects of the implementation are thoroughly reviewed and aligned with organizational standards.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "SUPERVISOR",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Create a tracking system for PMI removal requests",
+        "tool_needed": "task",
+        "details": "Create an internal task to develop a tracking system for PMI removal requests, assign to the IT team with a deadline of 30 days.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:18.837838",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Define metrics for tracking PMI removal timelines",
+        "tool_needed": "task",
+        "details": "Create a task for the compliance team to define and document metrics for tracking PMI removal timelines within 15 days.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:18.837892",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Schedule a review meeting to discuss progress",
+        "tool_needed": "task",
+        "details": "Create a task to schedule a review meeting with the team to discuss the implementation status of the tracking system within 10 days.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:18.837924",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Update team on PMI removal tracking system",
+        "tool_needed": "email",
+        "details": "Send an email to the team outlining the new tracking system for PMI removal requests and its importance for expediting reviews.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:18.837954",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Monitor compliance with the new tracking system",
+        "tool_needed": "task",
+        "details": "Create a task to monitor compliance with the new tracking system and report findings to management every two weeks.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:18.837987",
+          "workflow_type": "SUPERVISOR"
+        }
+      },
+      {
+        "step_number": 6,
+        "action": "Gather feedback on the tracking system",
+        "tool_needed": "task",
+        "details": "Create a task to gather feedback from staff on the effectiveness of the new tracking system after its implementation.",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:18.838015",
+          "workflow_type": "SUPERVISOR"
+        }
+      }
+    ]
+  },
+  {
+    "id": "5735b209-f3e4-4b4b-ab63-e18a50b6b63c",
+    "plan_id": "PLAN_ANALYSIS_CALL_4",
+    "analysis_id": "ANALYSIS_CALL_46F4C7",
+    "transcript_id": "CALL_46F4C703",
+    "workflow_data": {
+      "action_item": "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently.",
+      "description": "Resource allocation: Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently.",
+      "priority": "medium",
+      "timeline": "within 60 days",
+      "workflow_type": "LEADERSHIP",
+      "item_metadata": {
+        "plan_source": "leadership_plan.resource_allocation[0]",
+        "allocation_type": "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently.",
+        "translation_method": "DIRECT"
+      },
+      "extraction_metadata": {
+        "agent_id": "d0037590-4622-42ee-bd0e-3f899fda9f12",
+        "agent_version": "v2.0",
+        "translation_method": "DIRECT_MAPPING",
+        "translated_at": "2025-09-19T17:35:57.432629",
+        "workflow_type": "LEADERSHIP"
+      },
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Evaluate current resource allocation in the underwriting department",
+          "tool_needed": "task",
+          "details": "Create a task for the leadership team to review current staffing levels and workload in the underwriting department within 14 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.819856",
+            "workflow_type": "LEADERSHIP"
+          }
+        },
+        {
+          "step_number": 2,
+          "action": "Analyze PMI request volume and processing times",
+          "tool_needed": "task",
+          "details": "Assign a task to the underwriting manager to gather data on PMI requests and processing times over the last 6 months and report findings within 30 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.819872",
+            "workflow_type": "LEADERSHIP"
+          }
+        },
+        {
+          "step_number": 3,
+          "action": "Identify potential candidates for additional resources",
+          "tool_needed": "task",
+          "details": "Create a task for HR to identify potential internal candidates or temporary resources to support the underwriting department within 30 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.819878",
+            "workflow_type": "LEADERSHIP"
+          }
+        },
+        {
+          "step_number": 4,
+          "action": "Draft a proposal for resource allocation",
+          "tool_needed": "task",
+          "details": "Assign a task to the underwriting director to draft a proposal for additional resources, including budget implications, to be submitted within 45 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.819885",
+            "workflow_type": "LEADERSHIP"
+          }
+        },
+        {
+          "step_number": 5,
+          "action": "Schedule a leadership meeting to discuss resource allocation",
+          "tool_needed": "task",
+          "details": "Create a task to schedule a meeting with leadership to review the proposal and make decisions on resource allocation within 60 days",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.819891",
+            "workflow_type": "LEADERSHIP"
+          }
+        },
+        {
+          "step_number": 6,
+          "action": "Monitor implementation of additional resources if approved",
+          "tool_needed": "task",
+          "details": "Create a task for the underwriting manager to monitor the integration of additional resources into the team and report on effectiveness within 30 days post-implementation",
+          "generation_metadata": {
+            "agent_id": "workflow_step_agent",
+            "agent_version": "v1.0",
+            "generated_at": "2025-09-19T17:36:17.819899",
+            "workflow_type": "LEADERSHIP"
+          }
+        }
+      ]
+    },
+    "risk_level": "MEDIUM",
+    "status": "AWAITING_APPROVAL",
+    "context_data": {
+      "transcript_id": "CALL_46F4C703",
+      "analysis_id": "ANALYSIS_CALL_46F4C7",
+      "plan_id": "PLAN_ANALYSIS_CALL_4",
+      "plan_data": {
+        "borrower_plan": {
+          "immediate_actions": [
+            {
+              "action": "Initiate PMI removal process based on John's request and provided documentation.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Review John's account to confirm that he has met the criteria for PMI removal, including loan balance and appraisal."
+            },
+            {
+              "action": "Contact underwriting department to expedite review of John's PMI removal request.",
+              "timeline": "Within 24 hours",
+              "priority": "High",
+              "auto_executable": false,
+              "description": "Mark the request as urgent and ensure it is prioritized."
+            }
+          ],
+          "follow_ups": [
+            {
+              "action": "Provide John with an update on the status of his PMI removal request.",
+              "due_date": "October 11, 2023",
+              "owner": "Sarah Johnson",
+              "trigger_condition": "After escalation to underwriting department."
+            }
+          ],
+          "personalized_offers": [],
+          "risk_mitigation": [
+            "Monitor John's account for any signs of dissatisfaction or potential churn due to ongoing PMI issues."
+          ]
+        },
+        "advisor_plan": {
+          "coaching_items": [
+            {
+              "action": "Enhance communication skills regarding customer frustrations and urgency.",
+              "coaching_point": "Ensure empathy is conveyed during calls, especially when customers express financial strain.",
+              "expected_improvement": "Improved customer satisfaction and reduced complaint risk.",
+              "priority": "High"
+            },
+            {
+              "action": "Review PMI removal guidelines and processes to ensure accurate information is provided to customers.",
+              "coaching_point": "Understand the internal review process and timelines for PMI removal requests.",
+              "expected_improvement": "Faster resolution times and fewer escalations.",
+              "priority": "Medium"
+            }
+          ],
+          "performance_feedback": {
+            "strengths": [
+              "Demonstrated empathy and understanding of the customer's frustration.",
+              "Took immediate action to escalate the issue."
+            ],
+            "improvements": [
+              "Need to provide clearer timelines and expectations to customers regarding the PMI removal process."
+            ],
+            "score_explanations": [
+              "Customer expressed high urgency and dissatisfaction, indicating a need for improved communication and process understanding."
+            ]
+          },
+          "training_recommendations": [
+            "Conduct a training session on PMI removal processes and customer communication strategies."
+          ],
+          "next_actions": [
+            "Schedule a follow-up training session on compliance and customer service best practices."
+          ]
+        },
+        "supervisor_plan": {
+          "escalation_items": [
+            {
+              "item": "John's PMI removal request",
+              "reason": "Customer has met criteria for removal but is experiencing delays.",
+              "priority": "High",
+              "action_required": "Review and expedite the underwriting process."
+            }
+          ],
+          "team_patterns": [
+            "Increased customer inquiries regarding PMI removal processes, indicating a potential need for process improvement."
+          ],
+          "compliance_review": [
+            "Ensure all PMI removal requests are processed within the regulatory timeframes to avoid customer dissatisfaction."
+          ],
+          "approval_required": false,
+          "process_improvements": [
+            "Implement a tracking system for PMI removal requests to monitor timelines and expedite reviews."
+          ]
+        },
+        "leadership_plan": {
+          "portfolio_insights": [
+            "High volume of calls related to PMI removal indicates a potential gap in communication or process efficiency.",
+            "Customers are increasingly frustrated with delays in PMI removal, which could impact overall satisfaction."
+          ],
+          "strategic_opportunities": [
+            "Explore opportunities to streamline the PMI removal process to enhance customer experience and reduce churn risk."
+          ],
+          "risk_indicators": [
+            "High complaint risk associated with PMI removal requests.",
+            "Increased churn risk among customers who feel their concerns are not addressed promptly."
+          ],
+          "trend_analysis": [
+            "Notable increase in customer complaints regarding PMI removal over the last quarter."
+          ],
+          "resource_allocation": [
+            "Consider allocating additional resources to the underwriting department to handle PMI requests more efficiently."
+          ]
+        },
+        "plan_id": "PLAN_ANALYSIS_CALL_4",
+        "analysis_id": "ANALYSIS_CALL_46F4C7",
+        "transcript_id": "CALL_46F4C703",
+        "generator_version": "1.0",
+        "risk_level": null,
+        "approval_route": null,
+        "queue_status": null,
+        "auto_executable": 0,
+        "routing_reason": null,
+        "created_at": "2025-09-19 17:35:57",
+        "approved_at": null,
+        "approved_by": null
+      },
+      "extraction_timestamp": "2025-09-19T17:35:57.430637",
+      "pipeline_stage": "granular_workflow_extraction",
+      "workflow_type": "LEADERSHIP",
+      "action_item_context": {
+
+      }
+    },
+    "risk_reasoning": "The action of allocating additional resources to the underwriting department to handle PMI requests is classified as medium risk due to several factors. While the action aims to improve efficiency and customer satisfaction, it involves moderate complexity and potential operational impacts. The urgency of the timeline (within 60 days) adds pressure to execute effectively, which could lead to errors if not managed properly. Additionally, there are implications for resource allocation that could affect other departments or projects, creating dependencies that need careful consideration. The action is not directly regulatory in nature, but it does relate to compliance with customer service expectations and could impact customer satisfaction if not executed well. Therefore, while it is a proactive step, the associated risks warrant a medium classification.",
+    "approval_reasoning": "The action item involves allocating additional resources to the underwriting department, which is classified as medium risk due to its moderate complexity and potential operational impacts. Given the urgency of the timeline (within 60 days) and the dependencies on other departments, careful consideration is necessary to avoid errors that could affect customer satisfaction. This action is strategic in nature and aligns with the need for advisor-level approval to ensure that resource allocation is managed effectively and does not disrupt other operations. Therefore, it requires human approval from an advisor.",
+    "requires_human_approval": true,
+    "assigned_approver": "",
+    "approved_by": null,
+    "approved_at": null,
+    "rejected_by": null,
+    "rejected_at": null,
+    "rejection_reason": null,
+    "executed_at": null,
+    "execution_results": null,
+    "created_at": "2025-09-19 17:36:18",
+    "updated_at": "2025-09-19 17:36:18",
+    "workflow_type": "LEADERSHIP",
+    "workflow_steps": [
+      {
+        "step_number": 1,
+        "action": "Evaluate current resource allocation in the underwriting department",
+        "tool_needed": "task",
+        "details": "Create a task for the leadership team to review current staffing levels and workload in the underwriting department within 14 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.819856",
+          "workflow_type": "LEADERSHIP"
+        }
+      },
+      {
+        "step_number": 2,
+        "action": "Analyze PMI request volume and processing times",
+        "tool_needed": "task",
+        "details": "Assign a task to the underwriting manager to gather data on PMI requests and processing times over the last 6 months and report findings within 30 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.819872",
+          "workflow_type": "LEADERSHIP"
+        }
+      },
+      {
+        "step_number": 3,
+        "action": "Identify potential candidates for additional resources",
+        "tool_needed": "task",
+        "details": "Create a task for HR to identify potential internal candidates or temporary resources to support the underwriting department within 30 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.819878",
+          "workflow_type": "LEADERSHIP"
+        }
+      },
+      {
+        "step_number": 4,
+        "action": "Draft a proposal for resource allocation",
+        "tool_needed": "task",
+        "details": "Assign a task to the underwriting director to draft a proposal for additional resources, including budget implications, to be submitted within 45 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.819885",
+          "workflow_type": "LEADERSHIP"
+        }
+      },
+      {
+        "step_number": 5,
+        "action": "Schedule a leadership meeting to discuss resource allocation",
+        "tool_needed": "task",
+        "details": "Create a task to schedule a meeting with leadership to review the proposal and make decisions on resource allocation within 60 days",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.819891",
+          "workflow_type": "LEADERSHIP"
+        }
+      },
+      {
+        "step_number": 6,
+        "action": "Monitor implementation of additional resources if approved",
+        "tool_needed": "task",
+        "details": "Create a task for the underwriting manager to monitor the integration of additional resources into the team and report on effectiveness within 30 days post-implementation",
+        "generation_metadata": {
+          "agent_id": "workflow_step_agent",
+          "agent_version": "v1.0",
+          "generated_at": "2025-09-19T17:36:17.819899",
+          "workflow_type": "LEADERSHIP"
+        }
+      }
+    ]
+  }
+]

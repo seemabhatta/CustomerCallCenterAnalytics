@@ -532,6 +532,32 @@ export type Environment = 'dev' | 'staging' | 'prod';
 // User Role Types
 export type UserRole = 'leadership' | 'supervisor' | 'advisor' | 'admin';
 
+// Leadership Chat Types
+export interface LeadershipChatRequest {
+  query: string;
+  executive_id: string;
+  executive_role?: string;
+  session_id?: string;
+}
+
+export interface LeadershipChatResponse {
+  content: string;
+  executive_summary: string;
+  key_metrics: any[];
+  recommendations: string[];
+  supporting_data: Record<string, any>;
+  session_id: string;
+  cache_hit: boolean;
+  metadata: {
+    query_understanding: any;
+    total_processing_time_ms: number;
+    overall_confidence: number;
+    data_sources_used: string[];
+    records_analyzed: number;
+    response_timestamp: string;
+  };
+}
+
 // Error Types
 export interface ApiError {
   detail: string;

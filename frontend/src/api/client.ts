@@ -22,11 +22,14 @@ import {
   ApiError,
   OrchestrationRun,
   OrchestrationRunRequest,
-  OrchestrationRunResponse
+  OrchestrationRunResponse,
+  LeadershipChatRequest,
+  LeadershipChatResponse
 } from '@/types';
 
 // Create axios instance with base configuration
 const api = axios.create({
+  baseURL: 'http://localhost:8000',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -431,6 +434,14 @@ export const orchestrationApi = {
   listRuns: () =>
     apiCall<{ runs: OrchestrationRun[] }>(() =>
       api.get('/api/v1/orchestrate/runs')
+    ),
+};
+
+// Leadership API
+export const leadershipApi = {
+  chat: (data: LeadershipChatRequest) =>
+    apiCall<LeadershipChatResponse>(() =>
+      api.post('/api/v1/leadership/chat', data)
     ),
 };
 

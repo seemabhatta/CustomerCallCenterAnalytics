@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Send, Trash2, Crown } from 'lucide-react';
+import { leadershipApi } from '@/api/client';
 
 interface ChatMessage {
   id: string;
@@ -22,6 +23,7 @@ export function InsightsView() {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -34,43 +36,45 @@ export function InsightsView() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentQuery = inputMessage;
     setInputMessage('');
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await leadershipApi.chat({
+        query: currentQuery,
+        executive_id: 'EXEC_001',
+        executive_role: 'Manager',
+        session_id: sessionId || undefined
+      });
+
+      // Store session ID for conversation continuity
+      if (response.session_id && !sessionId) {
+        setSessionId(response.session_id);
+      }
+
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: getSimulatedResponse(inputMessage),
+        content: response.content,
         timestamp: new Date()
       };
+
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat API error:', error);
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  const getSimulatedResponse = (input: string): string => {
-    const lowerInput = input.toLowerCase();
-
-    if (lowerInput.includes('risk') || lowerInput.includes('high risk')) {
-      return 'Based on recent analysis, I see a 15% increase in high-risk calls this month. PMI removal and hardship requests show the highest escalation rates. Would you like me to drill down into specific risk patterns?';
-    }
-
-    if (lowerInput.includes('team') || lowerInput.includes('performance')) {
-      return 'Team performance metrics show advisors are resolving 78% of calls on first contact. Top performers are excelling in payment arrangement scenarios. I recommend coaching focus on escrow analysis techniques.';
-    }
-
-    if (lowerInput.includes('trend') || lowerInput.includes('pattern')) {
-      return 'Key trends this quarter: 23% increase in refinancing inquiries, 8% rise in property tax disputes, and seasonal uptick in PMI removal requests. These align with current market interest rate changes.';
-    }
-
-    if (lowerInput.includes('customer') || lowerInput.includes('satisfaction')) {
-      return 'Customer sentiment analysis shows 82% positive resolution rate. Main pain points: wait times for escrow analysis (avg 3.2 days) and complex PMI removal documentation. Opportunity for process streamlining exists.';
-    }
-
-    return 'I understand you\'re looking for insights. I can help analyze risk patterns, team performance, customer trends, or operational metrics. Try asking about specific areas like "What are our current risk trends?" or "How is team performance this month?"';
-  };
 
   const quickQuestions = [
     "What are our highest risk areas?",
@@ -80,6 +84,7 @@ export function InsightsView() {
   ];
 
   const handleClearChat = () => {
+    setSessionId(null);
     setMessages([
       {
         id: '1',
