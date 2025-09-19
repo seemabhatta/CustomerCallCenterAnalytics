@@ -335,7 +335,7 @@ class CLIRestClient:
         }
         if session_id:
             payload["session_id"] = session_id
-        return self._make_request('POST', '/api/v1/leadership/chat', json_data=payload)
+        return self._make_request('POST', '/api/v1/leadership/chat', json_data=payload, timeout=120)
 
     def leadership_sessions(self, executive_id: str, limit: int = 10) -> Dict[str, Any]:
         """List sessions for an executive."""
