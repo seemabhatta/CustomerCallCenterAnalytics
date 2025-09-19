@@ -296,7 +296,7 @@ class LeadershipInsightsService:
         """
         try:
             # Get data summary
-            data_summary = self.data_reader.get_data_summary()
+            data_summary = await self.data_reader.get_data_summary()
 
             # Get cache statistics
             cache_stats = self.cache_store.get_cache_statistics()

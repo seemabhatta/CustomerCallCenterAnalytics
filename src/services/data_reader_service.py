@@ -44,7 +44,7 @@ class DataReaderService:
         self.workflow_store = WorkflowStore(db_path)
         self.execution_store = WorkflowExecutionStore(db_path)
 
-    def fetch_by_plan(self, data_plan: Dict[str, Any]) -> Dict[str, Any]:
+    async def fetch_by_plan(self, data_plan: Dict[str, Any]) -> Dict[str, Any]:
         """Fetch data according to LLM-generated plan.
 
         Args:
@@ -88,7 +88,7 @@ class DataReaderService:
 
             # Fetch executions if needed
             if data_plan.get('needs_executions'):
-                fetched_data['executions'] = self._fetch_executions(
+                fetched_data['executions'] = await self._fetch_executions(
                     data_plan.get('execution_filters', {})
                 )
 
@@ -207,7 +207,7 @@ class DataReaderService:
         except Exception as e:
             raise Exception(f"Workflow fetching failed: {str(e)}")
 
-    def _fetch_executions(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _fetch_executions(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Fetch executions with filters.
 
         Args:
@@ -218,7 +218,7 @@ class DataReaderService:
         """
         try:
             # Get all executions
-            executions = self.execution_store.get_all()
+            executions = await self.execution_store.get_all()
 
             # Apply filters
             filtered = self._apply_execution_filters(executions, filters)
@@ -484,7 +484,7 @@ class DataReaderService:
 
         return False
 
-    def get_data_summary(self) -> Dict[str, Any]:
+    async def get_data_summary(self) -> Dict[str, Any]:
         """Get summary of available data across all stores.
 
         Returns:
@@ -527,7 +527,7 @@ class DataReaderService:
             }
 
             # Execution summary
-            executions = self.execution_store.get_all()
+            executions = await self.execution_store.get_all()
             successful_count = sum(1 for e in executions if e.get('successful'))
             summary['executions'] = {
                 'total_count': len(executions),

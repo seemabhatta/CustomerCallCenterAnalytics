@@ -36,7 +36,7 @@ DATA STORE CAPABILITIES:
 FILTERING OPTIONS:
 
 For each store, consider these filters:
-- date_range: {start: "YYYY-MM-DD", end: "YYYY-MM-DD"}
+- date_range: {{start: "YYYY-MM-DD", end: "YYYY-MM-DD"}}
 - limit: Maximum records to retrieve
 - status: Filter by status values
 - risk_level: HIGH, MEDIUM, LOW
