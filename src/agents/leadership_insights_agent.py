@@ -1,9 +1,10 @@
-"""Leadership Insights Agent - Simplified Agentic Approach.
+"""Leadership Insights Agent - Simple Conversational Approach.
 
 Core Principles Applied:
-- NO FALLBACK: Fail fast on unclear queries or processing errors
-- AGENTIC: LLM makes all decisions, no hardcoded workflows
-- SIMPLIFIED: 2-step process instead of 7-step over-engineering
+- NO FALLBACK: Fail fast if no value can be provided
+- AGENTIC: LLM makes all decisions including what to say to user
+- TRANSPARENT: Real-time narration of thinking process
+- SIMPLE: One agent, one loop, conversational
 """
 from typing import Dict, Any, Optional, List
 import json
@@ -17,7 +18,7 @@ from .insights.thinking_agent import ThinkingAgent, QueryUnderstanding
 
 
 class LeadershipInsightsAgent:
-    """Simplified leadership insights agent with 2-step processing."""
+    """Simple conversational agent that thinks out loud while searching."""
 
     def __init__(self, llm_client: LLMClientV2, data_reader=None):
         """Initialize agent with dependencies.
@@ -38,13 +39,13 @@ class LeadershipInsightsAgent:
         self.llm = llm_client
         self.data_reader = data_reader
 
-        # Initialize sub-agents
+        # Initialize thinking agent for query understanding
         self.thinking_agent = ThinkingAgent(llm_client)
 
     @trace_async_function("insights.process_query")
     async def process_query(self, query: str, executive_role: str = None,
                            session_context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Process leadership query with simplified 2-step approach.
+        """Process leadership query with conversational thinking out loud.
 
         Args:
             query: Leadership query string
@@ -61,7 +62,6 @@ class LeadershipInsightsAgent:
             raise ValueError("Query cannot be empty")
 
         start_time = time.time()
-        processing_steps = []
 
         # Add tracing attributes for observability
         set_span_attributes(
@@ -71,84 +71,80 @@ class LeadershipInsightsAgent:
         )
 
         try:
-            # STEP 1: STRATEGY - Let LLM agent decide everything
-            print("🧠 STRATEGIZING: Analyzing query and creating action plan...")
-            step_start = time.time()
+            # Quick understanding of the query
+            understanding = await self.thinking_agent.understand_query(
+                query=query,
+                executive_role=executive_role,
+                session_context=session_context
+            )
 
-            # Create strategy using LLM agent (not hardcoded logic)
-            strategy = await self._create_strategy(query, executive_role, session_context)
+            # Start conversational search
+            found_data = {}
+            data_sources = ['analyses', 'transcripts', 'workflows', 'plans']
 
-            # Display strategy-driven visibility messages (agent decides what to show)
-            for message in strategy.get('visibility_messages', []):
-                print(message)
+            # Search loop with narration
+            for attempt in range(len(data_sources) + 1):  # +1 for final attempt
+                # Get LLM's next thought and narration
+                thought = await self._get_next_thought(
+                    query=query,
+                    understanding=understanding,
+                    searched_so_far=list(found_data.keys()),
+                    available_sources=[s for s in data_sources if s not in found_data],
+                    current_data=found_data,
+                    attempt=attempt
+                )
 
-            understanding = strategy['understanding']
+                # Print what the agent is thinking
+                print(thought['narration'])
 
-            strategy_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'strategy',
-                'duration_ms': round(strategy_time * 1000),
-                'confidence': understanding.confidence,
-                'strategy_type': strategy.get('approach', 'unknown')
-            })
+                # If LLM says to summarize, we're done searching
+                if thought['action'] == 'summarize':
+                    break
 
-            # STEP 2: DATA SEARCH - Use strategy-driven data finder
-            print("📊 SEARCHING: Following strategy-defined data search plan...")
-            step_start = time.time()
+                # If LLM wants to search, do it
+                if thought['action'] == 'search' and thought.get('source'):
+                    try:
+                        data = await self._search_source(
+                            thought['source'],
+                            thought.get('filters', {}),
+                            understanding
+                        )
+                        if data:
+                            found_data[thought['source']] = data
+                    except Exception as e:
+                        # Continue searching even if one source fails
+                        print(f"❌ Search failed: {str(e)}")
 
-            # Let the data finder agent execute the strategy
-            data_result = await self._find_data_with_strategy(strategy)
+                # If LLM says to fail fast, stop immediately
+                if thought['action'] == 'fail_fast':
+                    raise Exception(thought.get('reason', 'Cannot provide meaningful insights'))
 
-            # Display data search results (agent decides what to show)
-            for message in data_result.get('search_messages', []):
-                print(message)
+            # Generate brief summary
+            summary_response = await self._create_summary(query, understanding, found_data)
 
-            search_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'data_search',
-                'duration_ms': round(search_time * 1000),
-                'records_found': data_result.get('total_records', 0),
-                'sources_searched': len(data_result.get('sources_tried', []))
-            })
+            # Print the summary
+            print(f"\n💬 {summary_response['brief_summary']}")
 
-            # STEP 3: RESPONSE GENERATION - Let response agent decide how to respond
-            print("✨ GENERATING: Creating strategic response...")
-            step_start = time.time()
-
-            # Generate response using strategy + data (agent decides format and content)
-            response = await self._generate_strategic_response(strategy, data_result, query)
-
-            generation_time = time.time() - step_start
-            processing_steps.append({
-                'step': 'response_generation',
-                'duration_ms': round(generation_time * 1000),
-                'response_type': response.get('response_type', 'standard')
-            })
-
-            # Compile final response with strategy context
+            # Compile final response
             total_time = time.time() - start_time
 
             final_response = {
-                'content': response.get('content'),
-                'executive_summary': response.get('executive_summary'),
-                'key_metrics': response.get('key_metrics', []),
-                'recommendations': response.get('recommendations', []),
-                'supporting_data': response.get('supporting_data', {}),
+                'content': summary_response['content'],
+                'executive_summary': summary_response['brief_summary'],
+                'key_metrics': summary_response.get('key_metrics', []),
+                'recommendations': summary_response.get('recommendations', []),
+                'supporting_data': summary_response.get('supporting_data', {}),
 
                 # Metadata for transparency
                 'metadata': {
                     'query_understanding': understanding.to_dict(),
-                    'strategy_used': strategy.get('approach', 'unknown'),
-                    'processing_steps': processing_steps,
                     'total_processing_time_ms': round(total_time * 1000),
-                    'overall_confidence': response.get('confidence', 80),
-                    'data_sources_used': data_result.get('sources_used', []),
-                    'records_analyzed': data_result.get('total_records', 0),
+                    'overall_confidence': summary_response.get('confidence', 75),
+                    'data_sources_used': list(found_data.keys()),
+                    'records_analyzed': sum(len(data) if isinstance(data, list) else 1 for data in found_data.values()),
                     'response_timestamp': datetime.now().isoformat()
                 }
             }
-
-            print(f"✅ COMPLETE: {strategy.get('goal', 'Query')} processed in {total_time:.2f}s")
 
             return final_response
 
@@ -156,177 +152,166 @@ class LeadershipInsightsAgent:
             processing_time = time.time() - start_time
             raise Exception(f"Leadership insights processing failed after {processing_time:.2f}s: {str(e)}")
 
-    async def _create_strategy(self, query: str, executive_role: str, session_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Strategy Agent: Create comprehensive strategy for query processing.
+    async def _get_next_thought(self, query: str, understanding: QueryUnderstanding,
+                               searched_so_far: List[str], available_sources: List[str],
+                               current_data: Dict[str, Any], attempt: int) -> Dict[str, Any]:
+        """Get LLM's next thought and action in the search process.
 
         Args:
             query: Original query
-            executive_role: Executive role
-            session_context: Session context
+            understanding: Query understanding
+            searched_so_far: Sources already searched
+            available_sources: Sources still available
+            current_data: Data found so far
+            attempt: Current attempt number
 
         Returns:
-            Strategy dictionary with understanding, approach, visibility messages
+            Dictionary with narration and next action
         """
         try:
-            # Build strategy context
+            # Build context for LLM decision
             context = {
                 'query': query,
-                'executive_role': executive_role or 'Manager',
-                'session_context': session_context or {}
+                'understanding': understanding.to_dict(),
+                'searched_so_far': searched_so_far,
+                'available_sources': available_sources,
+                'current_data_summary': self._summarize_found_data(current_data),
+                'attempt': attempt,
+                'max_attempts': 4
             }
 
-            # Load strategy prompt
+            # Load conversational thinking prompt
             prompt = prompt_loader.format(
-                'insights/strategy/query_strategy.txt',
+                'insights/conversational/next_thought.txt',
                 **context
             )
 
-            # Get strategy from LLM
-            response = await self.llm.arun(
-                messages=[{"role": "user", "content": prompt}],
-                options=RequestOptions(temperature=0.3)
-            )
-
-            if not response.text:
-                raise Exception("Strategy agent returned no response")
-
-            strategy = self._parse_json_response(response.text)
-
-            # Add understanding from thinking agent
-            understanding = await self.thinking_agent.understand_query(
-                query=query,
-                executive_role=executive_role,
-                session_context=session_context
-            )
-            strategy['understanding'] = understanding
-
-            return strategy
-
-        except Exception as e:
-            raise Exception(f"Strategy creation failed: {str(e)}")
-
-    async def _find_data_with_strategy(self, strategy: Dict[str, Any]) -> Dict[str, Any]:
-        """Data Finder Agent: Execute strategy-driven data search.
-
-        Args:
-            strategy: Strategy from strategy agent
-
-        Returns:
-            Data search results with messages and findings
-        """
-        try:
-            # Build data search context
-            context = {
-                'strategy': strategy,
-                'understanding': strategy['understanding'].to_dict()
-            }
-
-            # Load data search prompt
-            prompt = prompt_loader.format(
-                'insights/data/strategic_search.txt',
-                **context
-            )
-
-            # Get search plan from LLM
-            response = await self.llm.arun(
-                messages=[{"role": "user", "content": prompt}],
-                options=RequestOptions(temperature=0.2)
-            )
-
-            if not response.text:
-                raise Exception("Data finder agent returned no response")
-
-            search_plan = self._parse_json_response(response.text)
-
-            # Execute the search plan
-            data_result = {
-                'search_messages': search_plan.get('search_messages', []),
-                'sources_tried': [],
-                'sources_used': [],
-                'total_records': 0,
-                'data': {}
-            }
-
-            # Execute each search in the plan
-            for search in search_plan.get('searches', []):
-                try:
-                    if search['source'] == 'transcripts':
-                        data = await self.data_reader.get_transcripts(search.get('filters', {}))
-                        if data:
-                            data_result['data']['transcripts'] = data
-                            data_result['sources_used'].append('transcripts')
-                            data_result['total_records'] += len(data)
-
-                    elif search['source'] == 'analyses':
-                        data = await self.data_reader.get_analyses(search.get('filters', {}))
-                        if data:
-                            data_result['data']['analyses'] = data
-                            data_result['sources_used'].append('analyses')
-                            data_result['total_records'] += len(data)
-
-                    data_result['sources_tried'].append(search['source'])
-
-                except Exception as search_error:
-                    # Continue with other searches if one fails
-                    print(f"Search failed for {search['source']}: {search_error}")
-
-            return data_result
-
-        except Exception as e:
-            raise Exception(f"Strategic data search failed: {str(e)}")
-
-    async def _generate_strategic_response(self, strategy: Dict[str, Any],
-                                          data_result: Dict[str, Any], query: str) -> Dict[str, Any]:
-        """Response Generator Agent: Create strategic response based on strategy and data.
-
-        Args:
-            strategy: Strategy from strategy agent
-            data_result: Data search results
-            query: Original query
-
-        Returns:
-            Strategic response dictionary
-        """
-        try:
-            # Build response context
-            context = {
-                'query': query,
-                'strategy': strategy,
-                'data_result': data_result,
-                'understanding': strategy['understanding'].to_dict()
-            }
-
-            # Load strategic response prompt
-            prompt = prompt_loader.format(
-                'insights/response/strategic_executive_response.txt',
-                **context
-            )
-
-            # Get strategic response from LLM
+            # Get LLM's next thought
             response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.4)
             )
 
             if not response.text:
-                raise Exception("Response generator agent returned no response")
+                raise Exception("LLM returned no thought")
 
-            # Parse strategic response
-            parsed = self._parse_json_response(response.text)
+            # Parse the thought
+            thought = self._parse_json_response(response.text)
 
-            return {
-                'content': parsed.get('content', ''),
-                'executive_summary': parsed.get('executive_summary', ''),
-                'key_metrics': parsed.get('key_metrics', []),
-                'recommendations': parsed.get('recommendations', []),
-                'supporting_data': parsed.get('supporting_data', {}),
-                'confidence': parsed.get('confidence', 80),
-                'response_type': parsed.get('response_type', 'strategic')
-            }
+            return thought
 
         except Exception as e:
-            raise Exception(f"Strategic response generation failed: {str(e)}")
+            # Fallback thought if parsing fails
+            return {
+                'narration': f"🤔 Having trouble thinking through this... {str(e)}",
+                'action': 'fail_fast',
+                'reason': f"Thought process failed: {str(e)}"
+            }
 
+    async def _search_source(self, source: str, filters: Dict[str, Any],
+                           understanding: QueryUnderstanding) -> Optional[List[Dict]]:
+        """Search a specific data source.
+
+        Args:
+            source: Data source name
+            filters: Search filters
+            understanding: Query understanding
+
+        Returns:
+            Search results or None
+        """
+        try:
+            if source == 'analyses':
+                return await self.data_reader.get_analyses(filters)
+            elif source == 'transcripts':
+                return await self.data_reader.get_transcripts(filters)
+            elif source == 'workflows':
+                # Note: workflows method doesn't exist yet, but agent might try it
+                return []
+            elif source == 'plans':
+                # Note: plans method doesn't exist yet, but agent might try it
+                return []
+            else:
+                return None
+
+        except Exception as e:
+            print(f"❌ Error searching {source}: {str(e)}")
+            return None
+
+    async def _create_summary(self, query: str, understanding: QueryUnderstanding,
+                            found_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create brief conversational summary.
+
+        Args:
+            query: Original query
+            understanding: Query understanding
+            found_data: All data found during search
+
+        Returns:
+            Summary response dictionary
+        """
+        try:
+            # Build summary context
+            context = {
+                'query': query,
+                'understanding': understanding.to_dict(),
+                'found_data': found_data,
+                'data_summary': self._summarize_found_data(found_data),
+                'has_data': len(found_data) > 0
+            }
+
+            # Load conversational summary prompt
+            prompt = prompt_loader.format(
+                'insights/conversational/brief_summary.txt',
+                **context
+            )
+
+            # Get brief summary from LLM
+            response = await self.llm.arun(
+                messages=[{"role": "user", "content": prompt}],
+                options=RequestOptions(temperature=0.4)
+            )
+
+            if not response.text:
+                raise Exception("LLM returned no summary")
+
+            # Parse summary
+            summary = self._parse_json_response(response.text)
+
+            return summary
+
+        except Exception as e:
+            # Simple fallback summary
+            if found_data:
+                record_count = sum(len(data) if isinstance(data, list) else 1 for data in found_data.values())
+                brief = f"Found {record_count} relevant records. Analysis available with more details."
+            else:
+                brief = "No relevant data found for this query."
+
+            return {
+                'brief_summary': brief,
+                'content': brief,
+                'confidence': 50
+            }
+
+    def _summarize_found_data(self, found_data: Dict[str, Any]) -> str:
+        """Create brief summary of found data for context.
+
+        Args:
+            found_data: Data found during search
+
+        Returns:
+            Brief summary string
+        """
+        if not found_data:
+            return "No data found yet"
+
+        summaries = []
+        for source, data in found_data.items():
+            count = len(data) if isinstance(data, list) else 1
+            summaries.append(f"{source}: {count} records")
+
+        return ", ".join(summaries)
 
     def _parse_json_response(self, response_text: str) -> Dict[str, Any]:
         """Parse JSON response from LLM.
@@ -366,17 +351,18 @@ class LeadershipInsightsAgent:
         """
         return {
             'agent_type': 'LeadershipInsightsAgent',
-            'version': '2.0.0',
-            'approach': 'simplified_agentic',
+            'version': '3.0.0',
+            'approach': 'conversational_transparent',
             'capabilities': [
-                'query_understanding',
-                'data_fetching',
-                'response_generation',
-                'no_data_handling'
+                'real_time_narration',
+                'progressive_search',
+                'conversational_summary',
+                'fail_fast_behavior'
             ],
             'processing_steps': [
                 'understand_query',
-                'generate_response'
+                'conversational_search_loop',
+                'brief_summary'
             ],
             'status': 'ready'
         }

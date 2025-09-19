@@ -1,65 +1,88 @@
-[22:55:09] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=CREATE INDEX...
-🧠 THINKING: Understanding query...
-[22:55:14] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+INFO:     127.0.0.1:55138 - "POST /api/v1/analyses HTTP/1.1" 500 Internal Server Error
+{
+    "body": "OpenAI request failed",
+    "severity_number": 13,
+    "severity_text": "WARN",
+    "attributes": {
+        "operation": "openai.generate_structured",
+        "attempt": 1,
+        "model": "gpt-4.1-mini",
+        "retryable": false,
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/llm/openai_wrapper.py",
+        "code.function.name": "_invoke_with_retry",
+        "code.line.number": 247,
+        "exception.type": "TypeError",
+        "exception.message": "Responses.create() got an unexpected keyword argument 'response_format'",
+        "exception.stacktrace": "Traceback (most recent call last):\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/llm/openai_wrapper.py\", line 230, in _invoke_with_retry\n    response = call_fn()\n               ^^^^^^^^^\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/llm/openai_wrapper.py\", line 109, in call\n    return self.client.responses.create(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/openai/utils.py\", line 119, in wrapper\n    return func(tracer, wrapped, instance, args, kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/openai/v1/responses_wrappers.py\", line 441, in responses_get_or_create_wrapper\n    response = wrapped(*args, **kwargs)\n               ^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: Responses.create() got an unexpected keyword argument 'response_format'\n"
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-09-19T16:53:57.564889Z",
+    "observed_timestamp": "2025-09-19T16:53:57.565029Z",
+    "trace_id": "0x95cd2fcf19232c39620a57a367d78aa3",
+    "span_id": "0x8998f271b6abf41a",
+    "trace_flags": 1,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
+[12:53:57] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=
            ...
-[22:55:14] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
+[12:53:57] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=
            ...
-[22:55:14] ✓ leadership.check_cache | 0.0s | querylength=47 executiverole=CCO cachehit=False
-[22:55:14] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
+[12:53:57] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=CREATE INDEX...
+[12:53:57] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=CREATE INDEX...
+[12:53:57] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=CREATE INDEX...
+[12:53:57] ✓ CREATE | 0.0s | db.system=sqlite db.name= db.statement=CREATE INDEX...
+[12:53:57] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
            ...
-📋 PLANNING: Creating data strategy...
-[22:55:14] ✓ POST | 16.2s | http.method=POST http.url=https://api.... http.statuscode=200
-[22:55:14] ✓ openai.response | 16.3s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc61... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=992
-[22:55:14] ✓ openai.llm.arun | 16.3s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=16304.139424... llm.responseid=resp_68ccc61...
-📊 FETCHING: Retrieving data...
-🔄 AGGREGATING: Summarizing data...
-[22:55:31] ✓ POST | 24.1s | http.method=POST http.url=https://api.... http.statuscode=200
-[22:55:31] ✓ openai.response | 24.1s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc62... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=1151
-[22:55:31] ✓ openai.llm.arun | 24.1s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=21674.427416... llm.responseid=resp_68ccc62...
-[22:55:31] ✓ insights.planning | 24.1s
-[22:55:55] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
+[12:53:57] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
            ...
-[22:55:55] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
-           ...
-[22:55:55] ✓ SELECT | 0.0s | db.system=sqlite db.name= db.statement=
-           ...
-[22:55:55] ✓ data.fetch_by_plan | 0.0s | needstranscripts=False needsanalyses=True needsplans=True needsworkflows=True needsexecutions=True
-[22:55:55]   📝 analyses.fetch_start | filters={'date_range': {'start': '2025-08-20', 'end': '2025-09-18'}, 'has_compliance_issues': True, 'risk_level': 'ALL', 'limit': 1000}
-[22:55:55]   📝 analyses.fetched | count=3 duration_ms=1
-[22:55:55]   📝 analyses.filtered | original_count=3 filtered_count=0 duration_ms=0
-[22:55:55] ✓ insights.fetching | 0.0s
-✨ SYNTHESIZING: Creating executive response...
-[22:55:55] ✓ POST | 21.5s | http.method=POST http.url=https://api.... http.statuscode=200
-[22:55:55] ✓ openai.response | 21.5s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc63... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=1279
-[22:55:55] ✓ openai.llm.arun | 21.5s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=19099.386945... llm.responseid=resp_68ccc63...
-[22:55:55] ✓ insights.aggregating | 21.5s | datasizebytes=214 totalrecords=0 datasourcescount=4 datasources=['analyses',...
-[22:55:55]   📝 aggregation.context_building | record_count=0
-[22:55:55]   📝 aggregation.prompt_loading
-🔍 REFLECTING: Evaluating response quality...
-[22:56:16] ✓ POST | 28.2s | http.method=POST http.url=https://api.... http.statuscode=200
-[22:56:16] ✓ openai.response | 28.2s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc65... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=2011
-[22:56:16] ✓ openai.llm.arun | 28.2s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=25807.150441... llm.responseid=resp_68ccc65...
-[22:56:16] ✓ insights.synthesizing | 28.2s
-📚 LEARNING: Extracting patterns...
-[22:56:45] ✓ POST | 16.9s | http.method=POST http.url=https://api.... http.statuscode=200
-[22:56:45] ✓ openai.response | 16.9s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc66... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=2779
-[22:56:45] ✓ openai.llm.arun | 16.9s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=16924.187331... llm.responseid=resp_68ccc66...
-✅ COMPLETE: Processed in 127.36s with 81% confidence
-INFO:     127.0.0.1:56942 - "POST /api/v1/leadership/chat HTTP/1.1" 200 OK
-[22:57:02] ✓ POST | 20.3s | http.method=POST http.url=https://api.... http.statuscode=200
-[22:57:02] ✓ openai.response | 20.3s | genai.system=openai genai.request.model=gpt-5-nano genai.response.id=resp_68ccc67... genai.response.model=gpt-5-nano-2... genai.usage.inputtokens=1247
-[22:57:02] ✓ openai.llm.arun | 20.3s | llm.provider=openai llm.model=gpt-5-nano llm.attempt=1 llm.latencyms=17917.912625... llm.responseid=resp_68ccc67...
-[22:55:14] ✓ insights.process_query | 127.4s | querylength=47 executiverole=CCO hassessioncontext=True
-[22:57:22] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
-           ...
-[22:57:22] ✓ DELETE | 0.0s | db.system=sqlite db.name= db.statement=
-           ...
-[22:57:22] ✓ INSERT | 0.0s | db.system=sqlite db.name= db.statement=
-           ...
-[22:57:22] ✓ leadership.cache_response | 0.1s
-[22:57:22] ✓ leadership.store_patterns | 0.0s
-[22:57:22] ✓ UPDATE | 0.0s | db.system=sqlite db.name= db.statement=
-           ...
-[22:57:22] ✓ UPDATE | 0.0s | db.system=sqlite db.name= db.statement=
-           ...
-[22:55:14] ✓ leadership.chat | 127.6s | executiverole=CCO executiveid=cco_001 querylength=47 hassession=False
+[12:53:57] ✗ openai.response | 0.0s | error.type=TypeError genai.system=openai genai.request.model=gpt-4.1-mini genai.request.reasoningsummary=() genai.request.reasoningeffort=()
+[12:53:57]   📝 exception | exception.type=TypeError exception.message=Responses.create() got an unexpected keyword argument 'response_format' exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/openai/v1/responses_wrappers.py", line 441, in responses_get_or_create_wrapper
+    response = wrapped(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Responses.create() got an unexpected keyword argument 'response_format'
+
+[12:53:57] ✗ openai.generate_structured | 0.0s | openai.model=gpt-4.1-mini openai.temperature=0.3 openai.attempt=1 openai.retryable=False
+[12:53:57]   📝 exception | exception.type=TypeError exception.message=Responses.create() got an unexpected keyword argument 'response_format' exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/llm/openai_wrapper.py", line 230, in _invoke_with_retry
+    response = call_fn()
+               ^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/llm/openai_wrapper.py", line 109, in call
+    return self.client.responses.create(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/openai/utils.py", line 119, in wrapper
+    return func(tracer, wrapped, instance, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/openai/v1/responses_wrappers.py", line 441, in responses_get_or_create_wrapper
+    response = wrapped(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Responses.create() got an unexpected keyword argument 'response_format'
+
+[12:53:57]   📝 exception | exception.type=TypeError exception.message=Responses.create() got an unexpected keyword argument 'response_format' exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/trace/__init__.py", line 589, in use_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/__init__.py", line 1105, in start_as_current_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/llm/openai_wrapper.py", line 230, in _invoke_with_retry
+    response = call_fn()
+               ^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/src/infrastructure/llm/openai_wrapper.py", line 109, in call
+    return self.client.responses.create(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/openai/utils.py", line 119, in wrapper
+    return func(tracer, wrapped, instance, args, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/openai/v1/responses_wrappers.py", line 441, in responses_get_or_create_wrapper
+    response = wrapped(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Responses.create() got an unexpected keyword argument 'response_format'
