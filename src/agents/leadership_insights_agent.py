@@ -227,10 +227,10 @@ class LeadershipInsightsAgent:
             )
 
             # Get LLM plan
-            response = await self.llm.arun(RequestSpec(
+            response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.3)
-            ))
+            )
 
             if not response.text:
                 raise Exception("LLM returned no planning response")
@@ -304,10 +304,10 @@ class LeadershipInsightsAgent:
             )
 
             # Get LLM aggregation
-            response = await self.llm.arun(RequestSpec(
+            response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.4)
-            ))
+            )
 
             if not response.text:
                 raise Exception("LLM returned no aggregation response")
@@ -355,10 +355,10 @@ class LeadershipInsightsAgent:
             )
 
             # Get LLM synthesis
-            response = await self.llm.arun(RequestSpec(
+            response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.5)
-            ))
+            )
 
             if not response.text:
                 raise Exception("LLM returned no synthesis response")
@@ -406,10 +406,10 @@ class LeadershipInsightsAgent:
             )
 
             # Get LLM reflection
-            reflection_response = await self.llm.arun(RequestSpec(
+            reflection_response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.3)
-            ))
+            )
 
             if not reflection_response.text:
                 raise Exception("LLM returned no reflection response")
@@ -465,10 +465,10 @@ class LeadershipInsightsAgent:
             )
 
             # Get LLM learning
-            learning_response = await self.llm.arun(RequestSpec(
+            learning_response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.4)
-            ))
+            )
 
             if not learning_response.text:
                 return {'patterns': [], 'insights': []}

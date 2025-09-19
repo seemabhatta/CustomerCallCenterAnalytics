@@ -205,16 +205,21 @@ class OpenAIProvider(LLMProvider):
                 span.set_attribute("llm.provider", "openai")
                 span.set_attribute("llm.model", self.model)
 
-            response = await self._aclient.responses.stream(
-                model=self.model,
-                input=messages,
-                response_format=schema_payload,
-                temperature=spec.options.temperature,
-                max_output_tokens=spec.options.max_output_tokens,
-                top_p=spec.options.top_p,
-                seed=spec.options.seed,
+            params = {
+                "model": self.model,
+                "input": messages,
+                "response_format": schema_payload,
+                "temperature": spec.options.temperature,
+                "max_output_tokens": spec.options.max_output_tokens,
+                "top_p": spec.options.top_p,
                 **(spec.provider_overrides or {}),
-            )
+            }
+
+            # Seed parameter not supported by current OpenAI client version
+            # if spec.options.seed is not None:
+            #     params["seed"] = spec.options.seed
+
+            response = await self._aclient.responses.stream(**params)
 
             async with response as stream:
                 async for event in stream:

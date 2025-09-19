@@ -96,10 +96,10 @@ class ThinkingAgent:
             )
 
             # Get LLM reasoning
-            response = await self.llm.arun(RequestSpec(
+            response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.3)
-            ))
+            )
 
             # Parse response
             if not response.text:
@@ -140,10 +140,10 @@ class ThinkingAgent:
             )
 
             # Get LLM classification
-            response = await self.llm.arun(RequestSpec(
+            response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.2)
-            ))
+            )
 
             if not response.text:
                 raise Exception("LLM returned no response")
@@ -191,10 +191,10 @@ class ThinkingAgent:
             )
 
             # Get LLM reasoning
-            response = await self.llm.arun(RequestSpec(
+            response = await self.llm.arun(
                 messages=[{"role": "user", "content": prompt}],
                 options=RequestOptions(temperature=0.4)
-            ))
+            )
 
             if not response.text:
                 raise Exception("LLM returned no response")
