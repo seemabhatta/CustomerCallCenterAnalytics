@@ -51,7 +51,7 @@ class PlanService:
         if not transcript:
             raise ValueError(f"Transcript {transcript_id} not found")
         add_span_event("plan.transcript_loaded", transcript_id=transcript_id)
-        
+
         # Generate plan using action plan generator
         add_span_event("plan.generator_started", analysis_id=analysis_id)
         plan_result = self.generator.generate(analysis, transcript)

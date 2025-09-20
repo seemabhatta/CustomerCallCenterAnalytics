@@ -49,7 +49,8 @@
       "Bash(npm run dev:*)",
       "Bash(git checkout:*)",
       "Bash(npm run build:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
