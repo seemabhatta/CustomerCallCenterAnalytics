@@ -1574,6 +1574,139 @@ def workflow_delete_all(
         raise typer.Exit(1)
 
 
+@workflow_app.command("steps")
+def workflow_steps(workflow_id: str):
+    """List all steps in a workflow."""
+    try:
+        client = get_client()
+
+        console.print(f"⚙️ [bold magenta]Getting steps for workflow {workflow_id}...[/bold magenta]")
+        result = client._make_request("GET", f"/api/v1/workflows/{workflow_id}/steps")
+
+        workflow_id_result = result.get('workflow_id', workflow_id)
+        total_steps = result.get('total_steps', 0)
+        steps = result.get('steps', [])
+
+        console.print(f"\n⚙️ [bold green]Workflow Steps[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{workflow_id_result}[/cyan]")
+        console.print(f"Total Steps: [cyan]{total_steps}[/cyan]")
+
+        if not steps:
+            console.print("📭 No steps found in this workflow")
+            return
+
+        # Create Rich table for steps
+        table = Table(title=f"Steps for Workflow {workflow_id_result}")
+        table.add_column("Step", style="cyan", no_wrap=True)
+        table.add_column("Action", style="white")
+        table.add_column("Tool", style="yellow")
+        table.add_column("Details", style="dim")
+
+        for i, step in enumerate(steps, 1):
+            action = step.get('action', 'N/A')
+            tool = step.get('tool_needed', 'N/A')
+            details = step.get('details', '')
+
+            # Truncate long details
+            if len(details) > 50:
+                details = details[:47] + "..."
+
+            table.add_row(str(i), action, tool, details)
+
+        console.print(table)
+
+    except CLIError as e:
+        print_error(f"Get steps failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("execute-step")
+def workflow_execute_step(
+    workflow_id: str,
+    step_number: int,
+    executed_by: str = typer.Option(..., "--executed-by", "-e", help="Name of executor")
+):
+    """Execute a single workflow step."""
+    try:
+        client = get_client()
+
+        console.print(f"🚀 [bold magenta]Executing step {step_number} of workflow {workflow_id}...[/bold magenta]")
+        result = client._make_request(
+            "POST",
+            f"/api/v1/workflows/{workflow_id}/steps/{step_number}/execute",
+            json_data={"executed_by": executed_by, "confirmation": True}
+        )
+
+        print_success(f"Step {step_number} executed successfully")
+
+        # Display execution results
+        console.print(f"\n🚀 [bold green]Execution Results[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{result.get('workflow_id', workflow_id)}[/cyan]")
+        console.print(f"Step Number: [cyan]{result.get('step_number', step_number)}[/cyan]")
+        console.print(f"Status: [yellow]{result.get('status', 'executed')}[/yellow]")
+        console.print(f"Executor Type: [yellow]{result.get('executor_type', 'N/A')}[/yellow]")
+        console.print(f"Executed By: [cyan]{result.get('executed_by', executed_by)}[/cyan]")
+        console.print(f"Execution ID: [dim]{result.get('execution_id', 'N/A')}[/dim]")
+
+        # Display duration if available
+        duration_ms = result.get('duration_ms')
+        if duration_ms is not None:
+            console.print(f"Duration: [cyan]{duration_ms}ms[/cyan]")
+
+        # Display execution result details
+        execution_result = result.get('result', {})
+        if execution_result:
+            console.print(f"\n📊 [bold blue]Execution Details:[/bold blue]")
+            for key, value in execution_result.items():
+                if isinstance(value, (str, int, float, bool)):
+                    console.print(f"   {key}: {value}")
+
+    except CLIError as e:
+        print_error(f"Step execution failed: {str(e)}")
+        raise typer.Exit(1)
+
+
+@workflow_app.command("step-status")
+def workflow_step_status(workflow_id: str, step_number: int):
+    """Check execution status of a workflow step."""
+    try:
+        client = get_client()
+
+        console.print(f"🔍 [bold magenta]Checking status of step {step_number} in workflow {workflow_id}...[/bold magenta]")
+        result = client._make_request(
+            "GET",
+            f"/api/v1/workflows/{workflow_id}/steps/{step_number}/status"
+        )
+
+        workflow_id_result = result.get('workflow_id', workflow_id)
+        step_number_result = result.get('step_number', step_number)
+        executed = result.get('executed', False)
+
+        console.print(f"\n🔍 [bold green]Step Status[/bold green]:")
+        console.print(f"Workflow ID: [cyan]{workflow_id_result}[/cyan]")
+        console.print(f"Step Number: [cyan]{step_number_result}[/cyan]")
+
+        if executed:
+            console.print(f"Status: [green]✅ Executed[/green]")
+
+            # Show execution details if available
+            execution_details = result.get('execution_details')
+            if execution_details:
+                console.print(f"\n📊 [bold blue]Execution Details:[/bold blue]")
+                console.print(f"   Status: [yellow]{execution_details.get('status', 'N/A')}[/yellow]")
+                console.print(f"   Executor Type: [yellow]{execution_details.get('executor_type', 'N/A')}[/yellow]")
+                console.print(f"   Executed By: [cyan]{execution_details.get('executed_by', 'N/A')}[/cyan]")
+                console.print(f"   Executed At: [dim]{execution_details.get('executed_at', 'N/A')}[/dim]")
+                console.print(f"   Duration: [cyan]{execution_details.get('duration_ms', 0)}ms[/cyan]")
+                console.print(f"   Execution ID: [dim]{execution_details.get('execution_id', 'N/A')}[/dim]")
+        else:
+            console.print(f"Status: [yellow]⏳ Pending Execution[/yellow]")
+
+    except CLIError as e:
+        print_error(f"Status check failed: {str(e)}")
+        raise typer.Exit(1)
+
+
 # ====================================================================
 # EXECUTION COMMANDS
 # ====================================================================
