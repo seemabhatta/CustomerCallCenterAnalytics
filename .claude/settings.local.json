@@ -48,7 +48,8 @@
       "WebFetch(domain:platform.openai.com)",
       "Bash(npm run dev:*)",
       "Bash(git checkout:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

@@ -47,6 +47,7 @@ from src.services.plan_service import PlanService
 from src.services.workflow_service import WorkflowService
 from src.services.system_service import SystemService
 from src.services.leadership_insights_service import LeadershipInsightsService
+from src.services.advisor_service import AdvisorService
 
 # Import execution models for step-by-step workflow execution
 from src.models.execution_models import (
@@ -137,6 +138,14 @@ class LeadershipDashboardRequest(BaseModel):
     executive_role: Optional[str] = None
 
 
+class AdvisorChatRequest(BaseModel):
+    advisor_id: str
+    message: str
+    session_id: Optional[str] = None
+    transcript_id: Optional[str] = None
+    plan_id: Optional[str] = None
+
+
 @app.get("/")
 async def root():
     """Root endpoint with basic info."""
@@ -155,7 +164,8 @@ async def root():
             "executions": "/api/v1/executions",
             "metrics": "/api/v1/metrics",
             "health": "/api/v1/health",
-            "leadership": "/api/v1/leadership"
+            "leadership": "/api/v1/leadership",
+            "advisor": "/api/v1/advisor"
         }
     }
 
@@ -884,6 +894,51 @@ async def get_leadership_service_status():
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get leadership service status: {str(e)}")
+
+
+# ===============================================
+# ADVISOR ENDPOINTS - BORROWER-focused Claude Code
+# ===============================================
+
+@app.post("/api/v1/advisor/chat")
+async def advisor_chat(request: AdvisorChatRequest):
+    """Main chat interface for advisors - like Claude Code for BORROWER workflows.
+
+    This is the single endpoint that makes the advisor agent work like Claude Code.
+    The agent autonomously decides what tools to call based on the message.
+    """
+    try:
+        # Initialize advisor service
+        advisor_service = AdvisorService(db_path=db_path)
+
+        # Process chat through service layer (fully agentic)
+        result = await advisor_service.chat(
+            advisor_id=request.advisor_id,
+            message=request.message,
+            session_id=request.session_id,
+            transcript_id=request.transcript_id,
+            plan_id=request.plan_id
+        )
+
+        return result
+
+    except Exception as e:
+        error_detail = f"Advisor chat failed: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_detail)
+
+
+@app.get("/api/v1/advisor/sessions/{advisor_id}")
+async def get_advisor_sessions(advisor_id: str, limit: int = Query(5, ge=1, le=20)):
+    """Get recent sessions for an advisor."""
+    try:
+        advisor_service = AdvisorService(db_path=db_path)
+        sessions = advisor_service.get_recent_sessions(advisor_id, limit)
+        return {"sessions": sessions}
+
+    except Exception as e:
+        error_detail = f"Failed to get advisor sessions: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_detail)
+
 
 # ===============================================
 # MAIN ENTRY POINT
