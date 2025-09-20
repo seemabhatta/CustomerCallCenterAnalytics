@@ -230,6 +230,7 @@ class TestStepExecutionAPI:
             executed=False,
             execution_details=None
         )
+        assert status_response.workflow_id == "WF_123"
         assert status_response.executed is False
 
 

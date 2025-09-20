@@ -1074,3 +1074,137 @@ class WorkflowService:
         
         return updated_workflow
     
+
+    # ===============================================
+    # STEP-BY-STEP EXECUTION METHODS
+    # ===============================================
+
+    def get_workflow_steps(self, workflow_id: str):
+        """Get all steps for a workflow.
+
+        Args:
+            workflow_id: ID of the workflow
+
+        Returns:
+            WorkflowStepsResponse with workflow steps
+
+        Raises:
+            ValueError: Workflow not found (NO FALLBACK)
+            Exception: Data access failure (NO FALLBACK)
+        """
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+
+        workflow = self.workflow_store.get_by_id(workflow_id)
+        if not workflow:
+            raise ValueError(f"Workflow not found: {workflow_id}")
+
+        from src.models.execution_models import WorkflowStepsResponse
+
+        workflow_data = workflow.get('workflow_data', {})
+        steps = workflow_data.get('steps', [])
+
+        return WorkflowStepsResponse(
+            workflow_id=workflow_id,
+            total_steps=len(steps),
+            steps=steps
+        )
+
+    async def execute_workflow_step(self, workflow_id: str, step_number: int, executed_by: str):
+        """Execute a single workflow step.
+
+        Args:
+            workflow_id: ID of the workflow
+            step_number: Step number to execute
+            executed_by: Who is executing the step
+
+        Returns:
+            StepExecutionResponse with execution result
+
+        Raises:
+            ValueError: Invalid parameters (NO FALLBACK)
+            Exception: Execution failure (NO FALLBACK)
+        """
+        from src.services.workflow_execution_engine import WorkflowExecutionEngine
+
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+
+        if not isinstance(step_number, int) or step_number <= 0:
+            raise ValueError("step_number must be a positive integer")
+
+        if not executed_by or not isinstance(executed_by, str):
+            raise ValueError("executed_by must be a non-empty string")
+
+        # Initialize execution engine
+        execution_engine = WorkflowExecutionEngine(self.db_path)
+
+        # Execute the single step - FAIL FAST on any error
+        result = await execution_engine.execute_single_step(
+            workflow_id=workflow_id,
+            step_number=step_number,
+            executed_by=executed_by
+        )
+
+        from src.models.execution_models import StepExecutionResponse
+
+        return StepExecutionResponse(**result)
+
+    async def get_step_execution_status(self, workflow_id: str, step_number: int):
+        """Get execution status for a specific workflow step.
+
+        Args:
+            workflow_id: ID of the workflow
+            step_number: Step number to query
+
+        Returns:
+            StepStatusResponse with execution status
+
+        Raises:
+            ValueError: Invalid parameters (NO FALLBACK)
+            Exception: Data access failure (NO FALLBACK)
+        """
+        from src.storage.workflow_execution_store import WorkflowExecutionStore
+
+        if not workflow_id or not isinstance(workflow_id, str):
+            raise ValueError("workflow_id must be a non-empty string")
+
+        if not isinstance(step_number, int) or step_number <= 0:
+            raise ValueError("step_number must be a positive integer")
+
+        # Initialize execution store
+        execution_store = WorkflowExecutionStore(self.db_path)
+
+        # Query for execution of this specific step
+        execution = await execution_store.get_by_workflow_and_step(workflow_id, step_number)
+
+        from src.models.execution_models import StepStatusResponse, StepExecutionResponse
+
+        if execution:
+            # Step has been executed - return details
+            execution_details = StepExecutionResponse(
+                workflow_id=execution['workflow_id'],
+                step_number=execution['step_number'],
+                status=execution['execution_status'],
+                executor_type=execution['executor_type'],
+                execution_id=execution['id'],
+                result=execution['execution_payload'],
+                executed_at=execution['executed_at'],
+                executed_by=execution['executed_by'],
+                duration_ms=execution['execution_duration_ms'] or 0
+            )
+
+            return StepStatusResponse(
+                workflow_id=workflow_id,
+                step_number=step_number,
+                executed=True,
+                execution_details=execution_details
+            )
+        else:
+            # Step has not been executed
+            return StepStatusResponse(
+                workflow_id=workflow_id,
+                step_number=step_number,
+                executed=False,
+                execution_details=None
+            )

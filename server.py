@@ -516,20 +516,9 @@ async def execute_all_approved_workflows(request: Optional[Dict] = None):
 async def get_workflow_steps(workflow_id: str):
     """Get all steps for a workflow."""
     try:
-        workflow = workflow_service.get_by_id(workflow_id)
-        if not workflow:
-            raise HTTPException(status_code=404, detail=f"Workflow not found: {workflow_id}")
-
-        workflow_data = workflow.get('workflow_data', {})
-        steps = workflow_data.get('steps', [])
-
-        return WorkflowStepsResponse(
-            workflow_id=workflow_id,
-            total_steps=len(steps),
-            steps=steps
-        )
-    except HTTPException:
-        raise
+        return workflow_service.get_workflow_steps(workflow_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get workflow steps: {str(e)}")
 
@@ -541,66 +530,17 @@ async def execute_workflow_step(
 ):
     """Execute a single workflow step."""
     try:
-        # Import and initialize execution engine
-        from src.services.workflow_execution_engine import WorkflowExecutionEngine
-        execution_engine = WorkflowExecutionEngine()
-
-        # Execute the single step - FAIL FAST on any error
-        result = await execution_engine.execute_single_step(
-            workflow_id=workflow_id,
-            step_number=step_number,
-            executed_by=request.executed_by
-        )
-
-        return StepExecutionResponse(**result)
-
+        return await workflow_service.execute_workflow_step(workflow_id, step_number, request.executed_by)
     except ValueError as e:
-        # Validation errors (workflow not found, invalid step, etc.)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Execution failures
         raise HTTPException(status_code=500, detail=f"Failed to execute step: {str(e)}")
 
 @app.get("/api/v1/workflows/{workflow_id}/steps/{step_number}/status", response_model=StepStatusResponse)
 async def get_step_execution_status(workflow_id: str, step_number: int):
     """Get execution status for a specific workflow step."""
     try:
-        # Import execution store directly
-        from src.storage.workflow_execution_store import WorkflowExecutionStore
-        execution_store = WorkflowExecutionStore()
-
-        # Query for execution of this specific step
-        execution = await execution_store.get_by_workflow_and_step(workflow_id, step_number)
-
-        if execution:
-            # Step has been executed - return details
-            execution_details = StepExecutionResponse(
-                workflow_id=execution['workflow_id'],
-                step_number=execution['step_number'],
-                status=execution['execution_status'],
-                executor_type=execution['executor_type'],
-                execution_id=execution['id'],
-                result=execution['execution_payload'],
-                executed_at=execution['executed_at'],
-                executed_by=execution['executed_by'],
-                duration_ms=execution['execution_duration_ms'] or 0
-            )
-
-            return StepStatusResponse(
-                workflow_id=workflow_id,
-                step_number=step_number,
-                executed=True,
-                execution_details=execution_details
-            )
-        else:
-            # Step has not been executed
-            return StepStatusResponse(
-                workflow_id=workflow_id,
-                step_number=step_number,
-                executed=False,
-                execution_details=None
-            )
-
+        return await workflow_service.get_step_execution_status(workflow_id, step_number)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
