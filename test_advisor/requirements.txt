@@ -1,0 +1,16 @@
+# Dependencies for the automated test harness
+
+# HTTP client for API calls
+aiohttp>=3.11.11
+
+# YAML parsing for test scenarios
+PyYAML==6.0.1
+
+# JSON handling (built-in, but explicit for clarity)
+# json (built-in)
+
+# Async support (built-in, but explicit for clarity)
+# asyncio (built-in)
+
+# The test harness uses the existing LLMClientV2 from the main project
+# No additional LLM dependencies needed

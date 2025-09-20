@@ -1,0 +1,120 @@
+# Test scenarios for the advisor agent
+# These scenarios test key functionality and common user patterns
+# The test harness will generate additional scenarios based on bugs found
+
+scenarios:
+  # Test the specific bug we found: asking for analysis of "this" call
+  - name: "Context-aware analysis request"
+    description: "Test if agent can show analysis for a specific call using context"
+    steps:
+      - input: "show me the last call"
+        expect: ["CALL_", "transcript", "PMI", "Critical"]
+        not_expect: ["error", "not found"]
+      - input: "show me the analysis for this"
+        expect: ["sentiment", "risk", "compliance", "analysis"]
+        not_expect: ["list", "multiple", "transcripts", "calls"]
+
+  # Test workflow resolution from transcript context
+  - name: "Workflow resolution from transcript"
+    description: "Test if agent can load workflows using transcript context"
+    steps:
+      - input: "list recent calls"
+        expect: ["CALL_", "PMI", "Property Tax"]
+        not_expect: ["error", "not found"]
+      - input: "show me workflows for the PMI one"
+        expect: ["workflow", "removal", "steps", "borrower"]
+        not_expect: ["provide", "plan ID", "transcript ID"]
+
+  # Test direct workflow execution
+  - name: "Direct workflow execution"
+    description: "Test starting a workflow by name"
+    steps:
+      - input: "I want to start PMI removal"
+        expect: ["workflow", "steps", "PMI", "removal"]
+        not_expect: ["provide ID", "not found", "error"]
+
+  # Test context switching between topics
+  - name: "Context switching test"
+    description: "Test if agent maintains context when switching topics"
+    steps:
+      - input: "show me calls about PMI"
+        expect: ["CALL_", "PMI", "removal"]
+        not_expect: ["error", "not found"]
+      - input: "now show me payment issue calls"
+        expect: ["payment", "issue", "CALL_"]
+        not_expect: ["error", "not found"]
+      - input: "go back to the PMI call"
+        expect: ["PMI", "CALL_46F4C703"]
+        not_expect: ["which call", "provide ID"]
+
+  # Test error handling
+  - name: "Error handling test"
+    description: "Test how agent handles invalid requests"
+    steps:
+      - input: "show me workflows for INVALID_ID"
+        expect: ["not found", "error", "try"]
+        not_expect: ["workflow", "steps"]
+      - input: "execute step 999"
+        expect: ["not found", "error", "invalid"]
+        not_expect: ["executing", "step 999"]
+
+  # Test help and guidance
+  - name: "Help and guidance test"
+    description: "Test if agent provides helpful guidance"
+    steps:
+      - input: "help"
+        expect: ["commands", "help", "list", "workflows"]
+        not_expect: ["error", "not found"]
+      - input: "what can you do?"
+        expect: ["workflow", "borrower", "help"]
+        not_expect: ["error", "not found"]
+
+  # Test session management
+  - name: "Session management test"
+    description: "Test session initialization and context"
+    steps:
+      - input: "what's my current context?"
+        expect: ["session", "advisor", "borrower"]
+        not_expect: ["error", "not found"]
+
+  # Test complex multi-step workflow
+  - name: "Multi-step workflow test"
+    description: "Test a complete workflow from discovery to execution"
+    steps:
+      - input: "list my recent calls"
+        expect: ["CALL_", "recent"]
+        not_expect: ["error", "not found"]
+      - input: "what workflows are available for the PMI call?"
+        expect: ["workflow", "PMI", "borrower"]
+        not_expect: ["provide ID", "not found"]
+      - input: "show me the details of the PMI workflow"
+        expect: ["steps", "PMI", "removal", "details"]
+        not_expect: ["provide ID", "not found"]
+
+  # Test edge cases
+  - name: "Edge case handling"
+    description: "Test various edge cases and boundary conditions"
+    steps:
+      - input: ""
+        expect: ["help", "command", "request"]
+        not_expect: ["error", "crash"]
+      - input: "show me workflows for transcript that doesn't exist"
+        expect: ["not found", "error", "try"]
+        not_expect: ["workflow", "steps"]
+      - input: "execute step -1"
+        expect: ["invalid", "error", "step"]
+        not_expect: ["executing"]
+
+  # Test the specific missing functionality we identified
+  - name: "Missing analysis tool test"
+    description: "Test the specific bug where analysis tool is missing"
+    steps:
+      - input: "show me call CALL_46F4C703"
+        expect: ["CALL_46F4C703", "PMI", "transcript"]
+        not_expect: ["error", "not found"]
+      - input: "what was the sentiment analysis for this call?"
+        expect: ["sentiment", "analysis", "positive", "negative", "neutral"]
+        not_expect: ["list", "multiple calls", "transcript"]
+      - input: "what risks were identified?"
+        expect: ["risk", "analysis", "identified"]
+        not_expect: ["list", "multiple calls"]
