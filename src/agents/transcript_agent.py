@@ -1,4 +1,5 @@
 """Simple transcript generator - just natural conversations."""
+import os
 import uuid
 from typing import Optional
 from datetime import datetime
@@ -11,6 +12,14 @@ from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
 
 # Load environment variables from .env file
 load_dotenv()
+
+
+def _get_generation_temperature() -> float:
+    """Get temperature for text generation - NO FALLBACK."""
+    temp = os.getenv("TEMPERATURE_GENERATION")
+    if not temp:
+        raise ValueError("TEMPERATURE_GENERATION environment variable not set - NO FALLBACK")
+    return float(temp)
 
 
 class TranscriptAgent:
@@ -72,7 +81,7 @@ class TranscriptAgent:
         Returns:
             Response text
         """
-        return self.llm.generate_text(prompt, temperature=0.7)
+        return self.llm.generate_text(prompt, temperature=_get_generation_temperature())
     
     def generate_batch(self, count: int, **context) -> list[Transcript]:
         """Generate multiple transcripts.

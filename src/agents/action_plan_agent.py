@@ -1,5 +1,6 @@
 """Four-layer action plan generator for mortgage servicing."""
 import json
+import os
 import uuid
 from typing import Dict, Any, Optional
 from datetime import datetime
@@ -11,6 +12,14 @@ from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
 from src.agents.models.action_plan_models import FourLayerActionPlan
 
 load_dotenv()
+
+
+def _get_analysis_temperature() -> float:
+    """Get temperature for analysis tasks - NO FALLBACK."""
+    temp = os.getenv("TEMPERATURE_ANALYSIS")
+    if not temp:
+        raise ValueError("TEMPERATURE_ANALYSIS environment variable not set - NO FALLBACK")
+    return float(temp)
 
 
 class ActionPlanAgent:
@@ -47,7 +56,7 @@ class ActionPlanAgent:
             action_plan_result = self.llm.generate_structured(
                 prompt=prompt,
                 schema_model=FourLayerActionPlan,
-                temperature=0.3
+                temperature=_get_analysis_temperature()
             )
 
             # Convert to dict and add metadata
@@ -102,19 +111,19 @@ class ActionPlanAgent:
         context['customer_concerns'] = []
         context['next_steps_mentioned'] = []
         
-        # Extract structured insights from analysis
-        context['primary_intent'] = analysis.get('primary_intent', '')
-        context['urgency_level'] = analysis.get('urgency_level', '')
-        context['borrower_risks'] = analysis.get('borrower_risks', {})
-        context['advisor_metrics'] = analysis.get('advisor_metrics', {})
-        context['compliance_flags'] = analysis.get('compliance_flags', [])
-        context['topics_discussed'] = analysis.get('topics_discussed', [])
+        # Extract structured insights from analysis - NO FALLBACK: fail if keys missing
+        context['primary_intent'] = analysis['primary_intent']
+        context['urgency_level'] = analysis['urgency_level']
+        context['borrower_risks'] = analysis['borrower_risks']
+        context['advisor_metrics'] = analysis['advisor_metrics']
+        context['compliance_flags'] = analysis['compliance_flags']
+        context['topics_discussed'] = analysis['topics_discussed']
         context['resolution_status'] = {
-            'resolved': analysis.get('issue_resolved', False),
-            'first_call_resolution': analysis.get('first_call_resolution', False),
-            'escalation_needed': analysis.get('escalation_needed', False)
+            'resolved': analysis['issue_resolved'],
+            'first_call_resolution': analysis['first_call_resolution'],
+            'escalation_needed': analysis['escalation_needed']
         }
-        context['confidence_score'] = analysis.get('confidence_score', 0)
+        context['confidence_score'] = analysis['confidence_score']
         
         # Customer and call metadata
         context['customer_id'] = getattr(transcript, 'customer_id', '')
@@ -148,13 +157,13 @@ class ActionPlanAgent:
             call_duration=context['call_duration'],
             call_topic=context['call_topic'],
             customer_id=context['customer_id'],
-            primary_intent=analysis.get('primary_intent', 'Unknown'),
-            sentiment=analysis.get('sentiment', 'Unknown'),
-            urgency_level=analysis.get('urgency_level', 'Unknown'),
-            risk_score=analysis.get('risk_score', 0),
-            compliance_flags=', '.join(analysis.get('compliance_flags', [])),
-            borrower_risks=json.dumps(analysis.get('borrower_risks', {}), indent=2),
-            advisor_performance=json.dumps(analysis.get('advisor_performance', {}), indent=2),
+            primary_intent=analysis['primary_intent'],
+            sentiment=analysis['sentiment'],
+            urgency_level=analysis['urgency_level'],
+            risk_score=analysis['risk_score'],
+            compliance_flags=', '.join(analysis['compliance_flags']),
+            borrower_risks=json.dumps(analysis['borrower_risks'], indent=2),
+            advisor_performance=json.dumps(analysis['advisor_performance'], indent=2),
             promises_made=', '.join(context['promises_made']),
             customer_concerns=', '.join(context['customer_concerns']),
             timeline_commitments=', '.join(context['timeline_commitments']),

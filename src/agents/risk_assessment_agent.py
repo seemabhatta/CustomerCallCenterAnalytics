@@ -23,6 +23,14 @@ from src.utils.prompt_loader import prompt_loader
 load_dotenv()
 
 
+def _get_risk_temperature() -> float:
+    """Get temperature for risk assessment - NO FALLBACK."""
+    temp = os.getenv("TEMPERATURE_RISK_ASSESSMENT")
+    if not temp:
+        raise ValueError("TEMPERATURE_RISK_ASSESSMENT environment variable not set - NO FALLBACK")
+    return float(temp)
+
+
 class RiskAssessmentAgent:
     """Pure LLM-based agent for granular action item risk assessment and routing decisions.
     
@@ -313,7 +321,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured WorkflowExtraction output
-            result = await self.llm.generate_structured_async(full_prompt, WorkflowExtraction, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, WorkflowExtraction, temperature=_get_risk_temperature())
 
             # Convert to dict and add agent metadata
             workflow_data = result.model_dump()
@@ -408,7 +416,7 @@ class RiskAssessmentAgent:
                           action_item_id=action_item.get('id', 'unknown'))
             
             # Use OpenAI wrapper with structured RiskAssessment output
-            result = await self.llm.generate_structured_async(full_prompt, RiskAssessment, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, RiskAssessment, temperature=_get_risk_temperature())
             add_span_event("risk_assessment.llm_call_completed")
 
             # Convert to dict and add assessment metadata
@@ -471,7 +479,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured RiskAssessment output
-            result = await self.llm.generate_structured_async(full_prompt, RiskAssessment, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, RiskAssessment, temperature=_get_risk_temperature())
 
             # Convert to dict and add assessment metadata
             risk_assessment = result.model_dump()
@@ -560,7 +568,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured RoutingDecision output
-            result = await self.llm.generate_structured_async(full_prompt, RoutingDecision, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, RoutingDecision, temperature=_get_risk_temperature())
 
             # Convert to dict and add routing metadata
             routing_decision = result.model_dump()
@@ -618,7 +626,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured RoutingDecision output
-            result = await self.llm.generate_structured_async(full_prompt, RoutingDecision, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, RoutingDecision, temperature=_get_risk_temperature())
 
             # Convert to dict and add routing metadata
             routing_decision = result.model_dump()
@@ -677,7 +685,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured ValidationResult output
-            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=_get_risk_temperature())
             validation_result = result.model_dump()
 
             # Add validation metadata
@@ -734,7 +742,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured ValidationResult output
-            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=_get_risk_temperature())
             validation_result = result.model_dump()
             
             # Add validation metadata
@@ -796,7 +804,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured ValidationResult output
-            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=_get_risk_temperature())
             validation_result = result.model_dump()
             
             # Add validation metadata
@@ -856,7 +864,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured ValidationResult output
-            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, ValidationResult, temperature=_get_risk_temperature())
             validation_result = result.model_dump()
 
             # Add validation metadata
@@ -907,7 +915,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured StatusDecision output
-            result = await self.llm.generate_structured_async(full_prompt, StatusDecision, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, StatusDecision, temperature=_get_risk_temperature())
             status_decision = result.model_dump()
             
             # Add decision metadata
@@ -953,7 +961,7 @@ class RiskAssessmentAgent:
 
         try:
             # Use OpenAI wrapper with structured StatusDecision output
-            result = await self.llm.generate_structured_async(full_prompt, StatusDecision, temperature=0.1)
+            result = await self.llm.generate_structured_async(full_prompt, StatusDecision, temperature=_get_risk_temperature())
             status_decision = result.model_dump()
 
             # Add decision metadata

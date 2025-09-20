@@ -47,7 +47,7 @@ class ToolCall:
 class RequestOptions:
     """Tunable request knobs."""
 
-    temperature: float = 0.2
+    temperature: Optional[float] = None
     max_output_tokens: Optional[int] = None
     top_p: Optional[float] = None
     seed: Optional[int] = None
@@ -140,8 +140,15 @@ class OpenAIProvider(LLMProvider):
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY not set for OpenAIProvider")
 
-        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-        self.timeout = timeout or float(os.getenv("OPENAI_TIMEOUT", "45.0"))
+        # NO FALLBACK - fail fast if configuration missing
+        self.model = model or os.getenv("OPENAI_MODEL")
+        if not self.model:
+            raise ValueError("OPENAI_MODEL environment variable not set - NO FALLBACK")
+
+        timeout_env = os.getenv("OPENAI_TIMEOUT")
+        self.timeout = timeout or (float(timeout_env) if timeout_env else None)
+        if not self.timeout:
+            raise ValueError("OPENAI_TIMEOUT environment variable not set - NO FALLBACK")
         self.retry_policy = retry_policy
 
         self._client = OpenAI(api_key=api_key, organization=organization, timeout=self.timeout)
