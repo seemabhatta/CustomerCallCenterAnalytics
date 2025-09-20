@@ -7,6 +7,7 @@ Core Principles Applied:
 """
 import asyncio
 import json
+import logging
 import uuid
 from typing import Dict, List, Optional, Any
 from datetime import datetime
@@ -16,6 +17,8 @@ from src.storage.action_plan_store import ActionPlanStore
 from src.agents.risk_assessment_agent import RiskAssessmentAgent
 from src.agents.workflow_step_agent import WorkflowStepAgent
 from src.utils.prompt_loader import prompt_loader
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowService:
@@ -289,10 +292,19 @@ class WorkflowService:
             reasoning=reasoning,
             context=approval_context
         )
-        
-        # Check if LLM agent rejects the approval
+
+        # Log validation concerns but don't block approval (advisory validation)
         if not approval_validation.get('approval_valid', False):
-            raise ValueError(f"LLM agent rejected approval: {approval_validation.get('rejection_reason', 'Unknown')}")
+            logger.warning(f"Risk validation concern for workflow {workflow_id}: {approval_validation.get('rejection_reason', 'Unknown')}")
+            # Store validation concerns in workflow metadata for audit trail
+            approval_context['validation_concerns'] = {
+                'concern_raised': True,
+                'concern_reason': approval_validation.get('rejection_reason', 'Unknown'),
+                'validation_reasoning': approval_validation.get('validation_reasoning', ''),
+                'validation_timestamp': datetime.utcnow().isoformat()
+            }
+        else:
+            approval_context['validation_concerns'] = {'concern_raised': False}
         
         # Determine next status using LLM agent
         next_status_decision = await self.risk_agent.determine_post_approval_status(
@@ -952,9 +964,18 @@ class WorkflowService:
             context=approval_context
         )
         
-        # Check if LLM agent rejects the approval
+        # Log validation concerns but don't block approval (advisory validation)
         if not approval_validation.get('approval_valid', False):
-            raise ValueError(f"LLM agent rejected approval: {approval_validation.get('rejection_reason', 'Unknown')}")
+            logger.warning(f"Risk validation concern for workflow {workflow_id}: {approval_validation.get('rejection_reason', 'Unknown')}")
+            # Store validation concerns in workflow metadata for audit trail
+            approval_context['validation_concerns'] = {
+                'concern_raised': True,
+                'concern_reason': approval_validation.get('rejection_reason', 'Unknown'),
+                'validation_reasoning': approval_validation.get('validation_reasoning', ''),
+                'validation_timestamp': datetime.utcnow().isoformat()
+            }
+        else:
+            approval_context['validation_concerns'] = {'concern_raised': False}
         
         # Determine next status using LLM agent
         next_status_decision = await self.risk_agent.determine_action_item_post_approval_status(

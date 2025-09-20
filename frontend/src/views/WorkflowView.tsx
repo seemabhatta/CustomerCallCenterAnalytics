@@ -214,10 +214,6 @@ export function WorkflowView({ goToPlan, focusWorkflowId }: WorkflowViewProps) {
     if (riskLevel === 'MEDIUM' || riskLevel === 'HIGH') {
       if (!approvalReasoning.trim()) {
         errors.push(`${riskLevel} risk workflows require detailed reasoning`);
-      } else if (riskLevel === 'MEDIUM' && approvalReasoning.trim().length < 50) {
-        errors.push('Medium risk workflows require at least 50 characters of reasoning');
-      } else if (riskLevel === 'HIGH' && approvalReasoning.trim().length < 100) {
-        errors.push('High risk workflows require at least 100 characters of detailed reasoning');
       }
     }
     
@@ -989,8 +985,6 @@ export function WorkflowView({ goToPlan, focusWorkflowId }: WorkflowViewProps) {
                   <label className="text-xs font-medium text-gray-700 mb-1 block">
                     Approval Reasoning 
                     {(workflow.risk_level === 'MEDIUM' || workflow.risk_level === 'HIGH') && <span className="text-red-500">*</span>}
-                    {workflow.risk_level === 'MEDIUM' && <span className="text-gray-500">(min 50 chars)</span>}
-                    {workflow.risk_level === 'HIGH' && <span className="text-gray-500">(min 100 chars)</span>}
                   </label>
                   <textarea
                     value={approvalReasoning}
