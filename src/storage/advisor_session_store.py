@@ -229,13 +229,15 @@ class AdvisorSessionStore:
         finally:
             conn.close()
 
-    def add_conversation_turn(self, session_id: str, role: str, content: str) -> bool:
+    def add_conversation_turn(self, session_id: str, role: str, content: str,
+                             tool_data: Optional[Dict[str, Any]] = None) -> bool:
         """Add a conversation turn to session history.
 
         Args:
             session_id: Session identifier
-            role: Either 'user' or 'assistant'
+            role: One of 'user', 'assistant', 'tool_call', 'tool_result'
             content: Message content
+            tool_data: Optional structured data for tool calls/results
 
         Returns:
             True if successful
@@ -244,8 +246,9 @@ class AdvisorSessionStore:
             ValueError: Invalid role or missing data (NO FALLBACK)
             Exception: Database operation failure (NO FALLBACK)
         """
-        if role not in ['user', 'assistant']:
-            raise ValueError(f"Invalid role: {role}")
+        valid_roles = ['user', 'assistant', 'tool_call', 'tool_result']
+        if role not in valid_roles:
+            raise ValueError(f"Invalid role: {role}. Must be one of {valid_roles}")
 
         if not content:
             raise ValueError("Content cannot be empty")
@@ -257,11 +260,17 @@ class AdvisorSessionStore:
 
         # Add new turn
         conversation_history = session['conversation_history']
-        conversation_history.append({
+        turn_data = {
             'role': role,
             'content': content,
             'timestamp': datetime.utcnow().isoformat()
-        })
+        }
+
+        # Include tool data for tool_call and tool_result messages
+        if tool_data is not None:
+            turn_data['tool_data'] = tool_data
+
+        conversation_history.append(turn_data)
 
         # Keep only last 20 turns to prevent unbounded growth
         if len(conversation_history) > 20:

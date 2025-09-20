@@ -103,14 +103,20 @@ class AdvisorAgent:
 
             # Execute any tool calls the LLM decided to make
             if decision.get('tool_calls'):
+                # Store the LLM's tool call decision in conversation
+                await self._store_tool_call_decision(decision)
+
                 tool_results = await self._execute_tool_calls(decision['tool_calls'])
+
+                # Store tool execution results in conversation
+                await self._store_tool_results(tool_results)
 
                 # LLM formats final response based on tool results
                 response = await self._format_response_with_results(user_input, tool_results, context)
             else:
                 response = decision.get('response', "I understand you want help with borrower workflows. Could you be more specific about what you'd like to do?")
 
-            # Update conversation history
+            # Update conversation history with user input and final response
             await self._update_conversation_history(user_input, response)
 
             return response
@@ -147,18 +153,22 @@ class AdvisorAgent:
             except:
                 pass  # Workflow may have been deleted or become inaccessible
 
+        # Merge extracted context with session context
+        extracted_context = getattr(self, '_session_context', {})
+        merged_session_context = {
+            'plan_id': extracted_context.get('plan_id') or session_context.get('plan_id'),
+            'transcript_id': extracted_context.get('transcript_id') or session_context.get('transcript_id'),
+            'active_workflow_id': extracted_context.get('active_workflow_id') or session_context.get('active_workflow_id'),
+            'cursor_step': session_context.get('cursor_step', 1),
+            'step_statuses': session_context.get('step_statuses', {})
+        }
+
         return {
             'user_input': user_input.strip(),
             'session_id': self.session_id,
             'advisor_id': self.advisor_id,
             'conversation_history': recent_history,
-            'session_context': {
-                'plan_id': session_context.get('plan_id'),
-                'transcript_id': session_context.get('transcript_id'),
-                'active_workflow_id': session_context.get('active_workflow_id'),
-                'cursor_step': session_context.get('cursor_step', 1),
-                'step_statuses': session_context.get('step_statuses', {})
-            },
+            'session_context': merged_session_context,
             'active_workflow': active_workflow,
             'available_tools': self.tools.get_tool_descriptions(),
             'timestamp': datetime.utcnow().isoformat()
@@ -173,38 +183,49 @@ class AdvisorAgent:
         Returns:
             LLM decision with tool calls and/or direct response
         """
-        # Create the prompt for the LLM
+        # Build messages array with conversation history (industry standard)
         messages = [
             {
                 "role": "system",
                 "content": self.system_prompt
-            },
-            {
-                "role": "user",
-                "content": f"""
-Context: {json.dumps(context, indent=2)}
+            }
+        ]
 
-Based on the user input "{context['user_input']}" and the current context, decide what to do.
+        # Add conversation history including tool interactions
+        conversation_history = context.get('conversation_history', [])
+        for turn in conversation_history:
+            role = turn.get('role')
+            content = turn.get('content', '')
 
-You can:
-1. Call one or more tools to help the user
-2. Provide a direct response if no tools are needed
-3. Ask for clarification if the request is unclear
+            if role == 'user':
+                messages.append({"role": "user", "content": content})
+            elif role == 'assistant':
+                messages.append({"role": "assistant", "content": content})
+            elif role == 'tool_call':
+                # Show LLM what tools were called in previous turns
+                messages.append({"role": "assistant", "content": f"[PREVIOUS TOOL CALL] {content}"})
+            elif role == 'tool_result':
+                # Show LLM what data was retrieved in previous turns
+                messages.append({"role": "user", "content": f"[TOOL RESULTS] {content}"})
+
+        # Add current user input
+        messages.append({
+            "role": "user",
+            "content": f"""Current request: {context['user_input']}
+
+Available tools: {json.dumps([tool['name'] for tool in context.get('available_tools', [])], indent=2)}
+
+Decide what to do based on the conversation history above and this current request.
 
 Respond with JSON in this format:
 {{
-    "reasoning": "Why you chose this approach",
+    "reasoning": "Why you chose this approach based on conversation context",
     "tool_calls": [
-        {{"tool_name": "list_workflows", "parameters": {{"plan_id": "P123"}}}},
-        {{"tool_name": "get_workflow_details", "parameters": {{"workflow_id": "W456"}}}}
+        {{"tool_name": "tool_name", "parameters": {{"param": "value"}}}}
     ],
     "response": "Direct response if no tools needed, or null if tools will provide the response"
-}}
-
-If you need to call tools, the response will be generated after tool execution.
-"""
-            }
-        ]
+}}"""
+        })
 
         try:
             # Call LLM to get decision
@@ -277,6 +298,10 @@ If you need to call tools, the response will be generated after tool execution.
                     result = await self.tools.get_workflow_steps(**parameters)
                 elif tool_name == 'execute_workflow_step':
                     result = await self.tools.execute_workflow_step(**parameters)
+                elif tool_name == 'get_full_pipeline_for_transcript':
+                    result = await self.tools.get_full_pipeline_for_transcript(**parameters)
+                elif tool_name == 'get_pending_borrower_workflows':
+                    result = await self.tools.get_pending_borrower_workflows(**parameters)
                 else:
                     result = {'error': f'Unknown tool: {tool_name}'}
 
@@ -294,6 +319,10 @@ If you need to call tools, the response will be generated after tool execution.
                     'success': success
                 })
 
+                # Extract and store context information for future requests
+                if success and result:
+                    self._extract_context_from_result(tool_name, result)
+
             except Exception as e:
                 print(f"      💥 Exception: {str(e)}")
                 results.append({
@@ -304,6 +333,70 @@ If you need to call tools, the response will be generated after tool execution.
                 })
 
         return results
+
+    def _extract_context_from_result(self, tool_name: str, result: Dict[str, Any]):
+        """Extract context information from tool results and update session.
+
+        Args:
+            tool_name: Name of the tool that was executed
+            result: Result from the tool execution
+        """
+        if not hasattr(self, '_session_context'):
+            self._session_context = {}
+
+        print(f"  🔍 Extracting context from {tool_name}")
+
+        try:
+            # Extract transcript ID when transcripts are retrieved
+            if tool_name == 'get_transcripts' and isinstance(result, list) and result:
+                # Store the first transcript as current context
+                first_transcript = result[0]
+                if 'id' in first_transcript:
+                    self._session_context['transcript_id'] = first_transcript['id']
+                    print(f"      📋 Stored transcript_id: {first_transcript['id']}")
+
+            elif tool_name == 'get_transcript' and 'id' in result:
+                self._session_context['transcript_id'] = result['id']
+                print(f"      📋 Stored transcript_id: {result['id']}")
+
+            # Extract plan ID when plans are retrieved
+            elif tool_name == 'get_plan_for_transcript' and 'id' in result:
+                self._session_context['plan_id'] = result['id']
+                print(f"      📝 Stored plan_id: {result['id']}")
+
+            elif tool_name == 'get_plan' and 'id' in result:
+                self._session_context['plan_id'] = result['id']
+                print(f"      📝 Stored plan_id: {result['id']}")
+
+            # Extract workflow ID when workflows are retrieved
+            elif tool_name == 'get_workflows_for_plan' and isinstance(result, list) and result:
+                workflow_ids = [w.get('id') for w in result if w.get('id')]
+                if workflow_ids:
+                    self._session_context['active_workflow_id'] = workflow_ids[0]
+                    print(f"      ⚙️ Stored active_workflow_id: {workflow_ids[0]}")
+
+            elif tool_name == 'get_workflow' and 'id' in result:
+                self._session_context['active_workflow_id'] = result['id']
+                print(f"      ⚙️ Stored active_workflow_id: {result['id']}")
+
+            # Extract from full pipeline results
+            elif tool_name == 'get_full_pipeline_for_transcript':
+                if 'transcript_id' in result:
+                    self._session_context['transcript_id'] = result['transcript_id']
+                    print(f"      📋 Stored transcript_id: {result['transcript_id']}")
+
+                if result.get('plan') and 'id' in result['plan']:
+                    self._session_context['plan_id'] = result['plan']['id']
+                    print(f"      📝 Stored plan_id: {result['plan']['id']}")
+
+                if result.get('workflows') and result['workflows']:
+                    workflow_ids = [w.get('id') for w in result['workflows'] if w.get('id')]
+                    if workflow_ids:
+                        self._session_context['active_workflow_id'] = workflow_ids[0]
+                        print(f"      ⚙️ Stored active_workflow_id: {workflow_ids[0]}")
+
+        except Exception as e:
+            print(f"      ⚠️ Failed to extract context: {str(e)}")
 
     async def _format_response_with_results(self, user_input: str, tool_results: List[Dict[str, Any]],
                                           context: Dict[str, Any]) -> str:
@@ -339,7 +432,7 @@ Guidelines:
 - For workflow lists, show priority and step counts
 - For step information, explain what will happen
 - For errors, suggest specific next actions
-- Use emojis for status indicators (🔴 HIGH, 🟡 MED, ✓ completed, etc.)
+- Use status indicators (HIGH, MEDIUM, LOW, completed, pending, etc.)
 """
             }
         ]
@@ -379,3 +472,60 @@ Guidelines:
         except Exception:
             # Don't fail the whole interaction if conversation logging fails
             pass
+
+    async def _store_tool_call_decision(self, decision: Dict[str, Any]):
+        """Store the LLM's tool call decision in conversation history.
+
+        Args:
+            decision: LLM decision containing tool_calls and reasoning
+        """
+        try:
+            tool_calls = decision.get('tool_calls', [])
+            reasoning = decision.get('reasoning', 'No reasoning provided')
+
+            content = f"I decided to call {len(tool_calls)} tool(s): {', '.join([tc.get('tool_name', 'unknown') for tc in tool_calls])}. Reasoning: {reasoning}"
+
+            self.session_store.add_conversation_turn(
+                self.session_id,
+                'tool_call',
+                content,
+                tool_data={'tool_calls': tool_calls, 'reasoning': reasoning}
+            )
+            print(f"  📝 Stored tool call decision: {len(tool_calls)} tools")
+        except Exception as e:
+            print(f"  ⚠️ Failed to store tool call decision: {str(e)}")
+
+    async def _store_tool_results(self, tool_results: List[Dict[str, Any]]):
+        """Store tool execution results in conversation history.
+
+        Args:
+            tool_results: List of tool execution results
+        """
+        try:
+            successful_tools = [r for r in tool_results if r.get('success')]
+            failed_tools = [r for r in tool_results if not r.get('success')]
+
+            content = f"Tool execution completed: {len(successful_tools)} successful, {len(failed_tools)} failed"
+
+            # Add summary of successful tool results for LLM context
+            if successful_tools:
+                content += "\n\nResults:"
+                for result in successful_tools:
+                    tool_name = result.get('tool_name', 'unknown')
+                    data = result.get('result', {})
+                    if isinstance(data, list) and data:
+                        content += f"\n- {tool_name}: Found {len(data)} items"
+                    elif isinstance(data, dict) and data:
+                        content += f"\n- {tool_name}: Retrieved data with keys: {list(data.keys())}"
+                    else:
+                        content += f"\n- {tool_name}: Completed successfully"
+
+            self.session_store.add_conversation_turn(
+                self.session_id,
+                'tool_result',
+                content,
+                tool_data={'results': tool_results}
+            )
+            print(f"  📝 Stored tool results: {len(tool_results)} total")
+        except Exception as e:
+            print(f"  ⚠️ Failed to store tool results: {str(e)}")

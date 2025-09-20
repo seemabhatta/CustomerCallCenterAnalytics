@@ -114,6 +114,7 @@ class APITools:
         """
         return await self._call_api("GET", f"/api/v1/analyses/{analysis_id}")
 
+
     # ============================================
     # PLAN TOOLS
     # ============================================
@@ -196,6 +197,65 @@ class APITools:
             json_data={"executed_by": executed_by}
         )
 
+    # ============================================
+    # PIPELINE NAVIGATION TOOLS
+    # ============================================
+
+    async def get_full_pipeline_for_transcript(self, transcript_id: str) -> Dict[str, Any]:
+        """Tool: Get complete pipeline data for a transcript - analysis, plan, and workflows.
+
+        This is the KEY TOOL that solves the broken data flow identified in the logs.
+        When user mentions a call ID, this gets all related data in one comprehensive call.
+
+        Args:
+            transcript_id: Transcript identifier
+
+        Returns:
+            Complete pipeline data: transcript → analysis → plan → workflows
+        """
+        pipeline_data = {
+            "transcript_id": transcript_id,
+            "transcript": None,
+            "analysis": None,
+            "plan": None,
+            "workflows": []
+        }
+
+        try:
+            # Get transcript details
+            pipeline_data["transcript"] = await self.get_transcript(transcript_id)
+
+            # Get analysis for this transcript
+            pipeline_data["analysis"] = await self.get_transcript_analysis(transcript_id)
+
+            # Get plan for this transcript
+            pipeline_data["plan"] = await self.get_plan_for_transcript(transcript_id)
+
+            # If we have a plan, get workflows
+            if pipeline_data["plan"] and pipeline_data["plan"].get("id"):
+                pipeline_data["workflows"] = await self.get_workflows_for_plan(pipeline_data["plan"]["id"])
+
+        except Exception as e:
+            # Fail fast - no fallback logic
+            raise Exception(f"Failed to get pipeline data for transcript {transcript_id}: {str(e)}")
+
+        return pipeline_data
+
+    async def get_pending_borrower_workflows(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Tool: Get all pending BORROWER workflows across all plans.
+
+        Args:
+            limit: Maximum number of workflows to return
+
+        Returns:
+            List of pending BORROWER workflows with context
+        """
+        return await self._call_api("GET", "/api/v1/workflows", params={
+            "status": "pending",
+            "workflow_type": "BORROWER",
+            "limit": limit
+        })
+
     def get_tool_descriptions(self) -> List[Dict[str, Any]]:
         """Get descriptions of all available tools for the LLM.
 
@@ -252,5 +312,20 @@ class APITools:
                 "when_to_use": "When user asks to execute, run, or perform a specific step",
                 "parameters": {"workflow_id": "required", "step_number": "required", "executed_by": "optional"},
                 "returns": "Execution result and status"
-            }
+            },
+            {
+                "name": "get_full_pipeline_for_transcript",
+                "description": "Get complete pipeline data for a transcript - transcript, analysis, plan, and workflows in one call. CRITICAL TOOL for navigation.",
+                "when_to_use": "When user mentions a call ID and you need to show related data. Use instead of multiple separate calls. ALWAYS use when user asks about 'pending workflows', 'action items', or 'what's next' for a specific call.",
+                "parameters": {"transcript_id": "required, from context or user"},
+                "returns": "Complete pipeline: transcript details, analysis data, action plan, and all BORROWER workflows",
+                "context_aware": "When user says 'show pending workflows for this call' or 'what are the action items', use transcript_id from conversation context"
+            },
+            {
+                "name": "get_pending_borrower_workflows",
+                "description": "Get all pending BORROWER workflows across all plans",
+                "when_to_use": "When user asks for 'pending workflows' without specifying a call, or 'show me all pending work'",
+                "parameters": {"limit": "optional, default 10"},
+                "returns": "List of all pending BORROWER workflows with context"
+            },
         ]
