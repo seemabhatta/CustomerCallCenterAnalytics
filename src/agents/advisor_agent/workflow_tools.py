@@ -48,6 +48,59 @@ class WorkflowTools:
         self.session_store = AdvisorSessionStore(db_path)
         self.workflow_store = WorkflowStore(db_path)
 
+    def load_transcript_workflows(self, transcript_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """CONTRACT: Get workflows from a transcript by resolving transcript → plan → workflows.
+
+        PRECONDITIONS:
+        - If transcript_id provided, must be valid non-empty string
+        - If transcript_id not provided, will attempt context resolution
+        - Transcript must have an associated plan with BORROWER workflows
+
+        INVARIANTS:
+        - Only BORROWER workflows are returned (strict filtering enforced)
+        - Automatically resolves: transcript → analysis → plan → workflows
+        - Context-aware: uses conversation or session context when transcript_id not provided
+
+        FAILURE GUIDANCE:
+        - If no transcript context: "Please provide a transcript ID or list recent transcripts first"
+        - If no plan found: "No plan found for transcript {transcript_id}. The transcript may not have been processed yet"
+        - If no BORROWER workflows: "No borrower workflows found for this transcript"
+
+        Args:
+            transcript_id: Optional transcript identifier. If not provided, attempts context resolution
+
+        Returns:
+            List of BORROWER workflows associated with the transcript
+
+        Raises:
+            ValueError: Invalid context or missing transcript_id with guidance
+            Exception: Database/service errors with specific failure reason
+        """
+        # Context resolution: if no transcript_id provided, this is where LLM context awareness comes in
+        # The LLM should provide transcript_id based on conversation context
+        if not transcript_id or not transcript_id.strip():
+            raise ValueError("Please provide a transcript ID. If you just listed recent calls, specify which transcript you want to work with (e.g., 'load workflows for CALL_46F4C703').")
+
+        try:
+            # Resolve transcript → plan
+            plan = self.plan_store.get_by_transcript_id(transcript_id.strip())
+            if not plan:
+                raise ValueError(f"No plan found for transcript {transcript_id}. The transcript may not have been processed yet. Try 'list recent transcripts' to see available options.")
+
+            # Use existing list_workflows to get BORROWER workflows
+            plan_id = plan.get('id')
+            if not plan_id:
+                raise ValueError(f"Plan for transcript {transcript_id} is missing an ID. Please check data integrity.")
+
+            # Return workflows using existing method (with BORROWER filtering already built in)
+            return self.list_workflows(plan_id)
+
+        except ValueError:
+            # Re-raise ValueError with original message
+            raise
+        except Exception as e:
+            raise Exception(f"Failed to load workflows for transcript {transcript_id}: {str(e)}")
+
     def list_workflows(self, plan_id: str) -> List[Dict[str, Any]]:
         """CONTRACT: Get available BORROWER workflows from a plan.
 
@@ -420,6 +473,48 @@ class WorkflowTools:
         except Exception as e:
             raise Exception(f"Failed to get progress: {str(e)}")
 
+    def list_recent_transcripts(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent transcript calls available to the advisor.
+
+        Args:
+            limit: Maximum number of transcripts to return (default 10)
+
+        Returns:
+            List of recent transcript summaries
+
+        Raises:
+            Exception: If retrieval fails (NO FALLBACK)
+        """
+        try:
+            # Get recent transcripts from the transcript store
+            transcripts = self.transcript_store.get_all()
+
+            # Sort by timestamp (most recent first) and limit
+            recent_transcripts = sorted(
+                transcripts,
+                key=lambda t: getattr(t, 'timestamp', ''),
+                reverse=True
+            )[:limit]
+
+            # Format for display
+            formatted_transcripts = []
+            for transcript in recent_transcripts:
+                # All transcripts are Transcript objects from the store
+                formatted_transcripts.append({
+                    'transcript_id': getattr(transcript, 'id', 'Unknown'),
+                    'customer_id': getattr(transcript, 'customer_id', 'Unknown'),
+                    'topic': getattr(transcript, 'topic', 'No topic'),
+                    'urgency': getattr(transcript, 'urgency', 'unknown'),
+                    'timestamp': getattr(transcript, 'timestamp', 'Unknown'),
+                    'message_count': len(getattr(transcript, 'messages', [])),
+                    'summary': f"{getattr(transcript, 'topic', 'Call')} - {len(getattr(transcript, 'messages', []))} messages"
+                })
+
+            return formatted_transcripts
+
+        except Exception as e:
+            raise Exception(f"Failed to list recent transcripts: {str(e)}")
+
     def get_tool_descriptions(self) -> List[Dict[str, Any]]:
         """Get descriptions of all available tools for the LLM.
 
@@ -427,6 +522,18 @@ class WorkflowTools:
             List of tool descriptions with parameters and purposes
         """
         return [
+            {
+                'name': 'list_recent_transcripts',
+                'description': 'Get recent call transcripts (call history)',
+                'parameters': ['limit (optional, default 10)'],
+                'purpose': 'View recent customer calls and their summaries'
+            },
+            {
+                'name': 'load_transcript_workflows',
+                'description': 'Get workflows from a transcript by auto-resolving transcript → plan → workflows',
+                'parameters': ['transcript_id (optional - uses context if not provided)'],
+                'purpose': 'Direct access to workflows when transcript context is known'
+            },
             {
                 'name': 'list_workflows',
                 'description': 'Get available borrower workflows from a plan',

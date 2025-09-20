@@ -263,6 +263,8 @@ If you need to call tools, the response will be generated after tool execution.
                 # Map tool names to actual methods
                 if tool_name == 'list_recent_transcripts':
                     result = self.tools.list_recent_transcripts(**parameters)
+                elif tool_name == 'load_transcript_workflows':
+                    result = self.tools.load_transcript_workflows(**parameters)
                 elif tool_name == 'list_workflows':
                     result = self.tools.list_workflows(**parameters)
                 elif tool_name == 'get_workflow_details':
