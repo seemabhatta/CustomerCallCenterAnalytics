@@ -1,0 +1,106 @@
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python cli_agent.py --advisor-id ADV001 --workflow-type BORROWER
+╭────────────────────────────────────────────────────────────── Advisor Agent - BORROWER Workflow Assistant ───────────────────────────────────────────────────────────────╮
+│  🧑‍💼 Advisor  ADV001                                                                                                                                                    │
+│  📋 Session    SID-3d44820b                                                                                                                                              │
+│  📄 Context    none yet                                                                                                                                                  │
+│  🎯 Focus      BORROWER workflows only                                                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Type your requests naturally. I'll help you work through borrower workflows step-by-step.
+Commands: 'list workflows', 'start <workflow>', 'status', 'help', 'end session'
+
+Agent: Hello! I'm here to help you work through borrower workflows step-by-step.
+Please provide a plan ID or transcript ID to get started, or say 'help' to see what I can do.
+
+You: hi
+Processing request...
+
+Agent: Hello! 👋
+
+I found some recent call transcripts related to your mortgage inquiries. Here’s a summary of the last few calls:
+
+1. **Call on October 10, 2023** - **Topic: PMI Removal**
+   - **Customer:** John Smith
+   - **Urgency:** 🔴 HIGH
+   - **Summary:** John expressed frustration about the delay in removing his Private Mortgage Insurance (PMI). He believes he has met the requirements and requested an
+urgent escalation of his case.
+
+2. **Call on October 5, 2023** - **Topic: Payment Issues**
+   - **Customer:** John Smith
+   - **Urgency:** 🟡 MED
+   - **Summary:** John reported issues with making his mortgage payment due to a system error. The representative provided options for making the payment over the phone.
+
+3. **Call on September 19, 2025** - **Topic: Property Tax Issues**
+   - **Customer:** Mark Thompson
+   - **Urgency:** 🔴 HIGH
+   - **Summary:** Mark was frustrated about unexpected property tax increases and confirmed that his taxes should be included in his monthly payment. The representative
+initiated an escrow analysis for him.
+
+If you need to take action on any of these issues, just let me know! I can help you start a workflow for the PMI removal or provide more details on any of the calls. 😊
+
+You: show me the call details for the first one
+Processing request...
+
+Agent: Here are the details from the first call you requested:
+
+### Call Details
+- **Customer ID:** CUST_001
+- **Loan Number:** 123456789
+- **Property Address:** 789 Maple Avenue, Springfield, IL 62704
+- **Topic:** Payment Issues
+- **Urgency Level:** 🟡 Medium
+- **Financial Impact:** None (The customer is seeking information before any missed payment occurs)
+- **Customer Sentiment:** Neutral
+- **Call Timestamp:** September 19, 2025, at 12:53 PM (UTC)
+
+### Summary
+The customer called regarding a missed payment inquiry. They were looking for information and expressed no immediate financial impact. The sentiment during the call was
+neutral, indicating that the customer was calm and seeking assistance.
+
+If you need further details or want to take action based on this call, just let me know! 😊
+
+You: do we have analysis for this call?
+Processing request...
+
+Agent: I found the analysis for the recent call you were inquiring about! Here are the details:
+
+### Recent Call Analysis
+- **Call ID:** CALL_46F4C703
+- **Date:** October 10, 2023
+- **Customer Name:** John Smith
+- **Topic:** PMI Removal
+- **Urgency Level:** 🔴 HIGH
+- **Summary:**
+  - John expressed frustration regarding the Private Mortgage Insurance (PMI) on his loan, stating he has met the requirements for removal but has not seen any progress.
+  - The representative, Sarah, acknowledged his concerns and promised to escalate the matter to the underwriting department, ensuring it would be prioritized.
+  - John emphasized the financial burden of the ongoing PMI payments and requested a swift resolution.
+
+### Next Steps
+If you would like to proceed with any specific actions related to this call, such as starting a workflow for PMI removal or addressing any other concerns, please let me
+know! 😊
+
+You: did we create any plans for this analysis?
+Processing request...
+
+Agent: It looks like we have some recent call transcripts related to your inquiries, but I didn't find any specific plans created for the analysis yet. Here’s a summary of
+the recent calls:
+
+1. **Call on October 10, 2023** - **Topic: PMI Removal**
+   - **Customer**: John Smith
+   - **Urgency**: 🔴 HIGH
+   - **Summary**: John expressed frustration over the delay in removing his Private Mortgage Insurance (PMI). He has met the necessary requirements and requested urgent
+escalation to expedite the process.
+
+2. **Call on October 5, 2023** - **Topic: Payment Issues**
+   - **Customer**: John Smith
+   - **Urgency**: 🟡 MED
+   - **Summary**: John reported issues with making his mortgage payment due to a system error. The representative provided options for resolving the payment issue.
+
+3. **Call on October 5, 2023** - **Topic: Property Tax Issues**
+   - **Customer**: Mark Thompson
+   - **Urgency**: 🔴 HIGH
+   - **Summary**: Mark was concerned about unexpected increases in property taxes and requested an escrow analysis to clarify the situation.
+
+If you would like to create a plan based on any of these discussions, especially regarding the PMI removal or payment issues, please let me know! We can start a workflow to
+address those concerns.
+
+You:

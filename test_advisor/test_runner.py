@@ -164,9 +164,11 @@ class AdvisorTestHarness:
 
                 if analysis and analysis.get('bugs'):
                     bugs_found.extend(analysis['bugs'])
-                    print(f"      ❌ {len(analysis['bugs'])} bugs found")
+                    print(f"      ❌ {len(analysis['bugs'])} bugs found:")
+                    for bug in analysis['bugs']:
+                        print(f"        - {bug['type']}: {bug['description'][:80]}...")
                 else:
-                    print(f"      ✅ OK")
+                    print(f"      ✅ Passed")
 
                 # Add to context
                 context.append({
@@ -240,7 +242,7 @@ Check for these bugs:
 5. Fallback response instead of proper error
 6. Not using conversation context intelligently
 
-Return JSON:
+IMPORTANT: Return ONLY valid JSON, no markdown formatting, no explanations outside JSON:
 {{
     "makes_sense": true/false,
     "bugs": [
@@ -257,18 +259,89 @@ Return JSON:
         try:
             response_obj = await self.llm.arun(
                 messages=[
-                    {"role": "system", "content": "You are a test analyzer for an advisor CLI agent. Be strict about detecting bugs."},
+                    {"role": "system", "content": "You are a test analyzer for an advisor CLI agent. Return ONLY valid JSON. Be strict about detecting bugs."},
                     {"role": "user", "content": prompt}
                 ],
                 options=RequestOptions(temperature=0.1)
             )
 
-            result = json.loads(response_obj.text)
+            # Extract JSON from response (handle markdown code blocks)
+            response_text = response_obj.text.strip()
+
+            # Remove markdown code blocks if present
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]  # Remove ```json
+            elif response_text.startswith('```'):
+                response_text = response_text[3:]  # Remove ```
+
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]  # Remove trailing ```
+
+            response_text = response_text.strip()
+
+            # Parse the cleaned JSON
+            result = json.loads(response_text)
+
+            # Basic validation - check expected content
+            if expected:
+                found_expected = [e for e in expected if e.lower() in response.lower()]
+                missing_expected = [e for e in expected if e.lower() not in response.lower()]
+
+                if missing_expected:
+                    # Add bug for missing expected content
+                    if 'bugs' not in result:
+                        result['bugs'] = []
+                    result['bugs'].append({
+                        "type": "missing_content",
+                        "description": f"Response missing expected content: {missing_expected}",
+                        "severity": "high",
+                        "evidence": response[:200] + "..." if len(response) > 200 else response
+                    })
+
+            # Check forbidden content
+            if not_expected:
+                found_forbidden = [n for n in not_expected if n.lower() in response.lower()]
+
+                if found_forbidden:
+                    # Add bug for forbidden content
+                    if 'bugs' not in result:
+                        result['bugs'] = []
+                    result['bugs'].append({
+                        "type": "forbidden_content",
+                        "description": f"Response contains forbidden content: {found_forbidden}",
+                        "severity": "high",
+                        "evidence": response[:200] + "..." if len(response) > 200 else response
+                    })
+
             return result
 
+        except json.JSONDecodeError as e:
+            print(f"      ❌ JSON parsing failed: {str(e)}")
+            print(f"      Response text: {response_obj.text[:200] if hasattr(locals(), 'response_obj') else 'N/A'}")
+            # Return analysis failure as a bug itself
+            return {
+                "makes_sense": False,
+                "bugs": [{
+                    "type": "analysis_failure",
+                    "description": f"Failed to parse LLM analysis response: {str(e)}",
+                    "severity": "critical",
+                    "evidence": "Analysis JSON parsing failed"
+                }],
+                "analysis": f"Analysis error: {str(e)}"
+            }
         except Exception as e:
-            print(f"      Analysis failed: {str(e)}")
-            return {"makes_sense": False, "bugs": [], "analysis": f"Analysis error: {str(e)}"}
+            print(f"      ❌ Analysis failed: {str(e)}")
+            # Return analysis failure as a bug itself
+            return {
+                "makes_sense": False,
+                "bugs": [{
+                    "type": "analysis_failure",
+                    "description": f"Analysis failed: {str(e)}",
+                    "severity": "critical",
+                    "evidence": "Analysis failed completely"
+                }],
+                "analysis": f"Analysis error: {str(e)}"
+            }
 
     async def generate_scenarios_from_bugs(self):
         """Generate new test scenarios based on bugs found."""
@@ -285,7 +358,7 @@ Generate 3 new test scenarios that:
 3. Test context switching between different topics
 4. Test the specific functionality that failed
 
-Format as JSON array:
+IMPORTANT: Return ONLY valid JSON array, no markdown formatting:
 [
     {{
         "name": "Test scenario name",
@@ -302,13 +375,25 @@ Format as JSON array:
         try:
             response = await self.llm.arun(
                 messages=[
-                    {"role": "system", "content": "Generate test scenarios to uncover bugs."},
+                    {"role": "system", "content": "Generate test scenarios to uncover bugs. Return ONLY valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
                 options=RequestOptions(temperature=0.7)
             )
 
-            scenarios = json.loads(response.text)
+            # Extract JSON from response (handle markdown code blocks)
+            response_text = response.text.strip()
+
+            # Remove markdown code blocks if present
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]  # Remove ```json
+            elif response_text.startswith('```'):
+                response_text = response_text[3:]  # Remove ```
+
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]  # Remove trailing ```
+
+            scenarios = json.loads(response_text.strip())
             print(f"📝 Generated {len(scenarios)} new scenarios from bug patterns")
             return scenarios
 
@@ -377,7 +462,7 @@ The advisor agent has these components:
 - src/agents/advisor_agent/advisor_agent.py (tool mapping)
 - prompts/advisor_agent/system_prompt.txt (LLM instructions)
 
-Return JSON with specific fix:
+IMPORTANT: Return ONLY valid JSON, no markdown formatting:
 {{
     "file": "path/to/file.py",
     "change": "what specifically to change",
@@ -388,13 +473,25 @@ Return JSON with specific fix:
         try:
             response = await self.llm.arun(
                 messages=[
-                    {"role": "system", "content": "Generate specific code fixes for bugs."},
+                    {"role": "system", "content": "Generate specific code fixes for bugs. Return ONLY valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
                 options=RequestOptions(temperature=0.1)
             )
 
-            return json.loads(response.text)
+            # Extract JSON from response (handle markdown code blocks)
+            response_text = response.text.strip()
+
+            # Remove markdown code blocks if present
+            if response_text.startswith('```json'):
+                response_text = response_text[7:]  # Remove ```json
+            elif response_text.startswith('```'):
+                response_text = response_text[3:]  # Remove ```
+
+            if response_text.endswith('```'):
+                response_text = response_text[:-3]  # Remove trailing ```
+
+            return json.loads(response_text.strip())
 
         except Exception as e:
             print(f"      Fix generation failed: {str(e)}")

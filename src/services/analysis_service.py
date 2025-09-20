@@ -77,7 +77,7 @@ class AnalysisService:
         analysis = self.store.get_by_id(analysis_id)
         if not analysis:
             return None
-        
+
         # NO FALLBACK: Handle both object and dict types properly
         if hasattr(analysis, 'to_dict'):
             return analysis.to_dict()  # Object with to_dict method
@@ -86,7 +86,22 @@ class AnalysisService:
         else:
             # Fail fast if unexpected type
             raise ValueError(f"Unexpected analysis type: {type(analysis)}")
-    
+
+    async def get_by_transcript_id(self, transcript_id: str) -> Optional[Dict[str, Any]]:
+        """Get analysis by transcript ID."""
+        analysis = self.store.get_by_transcript_id(transcript_id)
+        if not analysis:
+            return None
+
+        # NO FALLBACK: Handle both object and dict types properly
+        if hasattr(analysis, 'to_dict'):
+            return analysis.to_dict()  # Object with to_dict method
+        elif isinstance(analysis, dict):
+            return analysis  # Already a dictionary
+        else:
+            # Fail fast if unexpected type
+            raise ValueError(f"Unexpected analysis type: {type(analysis)}")
+
     async def delete(self, analysis_id: str) -> bool:
         """Delete analysis by ID."""
         return self.store.delete(analysis_id)

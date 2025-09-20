@@ -284,6 +284,19 @@ async def delete_analysis(analysis_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete analysis: {str(e)}")
 
+@app.get("/api/v1/analyses/by-transcript/{transcript_id}")
+async def get_analysis_by_transcript(transcript_id: str):
+    """Get analysis by transcript ID - proxies to analysis service."""
+    try:
+        result = await analysis_service.get_by_transcript_id(transcript_id)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"No analysis found for transcript {transcript_id}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get analysis for transcript: {str(e)}")
+
 @app.delete("/api/v1/analyses")
 async def delete_all_analyses():
     """Delete all analyses - proxies to analysis service."""
@@ -363,6 +376,19 @@ async def get_plan(plan_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get plan: {str(e)}")
+
+@app.get("/api/v1/plans/by-transcript/{transcript_id}")
+async def get_plan_by_transcript(transcript_id: str):
+    """Get action plan by transcript ID - proxies to plan service."""
+    try:
+        result = await plan_service.get_by_transcript_id(transcript_id)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"No plan found for transcript {transcript_id}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get plan for transcript: {str(e)}")
 
 @app.delete("/api/v1/plans/{plan_id}")
 async def delete_plan(plan_id: str):

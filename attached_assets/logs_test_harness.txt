@@ -1,0 +1,181 @@
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ cd test
+test_advisor/ tests/
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ cd test_advisor/
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics/test_advisor$ python3 test_runner.py
+🚀 Starting Automated Advisor Test Harness
+API URL: http://localhost:8000/api/v1/advisor/chat
+Scenarios: /home/ujjal/code/CustomerCallCenterAnalytics/test_advisor/test_scenarios.yaml
+================================================================================
+
+================================================================================
+🔄 Test Iteration 1 - 02:08:25
+================================================================================
+📋 Testing 10 scenarios
+
+[1/10] Testing: Context-aware analysis request
+    Step 1: show me the last call...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: show me the analysis for this...
+[02:08:34] ✓ POST | 2.2s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:08:34] ✓ openai.response | 2.2s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce44e... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=343
+[02:08:34] ✓ openai.llm.arun | 2.2s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=2243.2397310... llm.responseid=resp_68ce44e...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[2/10] Testing: Workflow resolution from transcript
+    Step 1: list recent calls...
+[02:08:45] ✓ POST | 8.3s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:08:45] ✓ openai.response | 8.3s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce44e... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=409
+[02:08:45] ✓ openai.llm.arun | 8.3s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=8349.4581460... llm.responseid=resp_68ce44e...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: show me workflows for the PMI one...
+[02:09:04] ✓ POST | 7.4s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:09:04] ✓ openai.response | 7.4s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce450... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=545
+[02:09:04] ✓ openai.llm.arun | 7.4s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=7418.7558929... llm.responseid=resp_68ce450...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[3/10] Testing: Direct workflow execution
+    Step 1: I want to start PMI removal...
+[02:09:34] ✓ POST | 6.5s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:09:34] ✓ openai.response | 6.6s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce451... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=883
+[02:09:34] ✓ openai.llm.arun | 6.6s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=6553.2532799... llm.responseid=resp_68ce451...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[4/10] Testing: Context switching test
+    Step 1: show me calls about PMI...
+[02:09:50] ✓ POST | 6.2s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:09:50] ✓ openai.response | 6.2s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce453... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=469
+[02:09:50] ✓ openai.llm.arun | 6.2s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=6208.2295229... llm.responseid=resp_68ce453...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: now show me payment issue calls...
+[02:10:03] ✓ POST | 2.0s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:10:03] ✓ openai.response | 2.0s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce453... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=357
+[02:10:03] ✓ openai.llm.arun | 2.0s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=2003.1672170... llm.responseid=resp_68ce453...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 3: go back to the PMI call...
+[02:10:12] ✓ POST | 5.5s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:10:12] ✓ openai.response | 5.5s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce454... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=511
+[02:10:12] ✓ openai.llm.arun | 5.5s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5478.3107460... llm.responseid=resp_68ce454...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[5/10] Testing: Error handling test
+[02:10:23] ✓ POST | 5.6s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:10:23] ✓ openai.response | 5.6s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce454... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=518
+[02:10:23] ✓ openai.llm.arun | 5.6s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5649.9196820... llm.responseid=resp_68ce454...
+    Step 1: show me workflows for INVALID_ID...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: execute step 999...
+[02:10:39] ✓ POST | 7.8s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:10:39] ✓ openai.response | 7.8s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce455... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=607
+[02:10:39] ✓ openai.llm.arun | 7.8s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=7801.7226230... llm.responseid=resp_68ce455...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[6/10] Testing: Help and guidance test
+    Step 1: help...
+[02:10:52] ✓ POST | 6.3s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:10:52] ✓ openai.response | 6.3s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce456... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=393
+[02:10:52] ✓ openai.llm.arun | 6.3s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=6307.4850170... llm.responseid=resp_68ce456...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: what can you do?...
+[02:11:08] ✓ POST | 6.4s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:11:08] ✓ openai.response | 6.4s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce457... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=515
+[02:11:08] ✓ openai.llm.arun | 6.4s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=6369.2126409... llm.responseid=resp_68ce457...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[7/10] Testing: Session management test
+    Step 1: what's my current context?...
+[02:11:20] ✓ POST | 5.9s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:11:20] ✓ openai.response | 5.9s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce458... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=403
+[02:11:20] ✓ openai.llm.arun | 5.9s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5876.6059189... llm.responseid=resp_68ce458...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[8/10] Testing: Multi-step workflow test
+    Step 1: list my recent calls...
+[02:11:35] ✓ POST | 5.9s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:11:35] ✓ openai.response | 5.9s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce459... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=475
+[02:11:35] ✓ openai.llm.arun | 5.9s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5921.5809379... llm.responseid=resp_68ce459...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: what workflows are available for the PMI call?...
+[02:11:51] ✓ POST | 4.3s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:11:51] ✓ openai.response | 4.3s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce45a... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=559
+[02:11:51] ✓ openai.llm.arun | 4.3s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=4300.8925469... llm.responseid=resp_68ce45a...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 3: show me the details of the PMI workflow...
+[02:12:03] ✓ POST | 4.5s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:12:03] ✓ openai.response | 4.5s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce45b... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=473
+[02:12:03] ✓ openai.llm.arun | 4.5s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=4479.6578440... llm.responseid=resp_68ce45b...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[9/10] Testing: Edge case handling
+    Step 1: ...
+[02:12:14] ✓ POST | 5.6s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:12:14] ✓ openai.response | 5.7s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce45b... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=521
+[02:12:14] ✓ openai.llm.arun | 5.7s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5651.8376900... llm.responseid=resp_68ce45b...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: show me workflows for transcript that doesn't exist...
+[02:12:20] ✓ POST | 5.1s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:12:20] ✓ openai.response | 5.4s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce45c... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=230
+[02:12:20] ✓ openai.llm.arun | 5.4s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5370.8819810... llm.responseid=resp_68ce45c...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 3: execute step -1...
+[02:12:34] ✓ POST | 7.3s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:12:34] ✓ openai.response | 7.3s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce45d... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=559
+[02:12:34] ✓ openai.llm.arun | 7.3s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=7294.1322269... llm.responseid=resp_68ce45d...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+[10/10] Testing: Missing analysis tool test
+    Step 1: show me call CALL_46F4C703...
+[02:12:49] ✓ POST | 14.4s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:12:49] ✓ openai.response | 14.4s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce45e... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=418
+[02:12:49] ✓ openai.llm.arun | 14.4s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=14380.643589... llm.responseid=resp_68ce45e...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 2: what was the sentiment analysis for this call?...
+[02:13:10] ✓ POST | 9.1s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:13:10] ✓ openai.response | 9.1s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce45f... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=376
+[02:13:10] ✓ openai.llm.arun | 9.1s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=9112.8740249... llm.responseid=resp_68ce45f...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+    Step 3: what risks were identified?...
+[02:13:29] ✓ POST | 5.9s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:13:29] ✓ openai.response | 5.9s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce460... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=617
+[02:13:29] ✓ openai.llm.arun | 5.9s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5886.8107430... llm.responseid=resp_68ce460...
+      Analysis failed: Expecting value: line 1 column 1 (char 0)
+      ✅ OK
+  ✅ All tests passed
+
+⏰ Waiting 2 minutes before next iteration...
+[02:13:42] ✓ POST | 9.2s | http.method=POST http.url=https://api.... http.statuscode=200
+[02:13:42] ✓ openai.response | 9.2s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68ce461... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=466
+[02:13:42] ✓ openai.llm.arun | 9.2s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=9206.5144869... llm.responseid=resp_68ce461...
+^C
+
+👋 Test harness stopped
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics/test_advisor$

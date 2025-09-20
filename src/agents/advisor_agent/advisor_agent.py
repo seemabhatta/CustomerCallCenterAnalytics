@@ -10,7 +10,7 @@ from datetime import datetime
 
 from src.infrastructure.llm.llm_client_v2 import LLMClientV2
 from src.utils.prompt_loader import prompt_loader
-from .workflow_tools import WorkflowTools
+from .api_tools import APITools
 from src.storage.advisor_session_store import AdvisorSessionStore
 
 
@@ -48,7 +48,7 @@ class AdvisorAgent:
         self.llm = LLMClientV2()
 
         # Initialize tools and storage
-        self.tools = WorkflowTools(db_path, advisor_id)
+        self.tools = APITools(advisor_id=advisor_id)
         self.session_store = AdvisorSessionStore(db_path)
 
         # Load system prompt
@@ -260,27 +260,31 @@ If you need to call tools, the response will be generated after tool execution.
             print(f"      Parameters: {parameters}")
 
             try:
-                # Map tool names to actual methods
-                if tool_name == 'list_recent_transcripts':
-                    result = self.tools.list_recent_transcripts(**parameters)
-                elif tool_name == 'load_transcript_workflows':
-                    result = self.tools.load_transcript_workflows(**parameters)
-                elif tool_name == 'list_workflows':
-                    result = self.tools.list_workflows(**parameters)
-                elif tool_name == 'get_workflow_details':
-                    result = self.tools.get_workflow_details(**parameters)
-                elif tool_name == 'preflight_step':
-                    result = self.tools.preflight_step(**parameters)
-                elif tool_name == 'execute_step':
-                    result = self.tools.execute_step(**parameters)
-                elif tool_name == 'skip_step':
-                    result = self.tools.skip_step(**parameters)
-                elif tool_name == 'get_progress':
-                    result = self.tools.get_progress(**parameters)
+                # Map tool names to actual API methods
+                if tool_name == 'get_transcripts':
+                    result = await self.tools.get_transcripts(**parameters)
+                elif tool_name == 'get_transcript':
+                    result = await self.tools.get_transcript(**parameters)
+                elif tool_name == 'get_transcript_analysis':
+                    result = await self.tools.get_transcript_analysis(**parameters)
+                elif tool_name == 'get_plan_for_transcript':
+                    result = await self.tools.get_plan_for_transcript(**parameters)
+                elif tool_name == 'get_workflows_for_plan':
+                    result = await self.tools.get_workflows_for_plan(**parameters)
+                elif tool_name == 'get_workflow':
+                    result = await self.tools.get_workflow(**parameters)
+                elif tool_name == 'get_workflow_steps':
+                    result = await self.tools.get_workflow_steps(**parameters)
+                elif tool_name == 'execute_workflow_step':
+                    result = await self.tools.execute_workflow_step(**parameters)
                 else:
                     result = {'error': f'Unknown tool: {tool_name}'}
 
-                success = 'error' not in result
+                # Handle None results from API calls (404s)
+                if result is None:
+                    result = {'error': 'Resource not found'}
+
+                success = result is not None and 'error' not in result
                 print(f"      ✅ Result: {result}" if success else f"      ❌ Error in result: {result}")
 
                 results.append({

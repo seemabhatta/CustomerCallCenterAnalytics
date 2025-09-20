@@ -75,7 +75,14 @@ class PlanService:
         if not plan:
             return None
         return plan  # plan is already a dict from store.get_by_id()
-    
+
+    async def get_by_transcript_id(self, transcript_id: str) -> Optional[Dict[str, Any]]:
+        """Get action plan by transcript ID."""
+        plan = self.store.get_by_transcript_id(transcript_id)
+        if not plan:
+            return None
+        return plan  # plan is already a dict from store.get_by_transcript_id()
+
     async def update(self, plan_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update action plan."""
         plan = self.store.get_by_id(plan_id)
