@@ -233,9 +233,9 @@ class WorkflowExecutionStore:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, workflow_id, executor_type, execution_status, 
-                       execution_payload, executed_at, executed_by, 
-                       execution_duration_ms, mock_execution, error_message, 
+                SELECT id, workflow_id, step_number, executor_type, execution_status,
+                       execution_payload, executed_at, executed_by,
+                       execution_duration_ms, mock_execution, error_message,
                        metadata, created_at
                 FROM workflow_executions 
                 WHERE id = ?
@@ -364,9 +364,9 @@ class WorkflowExecutionStore:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, workflow_id, executor_type, execution_status, 
-                       execution_payload, executed_at, executed_by, 
-                       execution_duration_ms, mock_execution, error_message, 
+                SELECT id, workflow_id, step_number, executor_type, execution_status,
+                       execution_payload, executed_at, executed_by,
+                       execution_duration_ms, mock_execution, error_message,
                        metadata, created_at
                 FROM workflow_executions 
                 WHERE executor_type = ?
@@ -405,9 +405,9 @@ class WorkflowExecutionStore:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, workflow_id, executor_type, execution_status, 
-                       execution_payload, executed_at, executed_by, 
-                       execution_duration_ms, mock_execution, error_message, 
+                SELECT id, workflow_id, step_number, executor_type, execution_status,
+                       execution_payload, executed_at, executed_by,
+                       execution_duration_ms, mock_execution, error_message,
                        metadata, created_at
                 FROM workflow_executions 
                 ORDER BY executed_at DESC
@@ -451,7 +451,7 @@ class WorkflowExecutionStore:
 
             # Build query with filters
             query = '''
-                SELECT id, workflow_id, executor_type, execution_status,
+                SELECT id, workflow_id, step_number, executor_type, execution_status,
                        execution_payload, executed_at, executed_by,
                        execution_duration_ms, mock_execution, error_message,
                        metadata, created_at
@@ -753,7 +753,7 @@ class WorkflowExecutionStore:
 
             # Build query with filters
             query = '''
-                SELECT id, workflow_id, executor_type, execution_status,
+                SELECT id, workflow_id, step_number, executor_type, execution_status,
                        execution_payload, executed_at, executed_by,
                        execution_duration_ms, mock_execution, error_message,
                        metadata, created_at
