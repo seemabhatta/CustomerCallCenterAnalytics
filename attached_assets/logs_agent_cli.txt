@@ -1,7 +1,7 @@
 (venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python cli_agent.py --advisor-id ADV001 --workflow-type BORROWER
 ╭────────────────────────────────────────────────────────────── Advisor Agent - BORROWER Workflow Assistant ───────────────────────────────────────────────────────────────╮
 │  🧑‍💼 Advisor  ADV001                                                                                                                                                    │
-│  📋 Session    SID-3d44820b                                                                                                                                              │
+│  📋 Session    SID-32a4d4f8                                                                                                                                              │
 │  📄 Context    none yet                                                                                                                                                  │
 │  🎯 Focus      BORROWER workflows only                                                                                                                                   │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
@@ -11,96 +11,54 @@ Commands: 'list workflows', 'start <workflow>', 'status', 'help', 'end session'
 Agent: Hello! I'm here to help you work through borrower workflows step-by-step.
 Please provide a plan ID or transcript ID to get started, or say 'help' to see what I can do.
 
-You: hi
+You: show me the last call
 Processing request...
 
-Agent: Hello! 👋
+Agent: I found the details of the last call for the customer, Tom Bennett, which took place on October 4, 2023, at 10:15 AM. The call lasted for 12 minutes and focused on
+payment issues. Here are some key points from the conversation:
 
-I found some recent call transcripts related to your mortgage inquiries. Here’s a summary of the last few calls:
+- **Customer ID:** UB_001
+- **Issue:** Tom expressed frustration regarding his mortgage payment, specifically that his last payment of $1,500 due on September 1st was not processed due to a
+technical issue with online payments.
+- **Resolution Steps:**
+  - The representative, Sarah, manually processed Tom's September payment during the call.
+  - Tom was concerned about late fees and requested that the billing department review these fees since the issue was due to the system's fault. Sarah assured him that this
+would be escalated, and he would receive a follow-up within 3-5 business days.
 
-1. **Call on October 10, 2023** - **Topic: PMI Removal**
-   - **Customer:** John Smith
-   - **Urgency:** 🔴 HIGH
-   - **Summary:** John expressed frustration about the delay in removing his Private Mortgage Insurance (PMI). He believes he has met the requirements and requested an
-urgent escalation of his case.
+The urgency of this matter is marked as **critical**, indicating that it requires prompt attention.
 
-2. **Call on October 5, 2023** - **Topic: Payment Issues**
-   - **Customer:** John Smith
-   - **Urgency:** 🟡 MED
-   - **Summary:** John reported issues with making his mortgage payment due to a system error. The representative provided options for making the payment over the phone.
+Would you like to proceed with any specific action items related to this call, such as following up on the billing department's review or starting a workflow for further
+resolution? Let me know how you’d like to proceed!
 
-3. **Call on September 19, 2025** - **Topic: Property Tax Issues**
-   - **Customer:** Mark Thompson
-   - **Urgency:** 🔴 HIGH
-   - **Summary:** Mark was frustrated about unexpected property tax increases and confirmed that his taxes should be included in his monthly payment. The representative
-initiated an escrow analysis for him.
-
-If you need to take action on any of these issues, just let me know! I can help you start a workflow for the PMI removal or provide more details on any of the calls. 😊
-
-You: show me the call details for the first one
+You: whats the call id?
 Processing request...
 
-Agent: Here are the details from the first call you requested:
+Agent: The call ID for the most recent customer interaction is **CALL_CA1A2E20**.
 
-### Call Details
-- **Customer ID:** CUST_001
-- **Loan Number:** 123456789
-- **Property Address:** 789 Maple Avenue, Springfield, IL 62704
+Here are some details from the call:
+
+- **Customer Name:** Tom Bennett
+- **Customer ID:** UB_001
+- **Date of Call:** October 4, 2023
+- **Time of Call:** 10:15 AM
+- **Duration:** 12 minutes
 - **Topic:** Payment Issues
-- **Urgency Level:** 🟡 Medium
-- **Financial Impact:** None (The customer is seeking information before any missed payment occurs)
-- **Customer Sentiment:** Neutral
-- **Call Timestamp:** September 19, 2025, at 12:53 PM (UTC)
+- **Urgency Level:** Critical
 
-### Summary
-The customer called regarding a missed payment inquiry. They were looking for information and expressed no immediate financial impact. The sentiment during the call was
-neutral, indicating that the customer was calm and seeking assistance.
+During the call, Tom expressed frustration regarding issues with his mortgage payment, specifically a payment that was due on September 1st but was not processed due to a
+technical issue. The representative assured him that they would manually process the payment and escalate the case to the billing department to review any late fees
+incurred.
 
-If you need further details or want to take action based on this call, just let me know! 😊
+If you need to take further action based on this call, please let me know how I can assist you!
 
-You: do we have analysis for this call?
+You: great - what pending action items are there?
 Processing request...
 
-Agent: I found the analysis for the recent call you were inquiring about! Here are the details:
+Agent: It seems there was an issue retrieving the pending action items for the customer. The API call returned an error indicating an "Invalid status: pending."
 
-### Recent Call Analysis
-- **Call ID:** CALL_46F4C703
-- **Date:** October 10, 2023
-- **Customer Name:** John Smith
-- **Topic:** PMI Removal
-- **Urgency Level:** 🔴 HIGH
-- **Summary:**
-  - John expressed frustration regarding the Private Mortgage Insurance (PMI) on his loan, stating he has met the requirements for removal but has not seen any progress.
-  - The representative, Sarah, acknowledged his concerns and promised to escalate the matter to the underwriting department, ensuring it would be prioritized.
-  - John emphasized the financial burden of the ongoing PMI payments and requested a swift resolution.
+To move forward, you might want to check if there are any specific workflows or action items you have in mind that you can look up directly. Alternatively, you can try
+listing recent calls to see if any new action items were discussed.
 
-### Next Steps
-If you would like to proceed with any specific actions related to this call, such as starting a workflow for PMI removal or addressing any other concerns, please let me
-know! 😊
-
-You: did we create any plans for this analysis?
-Processing request...
-
-Agent: It looks like we have some recent call transcripts related to your inquiries, but I didn't find any specific plans created for the analysis yet. Here’s a summary of
-the recent calls:
-
-1. **Call on October 10, 2023** - **Topic: PMI Removal**
-   - **Customer**: John Smith
-   - **Urgency**: 🔴 HIGH
-   - **Summary**: John expressed frustration over the delay in removing his Private Mortgage Insurance (PMI). He has met the necessary requirements and requested urgent
-escalation to expedite the process.
-
-2. **Call on October 5, 2023** - **Topic: Payment Issues**
-   - **Customer**: John Smith
-   - **Urgency**: 🟡 MED
-   - **Summary**: John reported issues with making his mortgage payment due to a system error. The representative provided options for resolving the payment issue.
-
-3. **Call on October 5, 2023** - **Topic: Property Tax Issues**
-   - **Customer**: Mark Thompson
-   - **Urgency**: 🔴 HIGH
-   - **Summary**: Mark was concerned about unexpected increases in property taxes and requested an escrow analysis to clarify the situation.
-
-If you would like to create a plan based on any of these discussions, especially regarding the PMI removal or payment issues, please let me know! We can start a workflow to
-address those concerns.
+Would you like to explore recent calls or check for specific workflows? Let me know how you'd like to proceed!
 
 You:

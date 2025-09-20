@@ -51,6 +51,10 @@ class AdvisorAgent:
         self.tools = APITools(advisor_id=advisor_id)
         self.session_store = AdvisorSessionStore(db_path)
 
+        # Initialize two-layer memory architecture
+        from .session_context import SessionContext
+        self.session_context = SessionContext(session_id, graph_store=None)  # Uses default GraphStore
+
         # Load system prompt
         self.system_prompt = self._load_system_prompt()
 
@@ -347,53 +351,40 @@ Respond with JSON in this format:
         print(f"  🔍 Extracting context from {tool_name}")
 
         try:
-            # Extract transcript ID when transcripts are retrieved
+            # Use SessionContext for intelligent entity tracking
             if tool_name == 'get_transcripts' and isinstance(result, list) and result:
                 # Store the first transcript as current context
                 first_transcript = result[0]
                 if 'id' in first_transcript:
-                    self._session_context['transcript_id'] = first_transcript['id']
-                    print(f"      📋 Stored transcript_id: {first_transcript['id']}")
+                    transcript_id = first_transcript['id']
+                    self.session_context.set_active_transcript(transcript_id)
+                    print(f"      📋 Set active transcript: {transcript_id}")
 
             elif tool_name == 'get_transcript' and 'id' in result:
-                self._session_context['transcript_id'] = result['id']
-                print(f"      📋 Stored transcript_id: {result['id']}")
-
-            # Extract plan ID when plans are retrieved
-            elif tool_name == 'get_plan_for_transcript' and 'id' in result:
-                self._session_context['plan_id'] = result['id']
-                print(f"      📝 Stored plan_id: {result['id']}")
-
-            elif tool_name == 'get_plan' and 'id' in result:
-                self._session_context['plan_id'] = result['id']
-                print(f"      📝 Stored plan_id: {result['id']}")
+                transcript_id = result['id']
+                self.session_context.set_active_transcript(transcript_id)
+                print(f"      📋 Set active transcript: {transcript_id}")
 
             # Extract workflow ID when workflows are retrieved
             elif tool_name == 'get_workflows_for_plan' and isinstance(result, list) and result:
                 workflow_ids = [w.get('id') for w in result if w.get('id')]
                 if workflow_ids:
-                    self._session_context['active_workflow_id'] = workflow_ids[0]
-                    print(f"      ⚙️ Stored active_workflow_id: {workflow_ids[0]}")
+                    self.session_context.set_active_workflow(workflow_ids[0])
+                    print(f"      ⚙️ Set active workflow: {workflow_ids[0]}")
 
             elif tool_name == 'get_workflow' and 'id' in result:
-                self._session_context['active_workflow_id'] = result['id']
-                print(f"      ⚙️ Stored active_workflow_id: {result['id']}")
+                workflow_id = result['id']
+                self.session_context.set_active_workflow(workflow_id)
+                print(f"      ⚙️ Set active workflow: {workflow_id}")
 
             # Extract from full pipeline results
             elif tool_name == 'get_full_pipeline_for_transcript':
                 if 'transcript_id' in result:
-                    self._session_context['transcript_id'] = result['transcript_id']
-                    print(f"      📋 Stored transcript_id: {result['transcript_id']}")
+                    transcript_id = result['transcript_id']
+                    self.session_context.set_active_transcript(transcript_id)
+                    print(f"      📋 Set active transcript: {transcript_id}")
 
-                if result.get('plan') and 'id' in result['plan']:
-                    self._session_context['plan_id'] = result['plan']['id']
-                    print(f"      📝 Stored plan_id: {result['plan']['id']}")
-
-                if result.get('workflows') and result['workflows']:
-                    workflow_ids = [w.get('id') for w in result['workflows'] if w.get('id')]
-                    if workflow_ids:
-                        self._session_context['active_workflow_id'] = workflow_ids[0]
-                        print(f"      ⚙️ Stored active_workflow_id: {workflow_ids[0]}")
+                # SessionContext will auto-derive related entities from graph
 
         except Exception as e:
             print(f"      ⚠️ Failed to extract context: {str(e)}")

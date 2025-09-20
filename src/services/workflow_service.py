@@ -153,7 +153,46 @@ class WorkflowService:
         # Store workflow
         workflow_id = self.workflow_store.create(workflow_data)
         workflow_data['id'] = workflow_id
-        
+
+        # Store workflow in knowledge graph for two-layer memory architecture
+        try:
+            from src.storage.graph_store import GraphStore
+            graph_store = GraphStore()
+
+            # Extract steps from workflow data
+            steps = []
+            workflow_extraction_data = workflow_data.get('workflow_data', {})
+            extracted_workflows = workflow_extraction_data.get('workflows', [])
+
+            # Process first workflow's steps (assuming single workflow per action item)
+            if extracted_workflows:
+                first_workflow = extracted_workflows[0]
+                workflow_steps = first_workflow.get('steps', [])
+                for i, step in enumerate(workflow_steps):
+                    steps.append({
+                        'action': step.get('step', ''),
+                        'executor_type': step.get('executor', ''),
+                        'status': 'pending',
+                        'estimated_duration': step.get('estimated_time_minutes', 60)
+                    })
+
+            workflow_graph_data = {
+                'workflow_id': workflow_id,
+                'plan_id': plan_id,
+                'workflow_type': workflow_data.get('workflow_type', 'BORROWER'),
+                'priority': workflow_data.get('risk_level', 'medium'),
+                'status': workflow_data.get('status', 'pending'),
+                'execution_order': 1,  # Could be derived from action order
+                'steps': steps
+            }
+
+            success = graph_store.add_workflow_with_steps(workflow_graph_data)
+            logger.info(f"Workflow {workflow_id} stored in graph: {success}")
+
+        except Exception as e:
+            # Log but don't fail - graph storage is supplementary
+            logger.warning(f"Failed to store workflow in graph: {str(e)}")
+
         return workflow_data
     
     async def get_workflow(self, workflow_id: str) -> Optional[Dict[str, Any]]:

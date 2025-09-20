@@ -66,7 +66,27 @@ class PlanService:
         should_store = request_data.get("store", True)
         if should_store:
             self.store.store(plan_result)
-        
+
+            # Store plan in knowledge graph for two-layer memory architecture
+            try:
+                from ..storage.graph_store import GraphStore
+                graph_store = GraphStore()
+
+                plan_graph_data = {
+                    'plan_id': plan_result["plan_id"],
+                    'analysis_id': analysis_id,
+                    'status': 'generated',
+                    'priority_level': plan_result.get('urgency_level', 'medium'),
+                    'generation_time': 0.0  # Could track actual generation time if needed
+                }
+
+                success = graph_store.add_plan_with_relationships(plan_graph_data)
+                add_span_event("plan.graph_stored", plan_id=plan_result["plan_id"], success=success)
+
+            except Exception as e:
+                # Log but don't fail - graph storage is supplementary
+                add_span_event("plan.graph_storage_failed", error=str(e))
+
         return plan_result
     
     async def get_by_id(self, plan_id: str) -> Optional[Dict[str, Any]]:

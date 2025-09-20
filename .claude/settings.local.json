@@ -50,7 +50,9 @@
       "Bash(git checkout:*)",
       "Bash(npm run build:*)",
       "Bash(python3:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []
