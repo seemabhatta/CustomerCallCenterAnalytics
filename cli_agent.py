@@ -153,11 +153,11 @@ def main(
         elif plan_id:
             context = f"Plan {plan_id}"
 
-        # Start with a simple hello to establish session
+        # Initialize session silently
         try:
             result = client.chat(
                 advisor_id=advisor_id,
-                message="Hello, I'm ready to work on borrower workflows.",
+                message="session_init",  # Neutral message that won't trigger LLM processing
                 session_id=session_id,
                 transcript_id=transcript_id,
                 plan_id=plan_id
@@ -172,8 +172,7 @@ def main(
         # Display banner
         display_banner(advisor_id, current_session_id, context)
 
-        # Display initial response
-        console.print(f"[bold]Agent:[/bold] {result['response']}")
+        # Don't display the response from session init - it's just establishing connection
 
         # Run chat loop
         chat_loop(client, advisor_id, current_session_id, transcript_id, plan_id)

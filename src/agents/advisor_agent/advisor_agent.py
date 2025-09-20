@@ -90,6 +90,10 @@ class AdvisorAgent:
         if not user_input or not user_input.strip():
             return "I'm here to help with borrower workflows. What would you like to do? You can say 'list workflows', 'start <workflow name>', or ask for help."
 
+        # Handle session initialization silently
+        if user_input.strip() == "session_init":
+            return "Session established successfully."
+
         try:
             # Build context for the LLM
             context = self._build_llm_context(user_input, session_context)
@@ -207,14 +211,24 @@ If you need to call tools, the response will be generated after tool execution.
             # Call LLM using the correct API method
             from src.infrastructure.llm.llm_client_v2 import RequestOptions
 
+            print(f"\n🧠 LLM DECISION DEBUG: Processing user input: '{context['user_input']}'")
+
             response = await self.llm.arun(
                 messages=messages,
                 options=RequestOptions(temperature=0.1)
             )
             llm_response = response.text
 
+            print(f"🤖 Raw LLM Response:\n{llm_response}")
+
             # Parse JSON response
             decision = json.loads(llm_response)
+
+            print(f"📋 Parsed Decision:")
+            print(f"   Reasoning: {decision.get('reasoning', 'None')}")
+            print(f"   Tool Calls: {decision.get('tool_calls', [])}")
+            print(f"   Direct Response: {decision.get('response', 'None')}")
+
             return decision
 
         except json.JSONDecodeError:
@@ -236,13 +250,20 @@ If you need to call tools, the response will be generated after tool execution.
         """
         results = []
 
-        for tool_call in tool_calls:
+        print(f"\n🔧 TOOL EXECUTION DEBUG: Executing {len(tool_calls)} tool calls")
+
+        for i, tool_call in enumerate(tool_calls, 1):
             tool_name = tool_call.get('tool_name')
             parameters = tool_call.get('parameters', {})
 
+            print(f"  🛠️  Tool {i}: {tool_name}")
+            print(f"      Parameters: {parameters}")
+
             try:
                 # Map tool names to actual methods
-                if tool_name == 'list_workflows':
+                if tool_name == 'list_recent_transcripts':
+                    result = self.tools.list_recent_transcripts(**parameters)
+                elif tool_name == 'list_workflows':
                     result = self.tools.list_workflows(**parameters)
                 elif tool_name == 'get_workflow_details':
                     result = self.tools.get_workflow_details(**parameters)
@@ -257,14 +278,18 @@ If you need to call tools, the response will be generated after tool execution.
                 else:
                     result = {'error': f'Unknown tool: {tool_name}'}
 
+                success = 'error' not in result
+                print(f"      ✅ Result: {result}" if success else f"      ❌ Error in result: {result}")
+
                 results.append({
                     'tool_name': tool_name,
                     'parameters': parameters,
                     'result': result,
-                    'success': 'error' not in result
+                    'success': success
                 })
 
             except Exception as e:
+                print(f"      💥 Exception: {str(e)}")
                 results.append({
                     'tool_name': tool_name,
                     'parameters': parameters,
@@ -313,16 +338,27 @@ Guidelines:
             }
         ]
 
+        print(f"\n💬 RESPONSE FORMATTING DEBUG:")
+        print(f"   User Input: {user_input}")
+        print(f"   Tool Results Summary: {len([r for r in tool_results if r.get('success')])} successful, {len([r for r in tool_results if not r.get('success')])} failed")
+
         try:
             # Call LLM using the correct API method
+            from src.infrastructure.llm.llm_client_v2 import RequestOptions
+
             response = await self.llm.arun(
                 messages=messages,
                 options=RequestOptions(temperature=0.3)
             )
-            return response.text
+            final_response = response.text
+            print(f"   🎯 Final Response: {final_response}")
+            return final_response
         except Exception as e:
             # Fallback to basic result summary
-            return f"Completed tool execution. Results: {len([r for r in tool_results if r.get('success')])} successful, {len([r for r in tool_results if not r.get('success')])} failed."
+            fallback_response = f"Completed tool execution. Results: {len([r for r in tool_results if r.get('success')])} successful, {len([r for r in tool_results if not r.get('success')])} failed."
+            print(f"   ⚠️  Fallback Response: {fallback_response}")
+            print(f"   💥 Exception during formatting: {str(e)}")
+            return fallback_response
 
     async def _update_conversation_history(self, user_input: str, response: str):
         """Update session conversation history.
