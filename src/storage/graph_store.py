@@ -90,6 +90,38 @@ class GraphStore:
                     severity STRING,
                     PRIMARY KEY(flag_id)
                 )""",
+
+                # Action Plan nodes
+                """CREATE NODE TABLE IF NOT EXISTS ActionPlan(
+                    plan_id STRING,
+                    analysis_id STRING,
+                    status STRING,
+                    priority_level STRING,
+                    created_at TIMESTAMP,
+                    PRIMARY KEY(plan_id)
+                )""",
+
+                # Workflow nodes
+                """CREATE NODE TABLE IF NOT EXISTS Workflow(
+                    workflow_id STRING,
+                    plan_id STRING,
+                    workflow_type STRING,
+                    priority STRING,
+                    status STRING,
+                    created_at TIMESTAMP,
+                    PRIMARY KEY(workflow_id)
+                )""",
+
+                # Workflow Step nodes
+                """CREATE NODE TABLE IF NOT EXISTS WorkflowStep(
+                    step_id STRING,
+                    workflow_id STRING,
+                    step_number INT64,
+                    action STRING,
+                    executor_type STRING,
+                    status STRING,
+                    PRIMARY KEY(step_id)
+                )""",
             ]
             
             # Create relationships
@@ -135,6 +167,28 @@ class GraphStore:
                     FROM Analysis TO Analysis,
                     escalation_type STRING,
                     priority STRING,
+                    created_at TIMESTAMP
+                )""",
+
+                # Analysis generates Plan
+                """CREATE REL TABLE IF NOT EXISTS GENERATED_PLAN(
+                    FROM Analysis TO ActionPlan,
+                    generation_time DOUBLE,
+                    created_at TIMESTAMP
+                )""",
+
+                # Plan has Workflow
+                """CREATE REL TABLE IF NOT EXISTS HAS_WORKFLOW(
+                    FROM ActionPlan TO Workflow,
+                    execution_order INT64,
+                    created_at TIMESTAMP
+                )""",
+
+                # Workflow has Step
+                """CREATE REL TABLE IF NOT EXISTS HAS_STEP(
+                    FROM Workflow TO WorkflowStep,
+                    step_order INT64,
+                    estimated_duration INT64,
                     created_at TIMESTAMP
                 )""",
             ]
@@ -911,6 +965,256 @@ class GraphStore:
             
         except Exception as e:
             raise GraphStoreError(f"Graph visualization data extraction failed: {str(e)}")
+
+    def add_plan_with_relationships(self, plan_data: Dict[str, Any]) -> bool:
+        """Add action plan node and create relationships."""
+        try:
+            plan_id = plan_data.get('plan_id')
+            analysis_id = plan_data.get('analysis_id')
+
+            if not plan_id or not analysis_id:
+                raise GraphStoreError("plan_id and analysis_id are required")
+
+            # Create plan node
+            query = """
+            CREATE (:ActionPlan {
+                plan_id: $plan_id,
+                analysis_id: $analysis_id,
+                status: $status,
+                priority_level: $priority_level,
+                created_at: current_timestamp()
+            })
+            """
+            self.connection.execute(query, {
+                "plan_id": plan_id,
+                "analysis_id": analysis_id,
+                "status": plan_data.get('status', 'pending'),
+                "priority_level": plan_data.get('priority_level', 'medium')
+            })
+
+            # Create relationship from Analysis to Plan
+            rel_query = """
+            MATCH (a:Analysis {analysis_id: $analysis_id})
+            MATCH (p:ActionPlan {plan_id: $plan_id})
+            CREATE (a)-[:GENERATED_PLAN {
+                generation_time: $generation_time,
+                created_at: current_timestamp()
+            }]->(p)
+            """
+            self.connection.execute(rel_query, {
+                "analysis_id": analysis_id,
+                "plan_id": plan_id,
+                "generation_time": plan_data.get('generation_time', 0.0)
+            })
+
+            return True
+
+        except Exception as e:
+            error_msg = str(e)
+            if "duplicated primary key" in error_msg:
+                return True  # Idempotent behavior
+            raise GraphStoreError(f"Failed to add plan: {error_msg}")
+
+    def add_workflow_with_steps(self, workflow_data: Dict[str, Any]) -> bool:
+        """Add workflow node with steps and create relationships."""
+        try:
+            workflow_id = workflow_data.get('workflow_id')
+            plan_id = workflow_data.get('plan_id')
+
+            if not workflow_id or not plan_id:
+                raise GraphStoreError("workflow_id and plan_id are required")
+
+            # Create workflow node
+            query = """
+            CREATE (:Workflow {
+                workflow_id: $workflow_id,
+                plan_id: $plan_id,
+                workflow_type: $workflow_type,
+                priority: $priority,
+                status: $status,
+                created_at: current_timestamp()
+            })
+            """
+            self.connection.execute(query, {
+                "workflow_id": workflow_id,
+                "plan_id": plan_id,
+                "workflow_type": workflow_data.get('workflow_type', 'BORROWER'),
+                "priority": workflow_data.get('priority', 'medium'),
+                "status": workflow_data.get('status', 'pending')
+            })
+
+            # Create relationship from Plan to Workflow
+            rel_query = """
+            MATCH (p:ActionPlan {plan_id: $plan_id})
+            MATCH (w:Workflow {workflow_id: $workflow_id})
+            CREATE (p)-[:HAS_WORKFLOW {
+                execution_order: $execution_order,
+                created_at: current_timestamp()
+            }]->(w)
+            """
+            self.connection.execute(rel_query, {
+                "plan_id": plan_id,
+                "workflow_id": workflow_id,
+                "execution_order": workflow_data.get('execution_order', 1)
+            })
+
+            # Add workflow steps if provided
+            steps = workflow_data.get('steps', [])
+            for i, step in enumerate(steps):
+                step_id = f"{workflow_id}_step_{i+1}"
+                self._add_workflow_step(workflow_id, step_id, i+1, step)
+
+            return True
+
+        except Exception as e:
+            error_msg = str(e)
+            if "duplicated primary key" in error_msg:
+                return True  # Idempotent behavior
+            raise GraphStoreError(f"Failed to add workflow: {error_msg}")
+
+    def _add_workflow_step(self, workflow_id: str, step_id: str, step_number: int, step_data: Dict[str, Any]):
+        """Add a workflow step node and relationship."""
+        # Create step node
+        query = """
+        CREATE (:WorkflowStep {
+            step_id: $step_id,
+            workflow_id: $workflow_id,
+            step_number: $step_number,
+            action: $action,
+            executor_type: $executor_type,
+            status: $status
+        })
+        """
+        self.connection.execute(query, {
+            "step_id": step_id,
+            "workflow_id": workflow_id,
+            "step_number": step_number,
+            "action": step_data.get('action', ''),
+            "executor_type": step_data.get('executor_type', ''),
+            "status": step_data.get('status', 'pending')
+        })
+
+        # Create relationship from Workflow to Step
+        rel_query = """
+        MATCH (w:Workflow {workflow_id: $workflow_id})
+        MATCH (s:WorkflowStep {step_id: $step_id})
+        CREATE (w)-[:HAS_STEP {
+            step_order: $step_order,
+            estimated_duration: $estimated_duration,
+            created_at: current_timestamp()
+        }]->(s)
+        """
+        self.connection.execute(rel_query, {
+            "workflow_id": workflow_id,
+            "step_id": step_id,
+            "step_order": step_number,
+            "estimated_duration": step_data.get('estimated_duration', 60)
+        })
+
+    def get_pipeline_for_transcript(self, transcript_id: str) -> Dict[str, Any]:
+        """Get complete pipeline data for a transcript (Transcript → Analysis → Plan → Workflows)."""
+        try:
+            # Query the full pipeline in one traversal
+            query = """
+            MATCH (t:Transcript {transcript_id: $transcript_id})
+            OPTIONAL MATCH (t)-[:GENERATED_ANALYSIS]->(a:Analysis)
+            OPTIONAL MATCH (a)-[:GENERATED_PLAN]->(p:ActionPlan)
+            OPTIONAL MATCH (p)-[:HAS_WORKFLOW]->(w:Workflow)
+            OPTIONAL MATCH (w)-[:HAS_STEP]->(s:WorkflowStep)
+            RETURN t, a, p,
+                   collect(DISTINCT w) as workflows,
+                   collect(DISTINCT s) as steps
+            """
+
+            result = self.connection.execute(query, {"transcript_id": transcript_id})
+
+            for record in result:
+                return {
+                    "transcript": dict(record.get("t", {})),
+                    "analysis": dict(record.get("a", {})) if record.get("a") else None,
+                    "plan": dict(record.get("p", {})) if record.get("p") else None,
+                    "workflows": [dict(w) for w in record.get("workflows", []) if w],
+                    "steps": [dict(s) for s in record.get("steps", []) if s]
+                }
+
+            return {}
+
+        except Exception as e:
+            raise GraphStoreError(f"Failed to get pipeline: {str(e)}")
+
+    def get_workflows_for_transcript(self, transcript_id: str, workflow_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get all workflows associated with a transcript."""
+        try:
+            if workflow_type:
+                query = """
+                MATCH (t:Transcript {transcript_id: $transcript_id})
+                      -[:GENERATED_ANALYSIS]->(a:Analysis)
+                      -[:GENERATED_PLAN]->(p:ActionPlan)
+                      -[:HAS_WORKFLOW]->(w:Workflow {workflow_type: $workflow_type})
+                OPTIONAL MATCH (w)-[:HAS_STEP]->(s:WorkflowStep)
+                RETURN w, collect(s) as steps
+                ORDER BY w.priority DESC, w.created_at
+                """
+                params = {"transcript_id": transcript_id, "workflow_type": workflow_type}
+            else:
+                query = """
+                MATCH (t:Transcript {transcript_id: $transcript_id})
+                      -[:GENERATED_ANALYSIS]->(a:Analysis)
+                      -[:GENERATED_PLAN]->(p:ActionPlan)
+                      -[:HAS_WORKFLOW]->(w:Workflow)
+                OPTIONAL MATCH (w)-[:HAS_STEP]->(s:WorkflowStep)
+                RETURN w, collect(s) as steps
+                ORDER BY w.priority DESC, w.created_at
+                """
+                params = {"transcript_id": transcript_id}
+
+            result = self.connection.execute(query, params)
+
+            workflows = []
+            for record in result:
+                workflow = dict(record.get("w", {}))
+                workflow["steps"] = [dict(s) for s in record.get("steps", []) if s]
+                workflows.append(workflow)
+
+            return workflows
+
+        except Exception as e:
+            raise GraphStoreError(f"Failed to get workflows: {str(e)}")
+
+    def resolve_entity_reference(self, reference: str, session_context: Dict[str, Any]) -> Optional[str]:
+        """Resolve contextual references like 'this call' or 'the plan' to actual IDs."""
+        try:
+            # Map common references to entity types
+            reference_map = {
+                "this call": "transcript_id",
+                "the call": "transcript_id",
+                "last call": "transcript_id",
+                "this analysis": "analysis_id",
+                "the analysis": "analysis_id",
+                "this plan": "plan_id",
+                "the plan": "plan_id",
+                "action plan": "plan_id",
+                "this workflow": "workflow_id",
+                "the workflow": "workflow_id"
+            }
+
+            # Normalize the reference
+            normalized_ref = reference.lower().strip()
+
+            # Check if we can map this reference
+            for ref_pattern, entity_type in reference_map.items():
+                if ref_pattern in normalized_ref:
+                    # Return the ID from session context if available
+                    return session_context.get(entity_type)
+
+            # If it's already an ID format, return as-is
+            if normalized_ref.startswith(("call_", "analysis_", "plan_", "workflow_")):
+                return reference
+
+            return None
+
+        except Exception as e:
+            raise GraphStoreError(f"Failed to resolve reference: {str(e)}")
 
     def close(self):
         """Close database connection."""
