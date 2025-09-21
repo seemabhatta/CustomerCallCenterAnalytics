@@ -69,8 +69,7 @@ class PlanService:
 
             # Store plan in knowledge graph for two-layer memory architecture
             try:
-                from ..storage.graph_store import GraphStore
-                graph_store = GraphStore()
+                from ..storage.queued_graph_store import add_plan_sync
 
                 plan_graph_data = {
                     'plan_id': plan_result["plan_id"],
@@ -80,7 +79,7 @@ class PlanService:
                     'generation_time': 0.0  # Could track actual generation time if needed
                 }
 
-                success = graph_store.add_plan_with_relationships(plan_graph_data)
+                success = add_plan_sync(plan_graph_data)
                 add_span_event("plan.graph_stored", plan_id=plan_result["plan_id"], success=success)
 
             except Exception as e:

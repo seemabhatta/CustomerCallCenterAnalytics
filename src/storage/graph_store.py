@@ -122,6 +122,20 @@ class GraphStore:
                     status STRING,
                     PRIMARY KEY(step_id)
                 )""",
+
+                # Step Execution nodes
+                """CREATE NODE TABLE IF NOT EXISTS StepExecution(
+                    execution_id STRING,
+                    workflow_id STRING,
+                    step_number INT64,
+                    status STRING,
+                    executor_type STRING,
+                    executed_by STRING,
+                    duration_ms INT64,
+                    executed_at TIMESTAMP,
+                    created_at TIMESTAMP,
+                    PRIMARY KEY(execution_id)
+                )""",
             ]
             
             # Create relationships
@@ -189,6 +203,14 @@ class GraphStore:
                     FROM Workflow TO WorkflowStep,
                     step_order INT64,
                     estimated_duration INT64,
+                    created_at TIMESTAMP
+                )""",
+
+                # WorkflowStep was executed as StepExecution
+                """CREATE REL TABLE IF NOT EXISTS EXECUTED_AS(
+                    FROM WorkflowStep TO StepExecution,
+                    execution_time DOUBLE,
+                    success BOOLEAN,
                     created_at TIMESTAMP
                 )""",
             ]
@@ -1060,9 +1082,17 @@ class GraphStore:
 
             # Add workflow steps if provided
             steps = workflow_data.get('steps', [])
+            print(f"📊 Adding {len(steps)} workflow steps for workflow {workflow_id}")
             for i, step in enumerate(steps):
                 step_id = f"{workflow_id}_step_{i+1}"
-                self._add_workflow_step(workflow_id, step_id, i+1, step)
+                try:
+                    self._add_workflow_step(workflow_id, step_id, i+1, step)
+                    print(f"✅ Added workflow step {step_id}: {step.get('action', 'unknown')}")
+                except Exception as e:
+                    print(f"❌ Failed to add workflow step {step_id}: {str(e)}")
+                    # Log the error but continue with other steps
+                    import traceback
+                    traceback.print_exc()
 
             return True
 
@@ -1074,42 +1104,54 @@ class GraphStore:
 
     def _add_workflow_step(self, workflow_id: str, step_id: str, step_number: int, step_data: Dict[str, Any]):
         """Add a workflow step node and relationship."""
-        # Create step node
-        query = """
-        CREATE (:WorkflowStep {
-            step_id: $step_id,
-            workflow_id: $workflow_id,
-            step_number: $step_number,
-            action: $action,
-            executor_type: $executor_type,
-            status: $status
-        })
-        """
-        self.connection.execute(query, {
-            "step_id": step_id,
-            "workflow_id": workflow_id,
-            "step_number": step_number,
-            "action": step_data.get('action', ''),
-            "executor_type": step_data.get('executor_type', ''),
-            "status": step_data.get('status', 'pending')
-        })
+        try:
+            print(f"🔧 Creating WorkflowStep node: {step_id}")
 
-        # Create relationship from Workflow to Step
-        rel_query = """
-        MATCH (w:Workflow {workflow_id: $workflow_id})
-        MATCH (s:WorkflowStep {step_id: $step_id})
-        CREATE (w)-[:HAS_STEP {
-            step_order: $step_order,
-            estimated_duration: $estimated_duration,
-            created_at: current_timestamp()
-        }]->(s)
-        """
-        self.connection.execute(rel_query, {
-            "workflow_id": workflow_id,
-            "step_id": step_id,
-            "step_order": step_number,
-            "estimated_duration": step_data.get('estimated_duration', 60)
-        })
+            # Create step node
+            query = """
+            CREATE (:WorkflowStep {
+                step_id: $step_id,
+                workflow_id: $workflow_id,
+                step_number: $step_number,
+                action: $action,
+                executor_type: $executor_type,
+                status: $status
+            })
+            """
+            self.connection.execute(query, {
+                "step_id": step_id,
+                "workflow_id": workflow_id,
+                "step_number": step_number,
+                "action": step_data.get('action', ''),
+                "executor_type": step_data.get('executor_type', ''),
+                "status": step_data.get('status', 'pending')
+            })
+            print(f"✅ WorkflowStep node created: {step_id}")
+
+            # Create relationship from Workflow to Step
+            print(f"🔗 Creating HAS_STEP relationship: {workflow_id} -> {step_id}")
+            rel_query = """
+            MATCH (w:Workflow {workflow_id: $workflow_id})
+            MATCH (s:WorkflowStep {step_id: $step_id})
+            CREATE (w)-[:HAS_STEP {
+                step_order: $step_order,
+                estimated_duration: $estimated_duration,
+                created_at: current_timestamp()
+            }]->(s)
+            """
+            self.connection.execute(rel_query, {
+                "workflow_id": workflow_id,
+                "step_id": step_id,
+                "step_order": step_number,
+                "estimated_duration": step_data.get('estimated_duration', 60)
+            })
+            print(f"✅ HAS_STEP relationship created: {workflow_id} -> {step_id}")
+
+        except Exception as e:
+            print(f"❌ Error in _add_workflow_step for {step_id}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
 
     def get_pipeline_for_transcript(self, transcript_id: str) -> Dict[str, Any]:
         """Get complete pipeline data for a transcript (Transcript → Analysis → Plan → Workflows)."""
@@ -1180,6 +1222,75 @@ class GraphStore:
 
         except Exception as e:
             raise GraphStoreError(f"Failed to get workflows: {str(e)}")
+
+    def add_execution_with_relationships(self, execution_data: Dict[str, Any]) -> bool:
+        """Add step execution and create relationships to workflow steps."""
+        try:
+            execution_id = execution_data.get('execution_id')
+            workflow_id = execution_data.get('workflow_id')
+            step_number = execution_data.get('step_number')
+
+            if not execution_id or not workflow_id or step_number is None:
+                raise GraphStoreError("execution_id, workflow_id, and step_number are required")
+
+            # Create execution node
+            query = """
+            CREATE (:StepExecution {
+                execution_id: $execution_id,
+                workflow_id: $workflow_id,
+                step_number: $step_number,
+                status: $status,
+                executor_type: $executor_type,
+                executed_by: $executed_by,
+                duration_ms: $duration_ms,
+                executed_at: timestamp($executed_at),
+                created_at: current_timestamp()
+            })
+            """
+
+            from datetime import datetime
+            executed_at = execution_data.get('executed_at', datetime.utcnow().isoformat())
+
+            self.connection.execute(query, {
+                "execution_id": execution_id,
+                "workflow_id": workflow_id,
+                "step_number": step_number,
+                "status": execution_data.get('status', 'completed'),
+                "executor_type": execution_data.get('executor_type', ''),
+                "executed_by": execution_data.get('executed_by', ''),
+                "duration_ms": execution_data.get('duration_ms', 0),
+                "executed_at": executed_at
+            })
+
+            # Create relationship from WorkflowStep to StepExecution
+            rel_query = """
+            MATCH (ws:WorkflowStep {workflow_id: $workflow_id, step_number: $step_number})
+            MATCH (se:StepExecution {execution_id: $execution_id})
+            CREATE (ws)-[:EXECUTED_AS {
+                execution_time: $execution_time,
+                success: $success,
+                created_at: current_timestamp()
+            }]->(se)
+            """
+
+            success = execution_data.get('status') == 'success'
+            execution_time = execution_data.get('duration_ms', 0) / 1000.0  # Convert to seconds
+
+            self.connection.execute(rel_query, {
+                "workflow_id": workflow_id,
+                "step_number": step_number,
+                "execution_id": execution_id,
+                "execution_time": execution_time,
+                "success": success
+            })
+
+            return True
+
+        except Exception as e:
+            error_msg = str(e)
+            if "duplicated primary key" in error_msg:
+                return True  # Idempotent behavior
+            raise GraphStoreError(f"Failed to add execution: {error_msg}")
 
     def resolve_entity_reference(self, reference: str, session_context: Dict[str, Any]) -> Optional[str]:
         """Resolve contextual references like 'this call' or 'the plan' to actual IDs."""
