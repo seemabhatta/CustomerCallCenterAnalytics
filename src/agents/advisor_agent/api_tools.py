@@ -250,11 +250,20 @@ class APITools:
         Returns:
             List of pending BORROWER workflows with context
         """
-        return await self._call_api("GET", "/api/v1/workflows", params={
-            "status": "PENDING_ASSESSMENT",  # Fixed: use valid status from workflow store
-            "workflow_type": "BORROWER",
-            "limit": limit
-        })
+        # Try multiple status values since workflows can have different pending states
+        statuses = ["PENDING_ASSESSMENT", "AWAITING_APPROVAL", "APPROVED"]
+        all_workflows = []
+
+        for status in statuses:
+            workflows = await self._call_api("GET", "/api/v1/workflows", params={
+                "status": status,
+                "workflow_type": "BORROWER",
+                "limit": limit
+            })
+            if workflows:
+                all_workflows.extend(workflows)
+
+        return all_workflows[:limit]  # Respect limit
 
     # ============================================
     # CONTEXTUAL GRAPH-AWARE TOOLS
@@ -275,15 +284,28 @@ class APITools:
         # If we have an active transcript in context, get workflows for that
         if session_context.get('transcript_id'):
             transcript_id = session_context['transcript_id']
-            pipeline_data = await self.get_full_pipeline_for_transcript(transcript_id)
 
-            if pipeline_data.get('workflows'):
-                # Filter for pending workflows using correct status values
-                pending_workflows = [
-                    w for w in pipeline_data['workflows']
-                    if w.get('status', '') in ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'APPROVED']
-                ]
-                return pending_workflows
+            # First try to get the plan for this transcript
+            plan_data = await self.get_plan_for_transcript(transcript_id)
+
+            if plan_data and plan_data.get('plan_id'):
+                plan_id = plan_data['plan_id']
+                # Get all workflows for this plan
+                all_workflows = await self.get_workflows_for_plan(plan_id)
+
+                if all_workflows:
+                    # Filter for pending workflows using correct status values
+                    pending_workflows = [
+                        w for w in all_workflows
+                        if w.get('status', '') in ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'APPROVED']
+                    ]
+
+                    # Add workflow steps details for each workflow
+                    for workflow in pending_workflows:
+                        if workflow.get('id'):
+                            workflow['steps'] = await self.get_workflow_steps(workflow['id'])
+
+                    return pending_workflows
 
         # Fallback to global pending workflows
         return await self.get_pending_borrower_workflows()
@@ -401,9 +423,10 @@ class APITools:
             },
             {
                 "name": "get_pending_borrower_workflows",
-                "description": "Get all pending BORROWER workflows across all plans",
-                "when_to_use": "When user asks for 'pending workflows' without specifying a call, or 'show me all pending work'",
+                "description": "Get all pending BORROWER workflows across all plans. AUTO-REDIRECTED when context is available.",
+                "when_to_use": "When user asks for 'pending workflows', 'pending items', 'action items', or 'what needs to be done'. Will be automatically redirected to context-aware version when transcript context exists.",
                 "parameters": {"limit": "optional, default 10"},
-                "returns": "List of all pending BORROWER workflows with context"
+                "returns": "List of all pending BORROWER workflows with context. When context exists, returns detailed workflow steps for the specific call.",
+                "context_aware": "AUTOMATICALLY redirected to get_pending_workflows_for_context when transcript_id is in session context"
             },
         ]

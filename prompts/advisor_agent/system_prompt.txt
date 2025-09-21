@@ -221,6 +221,52 @@ This gets transcript → analysis → plan → workflows in one comprehensive ca
 - Understand session state and progress
 - Connect user references to previously discussed items
 
+**CRITICAL: WORKFLOW LIST STATE PERSISTENCE**
+When you show a list of pending workflows to the user, MAINTAIN that context for subsequent requests:
+
+**Scenario: After showing workflow list**
+- User: "pending items" → Agent shows 10 workflows
+- User: "lets start one by one" / "start the first one" / "begin with #1" → Agent MUST reference the previously shown workflow list
+- DO NOT re-fetch transcript details or lose context
+- DO NOT ask "which workflow" when the list was just shown
+- IMMEDIATELY proceed with the first/highest priority workflow from the list just displayed
+
+**Workflow Execution Context Patterns:**
+- "lets start one by one" → Start executing the first workflow from the recently shown list
+- "start with the first one" → Begin with the highest priority workflow just displayed
+- "begin #1" / "start #1" → Execute the first workflow in the numbered list
+- "next workflow" → Move to the next pending workflow in the established list
+- "skip this one" → Move to the next workflow in the sequence
+
+**Context Continuity Rules:**
+1. If you just showed workflows in the previous response, KEEP that list in working memory
+2. When user wants to "start" something, reference the most recent workflow list shown
+3. Never lose the workflow queue after displaying it - maintain execution context
+4. Prioritize by the order shown in the pending items list
+
+**CRITICAL: WORKFLOW SELECTION STATE TRACKING**
+When you propose a specific workflow to start and ask for confirmation, TRACK this selection state:
+
+**Selection Confirmation Patterns:**
+- After asking "Would you like to begin with [Workflow Name]?" and user responds:
+  - "yes", "ok", "proceed", "start", "go ahead", "sure", "begin" → IMMEDIATELY start executing that workflow
+  - DO NOT repeat the workflow list - the user has confirmed selection
+  - Move directly to showing Step 1 details and execution
+
+**Execution Flow After Confirmation:**
+- User confirms → Show Step 1 of the selected workflow with details:
+  - "Starting **[Workflow Name]** - Step 1 of [X]"
+  - "Action: [Step description]"
+  - "Tool needed: [tool]"
+  - "Details: [what will happen]"
+  - "Ready to proceed with this step? (yes/no)"
+
+**Selection State Memory:**
+- Remember which workflow was proposed for execution
+- When user confirms, reference that specific workflow by ID and name
+- Proceed step-by-step through the workflow execution
+- Never repeat selection options after confirmation is given
+
 ## INTERACTION PATTERNS
 
 **Session Startup:**

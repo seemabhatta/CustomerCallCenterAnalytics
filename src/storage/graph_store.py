@@ -1171,14 +1171,54 @@ class GraphStore:
             result = self.connection.execute(query, {"transcript_id": transcript_id})
 
             for record in result:
-                return {
-                    "transcript": dict(record.get("t", {})),
-                    "analysis": dict(record.get("a", {})) if record.get("a") else None,
-                    "plan": dict(record.get("p", {})) if record.get("p") else None,
-                    "workflows": [dict(w) for w in record.get("workflows", []) if w],
-                    "steps": [dict(s) for s in record.get("steps", []) if s]
-                }
 
+                # KuzuDB returns records as lists, access by index
+                # RETURN t, a, p, collect(DISTINCT w) as workflows, collect(DISTINCT s) as steps
+                # So: record[0]=t, record[1]=a, record[2]=p, record[3]=workflows, record[4]=steps
+
+                try:
+                    t_data = record[0] if len(record) > 0 else None
+                    transcript_dict = dict(t_data) if t_data else {}
+                except Exception as e:
+                    print(f"🔍 DEBUG: Error processing transcript: {e}")
+                    transcript_dict = {}
+
+                try:
+                    a_data = record[1] if len(record) > 1 else None
+                    analysis_dict = dict(a_data) if a_data else None
+                except Exception as e:
+                    print(f"🔍 DEBUG: Error processing analysis: {e}")
+                    analysis_dict = None
+
+                try:
+                    p_data = record[2] if len(record) > 2 else None
+                    plan_dict = dict(p_data) if p_data else None
+                except Exception as e:
+                    print(f"🔍 DEBUG: Error processing plan: {e}")
+                    plan_dict = None
+
+                try:
+                    w_data = record[3] if len(record) > 3 else []
+                    workflows_list = [dict(w) for w in w_data if w] if isinstance(w_data, list) else []
+                except Exception as e:
+                    print(f"🔍 DEBUG: Error processing workflows: {e}")
+                    workflows_list = []
+
+                try:
+                    s_data = record[4] if len(record) > 4 else []
+                    steps_list = [dict(s) for s in s_data if s] if isinstance(s_data, list) else []
+                except Exception as e:
+                    print(f"🔍 DEBUG: Error processing steps: {e}")
+                    steps_list = []
+
+                pipeline_data = {
+                    "transcript": transcript_dict,
+                    "analysis": analysis_dict,
+                    "plan": plan_dict,
+                    "workflows": workflows_list,
+                    "steps": steps_list
+                }
+                return pipeline_data
             return {}
 
         except Exception as e:

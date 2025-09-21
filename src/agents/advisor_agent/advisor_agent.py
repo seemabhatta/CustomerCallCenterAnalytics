@@ -62,6 +62,14 @@ class AdvisorAgent:
         # Load system prompt
         self.system_prompt = self._load_system_prompt()
 
+        # Track the most recent workflow list for context persistence
+        self.recent_workflow_list = None
+        self.recent_workflow_list_timestamp = None
+
+        # Track workflow selection state to prevent amnesia
+        self.pending_workflow_selection = None  # {'workflow_id': str, 'workflow_name': str, 'proposed_at': datetime}
+        self.last_response_proposed_workflow = False  # Flag to track if last response proposed a workflow
+
     def _load_system_prompt(self) -> str:
         """Load system prompt from file.
 
@@ -106,6 +114,13 @@ class AdvisorAgent:
             # Update SessionContext with any entity references in user input
             await self._update_session_context_from_input(user_input, session_context)
 
+            # CRITICAL: Check for workflow selection confirmation BEFORE LLM decision
+            confirmation_response = await self._handle_workflow_confirmation(user_input)
+            if confirmation_response:
+                # User confirmed a workflow - execute it directly, bypass LLM
+                await self._update_conversation_history(user_input, confirmation_response)
+                return confirmation_response
+
             # Build context for the LLM with graph-aware information
             context = self._build_llm_context(user_input, session_context)
 
@@ -126,6 +141,9 @@ class AdvisorAgent:
                 response = await self._format_response_with_results(user_input, tool_results, context)
             else:
                 response = decision.get('response', "I understand you want help with borrower workflows. Could you be more specific about what you'd like to do?")
+
+            # Track workflow selection state before storing conversation
+            await self._update_workflow_selection_state(response)
 
             # Update conversation history with user input and final response
             await self._update_conversation_history(user_input, response)
@@ -181,6 +199,29 @@ class AdvisorAgent:
             'has_context': bool(entity_refs.get('transcript_id'))  # Explicit flag for LLM
         }
 
+        # Include recent workflow list if available for context persistence
+        recent_workflow_context = None
+        if self.recent_workflow_list and self.recent_workflow_list_timestamp:
+            # Only include if it's recent (within last 10 minutes)
+            from datetime import timedelta
+            time_diff = datetime.utcnow() - self.recent_workflow_list_timestamp
+            if time_diff < timedelta(minutes=10):
+                recent_workflow_context = {
+                    'workflows': self.recent_workflow_list,
+                    'shown_at': self.recent_workflow_list_timestamp.isoformat(),
+                    'count': len(self.recent_workflow_list)
+                }
+
+        # Include pending workflow selection state for context persistence
+        selection_context = None
+        if self.pending_workflow_selection:
+            selection_context = {
+                'workflow_id': self.pending_workflow_selection['workflow_id'],
+                'workflow_name': self.pending_workflow_selection['workflow_name'],
+                'proposed_at': self.pending_workflow_selection['proposed_at'].isoformat(),
+                'awaiting_confirmation': True
+            }
+
         return {
             'user_input': user_input.strip(),
             'session_id': self.session_id,
@@ -188,6 +229,8 @@ class AdvisorAgent:
             'conversation_history': recent_history,
             'session_context': merged_session_context,
             'active_workflow': active_workflow,
+            'recent_workflow_list': recent_workflow_context,
+            'pending_workflow_selection': selection_context,
             'available_tools': self.tools.get_tool_descriptions(),
             'timestamp': datetime.utcnow().isoformat()
         }
@@ -425,6 +468,27 @@ Respond with JSON in this format:
                     self.session_context.set_active_transcript(transcript_id)
                     print(f"      📋 Set active transcript: {transcript_id}")
 
+            # Track workflow lists for context persistence (CRITICAL for "lets start one by one" flow)
+            if tool_name in ['get_pending_workflows_for_context', 'get_full_pipeline_for_transcript', 'get_workflows_for_plan']:
+                workflows = []
+                if tool_name == 'get_full_pipeline_for_transcript' and isinstance(result, dict):
+                    workflows = result.get('workflows', [])
+                elif isinstance(result, list):
+                    workflows = result
+
+                if workflows and len(workflows) > 0:
+                    # Store workflow list with metadata for context awareness
+                    self.recent_workflow_list = [{
+                        'id': w.get('id'),
+                        'action_item': w.get('workflow_data', {}).get('action_item', 'Unknown'),
+                        'priority': w.get('workflow_data', {}).get('priority', 'medium'),
+                        'status': w.get('status', 'unknown'),
+                        'step_count': len(w.get('workflow_steps', [])) if w.get('workflow_steps') else 0,
+                        'workflow_type': w.get('workflow_type', 'BORROWER')
+                    } for w in workflows if w.get('id')]
+                    self.recent_workflow_list_timestamp = datetime.utcnow()
+                    print(f"      📋 Captured workflow list: {len(self.recent_workflow_list)} workflows for context persistence")
+
                 # SessionContext will auto-derive related entities from graph
 
         except Exception as e:
@@ -490,6 +554,105 @@ Guidelines:
             print(f"   ⚠️  Fallback Response: {fallback_response}")
             print(f"   💥 Exception during formatting: {str(e)}")
             return fallback_response
+
+    async def _handle_workflow_confirmation(self, user_input: str) -> str:
+        """Handle workflow selection confirmation to prevent amnesia.
+
+        If user is confirming a pending workflow selection, execute Step 1 directly
+        instead of re-listing workflows.
+
+        Args:
+            user_input: User's message
+
+        Returns:
+            Response string if confirmation detected, None otherwise
+        """
+        if not self.pending_workflow_selection:
+            return None
+
+        user_lower = user_input.lower().strip()
+        confirmation_patterns = ['yes', 'ok', 'proceed', 'start', 'go ahead', 'sure', 'begin']
+
+        if any(pattern in user_lower for pattern in confirmation_patterns):
+            # User confirmed workflow selection - start execution
+            workflow_id = self.pending_workflow_selection['workflow_id']
+            workflow_name = self.pending_workflow_selection['workflow_name']
+
+            print(f"      ✅ User confirmed workflow selection: {workflow_name}")
+            print(f"      🚀 Starting direct execution of Step 1 for workflow {workflow_id}")
+
+            # Clear pending selection
+            self.pending_workflow_selection = None
+
+            try:
+                # Get workflow steps and execute first step
+                steps_result = await self.api_tools.get_workflow_steps(workflow_id)
+
+                if not steps_result or not isinstance(steps_result, list) or len(steps_result) == 0:
+                    return f"I confirmed we'll start the **{workflow_name}** workflow, but I couldn't retrieve the execution steps. Please try listing the workflow details first."
+
+                # Show Step 1 details for execution
+                step_1 = steps_result[0]
+                step_number = step_1.get('step_number', 1)
+                action = step_1.get('action', 'Unknown action')
+                tool_needed = step_1.get('tool_needed', 'unknown')
+                details = step_1.get('details', 'No additional details available')
+
+                return f"""Perfect! Starting **{workflow_name}** - Step {step_number} of {len(steps_result)}
+
+**Action:** {action}
+**Tool needed:** {tool_needed}
+**Details:** {details}
+
+Ready to proceed with this step? I can execute it for you once you confirm."""
+
+            except Exception as e:
+                return f"I confirmed we'll start the **{workflow_name}** workflow, but encountered an error retrieving the steps: {str(e)}"
+
+        return None
+
+    async def _update_workflow_selection_state(self, response: str):
+        """Track workflow selection state to prevent context amnesia.
+
+        Detects when agent proposes a workflow for confirmation.
+
+        Args:
+            response: Agent's response
+        """
+        try:
+            response_lower = response.lower()
+
+            # Check if agent is proposing a workflow for confirmation
+            workflow_proposal_patterns = [
+                'would you like to begin with',
+                'would you like to start with',
+                'shall we start with',
+                'do you want to begin with'
+            ]
+
+            if any(pattern in response_lower for pattern in workflow_proposal_patterns):
+                # Try to extract workflow name from the response
+                workflow_name = None
+                if 'monitor payment status' in response_lower:
+                    workflow_name = 'Monitor Payment Status'
+                    workflow_id = None
+                    # Try to find the workflow ID from recent workflow list
+                    if self.recent_workflow_list:
+                        for workflow in self.recent_workflow_list:
+                            if 'monitor payment status' in workflow.get('action_item', '').lower():
+                                workflow_id = workflow.get('id')
+                                break
+
+                    if workflow_id:
+                        self.pending_workflow_selection = {
+                            'workflow_id': workflow_id,
+                            'workflow_name': workflow_name,
+                            'proposed_at': datetime.utcnow()
+                        }
+                        print(f"      📋 Workflow proposal detected: {workflow_name} (ID: {workflow_id})")
+
+        except Exception as e:
+            print(f"      ⚠️ Error tracking workflow selection state: {str(e)}")
 
     async def _update_conversation_history(self, user_input: str, response: str):
         """Update session conversation history.

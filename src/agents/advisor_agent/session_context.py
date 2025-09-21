@@ -74,6 +74,10 @@ class SessionContext:
             # Use graph traversal to find related entities
             pipeline_data = self.graph_store.get_pipeline_for_transcript(transcript_id)
 
+            # Defensive programming: handle unexpected data types
+            if not isinstance(pipeline_data, dict):
+                pipeline_data = {}
+
             if pipeline_data.get('analysis'):
                 self.entity_refs['analysis_id'] = pipeline_data['analysis'].get('analysis_id')
 
