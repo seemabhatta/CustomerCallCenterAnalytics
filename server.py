@@ -67,11 +67,11 @@ if not api_key:
 db_path = os.getenv('DATABASE_PATH', './data/call_center.db')
 transcript_service = TranscriptService(api_key=api_key)
 analysis_service = AnalysisService(api_key=api_key)
-insights_service = InsightsService()
+# insights_service = InsightsService()  # Temporarily disabled for queue testing
 plan_service = PlanService(api_key=api_key)
 workflow_service = WorkflowService(db_path=db_path)
 system_service = SystemService(api_key=api_key)
-leadership_insights_service = LeadershipInsightsService(api_key=api_key, db_path=db_path)
+# leadership_insights_service = LeadershipInsightsService(api_key=api_key, db_path=db_path)  # Temporarily disabled for queue testing
 
 print("✅ All services initialized successfully")
 

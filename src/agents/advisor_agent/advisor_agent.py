@@ -53,7 +53,11 @@ class AdvisorAgent:
 
         # Initialize two-layer memory architecture
         from .session_context import SessionContext
-        self.session_context = SessionContext(session_id, graph_store=None)  # Uses default GraphStore
+        from ...storage.queued_graph_store import get_queued_graph_store
+
+        # Use the queued graph store for thread-safe access
+        queued_graph_store = get_queued_graph_store()
+        self.session_context = SessionContext(session_id, graph_store=queued_graph_store)
 
         # Load system prompt
         self.system_prompt = self._load_system_prompt()
@@ -99,7 +103,10 @@ class AdvisorAgent:
             return "Session established successfully."
 
         try:
-            # Build context for the LLM
+            # Update SessionContext with any entity references in user input
+            await self._update_session_context_from_input(user_input, session_context)
+
+            # Build context for the LLM with graph-aware information
             context = self._build_llm_context(user_input, session_context)
 
             # Get LLM decision on what to do
@@ -306,6 +313,13 @@ Respond with JSON in this format:
                     result = await self.tools.get_full_pipeline_for_transcript(**parameters)
                 elif tool_name == 'get_pending_borrower_workflows':
                     result = await self.tools.get_pending_borrower_workflows(**parameters)
+                # Contextual graph-aware tools
+                elif tool_name == 'get_pending_workflows_for_context':
+                    result = await self.tools.get_pending_workflows_for_context(self.session_context.entity_refs)
+                elif tool_name == 'get_analysis_for_context':
+                    result = await self.tools.get_analysis_for_context(self.session_context.entity_refs)
+                elif tool_name == 'get_plan_for_context':
+                    result = await self.tools.get_plan_for_context(self.session_context.entity_refs)
                 else:
                     result = {'error': f'Unknown tool: {tool_name}'}
 
@@ -520,3 +534,55 @@ Guidelines:
             print(f"  📝 Stored tool results: {len(tool_results)} total")
         except Exception as e:
             print(f"  ⚠️ Failed to store tool results: {str(e)}")
+
+    async def _update_session_context_from_input(self, user_input: str, session_context: Dict[str, Any]):
+        """Update SessionContext based on user input patterns and entity references.
+
+        This method analyzes user input for entity references and updates the session context
+        to enable contextual tool calls like "show me the analysis" after mentioning a call.
+
+        Args:
+            user_input: Current user message
+            session_context: Current session context
+        """
+        try:
+            user_lower = user_input.lower().strip()
+
+            # Check for transcript/call ID mentions
+            import re
+            call_pattern = r'call[_\s]+([a-zA-Z0-9_]+)'
+            transcript_pattern = r'transcript[_\s]+([a-zA-Z0-9_]+)'
+
+            call_match = re.search(call_pattern, user_lower)
+            transcript_match = re.search(transcript_pattern, user_lower)
+
+            if call_match or transcript_match:
+                transcript_id = call_match.group(1) if call_match else transcript_match.group(1)
+                transcript_id = transcript_id.upper()
+
+                # Update SessionContext with this transcript
+                success = self.session_context.set_active_transcript(transcript_id)
+                if success:
+                    print(f"🎯 Updated session context with transcript: {transcript_id}")
+                    # Update session context dict for immediate use
+                    session_context.update(self.session_context.entity_refs)
+
+            # Check for "last call" or "most recent call" references
+            elif any(phrase in user_lower for phrase in ['last call', 'most recent', 'latest call', 'recent call']):
+                # Get the most recent transcript from API
+                try:
+                    recent_transcripts = await self.tools.get_transcripts(limit=1)
+                    if recent_transcripts and len(recent_transcripts) > 0:
+                        latest_transcript = recent_transcripts[0]
+                        transcript_id = latest_transcript.get('id')
+                        if transcript_id:
+                            success = self.session_context.set_active_transcript(transcript_id)
+                            if success:
+                                print(f"🎯 Updated session context with latest transcript: {transcript_id}")
+                                session_context.update(self.session_context.entity_refs)
+                except Exception as e:
+                    print(f"⚠️ Failed to get latest transcript: {str(e)}")
+
+        except Exception as e:
+            print(f"⚠️ Error updating session context from input: {str(e)}")
+            # Non-fatal error - continue processing

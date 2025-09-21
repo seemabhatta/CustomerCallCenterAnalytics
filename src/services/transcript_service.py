@@ -45,7 +45,27 @@ class TranscriptService:
         should_store = request_data.get("store", True)
         if should_store:
             self.store.store(transcript)
-        
+
+            # Store transcript in knowledge graph for two-layer memory architecture
+            try:
+                from ..storage.queued_graph_store import add_customer_sync, add_transcript_sync
+
+                # Add customer first (idempotent operation)
+                add_customer_sync(transcript.customer_id)
+
+                # Add transcript node
+                success = add_transcript_sync(
+                    transcript_id=transcript.id,
+                    topic=topic,
+                    message_count=len(transcript.messages)
+                )
+
+                print(f"📊 Transcript stored in knowledge graph: {success}")
+
+            except Exception as e:
+                # Log but don't fail - graph storage is supplementary
+                print(f"⚠️  Failed to store transcript in knowledge graph: {str(e)}")
+
         return transcript.to_dict()
     
     async def get_by_id(self, transcript_id: str) -> Optional[Dict[str, Any]]:

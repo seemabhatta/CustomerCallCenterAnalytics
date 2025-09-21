@@ -8,6 +8,7 @@ and secondary memory (session context) design pattern.
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from ...storage.graph_store import GraphStore, GraphStoreError
+from ...storage.queued_graph_store import QueuedGraphStore
 
 
 class SessionContextError(Exception):
@@ -28,12 +29,12 @@ class SessionContext:
     - Industry-standard approach similar to Claude Code/ChatGPT
     """
 
-    def __init__(self, session_id: str, graph_store: Optional[GraphStore] = None):
+    def __init__(self, session_id: str, graph_store: Optional[QueuedGraphStore] = None):
         """Initialize session context with graph store connection.
 
         Args:
             session_id: Unique session identifier
-            graph_store: GraphStore instance for entity resolution
+            graph_store: QueuedGraphStore instance for entity resolution
 
         Raises:
             SessionContextError: If initialization fails
@@ -42,7 +43,7 @@ class SessionContext:
             raise SessionContextError("session_id cannot be empty")
 
         self.session_id = session_id
-        self.graph_store = graph_store or GraphStore()
+        self.graph_store = graph_store or QueuedGraphStore()
 
         # Lightweight entity references (no data duplication)
         self.entity_refs = {

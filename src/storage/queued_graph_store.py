@@ -94,6 +94,30 @@ class QueuedGraphStore:
         """Find similar transcripts directly."""
         return self._graph_store.find_similar_transcripts(analysis_data, limit)
 
+    def get_pipeline_for_transcript(self, transcript_id: str):
+        """Get complete pipeline data for a transcript directly."""
+        return self._graph_store.get_pipeline_for_transcript(transcript_id)
+
+    def resolve_entity_reference(self, reference: str, session_context: Dict[str, Any]):
+        """Resolve entity references directly."""
+        return self._graph_store.resolve_entity_reference(reference, session_context)
+
+    def get_pending_workflows_for_transcript(self, transcript_id: str):
+        """Get pending workflows for a transcript directly."""
+        return self._graph_store.get_pending_workflows_for_transcript(transcript_id)
+
+    def get_customer_history(self, customer_id: str, limit: int = 10):
+        """Get customer history directly."""
+        return self._graph_store.get_customer_history(customer_id, limit)
+
+    def find_similar_transcripts_by_intent(self, intent: str, urgency_level: str = None, limit: int = 5):
+        """Find similar transcripts by intent directly."""
+        return self._graph_store.find_similar_transcripts_by_intent(intent, urgency_level, limit)
+
+    def get_workflow_success_patterns(self, intent: str, limit: int = 10):
+        """Get workflow success patterns directly."""
+        return self._graph_store.get_workflow_success_patterns(intent, limit)
+
     # Utility methods
 
     def wait_for_operations(self, timeout: Optional[float] = 30) -> bool:

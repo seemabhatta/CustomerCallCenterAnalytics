@@ -69,7 +69,28 @@ class AnalysisService:
         should_store = request_data.get("store", True)
         if should_store:
             self.store.store(analysis_result)
-        
+
+            # Store analysis in knowledge graph for two-layer memory architecture
+            try:
+                from ..storage.queued_graph_store import add_analysis_sync
+
+                analysis_graph_data = {
+                    'analysis_id': analysis_result["analysis_id"],
+                    'transcript_id': transcript_id,
+                    'intent': analysis_result.get('intent', 'unknown'),
+                    'urgency_level': analysis_result.get('urgency_level', 'medium'),
+                    'sentiment': analysis_result.get('sentiment', 'neutral'),
+                    'confidence_score': analysis_result.get('confidence_score', 0.0),
+                    'analysis_time': 0.0  # Could track actual analysis time if needed
+                }
+
+                success = add_analysis_sync(analysis_graph_data)
+                add_span_event("analysis.graph_stored", analysis_id=analysis_result["analysis_id"], success=success)
+
+            except Exception as e:
+                # Log but don't fail - graph storage is supplementary
+                add_span_event("analysis.graph_storage_failed", error=str(e))
+
         return analysis_result
     
     async def get_by_id(self, analysis_id: str) -> Optional[Dict[str, Any]]:

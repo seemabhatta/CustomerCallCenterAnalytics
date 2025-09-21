@@ -22,9 +22,10 @@ class InsightsService:
     """Service layer for knowledge graph analytics and insights."""
     
     def __init__(self, graph_store: Optional[GraphStore] = None):
-        """Initialize with GraphStore instance."""
+        """Initialize with QueuedGraphStore instance."""
         if graph_store is None:
-            self.graph_store = GraphStore()
+            from ..storage.queued_graph_store import QueuedGraphStore
+            self.graph_store = QueuedGraphStore()
         else:
             self.graph_store = graph_store
         

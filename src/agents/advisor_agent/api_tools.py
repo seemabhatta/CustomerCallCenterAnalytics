@@ -256,6 +256,84 @@ class APITools:
             "limit": limit
         })
 
+    # ============================================
+    # CONTEXTUAL GRAPH-AWARE TOOLS
+    # ============================================
+
+    async def get_pending_workflows_for_context(self, session_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Tool: Get pending workflows using session context for resolution.
+
+        This tool understands context like "show pending workflows" after user
+        has mentioned a specific call, and automatically finds workflows for that call.
+
+        Args:
+            session_context: Current session context with entity references
+
+        Returns:
+            List of pending workflows with context resolution
+        """
+        # If we have an active transcript in context, get workflows for that
+        if session_context.get('transcript_id'):
+            transcript_id = session_context['transcript_id']
+            pipeline_data = await self.get_full_pipeline_for_transcript(transcript_id)
+
+            if pipeline_data.get('workflows'):
+                # Filter for pending workflows
+                pending_workflows = [
+                    w for w in pipeline_data['workflows']
+                    if w.get('status', '').lower() in ['pending', 'active', 'in_progress']
+                ]
+                return pending_workflows
+
+        # Fallback to global pending workflows
+        return await self.get_pending_borrower_workflows()
+
+    async def get_analysis_for_context(self, session_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Tool: Get analysis using session context for resolution.
+
+        When user says "show me the analysis" after mentioning a call,
+        this tool knows which analysis they mean.
+
+        Args:
+            session_context: Current session context with entity references
+
+        Returns:
+            Analysis data for the contextual transcript
+        """
+        # Use analysis_id if directly available
+        if session_context.get('analysis_id'):
+            return await self.get_analysis(session_context['analysis_id'])
+
+        # Use transcript_id to get analysis
+        if session_context.get('transcript_id'):
+            return await self.get_transcript_analysis(session_context['transcript_id'])
+
+        # No context - fail fast
+        raise Exception("No transcript or analysis context available. Please specify which call you want analysis for.")
+
+    async def get_plan_for_context(self, session_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Tool: Get plan using session context for resolution.
+
+        When user says "show me the plan" after mentioning a call,
+        this tool knows which plan they mean.
+
+        Args:
+            session_context: Current session context with entity references
+
+        Returns:
+            Plan data for the contextual transcript
+        """
+        # Use plan_id if directly available
+        if session_context.get('plan_id'):
+            return await self.get_plan(session_context['plan_id'])
+
+        # Use transcript_id to get plan
+        if session_context.get('transcript_id'):
+            return await self.get_plan_for_transcript(session_context['transcript_id'])
+
+        # No context - fail fast
+        raise Exception("No transcript or plan context available. Please specify which call you want the plan for.")
+
     def get_tool_descriptions(self) -> List[Dict[str, Any]]:
         """Get descriptions of all available tools for the LLM.
 

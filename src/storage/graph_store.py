@@ -1327,6 +1327,144 @@ class GraphStore:
         except Exception as e:
             raise GraphStoreError(f"Failed to resolve reference: {str(e)}")
 
+    def get_pending_workflows_for_transcript(self, transcript_id: str) -> List[Dict[str, Any]]:
+        """Get pending workflows for a specific transcript."""
+        try:
+            query = """
+            MATCH (t:Transcript {transcript_id: $transcript_id})-[:ANALYZED_AS]->(a:Analysis)
+            -[:PLANNED_AS]->(p:ActionPlan)-[:HAS_WORKFLOW]->(w:Workflow)
+            WHERE w.status IN ['pending', 'active', 'in_progress']
+            OPTIONAL MATCH (w)-[:HAS_STEP]->(s:WorkflowStep)
+            RETURN w, collect(s) as steps
+            ORDER BY w.created_at DESC
+            """
+
+            result = self.connection.execute(query, {"transcript_id": transcript_id})
+            workflows = []
+
+            for record in result:
+                workflow = dict(record['w'])
+                steps = [dict(step) for step in record['steps'] if step is not None]
+                workflow['steps'] = steps
+                workflows.append(workflow)
+
+            return workflows
+
+        except Exception as e:
+            raise GraphStoreError(f"Failed to get pending workflows: {str(e)}")
+
+    def get_customer_history(self, customer_id: str, limit: int = 10) -> Dict[str, Any]:
+        """Get complete history for a customer including all transcripts, analyses, and workflows."""
+        try:
+            query = """
+            MATCH (c:Customer {customer_id: $customer_id})-[:HAS_TRANSCRIPT]->(t:Transcript)
+            OPTIONAL MATCH (t)-[:ANALYZED_AS]->(a:Analysis)
+            OPTIONAL MATCH (a)-[:PLANNED_AS]->(p:ActionPlan)
+            OPTIONAL MATCH (p)-[:HAS_WORKFLOW]->(w:Workflow)
+            RETURN c, t, a, p, w
+            ORDER BY t.created_at DESC
+            LIMIT $limit
+            """
+
+            result = self.connection.execute(query, {
+                "customer_id": customer_id,
+                "limit": limit
+            })
+
+            customer_data = {"customer_id": customer_id, "transcripts": []}
+
+            for record in result:
+                transcript = dict(record['t']) if record['t'] else None
+                analysis = dict(record['a']) if record['a'] else None
+                plan = dict(record['p']) if record['p'] else None
+                workflow = dict(record['w']) if record['w'] else None
+
+                if transcript:
+                    transcript_entry = {
+                        "transcript": transcript,
+                        "analysis": analysis,
+                        "plan": plan,
+                        "workflow": workflow
+                    }
+                    customer_data["transcripts"].append(transcript_entry)
+
+            return customer_data
+
+        except Exception as e:
+            raise GraphStoreError(f"Failed to get customer history: {str(e)}")
+
+    def find_similar_transcripts_by_intent(self, intent: str, urgency_level: str = None, limit: int = 5) -> List[Dict[str, Any]]:
+        """Find similar transcripts by intent and optionally urgency level."""
+        try:
+            if urgency_level:
+                query = """
+                MATCH (t:Transcript)-[:ANALYZED_AS]->(a:Analysis)
+                WHERE a.intent = $intent AND a.urgency_level = $urgency_level
+                OPTIONAL MATCH (a)-[:PLANNED_AS]->(p:ActionPlan)-[:HAS_WORKFLOW]->(w:Workflow)
+                WHERE w.status = 'completed'
+                RETURN t, a, p, count(w) as completed_workflows
+                ORDER BY t.created_at DESC
+                LIMIT $limit
+                """
+                params = {"intent": intent, "urgency_level": urgency_level, "limit": limit}
+            else:
+                query = """
+                MATCH (t:Transcript)-[:ANALYZED_AS]->(a:Analysis)
+                WHERE a.intent = $intent
+                OPTIONAL MATCH (a)-[:PLANNED_AS]->(p:ActionPlan)-[:HAS_WORKFLOW]->(w:Workflow)
+                WHERE w.status = 'completed'
+                RETURN t, a, p, count(w) as completed_workflows
+                ORDER BY t.created_at DESC
+                LIMIT $limit
+                """
+                params = {"intent": intent, "limit": limit}
+
+            result = self.connection.execute(query, params)
+            similar_cases = []
+
+            for record in result:
+                case = {
+                    "transcript": dict(record['t']),
+                    "analysis": dict(record['a']),
+                    "plan": dict(record['p']) if record['p'] else None,
+                    "completed_workflows": record['completed_workflows']
+                }
+                similar_cases.append(case)
+
+            return similar_cases
+
+        except Exception as e:
+            raise GraphStoreError(f"Failed to find similar transcripts: {str(e)}")
+
+    def get_workflow_success_patterns(self, intent: str, limit: int = 10) -> Dict[str, Any]:
+        """Get successful workflow patterns for a specific intent."""
+        try:
+            query = """
+            MATCH (a:Analysis {intent: $intent})-[:PLANNED_AS]->(p:ActionPlan)
+            -[:HAS_WORKFLOW]->(w:Workflow {status: 'completed'})
+            OPTIONAL MATCH (w)-[:HAS_STEP]->(s:WorkflowStep)
+            RETURN p, w, collect(s) as steps, count(*) as success_count
+            ORDER BY success_count DESC
+            LIMIT $limit
+            """
+
+            result = self.connection.execute(query, {"intent": intent, "limit": limit})
+            patterns = []
+
+            for record in result:
+                pattern = {
+                    "plan": dict(record['p']),
+                    "workflow": dict(record['w']),
+                    "steps": [dict(step) for step in record['steps'] if step is not None],
+                    "success_count": record['success_count']
+                }
+                patterns.append(pattern)
+
+            return {"intent": intent, "successful_patterns": patterns}
+
+        except Exception as e:
+            raise GraphStoreError(f"Failed to get workflow patterns: {str(e)}")
+
     def close(self):
         """Close database connection."""
         try:

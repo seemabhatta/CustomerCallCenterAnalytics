@@ -159,22 +159,16 @@ class WorkflowService:
             from src.storage.graph_store import GraphStore
             graph_store = GraphStore()
 
-            # Extract steps from workflow data
+            # Extract steps from workflow data - FIXED: steps are directly in workflow_data
             steps = []
-            workflow_extraction_data = workflow_data.get('workflow_data', {})
-            extracted_workflows = workflow_extraction_data.get('workflows', [])
-
-            # Process first workflow's steps (assuming single workflow per action item)
-            if extracted_workflows:
-                first_workflow = extracted_workflows[0]
-                workflow_steps = first_workflow.get('steps', [])
-                for i, step in enumerate(workflow_steps):
-                    steps.append({
-                        'action': step.get('step', ''),
-                        'executor_type': step.get('executor', ''),
-                        'status': 'pending',
-                        'estimated_duration': step.get('estimated_time_minutes', 60)
-                    })
+            workflow_steps = workflow_data.get('steps', [])
+            for i, step in enumerate(workflow_steps):
+                steps.append({
+                    'action': step.get('step', ''),
+                    'executor_type': step.get('executor', ''),
+                    'status': 'pending',
+                    'estimated_duration': step.get('estimated_time_minutes', 60)
+                })
 
             workflow_graph_data = {
                 'workflow_id': workflow_id,
@@ -830,6 +824,45 @@ class WorkflowService:
                 add_span_event("workflow.bulk_create_start", workflow_count=len(all_workflows))
                 workflow_ids = self.workflow_store.create_bulk(all_workflows)
                 add_span_event("workflow.bulk_create_success", created_count=len(workflow_ids))
+
+                # Store workflows in knowledge graph for two-layer memory architecture
+                try:
+                    from src.storage.queued_graph_store import add_workflow_sync
+
+                    for i, workflow_id in enumerate(workflow_ids):
+                        workflow_data = all_workflows[i]
+
+                        # Extract steps from workflow data - FIXED: steps are directly in workflow_data
+                        steps = []
+                        workflow_steps = workflow_data.get('steps', [])
+
+                        logger.info(f"DEBUG: workflow_steps count: {len(workflow_steps)}")
+                        for j, step in enumerate(workflow_steps):
+                            steps.append({
+                                'action': step.get('step', ''),
+                                'executor_type': step.get('executor', ''),
+                                'status': 'pending',
+                                'estimated_duration': step.get('estimated_time_minutes', 60)
+                            })
+
+                        logger.info(f"DEBUG: Final steps count for workflow {workflow_id}: {len(steps)}")
+
+                        workflow_graph_data = {
+                            'workflow_id': workflow_id,
+                            'plan_id': workflow_data.get('plan_id'),
+                            'workflow_type': workflow_data.get('workflow_type', 'BORROWER'),
+                            'priority': workflow_data.get('risk_level', 'medium'),
+                            'status': workflow_data.get('status', 'pending'),
+                            'execution_order': i + 1,
+                            'steps': steps
+                        }
+
+                        success = add_workflow_sync(workflow_graph_data)
+                        logger.info(f"Bulk workflow {workflow_id} stored in graph: {success}")
+
+                except Exception as e:
+                    # Log but don't fail - graph storage is supplementary
+                    logger.warning(f"Failed to store bulk workflows in graph: {str(e)}")
 
                 # Return workflows with their assigned IDs
                 created_workflows = []

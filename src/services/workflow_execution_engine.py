@@ -176,6 +176,28 @@ class WorkflowExecutionEngine:
 
             step_execution_id = await self.execution_store.create(step_execution_record)
 
+            # Store execution in knowledge graph for two-layer memory architecture
+            try:
+                from ..storage.queued_graph_store import add_execution_sync
+
+                execution_graph_data = {
+                    'execution_id': step_execution_id,
+                    'workflow_id': workflow_id,
+                    'step_number': step_number,
+                    'status': 'success',
+                    'executor_type': executor_type,
+                    'executed_by': executed_by,
+                    'duration_ms': step_duration,
+                    'executed_at': step_execution_record['executed_at']
+                }
+
+                success = add_execution_sync(execution_graph_data)
+                self.logger.info(f"📊 Execution stored in knowledge graph: {success}")
+
+            except Exception as e:
+                # Log but don't fail - graph storage is supplementary
+                self.logger.warning(f"⚠️  Failed to store execution in knowledge graph: {str(e)}")
+
             # Step 10: Return structured result
             return {
                 'workflow_id': workflow_id,
