@@ -164,14 +164,21 @@ class AdvisorAgent:
             except:
                 pass  # Workflow may have been deleted or become inaccessible
 
-        # Merge extracted context with session context
+        # Get current entity references from SessionContext (the real context!)
+        entity_refs = self.session_context.entity_refs
+
+        # Also include legacy context if available
         extracted_context = getattr(self, '_session_context', {})
         merged_session_context = {
-            'plan_id': extracted_context.get('plan_id') or session_context.get('plan_id'),
-            'transcript_id': extracted_context.get('transcript_id') or session_context.get('transcript_id'),
-            'active_workflow_id': extracted_context.get('active_workflow_id') or session_context.get('active_workflow_id'),
+            'plan_id': entity_refs.get('plan_id') or extracted_context.get('plan_id') or session_context.get('plan_id'),
+            'transcript_id': entity_refs.get('transcript_id') or extracted_context.get('transcript_id') or session_context.get('transcript_id'),
+            'analysis_id': entity_refs.get('analysis_id'),
+            'workflow_ids': entity_refs.get('workflow_ids', []),
+            'active_workflow_id': entity_refs.get('active_workflow_id') or extracted_context.get('active_workflow_id') or session_context.get('active_workflow_id'),
+            'customer_id': entity_refs.get('customer_id'),
             'cursor_step': session_context.get('cursor_step', 1),
-            'step_statuses': session_context.get('step_statuses', {})
+            'step_statuses': session_context.get('step_statuses', {}),
+            'has_context': bool(entity_refs.get('transcript_id'))  # Explicit flag for LLM
         }
 
         return {
@@ -287,6 +294,26 @@ Respond with JSON in this format:
         for i, tool_call in enumerate(tool_calls, 1):
             tool_name = tool_call.get('tool_name')
             parameters = tool_call.get('parameters', {})
+
+            # Smart tool redirection based on context
+            original_tool = tool_name
+            if self.session_context.entity_refs.get('transcript_id'):
+                transcript_id = self.session_context.entity_refs['transcript_id']
+                print(f"  🎯 Context available: transcript_id = {transcript_id}")
+
+                # Redirect to contextual tools when we have context
+                if tool_name == 'get_pending_borrower_workflows':
+                    tool_name = 'get_pending_workflows_for_context'
+                    parameters = {}  # Contextual tool gets context from SessionContext
+                    print(f"  ↪️  Redirected: {original_tool} → {tool_name} (using context)")
+                elif tool_name == 'get_transcript_analysis' and not parameters.get('transcript_id'):
+                    tool_name = 'get_analysis_for_context'
+                    parameters = {}
+                    print(f"  ↪️  Redirected: {original_tool} → {tool_name} (using context)")
+                elif tool_name == 'get_plan_for_transcript' and not parameters.get('transcript_id'):
+                    tool_name = 'get_plan_for_context'
+                    parameters = {}
+                    print(f"  ↪️  Redirected: {original_tool} → {tool_name} (using context)")
 
             print(f"  🛠️  Tool {i}: {tool_name}")
             print(f"      Parameters: {parameters}")

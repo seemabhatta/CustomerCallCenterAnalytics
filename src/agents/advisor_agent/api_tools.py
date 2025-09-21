@@ -251,7 +251,7 @@ class APITools:
             List of pending BORROWER workflows with context
         """
         return await self._call_api("GET", "/api/v1/workflows", params={
-            "status": "pending",
+            "status": "PENDING_ASSESSMENT",  # Fixed: use valid status from workflow store
             "workflow_type": "BORROWER",
             "limit": limit
         })
@@ -278,10 +278,10 @@ class APITools:
             pipeline_data = await self.get_full_pipeline_for_transcript(transcript_id)
 
             if pipeline_data.get('workflows'):
-                # Filter for pending workflows
+                # Filter for pending workflows using correct status values
                 pending_workflows = [
                     w for w in pipeline_data['workflows']
-                    if w.get('status', '').lower() in ['pending', 'active', 'in_progress']
+                    if w.get('status', '') in ['PENDING_ASSESSMENT', 'AWAITING_APPROVAL', 'APPROVED']
                 ]
                 return pending_workflows
 
