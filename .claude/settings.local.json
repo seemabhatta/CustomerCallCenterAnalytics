@@ -52,7 +52,11 @@
       "Bash(python3:*)",
       "Bash(git log:*)",
       "WebFetch(domain:arxiv.org)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.kuzudb.com)",
+      "Bash(docker stop:*)",
+      "Bash(rm:*)",
+      "Bash(docker:*)"
     ],
     "deny": [],
     "ask": []
