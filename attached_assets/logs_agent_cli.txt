@@ -1,8 +1,115 @@
-You: lets start one by one
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python3 cli_agent.py --advisor-id ujjal
+╭────────────────────────────────────────────────────────────── Advisor Agent - BORROWER Workflow Assistant ───────────────────────────────────────────────────────────────╮
+│  🧑‍💼 Advisor  ujjal                                                                                                                                                     │
+│  📋 Session    SID-dc600a6b                                                                                                                                              │
+│  📄 Context    none yet                                                                                                                                                  │
+│  🎯 Focus      BORROWER workflows only                                                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Type your requests naturally. I'll help you work through borrower workflows step-by-step.
+Commands: 'list workflows', 'start <workflow>', 'status', 'help', 'end session'
+
+Agent: Hello! I'm here to help you work through borrower workflows step-by-step.
+Please provide a plan ID or transcript ID to get started, or say 'help' to see what I can do.
+
+You: last call
 Processing request...
 
-Agent: I found several pending workflows for you to address, each with specific action items related to the customer's mortgage situation. Here’s a summary of the workflows
-available, along with their priorities and step counts:
+Agent: I found the details of the last call for the customer John Smith. Here’s a summary:
+
+### Call Details:
+- **Date:** October 10, 2023
+- **Time:** 10:15 AM
+- **Duration:** 12 minutes
+- **Customer ID:** CUST_001
+- **Topic:** Payment Issues
+- **Urgency Level:** Medium
+
+### Key Points from the Call:
+- John called regarding a payment issue, stating he made a payment of **$1,200** last week but received a notification that it hasn't been processed yet.
+- Sarah, the representative, confirmed that the payment was initiated on **October 3rd**, but there was a delay in processing.
+- John was assured that he would not incur any late fees since the payment was made on time and he is still within the grace period.
+- He was informed that he would receive a confirmation email once the payment is applied to his account, which should happen within **24 to 48 hours**.
+
+### Next Steps:
+If you need to address any follow-up actions for John regarding this payment issue, please let me know! We can look into workflows related to this call or any specific
+actions you want to take.
+
+You: pending items
+Processing request...
+
+Agent: I found several pending action items for you to address. Here’s a summary of what’s currently on your plate:
+
+### Pending Workflows
+
+1. **Monitor Payment Status**
+   - **Priority:** HIGH
+   - **Steps:** 7
+   - **Description:** Ensure the payment of $1,200 initiated on October 3rd is processed and applied to the borrower's account.
+   - **Status:** AWAITING APPROVAL
+
+2. **Empathy Training**
+   - **Priority:** HIGH
+   - **Steps:** 5
+   - **Description:** Coaching to acknowledge customer concerns more effectively at the start of the call.
+   - **Status:** AWAITING APPROVAL
+
+3. **Customer Communication Skills Workshop**
+   - **Priority:** MEDIUM
+   - **Steps:** 5
+   - **Description:** Training recommendation to enhance communication skills.
+   - **Status:** AWAITING APPROVAL
+
+4. **Payment Processing Systems Training**
+   - **Priority:** MEDIUM
+   - **Steps:** 5
+   - **Description:** Training recommendation to improve understanding of payment processing systems.
+   - **Status:** AWAITING APPROVAL
+
+5. **Schedule Follow-Up Training on Communication Skills**
+   - **Priority:** MEDIUM
+   - **Steps:** 3
+   - **Description:** Next action to schedule a follow-up training session.
+   - **Status:** AWAITING APPROVAL
+
+6. **Review Call Recordings for Further Coaching Opportunities**
+   - **Priority:** MEDIUM
+   - **Steps:** 5
+   - **Description:** Action to analyze call recordings for performance improvement.
+   - **Status:** AWAITING APPROVAL
+
+7. **Investigate Root Cause of Payment Processing Delays**
+   - **Priority:** MEDIUM
+   - **Steps:** 7
+   - **Description:** Process improvement initiative to address payment delays.
+   - **Status:** AWAITING APPROVAL
+
+8. **Implement Proactive Customer Notifications for Payment Status**
+   - **Priority:** MEDIUM
+   - **Steps:** 7
+   - **Description:** Process improvement to enhance customer communication regarding payment status.
+   - **Status:** AWAITING APPROVAL
+
+9. **Allocate Additional Resources to Payment Processing Team**
+   - **Priority:** MEDIUM
+   - **Steps:** 7
+   - **Description:** Resource allocation to address processing delays.
+   - **Status:** AWAITING APPROVAL
+
+10. **Invest in Technology Upgrades for Payment Tracking Systems**
+    - **Priority:** MEDIUM
+    - **Steps:** 6
+    - **Description:** Resource allocation for technology improvements.
+    - **Status:** AWAITING APPROVAL
+
+### Next Steps
+
+Would you like to start with the **Monitor Payment Status** workflow, as it has the highest priority? I can guide you through the steps, or if you prefer, we can tackle
+another workflow from the list. Just let me know how you’d like to proceed!
+
+You: yes
+Processing request...
+
+Agent: I found several pending workflows related to the customer's mortgage that require attention. Here’s a summary of the key action items:
 
 ### Pending Workflows
 
@@ -33,115 +140,56 @@ available, along with their priorities and step counts:
 5. **Schedule Follow-Up Training Session on Communication Skills**
    - **Priority:** MEDIUM
    - **Steps:** 3
-   - **Description:** Schedule a follow-up training session to enhance communication skills.
+   - **Description:** Schedule a follow-up training session to reinforce communication skills.
    - **Status:** AWAITING APPROVAL
 
 6. **Review Call Recordings for Further Coaching Opportunities**
    - **Priority:** MEDIUM
    - **Steps:** 5
-   - **Description:** Review past calls for coaching insights.
+   - **Description:** Analyze recent call recordings for performance improvement.
    - **Status:** AWAITING APPROVAL
 
-7. **Investigate Root Cause of Payment Processing Delays**
+7. **Investigate the Root Cause of Payment Processing Delays**
    - **Priority:** MEDIUM
    - **Steps:** 7
-   - **Description:** Analyze delays in payment processing to improve customer experience.
+   - **Description:** Analyze payment processing logs to identify delays.
    - **Status:** AWAITING APPROVAL
 
-8. **Implement Proactive Customer Notifications for Payment Status**
+8. **Implement a System for Proactive Customer Notifications**
    - **Priority:** MEDIUM
    - **Steps:** 7
-   - **Description:** Develop a system for notifying customers about payment status.
+   - **Description:** Develop a strategy for notifying customers about payment status.
    - **Status:** AWAITING APPROVAL
 
 9. **Allocate Additional Resources to Payment Processing Team**
    - **Priority:** MEDIUM
    - **Steps:** 7
-   - **Description:** Address delays by reallocating resources to the payment processing team.
+   - **Description:** Assess and allocate resources to improve payment processing efficiency.
    - **Status:** AWAITING APPROVAL
 
 10. **Invest in Technology Upgrades for Payment Tracking Systems**
     - **Priority:** MEDIUM
     - **Steps:** 6
-    - **Description:** Upgrade technology for better payment tracking.
+    - **Description:** Evaluate and propose technology upgrades for better payment tracking.
     - **Status:** AWAITING APPROVAL
 
 ### Next Steps
+Since all these workflows are currently awaiting approval, you may want to review them and provide the necessary approvals to move forward. If you need to start with any
+specific workflow, please let me know which one you'd like to focus on, and I can assist you with the next steps!
 
-Since all these workflows require approval, you can start by selecting one to proceed with. Would you like to begin with the **Monitor Payment Status** workflow, which has
-the highest priority? If so, I can provide the details for the first step and guide you through the execution process.
-
-Let me know how you would like to proceed!
-
-You: yes
+You: approved
 Processing request...
 
-Agent: I found several pending workflows related to the customer's mortgage that require your attention. Here’s a summary of the action items:
+Agent: It looks like I successfully retrieved the pipeline for the customer’s recent call (CALL_F67726F0), but unfortunately, there are no details available at this time.
+This includes the transcript, analysis, action plan, and workflows, which means there are currently no pending workflows to address.
 
-### Pending Workflows
+Here are a couple of next steps you might consider:
 
-1. **Monitor Payment Status**
-   - **Priority:** HIGH
-   - **Steps:** 7
-   - **Description:** Ensure the payment of $1,200 initiated on October 3rd is processed and applied to the borrower's account.
-   - **Status:** AWAITING APPROVAL
+1. **Check for Recent Calls:** If you want to see if there are other recent calls that might have action items, I can list those for you.
 
-2. **Empathy Training**
-   - **Priority:** HIGH
-   - **Steps:** 5
-   - **Description:** Coaching to acknowledge customer concerns more effectively at the start of the call.
-   - **Status:** AWAITING APPROVAL
+2. **Follow Up with the Customer:** If you have any specific concerns or topics you want to discuss with the customer, we can initiate a follow-up based on previous
+interactions.
 
-3. **Customer Communication Skills Workshop**
-   - **Priority:** MEDIUM
-   - **Steps:** 5
-   - **Description:** Training recommendation to enhance customer communication skills.
-   - **Status:** AWAITING APPROVAL
-
-4. **Payment Processing Systems Training**
-   - **Priority:** MEDIUM
-   - **Steps:** 5
-   - **Description:** Training recommendation to improve understanding of payment processing systems.
-   - **Status:** AWAITING APPROVAL
-
-5. **Schedule Follow-Up Training Session on Communication Skills**
-   - **Priority:** MEDIUM
-   - **Steps:** 3
-   - **Description:** Schedule a follow-up training session on communication skills within 7 days.
-   - **Status:** AWAITING APPROVAL
-
-6. **Review Call Recordings for Further Coaching Opportunities**
-   - **Priority:** MEDIUM
-   - **Steps:** 5
-   - **Description:** Review call recordings to identify coaching opportunities.
-   - **Status:** AWAITING APPROVAL
-
-7. **Investigate Root Cause of Payment Processing Delays**
-   - **Priority:** MEDIUM
-   - **Steps:** 7
-   - **Description:** Investigate the root cause of payment processing delays within 30 days.
-   - **Status:** AWAITING APPROVAL
-
-8. **Implement Proactive Customer Notifications Regarding Payment Status**
-   - **Priority:** MEDIUM
-   - **Steps:** 7
-   - **Description:** Implement a system for proactive customer notifications regarding payment status.
-   - **Status:** AWAITING APPROVAL
-
-9. **Allocate Additional Resources to Payment Processing Team**
-   - **Priority:** MEDIUM
-   - **Steps:** 7
-   - **Description:** Allocate additional resources to the payment processing team to address delays.
-   - **Status:** AWAITING APPROVAL
-
-10. **Invest in Technology Upgrades for Payment Tracking Systems**
-    - **Priority:** MEDIUM
-    - **Steps:** 6
-    - **Description:** Invest in technology upgrades for payment tracking systems.
-    - **Status:** AWAITING APPROVAL
-
-### Next Steps
-You will need to approve these workflows to proceed. Would you like to start with the **Monitor Payment Status** workflow, or do you have another preference? Each workflow
-has specific steps that will help ensure the customer's needs are addressed efficiently. Let me know how you would like to proceed!
+Please let me know how you’d like to proceed!
 
 You:
