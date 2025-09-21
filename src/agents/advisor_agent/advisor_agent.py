@@ -555,11 +555,46 @@ Guidelines:
             print(f"   💥 Exception during formatting: {str(e)}")
             return fallback_response
 
-    async def _handle_workflow_confirmation(self, user_input: str) -> str:
-        """Handle workflow selection confirmation to prevent amnesia.
+    async def _analyze_user_intent(self, user_input: str) -> bool:
+        """Use LLM to detect workflow confirmation instead of hardcoded patterns."""
+        if not self.pending_workflow_selection:
+            return False
 
-        If user is confirming a pending workflow selection, execute Step 1 directly
-        instead of re-listing workflows.
+        workflow_name = self.pending_workflow_selection.get('workflow_name', 'Unknown')
+
+        messages = [
+            {
+                "role": "system",
+                "content": f"""You are analyzing if a user is confirming to proceed with a workflow.
+
+Context: Agent proposed executing the "{workflow_name}" workflow and is awaiting confirmation.
+
+Respond with ONLY "true" or "false":
+- true: User is confirming/agreeing to proceed (yes, approved, ok, go ahead, etc.)
+- false: User is declining, asking questions, or saying something unrelated"""
+            },
+            {
+                "role": "user",
+                "content": f'User said: "{user_input}"'
+            }
+        ]
+
+        try:
+            from src.infrastructure.llm.llm_client_v2 import RequestOptions
+            response = await self.llm.arun(messages=messages, options=RequestOptions(temperature=0.1))
+            is_confirmation = response.text.strip().lower() == "true"
+
+            print(f"🧠 LLM Intent: '{user_input}' → {'CONFIRM' if is_confirmation else 'OTHER'}")
+            return is_confirmation
+
+        except Exception as e:
+            print(f"⚠️ Intent analysis failed: {e}")
+            return False
+
+    async def _handle_workflow_confirmation(self, user_input: str) -> str:
+        """Handle workflow selection confirmation using LLM intent analysis.
+
+        Replaces hardcoded pattern matching with intelligent intent classification.
 
         Args:
             user_input: User's message
@@ -570,10 +605,10 @@ Guidelines:
         if not self.pending_workflow_selection:
             return None
 
-        user_lower = user_input.lower().strip()
-        confirmation_patterns = ['yes', 'ok', 'proceed', 'start', 'go ahead', 'sure', 'begin']
+        # Use LLM to detect confirmation instead of hardcoded patterns
+        is_confirmation = await self._analyze_user_intent(user_input)
 
-        if any(pattern in user_lower for pattern in confirmation_patterns):
+        if is_confirmation:
             # User confirmed workflow selection - start execution
             workflow_id = self.pending_workflow_selection['workflow_id']
             workflow_name = self.pending_workflow_selection['workflow_name']
@@ -581,15 +616,16 @@ Guidelines:
             print(f"      ✅ User confirmed workflow selection: {workflow_name}")
             print(f"      🚀 Starting direct execution of Step 1 for workflow {workflow_id}")
 
-            # Clear pending selection
-            self.pending_workflow_selection = None
-
             try:
                 # Get workflow steps and execute first step
-                steps_result = await self.api_tools.get_workflow_steps(workflow_id)
+                steps_result = await self.tools.get_workflow_steps(workflow_id)
 
                 if not steps_result or not isinstance(steps_result, list) or len(steps_result) == 0:
+                    # Keep pending selection since execution failed
                     return f"I confirmed we'll start the **{workflow_name}** workflow, but I couldn't retrieve the execution steps. Please try listing the workflow details first."
+
+                # Clear pending selection only after successful workflow step retrieval
+                self.pending_workflow_selection = None
 
                 # Show Step 1 details for execution
                 step_1 = steps_result[0]
@@ -626,8 +662,12 @@ Ready to proceed with this step? I can execute it for you once you confirm."""
             workflow_proposal_patterns = [
                 'would you like to begin with',
                 'would you like to start with',
+                'would you like to proceed with',
                 'shall we start with',
-                'do you want to begin with'
+                'do you want to begin with',
+                'please confirm if you',
+                'ready to proceed',
+                'confirm if you\'d like to move forward'
             ]
 
             if any(pattern in response_lower for pattern in workflow_proposal_patterns):
