@@ -53,11 +53,20 @@ class AdvisorAgent:
 
         # Initialize two-layer memory architecture
         from .session_context import SessionContext
+        from .working_memory import WorkingMemory
         from ...storage.queued_graph_store import get_queued_graph_store
 
         # Use the queued graph store for thread-safe access
         queued_graph_store = get_queued_graph_store()
         self.session_context = SessionContext(session_id, graph_store=queued_graph_store)
+
+        # Initialize working memory for context aggregation
+        self.working_memory = WorkingMemory(
+            session_context=self.session_context,
+            session_store=self.session_store,
+            session_id=session_id,
+            advisor_id=advisor_id
+        )
 
         # Load system prompt
         self.system_prompt = self._load_system_prompt()
@@ -161,79 +170,28 @@ class AdvisorAgent:
                 return f"Sorry, I encountered an error: {error_msg}. Please try rephrasing your request or say 'help' for available commands."
 
     def _build_llm_context(self, user_input: str, session_context: Dict[str, Any]) -> Dict[str, Any]:
-        """Build context package for LLM decision making.
+        """Build context package for LLM decision making using WorkingMemory.
 
         Args:
             user_input: Current user message
-            session_context: Session state and history
+            session_context: Session state and history (legacy, now supplementary)
 
         Returns:
             Complete context for LLM processing
         """
-        # Get recent conversation history (last 10 turns)
-        conversation_history = session_context.get('conversation_history', [])
-        recent_history = conversation_history[-10:] if len(conversation_history) > 10 else conversation_history
+        # Use WorkingMemory to aggregate all context sources
+        available_tools = self.tools.get_tool_descriptions()
+        complete_context = self.working_memory.build_complete_context(user_input, available_tools)
 
-        # Get current workflow state if any
-        active_workflow = None
-        if session_context.get('active_workflow_id'):
-            try:
-                active_workflow = self.tools.get_workflow_details(session_context['active_workflow_id'])
-            except:
-                pass  # Workflow may have been deleted or become inaccessible
+        # Add legacy session context if it contains additional information
+        if session_context:
+            complete_context['legacy_session_context'] = session_context
 
-        # Get current entity references from SessionContext (the real context!)
-        entity_refs = self.session_context.entity_refs
+        # Log context summary for debugging
+        context_summary = self.working_memory.get_context_summary_for_logging()
+        print(f"🧠 Context built: {context_summary}")
 
-        # Also include legacy context if available
-        extracted_context = getattr(self, '_session_context', {})
-        merged_session_context = {
-            'plan_id': entity_refs.get('plan_id') or extracted_context.get('plan_id') or session_context.get('plan_id'),
-            'transcript_id': entity_refs.get('transcript_id') or extracted_context.get('transcript_id') or session_context.get('transcript_id'),
-            'analysis_id': entity_refs.get('analysis_id'),
-            'workflow_ids': entity_refs.get('workflow_ids', []),
-            'active_workflow_id': entity_refs.get('active_workflow_id') or extracted_context.get('active_workflow_id') or session_context.get('active_workflow_id'),
-            'customer_id': entity_refs.get('customer_id'),
-            'cursor_step': session_context.get('cursor_step', 1),
-            'step_statuses': session_context.get('step_statuses', {}),
-            'has_context': bool(entity_refs.get('transcript_id'))  # Explicit flag for LLM
-        }
-
-        # Include recent workflow list if available for context persistence
-        recent_workflow_context = None
-        if self.recent_workflow_list and self.recent_workflow_list_timestamp:
-            # Only include if it's recent (within last 10 minutes)
-            from datetime import timedelta
-            time_diff = datetime.utcnow() - self.recent_workflow_list_timestamp
-            if time_diff < timedelta(minutes=10):
-                recent_workflow_context = {
-                    'workflows': self.recent_workflow_list,
-                    'shown_at': self.recent_workflow_list_timestamp.isoformat(),
-                    'count': len(self.recent_workflow_list)
-                }
-
-        # Include pending workflow selection state for context persistence
-        selection_context = None
-        if self.pending_workflow_selection:
-            selection_context = {
-                'workflow_id': self.pending_workflow_selection['workflow_id'],
-                'workflow_name': self.pending_workflow_selection['workflow_name'],
-                'proposed_at': self.pending_workflow_selection['proposed_at'].isoformat(),
-                'awaiting_confirmation': True
-            }
-
-        return {
-            'user_input': user_input.strip(),
-            'session_id': self.session_id,
-            'advisor_id': self.advisor_id,
-            'conversation_history': recent_history,
-            'session_context': merged_session_context,
-            'active_workflow': active_workflow,
-            'recent_workflow_list': recent_workflow_context,
-            'pending_workflow_selection': selection_context,
-            'available_tools': self.tools.get_tool_descriptions(),
-            'timestamp': datetime.utcnow().isoformat()
-        }
+        return complete_context
 
     async def _get_llm_decision(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Get LLM decision on what tools to call and how to respond.
@@ -269,22 +227,35 @@ class AdvisorAgent:
                 # Show LLM what data was retrieved in previous turns
                 messages.append({"role": "user", "content": f"[TOOL RESULTS] {content}"})
 
-        # Add current user input
+        # Add current user input with reflection request
+        metadata_context = context.get('metadata_context', {})
+        recent_completeness_issues = metadata_context.get('metadata_summary', {}).get('recent_completeness_issues', [])
+
         messages.append({
             "role": "user",
             "content": f"""Current request: {context['user_input']}
 
-Available tools: {json.dumps([tool['name'] for tool in context.get('available_tools', [])], indent=2)}
+Context Information:
+- Available tools: {json.dumps([tool['name'] for tool in context.get('available_tools', [])], indent=2)}
+- Recent tool calls: {len(metadata_context.get('recent_tool_calls', []))}
+- Recent completeness issues: {len(recent_completeness_issues)}
+- Active entities: {context.get('entity_context', {}).get('entity_refs', {})}
 
-Decide what to do based on the conversation history above and this current request.
+FIRST: Reflect on the user's intent and context, then decide what to do.
 
 Respond with JSON in this format:
 {{
-    "reasoning": "Why you chose this approach based on conversation context",
+    "reflection": {{
+        "intent": "What the user is really asking for",
+        "expected_data": "Type and amount of data they expect",
+        "metadata_context": "Any relevant information from recent tool calls",
+        "completeness_concern": "Potential data limitations to acknowledge"
+    }},
     "tool_calls": [
         {{"tool_name": "tool_name", "parameters": {{"param": "value"}}}}
     ],
-    "response": "Direct response if no tools needed, or null if tools will provide the response"
+    "response": "Direct response if no tools needed, or null if tools will provide the response",
+    "response_strategy": "How to handle potential partial results or limitations"
 }}"""
         })
 
@@ -307,8 +278,9 @@ Respond with JSON in this format:
             decision = json.loads(llm_response)
 
             print(f"📋 Parsed Decision:")
-            print(f"   Reasoning: {decision.get('reasoning', 'None')}")
+            print(f"   Reflection: {decision.get('reflection', {})}")
             print(f"   Tool Calls: {decision.get('tool_calls', [])}")
+            print(f"   Response Strategy: {decision.get('response_strategy', 'None')}")
             print(f"   Direct Response: {decision.get('response', 'None')}")
 
             return decision
@@ -400,16 +372,18 @@ Respond with JSON in this format:
                 success = result is not None and 'error' not in result
                 print(f"      ✅ Result: {result}" if success else f"      ❌ Error in result: {result}")
 
+                # Track tool call in working memory for context building
+                if success and result:
+                    self.working_memory.update_tool_call_tracking(tool_name, parameters, result)
+                    # Also extract context information for backward compatibility
+                    self._extract_context_from_result(tool_name, result)
+
                 results.append({
                     'tool_name': tool_name,
                     'parameters': parameters,
                     'result': result,
                     'success': success
                 })
-
-                # Extract and store context information for future requests
-                if success and result:
-                    self._extract_context_from_result(tool_name, result)
 
             except Exception as e:
                 print(f"      💥 Exception: {str(e)}")
@@ -801,9 +775,11 @@ Ready to proceed with this step? I can execute it for you once you confirm."""
             elif any(phrase in user_lower for phrase in ['last call', 'most recent', 'latest call', 'recent call']):
                 # Get the most recent transcript from API
                 try:
-                    recent_transcripts = await self.tools.get_transcripts(limit=1)
-                    if recent_transcripts and len(recent_transcripts) > 0:
-                        latest_transcript = recent_transcripts[0]
+                    recent_transcripts_response = await self.tools.get_transcripts(limit=1)
+                    # Handle new metadata format
+                    transcripts = recent_transcripts_response.get('transcripts', [])
+                    if transcripts and len(transcripts) > 0:
+                        latest_transcript = transcripts[0]
                         transcript_id = latest_transcript.get('id')
                         if transcript_id:
                             success = self.session_context.set_active_transcript(transcript_id)

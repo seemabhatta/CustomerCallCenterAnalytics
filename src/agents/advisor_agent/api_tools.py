@@ -63,14 +63,14 @@ class APITools:
     # TRANSCRIPT TOOLS
     # ============================================
 
-    async def get_transcripts(self, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_transcripts(self, limit: int = 10) -> Dict[str, Any]:
         """Tool: List recent customer call transcripts.
 
         Args:
             limit: Maximum number of transcripts to return
 
         Returns:
-            List of transcript summaries
+            Dict containing transcripts and metadata about the request/response
         """
         return await self._call_api("GET", "/api/v1/transcripts", params={"limit": limit})
 

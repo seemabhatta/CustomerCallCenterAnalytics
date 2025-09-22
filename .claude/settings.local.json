@@ -57,7 +57,10 @@
       "Bash(docker stop:*)",
       "Bash(rm:*)",
       "Bash(docker:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []

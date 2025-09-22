@@ -60,6 +60,10 @@ class SessionContext:
         self.last_entity_mentioned = None
         self.entity_mention_time = None
 
+        # Tool call metadata tracking
+        self.tool_call_history = []  # Last 10 tool calls with metadata
+        self.current_metadata = {}   # Metadata from most recent tool calls
+
     def set_active_transcript(self, transcript_id: str) -> bool:
         """Set the active transcript and derive related entities from graph."""
         try:
@@ -247,4 +251,75 @@ class SessionContext:
             'total_actions': len(self.conversation_flow),
             'recent_actions': recent_actions,
             'current_context': self.get_current_context()
+        }
+
+    def track_tool_call(self, tool_name: str, parameters: Dict[str, Any],
+                       result: Dict[str, Any], metadata: Dict[str, Any] = None) -> None:
+        """Track tool call with its metadata for context building.
+
+        Args:
+            tool_name: Name of the tool called
+            parameters: Parameters passed to the tool
+            result: Result returned by the tool
+            metadata: Metadata about the request/response (e.g., counts, completeness)
+        """
+        tool_call_record = {
+            'tool_name': tool_name,
+            'parameters': parameters,
+            'result_summary': self._summarize_result(result),
+            'metadata': metadata or {},
+            'timestamp': datetime.utcnow().isoformat(),
+            'success': result is not None and 'error' not in result
+        }
+
+        # Keep only last 10 tool calls
+        self.tool_call_history.append(tool_call_record)
+        if len(self.tool_call_history) > 10:
+            self.tool_call_history.pop(0)
+
+        # Update current metadata for immediate context
+        if metadata:
+            self.current_metadata[tool_name] = metadata
+
+    def _summarize_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a lightweight summary of tool result for context tracking."""
+        if isinstance(result, dict):
+            if 'transcripts' in result:
+                return {
+                    'type': 'transcript_list',
+                    'count': len(result.get('transcripts', [])),
+                    'has_metadata': 'metadata' in result
+                }
+            elif 'workflows' in result:
+                return {
+                    'type': 'workflow_list',
+                    'count': len(result.get('workflows', [])),
+                    'has_metadata': 'metadata' in result
+                }
+            elif 'id' in result:
+                return {
+                    'type': 'single_entity',
+                    'entity_id': result.get('id'),
+                    'entity_type': result.get('type', 'unknown')
+                }
+            else:
+                return {
+                    'type': 'other',
+                    'keys': list(result.keys())[:5]  # First 5 keys for debugging
+                }
+        else:
+            return {'type': 'non_dict', 'data_type': type(result).__name__}
+
+    def get_metadata_context(self) -> Dict[str, Any]:
+        """Get metadata context for LLM decision making."""
+        return {
+            'recent_tool_calls': self.tool_call_history[-5:],  # Last 5 calls
+            'current_metadata': self.current_metadata,
+            'metadata_summary': {
+                'total_tool_calls': len(self.tool_call_history),
+                'recent_completeness_issues': [
+                    call for call in self.tool_call_history[-5:]
+                    if call.get('metadata', {}).get('completeness') == 'partial'
+                ]
+            }
         }

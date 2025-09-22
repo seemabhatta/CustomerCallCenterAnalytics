@@ -76,10 +76,20 @@ const apiCall = async <T>(request: () => Promise<AxiosResponse<T>>): Promise<T> 
 
 // Transcript API
 export const transcriptApi = {
-  list: (params?: ListParams) => 
-    apiCall<Transcript[]>(() => 
-      api.get('/api/v1/transcripts', { params })
-    ),
+  list: (params?: ListParams) =>
+    apiCall<Transcript[]>(async () => {
+      const response = await api.get('/api/v1/transcripts', { params });
+      // Handle new API response format with metadata
+      if (response.data && typeof response.data === 'object' && 'transcripts' in response.data) {
+        // Create a mock AxiosResponse for the transcripts array
+        return {
+          ...response,
+          data: response.data.transcripts
+        };
+      }
+      // Fallback for old format (plain array)
+      return response;
+    }),
 
   create: (data: TranscriptCreateRequest) => 
     apiCall<Transcript>(() => 

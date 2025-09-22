@@ -16,12 +16,23 @@ class TranscriptService:
         self.store = TranscriptStore(db_path)
         self.generator = TranscriptAgent()
     
-    async def list_all(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
-        """List all transcripts with optional limit."""
+    async def list_all(self, limit: Optional[int] = None) -> Dict[str, Any]:
+        """List all transcripts with optional limit and metadata."""
         transcripts = self.store.get_all()
+        total_available = len(transcripts)
+
         if limit:
             transcripts = transcripts[:limit]
-        return [t.to_dict() for t in transcripts]
+
+        return {
+            "transcripts": [t.to_dict() for t in transcripts],
+            "metadata": {
+                "requested": limit if limit is not None else total_available,
+                "returned": len(transcripts),
+                "total_available": total_available,
+                "completeness": "complete" if len(transcripts) == total_available else "partial"
+            }
+        }
     
     async def create(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new transcript."""

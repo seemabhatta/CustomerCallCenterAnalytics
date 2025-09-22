@@ -54,7 +54,7 @@ interface SimpleChatViewProps {
 export function SimpleChatView({
   role,
   userId,
-  agentMode = 'general',
+  agentMode = 'borrower',
   context = {},
   onChatResponse
 }: SimpleChatViewProps) {
@@ -205,28 +205,10 @@ export function SimpleChatView({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="general">
-                  <div className="flex items-center gap-1">
-                    <Settings className="h-3 w-3" />
-                    General
-                  </div>
-                </SelectItem>
                 <SelectItem value="borrower">
                   <div className="flex items-center gap-1">
                     <User className="h-3 w-3" />
                     Borrower
-                  </div>
-                </SelectItem>
-                <SelectItem value="supervisor">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    Supervisor
-                  </div>
-                </SelectItem>
-                <SelectItem value="compliance">
-                  <div className="flex items-center gap-1">
-                    <Shield className="h-3 w-3" />
-                    Compliance
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -302,10 +284,13 @@ export function SimpleChatView({
                                 ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2" {...props} />,
                                 ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2" {...props} />,
                                 li: ({node, ...props}) => <li className="mb-1" {...props} />,
-                                code: ({node, inline, ...props}) =>
-                                  inline
+                                code: ({node, ...props}) => {
+                                  // Check if this is inline code (no className or short content)
+                                  const isInline = !props.className || (typeof props.children === 'string' && props.children.length < 100);
+                                  return isInline
                                     ? <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono" {...props} />
-                                    : <code className="block bg-gray-100 p-2 rounded text-xs font-mono overflow-x-auto" {...props} />,
+                                    : <code className="block bg-gray-100 p-2 rounded text-xs font-mono overflow-x-auto" {...props} />;
+                                },
                                 pre: ({node, ...props}) => <pre className="bg-gray-100 p-2 rounded overflow-x-auto mb-2" {...props} />,
                                 blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic mb-2" {...props} />,
                                 a: ({node, ...props}) => <a className="text-blue-600 underline" {...props} />,

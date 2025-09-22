@@ -38,6 +38,16 @@ export interface TranscriptCreateRequest {
   store?: boolean;
 }
 
+export interface TranscriptListResponse {
+  transcripts: Transcript[];
+  metadata: {
+    requested: number;
+    returned: number;
+    total_available: number;
+    completeness: 'complete' | 'partial';
+  };
+}
+
 // Analysis Types
 export interface Analysis {
   id: string;

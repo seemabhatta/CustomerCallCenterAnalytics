@@ -228,7 +228,7 @@ export default function App() {
           <SimpleChatView
             role="leadership"
             userId="leadership-user"
-            agentMode="general"
+            agentMode="borrower"
             context={{
               transcriptId: activeTranscriptId,
               planId: workflowFocusId
@@ -291,7 +291,7 @@ export default function App() {
           <SimpleChatView
             role="advisor"
             userId={userRole === 'advisor' ? 'current-advisor' : 'admin'}
-            agentMode="general"
+            agentMode="borrower"
             context={{
               transcriptId: activeTranscriptId,
               planId: workflowFocusId
