@@ -135,27 +135,44 @@ class AdvisorAgent:
 
             # Get LLM decision on what to do
             decision = await self._get_llm_decision(context)
+            print(f"🔍 Decision received, type: {type(decision)}")
 
             # Execute any tool calls the LLM decided to make
             if decision.get('tool_calls'):
-                # Store the LLM's tool call decision in conversation
-                await self._store_tool_call_decision(decision)
+                # TODO: Store the LLM's tool call decision in conversation
+                # await self._store_tool_call_decision(decision)
 
                 tool_results = await self._execute_tool_calls(decision['tool_calls'])
 
-                # Store tool execution results in conversation
-                await self._store_tool_results(tool_results)
+                # TODO: Store tool execution results in conversation
+                # await self._store_tool_results(tool_results)
 
                 # LLM formats final response based on tool results
-                response = await self._format_response_with_results(user_input, tool_results, context)
+                try:
+                    response = await self._format_response_with_results(user_input, tool_results, context)
+                    print(f"🎯 Final formatted response: {response[:100]}...")
+                except Exception as format_error:
+                    print(f"❌ Error in response formatting: {format_error}")
+                    # Emergency fallback - never return raw JSON
+                    response = f"I've executed the requested tools. Please check the results and let me know if you need more information."
             else:
                 response = decision.get('response', "I understand you want help with borrower workflows. Could you be more specific about what you'd like to do?")
+                print(f"🎯 Direct response from decision: {response}")
 
             # Track workflow selection state before storing conversation
             await self._update_workflow_selection_state(response)
 
             # Update conversation history with user input and final response
             await self._update_conversation_history(user_input, response)
+
+            # CRITICAL DEBUG: Check what we're actually returning
+            print(f"🔍 CRITICAL: About to return response type: {type(response)}")
+            print(f"🔍 CRITICAL: Response content preview: {str(response)[:100]}...")
+
+            # Ensure we never return a dict/object - always return a string
+            if isinstance(response, dict):
+                print(f"❌ CRITICAL ERROR: Returning dict instead of string! Converting to error message.")
+                return "I apologize, there was an internal processing error. Please rephrase your request."
 
             return response
 
