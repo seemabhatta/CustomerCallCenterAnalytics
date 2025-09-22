@@ -34,7 +34,7 @@ interface ChatMessage {
   metadata?: any;
 }
 
-interface ChatbotViewProps {
+interface SimpleChatViewProps {
   role: ChatRole;
   userId: string;
   agentMode?: AgentMode;
@@ -47,13 +47,13 @@ interface ChatbotViewProps {
   onChatResponse?: (response: UnifiedChatResponse) => void;
 }
 
-export function ChatbotView({
+export function SimpleChatView({
   role,
   userId,
   agentMode = 'general',
   context = {},
   onChatResponse
-}: ChatbotViewProps) {
+}: SimpleChatViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -92,7 +92,6 @@ export function ChatbotView({
     setIsLoading(true);
 
     try {
-      // Use the unified chat service
       const response = await sendUnifiedChatMessage({
         role,
         user_id: userId,
@@ -107,7 +106,6 @@ export function ChatbotView({
         }
       });
 
-      // Store session ID for conversation continuity
       if (response.session_id && !sessionId) {
         setSessionId(response.session_id);
       }
@@ -123,7 +121,6 @@ export function ChatbotView({
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Notify parent component if callback provided
       if (onChatResponse) {
         onChatResponse(response);
       }
@@ -156,7 +153,6 @@ export function ChatbotView({
 
   const handleAgentModeChange = (mode: AgentMode) => {
     setCurrentAgentMode(mode);
-    // Add a system message about mode change
     const systemMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'assistant',
@@ -245,7 +241,7 @@ export function ChatbotView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3 overflow-hidden">
+        <div className="lg:col-span-3">
           <Card className="h-[600px] flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">
@@ -253,76 +249,105 @@ export function ChatbotView({
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
-              <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-4 mb-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 min-w-0 ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          {role === 'leadership' ? (
-                            <Crown className="h-4 w-4 text-blue-600" />
-                          ) : (
-                            <Bot className="h-4 w-4 text-blue-600" />
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[70%] min-w-0 px-4 py-2 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-900'
-                      }`}
-                    >
-                      <p className="text-sm break-all whitespace-pre-wrap overflow-hidden">{message.content}</p>
-                      {message.actions && message.actions.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-xs text-slate-600 font-medium">Actions taken:</p>
-                          {message.actions.map((action, idx) => (
-                            <div key={idx} className="text-xs bg-white p-2 rounded border">
-                              <span className="font-medium">{action.type}:</span> {action.description}
+              {/* Messages Container */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-4 p-2">
+                  {messages.map((message) => (
+                    <div key={message.id} className="mb-4">
+                      {/* Message Container with Flex and Width Constraint */}
+                      <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
+                        {/* Avatar for assistant messages */}
+                        {message.role === 'assistant' && (
+                          <div className="flex-shrink-0 mr-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              {role === 'leadership' ? (
+                                <Crown className="h-4 w-4 text-blue-600" />
+                              ) : (
+                                <Bot className="h-4 w-4 text-blue-600" />
+                              )}
                             </div>
-                          ))}
+                          </div>
+                        )}
+
+                        {/* Message Bubble with Proper Text Wrapping */}
+                        <div
+                          className={`
+                            max-w-[70%] min-w-0 px-4 py-2 rounded-lg break-words hyphens-auto
+                            ${message.role === 'user'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-100 text-slate-900'
+                            }
+                          `}
+                          style={{
+                            wordWrap: 'break-word',
+                            overflowWrap: 'anywhere',
+                            wordBreak: 'break-word',
+                            whiteSpace: 'pre-wrap'
+                          }}
+                        >
+                          <div className="text-sm">
+                            {message.content}
+                          </div>
+
+                          {message.actions && message.actions.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs font-medium opacity-70">
+                                Actions taken:
+                              </p>
+                              {message.actions.map((action, idx) => (
+                                <div
+                                  key={idx}
+                                  className="text-xs bg-white p-2 rounded border mt-1 break-words"
+                                >
+                                  <span className="font-medium">{action.type}:</span> {action.description}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <p className="text-xs mt-1 opacity-70">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
                         </div>
-                      )}
-                      <p className="text-xs mt-1 opacity-70">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-                    {message.role === 'user' && (
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                          <User className="h-4 w-4 text-slate-600" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        {role === 'leadership' ? (
-                          <Crown className="h-4 w-4 text-blue-600" />
-                        ) : (
-                          <Bot className="h-4 w-4 text-blue-600" />
+
+                        {/* Avatar for user messages */}
+                        {message.role === 'user' && (
+                          <div className="flex-shrink-0 ml-3">
+                            <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-slate-600" />
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div className="bg-slate-100 px-4 py-2 rounded-lg">
-                      <p className="text-sm text-slate-600">Assistant is typing...</p>
+                  ))}
+
+                  {isLoading && (
+                    <div className="mb-4">
+                      <div className="flex justify-start w-full">
+                        <div className="flex-shrink-0 mr-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            {role === 'leadership' ? (
+                              <Crown className="h-4 w-4 text-blue-600" />
+                            ) : (
+                              <Bot className="h-4 w-4 text-blue-600" />
+                            )}
+                          </div>
+                        </div>
+                        <div className="bg-slate-100 px-4 py-2 rounded-lg">
+                          <p className="text-sm text-slate-600">
+                            Assistant is typing...
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* Input Area */}
+              <div className="border-t pt-4 flex gap-2">
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
@@ -474,4 +499,3 @@ function getQuickActionsForRole(role: ChatRole) {
     }
   ];
 }
-

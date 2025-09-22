@@ -30,7 +30,7 @@ import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
 import { AnalyticsView } from "@/views/AnalyticsView";
-import { ChatbotView } from "@/components/ChatbotView";
+import { SimpleChatView } from "@/components/SimpleChatView";
 
 import { TabValue, UserRole } from "@/types";
 
@@ -225,7 +225,7 @@ export default function App() {
 
         {/* Insights - Leadership only */}
         <TabsContent value="insights">
-          <ChatbotView
+          <SimpleChatView
             role="leadership"
             userId="leadership-user"
             agentMode="general"
@@ -288,7 +288,7 @@ export default function App() {
 
         {/* AI Assistant - Advisor only */}
         <TabsContent value="advisor-chat">
-          <ChatbotView
+          <SimpleChatView
             role="advisor"
             userId={userRole === 'advisor' ? 'current-advisor' : 'admin'}
             agentMode="general"
