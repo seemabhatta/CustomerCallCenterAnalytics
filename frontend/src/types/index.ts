@@ -533,7 +533,46 @@ export type Environment = 'dev' | 'staging' | 'prod';
 // User Role Types
 export type UserRole = 'leadership' | 'supervisor' | 'advisor' | 'admin';
 
-// Leadership Chat Types
+// Unified Chat Types
+export type ChatRole = 'leadership' | 'advisor';
+export type AgentMode = 'borrower' | 'supervisor' | 'compliance' | 'general';
+
+export interface UnifiedChatRequest {
+  role: ChatRole;
+  user_id: string;
+  message: string;
+  session_id?: string;
+  agent_mode?: AgentMode;
+  context?: {
+    transcript_id?: string;
+    plan_id?: string;
+    analysis_id?: string;
+    workflow_id?: string;
+  };
+}
+
+export interface UnifiedChatResponse {
+  content: string;
+  session_id: string;
+  role: ChatRole;
+  agent_mode?: AgentMode;
+  actions?: any[];
+  metadata?: {
+    processing_time_ms?: number;
+    confidence?: number;
+    data_sources_used?: string[];
+    query_understanding?: any;
+  };
+  // Leadership-specific fields
+  executive_summary?: string;
+  key_metrics?: any[];
+  recommendations?: string[];
+  supporting_data?: Record<string, any>;
+  // Additional context
+  context?: Record<string, any>;
+}
+
+// Legacy types for backward compatibility
 export interface LeadershipChatRequest {
   query: string;
   executive_id: string;
@@ -559,7 +598,6 @@ export interface LeadershipChatResponse {
   };
 }
 
-// Advisor Chat Types
 export interface AdvisorChatRequest {
   advisor_id: string;
   message: string;

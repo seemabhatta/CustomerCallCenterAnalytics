@@ -56,7 +56,8 @@
       "WebFetch(domain:docs.kuzudb.com)",
       "Bash(docker stop:*)",
       "Bash(rm:*)",
-      "Bash(docker:*)"
+      "Bash(docker:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

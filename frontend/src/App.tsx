@@ -30,8 +30,7 @@ import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
 import { AnalyticsView } from "@/views/AnalyticsView";
-import { InsightsView } from "@/views/InsightsView";
-import { AdvisorChatView } from "@/views/AdvisorChatView";
+import { ChatbotView } from "@/components/ChatbotView";
 
 import { TabValue, UserRole } from "@/types";
 
@@ -226,7 +225,15 @@ export default function App() {
 
         {/* Insights - Leadership only */}
         <TabsContent value="insights">
-          <InsightsView />
+          <ChatbotView
+            role="leadership"
+            userId="leadership-user"
+            agentMode="general"
+            context={{
+              transcriptId: activeTranscriptId,
+              planId: workflowFocusId
+            }}
+          />
         </TabsContent>
 
         {/* Governance - Leadership and Admin */}
@@ -281,10 +288,14 @@ export default function App() {
 
         {/* AI Assistant - Advisor only */}
         <TabsContent value="advisor-chat">
-          <AdvisorChatView
-            advisorId={userRole === 'advisor' ? 'current-advisor' : 'admin'}
-            transcriptId={activeTranscriptId}
-            planId={workflowFocusId}
+          <ChatbotView
+            role="advisor"
+            userId={userRole === 'advisor' ? 'current-advisor' : 'admin'}
+            agentMode="general"
+            context={{
+              transcriptId: activeTranscriptId,
+              planId: workflowFocusId
+            }}
           />
         </TabsContent>
 

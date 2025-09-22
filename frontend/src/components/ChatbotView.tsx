@@ -2,8 +2,28 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Send, Trash2, User, Bot, Zap, FileText, CheckCircle, DollarSign } from 'lucide-react';
-import { advisorApi } from '@/api/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  MessageCircle,
+  Send,
+  Trash2,
+  User,
+  Bot,
+  Zap,
+  FileText,
+  CheckCircle,
+  DollarSign,
+  Crown,
+  Settings,
+  Users,
+  Shield
+} from 'lucide-react';
+import {
+  ChatRole,
+  AgentMode,
+  UnifiedChatResponse
+} from '@/types';
+import { sendUnifiedChatMessage } from '@/services/chatService';
 
 interface ChatMessage {
   id: string;
@@ -11,30 +31,41 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   actions?: any[];
+  metadata?: any;
 }
 
-interface AdvisorChatViewProps {
-  advisorId?: string;
-  transcriptId?: string | null;
-  planId?: string | null;
+interface ChatbotViewProps {
+  role: ChatRole;
+  userId: string;
+  agentMode?: AgentMode;
+  context?: {
+    transcriptId?: string | null;
+    planId?: string | null;
+    analysisId?: string | null;
+    workflowId?: string | null;
+  };
+  onChatResponse?: (response: UnifiedChatResponse) => void;
 }
 
-export function AdvisorChatView({
-  advisorId = 'current-advisor',
-  transcriptId = null,
-  planId = null
-}: AdvisorChatViewProps) {
+export function ChatbotView({
+  role,
+  userId,
+  agentMode = 'general',
+  context = {},
+  onChatResponse
+}: ChatbotViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I\'m your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?',
+      content: getWelcomeMessage(role),
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentAgentMode, setCurrentAgentMode] = useState<AgentMode>(agentMode);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -61,12 +92,19 @@ export function AdvisorChatView({
     setIsLoading(true);
 
     try {
-      const response = await advisorApi.chat({
-        advisor_id: advisorId,
+      // Use the unified chat service
+      const response = await sendUnifiedChatMessage({
+        role,
+        user_id: userId,
         message: messageToSend,
         session_id: sessionId || undefined,
-        transcript_id: transcriptId || undefined,
-        plan_id: planId || undefined
+        agent_mode: currentAgentMode,
+        context: {
+          transcript_id: context.transcriptId || undefined,
+          plan_id: context.planId || undefined,
+          analysis_id: context.analysisId || undefined,
+          workflow_id: context.workflowId || undefined
+        }
       });
 
       // Store session ID for conversation continuity
@@ -77,14 +115,21 @@ export function AdvisorChatView({
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.response,
+        content: response.content,
         timestamp: new Date(),
-        actions: response.actions
+        actions: response.actions,
+        metadata: response.metadata
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Notify parent component if callback provided
+      if (onChatResponse) {
+        onChatResponse(response);
+      }
+
     } catch (error) {
-      console.error('Advisor chat API error:', error);
+      console.error('Unified chat API error:', error);
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -97,39 +142,28 @@ export function AdvisorChatView({
     }
   };
 
-  const quickActions = [
-    {
-      icon: DollarSign,
-      label: "Remove PMI",
-      message: "Help me process a PMI removal request for the customer"
-    },
-    {
-      icon: FileText,
-      label: "Check Eligibility",
-      message: "Check customer eligibility for loan modification or refinancing"
-    },
-    {
-      icon: CheckCircle,
-      label: "Compliance Review",
-      message: "Review compliance requirements for this customer interaction"
-    },
-    {
-      icon: Zap,
-      label: "Quick Actions",
-      message: "Show me quick actions I can take for this customer"
-    }
-  ];
-
   const handleClearChat = () => {
     setSessionId(null);
     setMessages([
       {
         id: '1',
         role: 'assistant',
-        content: 'Hello! I\'m your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?',
+        content: getWelcomeMessage(role),
         timestamp: new Date()
       }
     ]);
+  };
+
+  const handleAgentModeChange = (mode: AgentMode) => {
+    setCurrentAgentMode(mode);
+    // Add a system message about mode change
+    const systemMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: `Switched to ${mode} mode. How can I assist you in this context?`,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, systemMessage]);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -139,36 +173,75 @@ export function AdvisorChatView({
     }
   };
 
+  const quickActions = getQuickActionsForRole(role);
+
   return (
     <div className="page-shell">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-blue-600" />
-          <h1 className="text-xl font-bold">AI Assistant</h1>
-          {(transcriptId || planId) && (
+          <h1 className="text-xl font-bold">
+            {role === 'leadership' ? 'Executive Assistant' : 'AI Assistant'}
+          </h1>
+          {(context.transcriptId || context.planId) && (
             <div className="flex gap-2 ml-4">
-              {transcriptId && (
+              {context.transcriptId && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                  Transcript: {transcriptId.slice(0, 8)}...
+                  Transcript: {context.transcriptId.slice(0, 8)}...
                 </span>
               )}
-              {planId && (
+              {context.planId && (
                 <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                  Plan: {planId.slice(0, 8)}...
+                  Plan: {context.planId.slice(0, 8)}...
                 </span>
               )}
             </div>
           )}
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleClearChat}
-          className="flex items-center gap-1"
-        >
-          <Trash2 className="h-3 w-3" />
-          Clear Chat
-        </Button>
+        <div className="flex items-center gap-2">
+          {role === 'advisor' && (
+            <Select value={currentAgentMode} onValueChange={(value: AgentMode) => handleAgentModeChange(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="general">
+                  <div className="flex items-center gap-1">
+                    <Settings className="h-3 w-3" />
+                    General
+                  </div>
+                </SelectItem>
+                <SelectItem value="borrower">
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Borrower
+                  </div>
+                </SelectItem>
+                <SelectItem value="supervisor">
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    Supervisor
+                  </div>
+                </SelectItem>
+                <SelectItem value="compliance">
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3 w-3" />
+                    Compliance
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearChat}
+            className="flex items-center gap-1"
+          >
+            <Trash2 className="h-3 w-3" />
+            Clear Chat
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -176,7 +249,7 @@ export function AdvisorChatView({
           <Card className="h-[600px] flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">
-                Conversation
+                Conversation {role === 'advisor' && `(${currentAgentMode} mode)`}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
@@ -191,7 +264,11 @@ export function AdvisorChatView({
                     {message.role === 'assistant' && (
                       <div className="flex-shrink-0">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Bot className="h-4 w-4 text-blue-600" />
+                          {role === 'leadership' ? (
+                            <Crown className="h-4 w-4 text-blue-600" />
+                          ) : (
+                            <Bot className="h-4 w-4 text-blue-600" />
+                          )}
                         </div>
                       </div>
                     )}
@@ -230,7 +307,11 @@ export function AdvisorChatView({
                   <div className="flex gap-3 justify-start">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-blue-600" />
+                        {role === 'leadership' ? (
+                          <Crown className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <Bot className="h-4 w-4 text-blue-600" />
+                        )}
                       </div>
                     </div>
                     <div className="bg-slate-100 px-4 py-2 rounded-lg">
@@ -246,7 +327,7 @@ export function AdvisorChatView({
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask me anything about customer workflows..."
+                  placeholder={getPlaceholderText(role, currentAgentMode)}
                   disabled={isLoading}
                   className="flex-1"
                 />
@@ -302,6 +383,14 @@ export function AdvisorChatView({
                 <p className="text-xs text-slate-500 mt-1">
                   Messages: {messages.length}
                 </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Role: {role}
+                </p>
+                {role === 'advisor' && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Mode: {currentAgentMode}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
@@ -310,3 +399,79 @@ export function AdvisorChatView({
     </div>
   );
 }
+
+// Helper functions
+function getWelcomeMessage(role: ChatRole): string {
+  if (role === 'leadership') {
+    return "Hello! I'm your executive assistant for strategic insights and portfolio analytics. I can help you with portfolio performance, risk analysis, and strategic decision support. What would you like to explore?";
+  }
+  return "Hello! I'm your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?";
+}
+
+function getPlaceholderText(role: ChatRole, agentMode: AgentMode): string {
+  if (role === 'leadership') {
+    return "Ask about portfolio insights, metrics, or strategic opportunities...";
+  }
+
+  switch (agentMode) {
+    case 'borrower':
+      return "Ask about borrower-specific actions and workflows...";
+    case 'supervisor':
+      return "Ask about supervision and escalation workflows...";
+    case 'compliance':
+      return "Ask about compliance requirements and regulations...";
+    default:
+      return "Ask me anything about customer workflows...";
+  }
+}
+
+function getQuickActionsForRole(role: ChatRole) {
+  if (role === 'leadership') {
+    return [
+      {
+        icon: CheckCircle,
+        label: "Portfolio Health",
+        message: "Show me the current portfolio health and key metrics"
+      },
+      {
+        icon: FileText,
+        label: "Risk Analysis",
+        message: "Analyze current risk patterns and provide recommendations"
+      },
+      {
+        icon: DollarSign,
+        label: "Revenue Impact",
+        message: "Show revenue opportunities and cost optimization insights"
+      },
+      {
+        icon: Zap,
+        label: "Strategic Actions",
+        message: "What strategic actions should we prioritize this quarter?"
+      }
+    ];
+  }
+
+  return [
+    {
+      icon: DollarSign,
+      label: "Remove PMI",
+      message: "Help me process a PMI removal request for the customer"
+    },
+    {
+      icon: FileText,
+      label: "Check Eligibility",
+      message: "Check customer eligibility for loan modification or refinancing"
+    },
+    {
+      icon: CheckCircle,
+      label: "Compliance Review",
+      message: "Review compliance requirements for this customer interaction"
+    },
+    {
+      icon: Zap,
+      label: "Quick Actions",
+      message: "Show me quick actions I can take for this customer"
+    }
+  ];
+}
+
