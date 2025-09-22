@@ -3,6 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css';
 import {
   MessageCircle,
   Send,
@@ -285,8 +289,33 @@ export function SimpleChatView({
                             whiteSpace: 'pre-wrap'
                           }}
                         >
-                          <div className="text-sm">
-                            {message.content}
+                          <div className="text-sm prose prose-sm max-w-none">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              rehypePlugins={[rehypeHighlight]}
+                              components={{
+                                // Custom styling for markdown elements
+                                h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-sm font-bold mb-1" {...props} />,
+                                p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2" {...props} />,
+                                li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                                code: ({node, inline, ...props}) =>
+                                  inline
+                                    ? <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono" {...props} />
+                                    : <code className="block bg-gray-100 p-2 rounded text-xs font-mono overflow-x-auto" {...props} />,
+                                pre: ({node, ...props}) => <pre className="bg-gray-100 p-2 rounded overflow-x-auto mb-2" {...props} />,
+                                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic mb-2" {...props} />,
+                                a: ({node, ...props}) => <a className="text-blue-600 underline" {...props} />,
+                                table: ({node, ...props}) => <table className="border-collapse border border-gray-300 mb-2" {...props} />,
+                                th: ({node, ...props}) => <th className="border border-gray-300 px-2 py-1 bg-gray-100 font-bold" {...props} />,
+                                td: ({node, ...props}) => <td className="border border-gray-300 px-2 py-1" {...props} />,
+                              }}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
                           </div>
 
                           {message.actions && message.actions.length > 0 && (
