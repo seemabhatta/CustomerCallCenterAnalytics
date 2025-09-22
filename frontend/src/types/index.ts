@@ -525,7 +525,8 @@ export type TabValue =
   | 'reviews'
   | 'monitoring'
   | 'calls'
-  | 'actions';
+  | 'actions'
+  | 'advisor-chat';
 
 export type Environment = 'dev' | 'staging' | 'prod';
 
@@ -556,6 +557,22 @@ export interface LeadershipChatResponse {
     records_analyzed: number;
     response_timestamp: string;
   };
+}
+
+// Advisor Chat Types
+export interface AdvisorChatRequest {
+  advisor_id: string;
+  message: string;
+  session_id?: string;
+  transcript_id?: string;
+  plan_id?: string;
+}
+
+export interface AdvisorChatResponse {
+  response: string;
+  session_id: string;
+  actions?: any[];
+  context?: Record<string, any>;
 }
 
 // Error Types

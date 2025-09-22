@@ -24,7 +24,9 @@ import {
   OrchestrationRunRequest,
   OrchestrationRunResponse,
   LeadershipChatRequest,
-  LeadershipChatResponse
+  LeadershipChatResponse,
+  AdvisorChatRequest,
+  AdvisorChatResponse
 } from '@/types';
 
 // Create axios instance with base configuration
@@ -442,6 +444,19 @@ export const leadershipApi = {
   chat: (data: LeadershipChatRequest) =>
     apiCall<LeadershipChatResponse>(() =>
       api.post('/api/v1/leadership/chat', data)
+    ),
+};
+
+// Advisor API
+export const advisorApi = {
+  chat: (data: AdvisorChatRequest) =>
+    apiCall<AdvisorChatResponse>(() =>
+      api.post('/api/v1/advisor/chat', data)
+    ),
+
+  getSessions: (advisorId: string, limit: number = 5) =>
+    apiCall<{ sessions: any[] }>(() =>
+      api.get(`/api/v1/advisor/sessions/${advisorId}`, { params: { limit } })
     ),
 };
 

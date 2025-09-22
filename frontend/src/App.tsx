@@ -31,6 +31,7 @@ import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
 import { AnalyticsView } from "@/views/AnalyticsView";
 import { InsightsView } from "@/views/InsightsView";
+import { AdvisorChatView } from "@/views/AdvisorChatView";
 
 import { TabValue, UserRole } from "@/types";
 
@@ -153,7 +154,7 @@ export default function App() {
             </>
           )}
 
-          {/* Advisor View: My Calls, Actions, Execute */}
+          {/* Advisor View: My Calls, Actions, Execute, AI Assistant */}
           {userRole === "advisor" && (
             <>
               <TabsTrigger value="calls" className="tab-trigger">
@@ -167,6 +168,10 @@ export default function App() {
               <TabsTrigger value="execution" className="tab-trigger">
                 <PlayCircle className="h-3 w-3 mr-1" />
                 Execute
+              </TabsTrigger>
+              <TabsTrigger value="advisor-chat" className="tab-trigger">
+                <MessageCircle className="h-3 w-3 mr-1" />
+                AI Assistant
               </TabsTrigger>
             </>
           )}
@@ -272,6 +277,15 @@ export default function App() {
         {/* Execute - Advisor and Admin (reuse Execution) */}
         <TabsContent value="execution">
           <ExecutionView />
+        </TabsContent>
+
+        {/* AI Assistant - Advisor only */}
+        <TabsContent value="advisor-chat">
+          <AdvisorChatView
+            advisorId={userRole === 'advisor' ? 'current-advisor' : 'admin'}
+            transcriptId={activeTranscriptId}
+            planId={workflowFocusId}
+          />
         </TabsContent>
 
         {/* Admin-only tabs */}
