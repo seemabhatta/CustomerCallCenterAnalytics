@@ -274,8 +274,15 @@ Respond with JSON in this format:
 
             print(f"🤖 Raw LLM Response:\n{llm_response}")
 
+            # Extract JSON from markdown code blocks if present
+            json_content = llm_response.strip()
+            if json_content.startswith('```json') and json_content.endswith('```'):
+                json_content = json_content[7:-3].strip()
+            elif json_content.startswith('```') and json_content.endswith('```'):
+                json_content = json_content[3:-3].strip()
+
             # Parse JSON response
-            decision = json.loads(llm_response)
+            decision = json.loads(json_content)
 
             print(f"📋 Parsed Decision:")
             print(f"   Reflection: {decision.get('reflection', {})}")
@@ -285,12 +292,14 @@ Respond with JSON in this format:
 
             return decision
 
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             # Fallback to simple response if JSON parsing fails
+            print(f"⚠️ JSON parsing failed: {e}")
+            print(f"⚠️ Raw content: {json_content[:200]}...")
             return {
                 "reasoning": "JSON parsing failed, providing simple response",
                 "tool_calls": [],
-                "response": llm_response
+                "response": "I understand you want help with borrower workflows. Could you provide more specific details about what you'd like to do?"
             }
 
     async def _execute_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -494,7 +503,9 @@ User asked: "{user_input}"
 Tool execution results:
 {json.dumps(tool_results, indent=2)}
 
-Format a helpful response for the user based on these results. Be conversational and specific about what was found or accomplished. If there were errors, provide clear guidance on next steps.
+IMPORTANT: Respond with a natural, conversational message to the user. Do NOT return JSON or any technical format.
+
+Provide a helpful response based on these results. Be conversational and specific about what was found or accomplished. If there were errors, provide clear guidance on next steps.
 
 Guidelines:
 - Use friendly, professional tone
@@ -503,6 +514,9 @@ Guidelines:
 - For step information, explain what will happen
 - For errors, suggest specific next actions
 - Use status indicators (HIGH, MEDIUM, LOW, completed, pending, etc.)
+- Respond as if speaking directly to the advisor
+
+Example good response: "I found the transcript for call CALL_F1438D7A. This was a payment issue call with John Smith where..."
 """
             }
         ]
