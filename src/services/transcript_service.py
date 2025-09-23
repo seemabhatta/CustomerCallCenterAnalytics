@@ -4,7 +4,7 @@ Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
 from ..storage.transcript_store import TranscriptStore
-from ..agents.transcript_agent import TranscriptAgent
+from ..call_center_agents.transcript_agent import TranscriptAgent
 
 
 class TranscriptService:

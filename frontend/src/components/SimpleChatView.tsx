@@ -492,24 +492,24 @@ function getQuickActionsForRole(role: ChatRole) {
 
   return [
     {
-      icon: DollarSign,
-      label: "Remove PMI",
-      message: "Help me process a PMI removal request for the customer"
-    },
-    {
       icon: FileText,
-      label: "Check Eligibility",
-      message: "Check customer eligibility for loan modification or refinancing"
+      label: "Last Call ID",
+      message: "What was the last call ID?"
     },
     {
       icon: CheckCircle,
-      label: "Compliance Review",
-      message: "Review compliance requirements for this customer interaction"
+      label: "Show Analysis",
+      message: "Tell me the analysis result for the call"
     },
     {
       icon: Zap,
-      label: "Quick Actions",
-      message: "Show me quick actions I can take for this customer"
+      label: "Show Plan",
+      message: "Show me the strategic plan for this call"
+    },
+    {
+      icon: DollarSign,
+      label: "Show Workflows",
+      message: "What workflows are available for this plan?"
     }
   ];
 }

@@ -14,7 +14,7 @@ from typing import Dict, Any, List
 
 from src.services.workflow_service import WorkflowService
 from src.storage.workflow_store import WorkflowStore
-from src.agents.risk_assessment_agent import RiskAssessmentAgent
+from src.call_center_agents.risk_assessment_agent import RiskAssessmentAgent
 
 
 class TestGranularWorkflowExtraction:

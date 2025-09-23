@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 from pydantic import BaseModel, Field, ValidationError
 from typing import List, Literal
 from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
-from src.agents.models.risk_models import RiskAssessment, ApprovalRouting
+from src.call_center_agents.models.risk_models import RiskAssessment, ApprovalRouting
 from src.models.shared import ActionItem, ActionItemList
 
 

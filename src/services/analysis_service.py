@@ -4,7 +4,7 @@ Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
 from ..storage.analysis_store import AnalysisStore
-from ..agents.call_analysis_agent import CallAnalysisAgent
+from ..call_center_agents.call_analysis_agent import CallAnalysisAgent
 
 
 class AnalysisService:

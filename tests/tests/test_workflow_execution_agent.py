@@ -6,7 +6,7 @@ import pytest
 import asyncio
 import json
 from unittest.mock import Mock, AsyncMock, patch
-from src.agents.workflow_execution_agent import (
+from src.call_center_agents.workflow_execution_agent import (
     WorkflowExecutionAgent,
     ExecutionDecision,
     ExecutionPayload

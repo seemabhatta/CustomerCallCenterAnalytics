@@ -39,7 +39,7 @@ try:
     import sys
     import asyncio
     sys.path.insert(0, '.')
-    from src.agents.transcript_agent import TranscriptAgent
+    from src.call_center_agents.transcript_agent import TranscriptAgent
     from src.storage.transcript_store import TranscriptStore
     DIRECT_MODE_AVAILABLE = True
 except ImportError as e:

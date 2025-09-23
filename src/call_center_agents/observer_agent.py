@@ -16,7 +16,7 @@ from collections import defaultdict, Counter
 
 from src.storage.approval_store import ApprovalStore
 from src.infrastructure.llm.openai_wrapper import OpenAIWrapper
-from src.agents.models.observer_models import ExecutionEvaluation, DecisionAgentFeedback
+from src.call_center_agents.models.observer_models import ExecutionEvaluation, DecisionAgentFeedback
 import os
 
 

@@ -8,7 +8,7 @@ import asyncio
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-from src.agents.workflow_execution_agent import WorkflowExecutionAgent
+from src.call_center_agents.workflow_execution_agent import WorkflowExecutionAgent
 from src.services.workflow_execution_engine import WorkflowExecutionEngine
 from src.infrastructure.adapters.workflow_mock_adapters import (
     EmailMockAdapter,

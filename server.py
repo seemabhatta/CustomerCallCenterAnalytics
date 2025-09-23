@@ -953,17 +953,12 @@ async def advisor_chat(request: AdvisorChatRequest):
         raise HTTPException(status_code=500, detail=error_detail)
 
 
-@app.get("/api/v1/advisor/sessions/{advisor_id}")
-async def get_advisor_sessions(advisor_id: str, limit: int = Query(5, ge=1, le=20)):
-    """Get recent sessions for an advisor."""
-    try:
-        advisor_service = AdvisorService(db_path=db_path)
-        sessions = advisor_service.get_recent_sessions(advisor_id, limit)
-        return {"sessions": sessions}
-
-    except Exception as e:
-        error_detail = f"Failed to get advisor sessions: {str(e)}"
-        raise HTTPException(status_code=500, detail=error_detail)
+# Session management endpoints disabled - now handled by OpenAI Agents SQLiteSession
+# @app.get("/api/v1/advisor/sessions/{advisor_id}")
+# async def get_advisor_sessions(advisor_id: str, limit: int = Query(5, ge=1, le=20)):
+#     """Get recent sessions for an advisor."""
+#     # Session tracking now handled automatically by OpenAI Agents
+#     return {"message": "Session management is now handled by OpenAI Agents"}
 
 
 # ===============================================

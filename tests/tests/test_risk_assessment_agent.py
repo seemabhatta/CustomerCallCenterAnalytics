@@ -12,7 +12,7 @@ from unittest.mock import Mock, AsyncMock, patch
 import json
 from typing import Dict, Any
 
-from src.agents.risk_assessment_agent import RiskAssessmentAgent
+from src.call_center_agents.risk_assessment_agent import RiskAssessmentAgent
 
 
 class TestRiskAssessmentAgent:

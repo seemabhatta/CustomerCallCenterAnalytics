@@ -14,7 +14,7 @@ from ..infrastructure.telemetry import trace_async_function, set_span_attributes
 from ..storage.session_store import SessionStore
 from ..storage.insights_cache_store import InsightsCacheStore
 from ..storage.insights_pattern_store import InsightsPatternStore
-from ..agents.leadership_insights_agent import LeadershipInsightsAgent
+from ..call_center_agents.leadership_insights_agent import LeadershipInsightsAgent
 from .data_reader_service import DataReaderService
 
 

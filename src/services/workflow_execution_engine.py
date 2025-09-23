@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
-from src.agents.workflow_execution_agent import WorkflowExecutionAgent
+from src.call_center_agents.workflow_execution_agent import WorkflowExecutionAgent
 from src.infrastructure.adapters.workflow_mock_adapters import (
     EmailMockAdapter,
     CRMockAdapter,
