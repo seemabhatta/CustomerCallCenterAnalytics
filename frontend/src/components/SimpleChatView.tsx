@@ -127,8 +127,8 @@ export function SimpleChatView({
     if (!messageContent) setInputMessage('');
     setIsLoading(true);
 
-    // Use streaming for advisor role, fallback to regular for others
-    if (role === 'advisor' && streamingEnabled) {
+    // Use streaming for all roles when enabled
+    if (streamingEnabled) {
       await handleStreamingMessage(messageToSend);
     } else {
       await handleRegularMessage(messageToSend);
