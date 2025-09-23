@@ -36,6 +36,8 @@ interface ChatMessage {
   timestamp: Date;
   actions?: any[];
   metadata?: any;
+  type?: 'message' | 'thinking' | 'tool_call' | 'streaming';
+  isComplete?: boolean;
 }
 
 interface SimpleChatViewProps {
@@ -70,7 +72,9 @@ export function SimpleChatView({
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentAgentMode, setCurrentAgentMode] = useState<AgentMode>(agentMode);
+  const [streamingEnabled, setStreamingEnabled] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -79,6 +83,15 @@ export function SimpleChatView({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleSendMessage = async (messageContent?: string) => {
     const messageToSend = messageContent || inputMessage.trim();
@@ -95,6 +108,116 @@ export function SimpleChatView({
     if (!messageContent) setInputMessage('');
     setIsLoading(true);
 
+    // Use streaming for advisor role, fallback to regular for others
+    if (role === 'advisor' && streamingEnabled) {
+      await handleStreamingMessage(messageToSend);
+    } else {
+      await handleRegularMessage(messageToSend);
+    }
+  };
+
+  const handleStreamingMessage = async (messageToSend: string) => {
+    try {
+      // Abort any existing stream
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      abortControllerRef.current = new AbortController();
+
+      // Create placeholder assistant message for streaming
+      const streamingMessageId = (Date.now() + 1).toString();
+      let assistantMessage: ChatMessage = {
+        id: streamingMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        type: 'streaming',
+        isComplete: false
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+
+      const response = await fetch('/api/v1/advisor/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          advisor_id: userId,
+          message: messageToSend,
+          session_id: sessionId || undefined,
+          transcript_id: context.transcriptId || undefined,
+          plan_id: context.planId || undefined
+        }),
+        signal: abortControllerRef.current.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const eventData = JSON.parse(line.slice(6));
+                await handleStreamEvent(eventData, streamingMessageId);
+
+                // Update session ID if received
+                if (eventData.session_id && !sessionId) {
+                  setSessionId(eventData.session_id);
+                }
+
+                // Break if completed or error
+                if (eventData.type === 'completed' || eventData.type === 'error') {
+                  break;
+                }
+              } catch (e) {
+                console.warn('Failed to parse SSE event:', line, e);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Streaming chat error:', error);
+        const errorMessage: ChatMessage = {
+          id: (Date.now() + 2).toString(),
+          role: 'assistant',
+          content: 'Sorry, I encountered an error with the streaming response. Please try again.',
+          timestamp: new Date(),
+          type: 'message'
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } finally {
+      setIsLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleRegularMessage = async (messageToSend: string) => {
     try {
       const response = await sendUnifiedChatMessage({
         role,
@@ -120,7 +243,8 @@ export function SimpleChatView({
         content: response.content,
         timestamp: new Date(),
         actions: response.actions,
-        metadata: response.metadata
+        metadata: response.metadata,
+        type: 'message'
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -135,12 +259,68 @@ export function SimpleChatView({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: 'Sorry, I encountered an error processing your request. Please try again.',
-        timestamp: new Date()
+        timestamp: new Date(),
+        type: 'message'
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleStreamEvent = async (eventData: any, messageId: string) => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const messageIndex = newMessages.findIndex(m => m.id === messageId);
+
+      if (messageIndex === -1) return prev;
+
+      const currentMessage = { ...newMessages[messageIndex] };
+
+      switch (eventData.type) {
+        case 'thinking':
+          // Add thinking indicator
+          if (!currentMessage.content.includes('🤔')) {
+            currentMessage.content = '🤔 Thinking...\n\n' + currentMessage.content;
+          }
+          break;
+
+        case 'tool_call':
+          // Add tool call indicator
+          const toolContent = eventData.content + '\n\n';
+          if (!currentMessage.content.includes(toolContent)) {
+            currentMessage.content = currentMessage.content.replace('🤔 Thinking...\n\n', '') + toolContent;
+          }
+          break;
+
+        case 'response_delta':
+          // Append text delta
+          const deltaContent = eventData.content;
+          // Remove thinking indicators when real content starts
+          if (!currentMessage.content.includes(deltaContent)) {
+            let baseContent = currentMessage.content.replace(/🤔 Thinking\.\.\.\n\n/g, '').replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
+            currentMessage.content = baseContent + deltaContent;
+          }
+          break;
+
+        case 'completed':
+          // Mark as complete and set final content
+          currentMessage.content = eventData.content;
+          currentMessage.isComplete = true;
+          currentMessage.type = 'message';
+          break;
+
+        case 'error':
+          // Show error
+          currentMessage.content = eventData.content;
+          currentMessage.isComplete = true;
+          currentMessage.type = 'message';
+          break;
+      }
+
+      newMessages[messageIndex] = currentMessage;
+      return newMessages;
+    });
   };
 
   const handleClearChat = () => {
@@ -245,7 +425,11 @@ export function SimpleChatView({
                         {/* Avatar for assistant messages */}
                         {message.role === 'assistant' && (
                           <div className="flex-shrink-0 mr-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              message.type === 'streaming' && !message.isComplete
+                                ? 'bg-blue-100 animate-pulse'
+                                : 'bg-blue-100'
+                            }`}>
                               {role === 'leadership' ? (
                                 <Crown className="h-4 w-4 text-blue-600" />
                               ) : (

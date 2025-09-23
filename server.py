@@ -32,12 +32,13 @@ logger = logging.getLogger(__name__)
 
 # NOW import everything else
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import uvicorn
+import json
 
 # Import service abstractions - NO business logic in routes
 from src.services.transcript_service import TranscriptService
@@ -950,6 +951,71 @@ async def advisor_chat(request: AdvisorChatRequest):
 
     except Exception as e:
         error_detail = f"Advisor chat failed: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_detail)
+
+
+@app.post("/api/v1/advisor/chat/stream")
+async def advisor_chat_stream(request: AdvisorChatRequest):
+    """Streaming chat interface for advisors with thinking steps and tool calls.
+
+    This endpoint streams events in real-time showing:
+    - 🤔 Thinking steps (agent reasoning)
+    - 🔧 Tool calls (agent actions)
+    - 📝 Response text (final answer)
+
+    Returns Server-Sent Events (SSE) format.
+    """
+    try:
+        # Initialize advisor service
+        advisor_service = AdvisorService(db_path=db_path)
+
+        async def generate_events():
+            """Generate SSE events from streaming chat response."""
+            try:
+                async for event in advisor_service.chat_stream(
+                    advisor_id=request.advisor_id,
+                    message=request.message,
+                    session_id=request.session_id,
+                    transcript_id=request.transcript_id,
+                    plan_id=request.plan_id
+                ):
+                    # Format as Server-Sent Events
+                    event_data = {
+                        "type": event["type"],
+                        "content": event["content"],
+                        "session_id": event["session_id"],
+                        "metadata": event.get("metadata", {})
+                    }
+
+                    # Send as SSE format
+                    yield f"data: {json.dumps(event_data)}\n\n"
+
+                    # If this is the final event, close the stream
+                    if event["type"] in ["completed", "error"]:
+                        break
+
+            except Exception as e:
+                # Send error event
+                error_event = {
+                    "type": "error",
+                    "content": f"Streaming failed: {str(e)}",
+                    "session_id": request.session_id or request.advisor_id,
+                    "metadata": {"error": str(e)}
+                }
+                yield f"data: {json.dumps(error_event)}\n\n"
+
+        return StreamingResponse(
+            generate_events(),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+            }
+        )
+
+    except Exception as e:
+        error_detail = f"Advisor streaming chat failed: {str(e)}"
         raise HTTPException(status_code=500, detail=error_detail)
 
 
