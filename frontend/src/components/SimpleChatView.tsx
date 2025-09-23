@@ -422,15 +422,15 @@ export function SimpleChatView({
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-3">
-          <Card className="h-[600px] flex flex-col">
+          <Card className="h-[600px] flex flex-col overflow-hidden">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">
                 Conversation {role === 'advisor' && `(${currentAgentMode} mode)`}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
+            <CardContent className="flex-1 flex flex-col min-h-0">
               {/* Messages Container */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto min-h-0">
                 <div className="space-y-4 p-2">
                   {messages.map((message) => (
                     <div key={message.id} className="mb-4">
