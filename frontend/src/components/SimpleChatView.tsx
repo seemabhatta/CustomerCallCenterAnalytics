@@ -271,32 +271,32 @@ export function SimpleChatView({
                             whiteSpace: 'pre-wrap'
                           }}
                         >
-                          <div className="text-sm prose prose-sm max-w-none">
+                          <div className="text-sm prose prose-sm overflow-x-auto">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               rehypePlugins={[rehypeHighlight]}
                               components={{
-                                // Custom styling for markdown elements
-                                h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2" {...props} />,
-                                h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2" {...props} />,
-                                h3: ({node, ...props}) => <h3 className="text-sm font-bold mb-1" {...props} />,
-                                p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2" {...props} />,
-                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2" {...props} />,
-                                li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                                // Custom styling for markdown elements - compact version
+                                h1: ({node, ...props}) => <h1 className="text-base font-bold mb-1" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-sm font-bold mb-1" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-xs font-bold mb-0.5" {...props} />,
+                                p: ({node, ...props}) => <p className="mb-1 last:mb-0" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1" {...props} />,
+                                li: ({node, ...props}) => <li className="mb-0.5" {...props} />,
                                 code: ({node, ...props}) => {
                                   // Check if this is inline code (no className or short content)
                                   const isInline = !props.className || (typeof props.children === 'string' && props.children.length < 100);
                                   return isInline
-                                    ? <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono" {...props} />
-                                    : <code className="block bg-gray-100 p-2 rounded text-xs font-mono overflow-x-auto" {...props} />;
+                                    ? <code className="bg-gray-200/50 px-0.5 py-0 rounded text-xs font-mono" {...props} />
+                                    : <code className="block bg-gray-100 p-1 rounded text-xs font-mono overflow-x-auto" {...props} />;
                                 },
-                                pre: ({node, ...props}) => <pre className="bg-gray-100 p-2 rounded overflow-x-auto mb-2" {...props} />,
-                                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic mb-2" {...props} />,
+                                pre: ({node, ...props}) => <pre className="bg-gray-100 p-1 rounded overflow-x-auto mb-1" {...props} />,
+                                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic mb-1" {...props} />,
                                 a: ({node, ...props}) => <a className="text-blue-600 underline" {...props} />,
-                                table: ({node, ...props}) => <table className="border-collapse border border-gray-300 mb-2" {...props} />,
-                                th: ({node, ...props}) => <th className="border border-gray-300 px-2 py-1 bg-gray-100 font-bold" {...props} />,
-                                td: ({node, ...props}) => <td className="border border-gray-300 px-2 py-1" {...props} />,
+                                table: ({node, ...props}) => <table className="border-collapse border border-gray-300 mb-1 overflow-x-auto" {...props} />,
+                                th: ({node, ...props}) => <th className="border border-gray-300 px-1 py-0.5 bg-gray-100 font-bold text-xs" {...props} />,
+                                td: ({node, ...props}) => <td className="border border-gray-300 px-1 py-0.5 text-xs" {...props} />,
                               }}
                             >
                               {message.content}
