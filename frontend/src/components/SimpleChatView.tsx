@@ -258,7 +258,7 @@ export function SimpleChatView({
                         {/* Message Bubble with Proper Text Wrapping */}
                         <div
                           className={`
-                            max-w-[70%] min-w-0 px-4 py-2 rounded-lg break-words hyphens-auto
+                            ${message.role === 'user' ? 'max-w-[70%]' : 'max-w-[85%]'} min-w-0 px-4 py-2 rounded-lg
                             ${message.role === 'user'
                               ? 'bg-blue-600 text-white'
                               : 'bg-slate-100 text-slate-900'
@@ -266,12 +266,12 @@ export function SimpleChatView({
                           `}
                           style={{
                             wordWrap: 'break-word',
-                            overflowWrap: 'anywhere',
+                            overflowWrap: 'break-word',
                             wordBreak: 'break-word',
                             whiteSpace: 'pre-wrap'
                           }}
                         >
-                          <div className="text-sm prose prose-sm overflow-x-auto">
+                          <div className="text-sm prose prose-sm w-full overflow-x-auto break-words">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               rehypePlugins={[rehypeHighlight]}
