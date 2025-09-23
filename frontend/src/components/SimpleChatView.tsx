@@ -279,9 +279,9 @@ export function SimpleChatView({
 
       switch (eventData.type) {
         case 'thinking':
-          // Add thinking indicator
-          if (!currentMessage.content.includes('🤔')) {
-            currentMessage.content = '🤔 Thinking...\n\n' + currentMessage.content;
+          // Add thinking indicator with animated dots
+          if (!currentMessage.content.includes('<span class="thinking-dots">')) {
+            currentMessage.content = '<span class="thinking-dots">...</span>\n\n' + currentMessage.content;
           }
           break;
 
@@ -289,31 +289,20 @@ export function SimpleChatView({
           // Add tool call indicator
           const toolContent = eventData.content + '\n\n';
           if (!currentMessage.content.includes(toolContent)) {
-            currentMessage.content = currentMessage.content.replace('🤔 Thinking...\n\n', '') + toolContent;
+            currentMessage.content = currentMessage.content.replace(/<span class="thinking-dots">.*?<\/span>\n\n/g, '') + toolContent;
           }
           break;
 
         case 'response_delta':
-          // Append text delta and mark that we have streaming content
+          // Append text delta
           const deltaContent = eventData.content;
           // Remove thinking/tool indicators when real content starts
-          let baseContent = currentMessage.content.replace(/🤔 Thinking\.\.\.\n\n/g, '').replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
+          let baseContent = currentMessage.content.replace(/<span class="thinking-dots">.*?<\/span>\n\n/g, '').replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
           currentMessage.content = baseContent + deltaContent;
-          // Mark that we've received streaming content
-          currentMessage.metadata = { ...currentMessage.metadata, hasStreamingContent: true };
           break;
 
         case 'completed':
-          // Only replace content if we haven't been streaming deltas
-          const hasStreamingContent = currentMessage.metadata?.hasStreamingContent;
-
-          if (!hasStreamingContent && eventData.content) {
-            // No streaming occurred, use the final content
-            currentMessage.content = eventData.content;
-          }
-          // Otherwise keep the accumulated streaming content
-
-          // Always mark as complete
+          // Just mark as complete - we already have the content from streaming deltas
           currentMessage.isComplete = true;
           currentMessage.type = 'message';
           break;
@@ -364,7 +353,22 @@ export function SimpleChatView({
   const quickActions = getQuickActionsForRole(role);
 
   return (
-    <div className="page-shell">
+    <>
+      <style>{`
+        .thinking-dots {
+          display: inline-block;
+          animation: thinking 1.5s infinite;
+          color: #64748b;
+          font-weight: bold;
+        }
+
+        @keyframes thinking {
+          0%, 20% { opacity: 0.2; }
+          40% { opacity: 1; }
+          60%, 100% { opacity: 0.2; }
+        }
+      `}</style>
+      <div className="page-shell">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-blue-600" />
@@ -528,26 +532,6 @@ export function SimpleChatView({
                     </div>
                   ))}
 
-                  {isLoading && (
-                    <div className="mb-4">
-                      <div className="flex justify-start w-full">
-                        <div className="flex-shrink-0 mr-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            {role === 'leadership' ? (
-                              <Crown className="h-4 w-4 text-blue-600" />
-                            ) : (
-                              <Bot className="h-4 w-4 text-blue-600" />
-                            )}
-                          </div>
-                        </div>
-                        <div className="bg-slate-100 px-4 py-2 rounded-lg">
-                          <p className="text-sm text-slate-600">
-                            Assistant is typing...
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                   <div ref={messagesEndRef} />
                 </div>
               </div>
@@ -627,7 +611,8 @@ export function SimpleChatView({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
