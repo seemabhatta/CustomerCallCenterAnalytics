@@ -74,16 +74,34 @@ export function SimpleChatView({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentAgentMode, setCurrentAgentMode] = useState<AgentMode>(agentMode);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageContainerRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (!messageContainerRef.current) return;
+    messageContainerRef.current.scrollTo({
+      top: messageContainerRef.current.scrollHeight,
+      behavior
+    });
+    setIsAtBottom(true);
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const lastMessage = messages[messages.length - 1];
+    const isStreaming = lastMessage?.type === 'streaming' && !lastMessage?.isComplete;
+    if (!isAtBottom) return;
+    scrollToBottom(isStreaming ? 'auto' : 'smooth');
+  }, [messages, isAtBottom]);
+
+  const handleMessagesScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.currentTarget;
+    const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    const atBottom = distanceFromBottom <= 32;
+    if (atBottom !== isAtBottom) {
+      setIsAtBottom(atBottom);
+    }
+  };
 
   // Cleanup on unmount
   useEffect(() => {
@@ -430,7 +448,11 @@ export function SimpleChatView({
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0">
               {/* Messages Container */}
-              <div className="flex-1 overflow-y-auto min-h-0">
+              <div
+                ref={messageContainerRef}
+                onScroll={handleMessagesScroll}
+                className="flex-1 overflow-y-auto min-h-0"
+              >
                 <div className="space-y-4 p-2">
                   {messages.map((message) => (
                     <div key={message.id} className="mb-4">
@@ -534,10 +556,8 @@ export function SimpleChatView({
                           </div>
                         )}
                       </div>
-                    </div>
-                  ))}
-
-                  <div ref={messagesEndRef} />
+                  </div>
+                ))}
                 </div>
               </div>
 
