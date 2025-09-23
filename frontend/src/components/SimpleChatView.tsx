@@ -75,6 +75,7 @@ export function SimpleChatView({
   const [currentAgentMode, setCurrentAgentMode] = useState<AgentMode>(agentMode);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
   const messageContainerRef = useRef<HTMLDivElement>(null);
+  const lastAutoScrolledMessageIdRef = useRef<string | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -89,9 +90,22 @@ export function SimpleChatView({
 
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
-    const isStreaming = lastMessage?.type === 'streaming' && !lastMessage?.isComplete;
-    if (!isAtBottom) return;
+    if (!lastMessage) return;
+
+    const isStreaming = lastMessage.type === 'streaming' && !lastMessage.isComplete;
+    const isSameAsLastScrolled = lastAutoScrolledMessageIdRef.current === lastMessage.id;
+
+    if (!isAtBottom) {
+      lastAutoScrolledMessageIdRef.current = lastMessage.id;
+      return;
+    }
+
+    if (isStreaming && isSameAsLastScrolled) {
+      return;
+    }
+
     scrollToBottom(isStreaming ? 'auto' : 'smooth');
+    lastAutoScrolledMessageIdRef.current = lastMessage.id;
   }, [messages, isAtBottom]);
 
   const handleMessagesScroll = (event: React.UIEvent<HTMLDivElement>) => {
@@ -351,6 +365,7 @@ export function SimpleChatView({
         timestamp: new Date()
       }
     ]);
+    lastAutoScrolledMessageIdRef.current = null;
   };
 
   const handleAgentModeChange = (mode: AgentMode) => {
@@ -428,6 +443,20 @@ export function SimpleChatView({
 
         .chat-markdown-root :where(li) {
           margin-top: 0.25rem;
+        }
+
+        .chat-markdown-root :where(li > p) {
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+
+        .chat-markdown-root :where(li > p:first-child) {
+          display: inline;
+        }
+
+        .chat-markdown-root :where(li > p:not(:first-child)) {
+          display: block;
+          margin-top: 0.2rem;
         }
       `}</style>
       <div className="page-shell">
