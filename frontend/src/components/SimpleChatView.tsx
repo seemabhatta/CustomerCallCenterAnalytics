@@ -388,6 +388,47 @@ export function SimpleChatView({
           40% { opacity: 1; }
           60%, 100% { opacity: 0.2; }
         }
+
+        .chat-markdown-root {
+          line-height: 1.5;
+        }
+
+        .chat-markdown-root :where(p,
+          ul,
+          ol,
+          pre,
+          blockquote,
+          table) {
+          margin-top: 0.2rem;
+          margin-bottom: 0.2rem;
+        }
+
+        .chat-markdown-root :where(p,
+          ul,
+          ol,
+          blockquote):first-child {
+          margin-top: 0;
+        }
+
+        .chat-markdown-root :where(h1,
+          h2,
+          h3,
+          h4,
+          h5,
+          h6) {
+          margin-top: 0.5rem;
+          margin-bottom: 0.3rem;
+          line-height: 1.3;
+        }
+
+        .chat-markdown-root :where(ul,
+          ol) {
+          padding-left: 1.25rem;
+        }
+
+        .chat-markdown-root :where(li) {
+          margin-top: 0.25rem;
+        }
       `}</style>
       <div className="page-shell">
       <div className="flex items-center justify-between mb-4">
@@ -489,10 +530,10 @@ export function SimpleChatView({
                             wordWrap: 'break-word',
                             overflowWrap: 'break-word',
                             wordBreak: 'break-word',
-                            whiteSpace: 'pre-wrap'
+                            whiteSpace: 'normal'
                           }}
                         >
-                          <div className="text-sm prose prose-sm w-full overflow-x-auto break-words">
+                          <div className="text-sm w-full overflow-x-auto break-words chat-markdown-root">
                             {message.isThinking && (
                               <span className="thinking-dots">...</span>
                             )}
@@ -501,13 +542,13 @@ export function SimpleChatView({
                               rehypePlugins={[rehypeHighlight]}
                               components={{
                                 // Custom styling for markdown elements - compact version
-                                h1: ({node, ...props}) => <h1 className="text-base font-bold mb-1" {...props} />,
-                                h2: ({node, ...props}) => <h2 className="text-sm font-bold mb-1" {...props} />,
-                                h3: ({node, ...props}) => <h3 className="text-xs font-bold mb-0.5" {...props} />,
-                                p: ({node, ...props}) => <p className="mb-1 last:mb-0" {...props} />,
-                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-1" {...props} />,
-                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-1" {...props} />,
-                                li: ({node, ...props}) => <li className="mb-0.5" {...props} />,
+                                h1: ({node, ...props}) => <h1 className="text-base font-bold" {...props} />,
+                                h2: ({node, ...props}) => <h2 className="text-sm font-bold" {...props} />,
+                                h3: ({node, ...props}) => <h3 className="text-xs font-bold" {...props} />,
+                                p: ({node, ...props}) => <p className="leading-relaxed" {...props} />,
+                                ul: ({node, ...props}) => <ul className="list-disc list-inside" {...props} />,
+                                ol: ({node, ...props}) => <ol className="list-decimal list-inside" {...props} />,
+                                li: ({node, ...props}) => <li {...props} />,
                                 code: ({node, ...props}) => {
                                   // Check if this is inline code (no className or short content)
                                   const isInline = !props.className || (typeof props.children === 'string' && props.children.length < 100);
