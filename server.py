@@ -125,18 +125,7 @@ class WorkflowApprovalRequest(BaseModel):
 class WorkflowExecutionRequest(BaseModel):
     executed_by: str
 
-class LeadershipChatRequest(BaseModel):
-    query: str
-    executive_id: str
-    executive_role: Optional[str] = "Manager"
-    session_id: Optional[str] = None
-
-class LeadershipSessionRequest(BaseModel):
-    executive_id: str
-    limit: Optional[int] = 10
-
-class LeadershipDashboardRequest(BaseModel):
-    executive_role: Optional[str] = None
+# Note: Leadership requests now use AdvisorChatRequest with role="leadership"
 
 
 class AdvisorChatRequest(BaseModel):
@@ -145,6 +134,7 @@ class AdvisorChatRequest(BaseModel):
     session_id: Optional[str] = None
     transcript_id: Optional[str] = None
     plan_id: Optional[str] = None
+    role: Optional[str] = "advisor"  # Role parameter: "advisor" or "leadership"
 
 
 @app.get("/")
@@ -165,8 +155,7 @@ async def root():
             "executions": "/api/v1/executions",
             "metrics": "/api/v1/metrics",
             "health": "/api/v1/health",
-            "leadership": "/api/v1/leadership",
-            "advisor": "/api/v1/advisor"
+            "chat": "/api/v1/advisor/chat (universal endpoint for all roles)"
         }
     }
 
@@ -809,130 +798,25 @@ async def list_orchestration_runs(
     }
 
 # ===============================================
-# LEADERSHIP INSIGHTS ENDPOINTS
+# UNIFIED CHAT ENDPOINT - Handles All Roles
 # ===============================================
 
-@app.post("/api/v1/leadership/chat")
-async def leadership_chat(request: LeadershipChatRequest):
-    """Main chat interface for leadership insights - proxies to leadership service."""
-    try:
-        result = await leadership_insights_service.chat(
-            query=request.query,
-            executive_id=request.executive_id,
-            executive_role=request.executive_role,
-            session_id=request.session_id
-        )
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Leadership chat failed: {str(e)}")
-
-@app.get("/api/v1/leadership/sessions/{session_id}/history")
-async def get_session_history(
-    session_id: str,
-    limit: Optional[int] = Query(50, description="Maximum messages to return")
-):
-    """Get conversation history for a session - proxies to leadership service."""
-    try:
-        result = await leadership_insights_service.get_session_history(session_id, limit)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get session history: {str(e)}")
-
-@app.get("/api/v1/leadership/sessions")
-async def list_executive_sessions(
-    executive_id: str = Query(..., description="Executive identifier"),
-    limit: Optional[int] = Query(10, description="Maximum sessions to return")
-):
-    """List sessions for an executive - proxies to leadership service."""
-    try:
-        result = await leadership_insights_service.get_executive_sessions(executive_id, limit)
-        return {"sessions": result, "total": len(result)}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list executive sessions: {str(e)}")
-
-@app.get("/api/v1/leadership/sessions/{session_id}")
-async def get_session_details(session_id: str):
-    """Get session details including metadata - proxies to leadership service."""
-    try:
-        result = await leadership_insights_service.get_session_history(session_id, limit=1)
-        if not result or not result.get('session'):
-            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
-        return result['session']
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get session details: {str(e)}")
-
-@app.delete("/api/v1/leadership/sessions/{session_id}")
-async def delete_session(session_id: str):
-    """Delete a leadership session - proxies to leadership service."""
-    try:
-        success = await leadership_insights_service.delete_session(session_id)
-        if not success:
-            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
-        return {"message": f"Session {session_id} deleted successfully"}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete session: {str(e)}")
-
-@app.get("/api/v1/leadership/dashboard")
-async def get_leadership_dashboard(
-    executive_role: Optional[str] = Query(None, description="Filter by executive role")
-):
-    """Get pre-computed insights dashboard - proxies to leadership service."""
-    try:
-        result = await leadership_insights_service.get_insights_dashboard(executive_role)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get leadership dashboard: {str(e)}")
-
-@app.get("/api/v1/leadership/cache/stats")
-async def get_cache_statistics():
-    """Get cache performance metrics - proxies to leadership service."""
-    try:
-        cache_stats = leadership_insights_service.get_cache_statistics()
-        return cache_stats
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get cache statistics: {str(e)}")
-
-@app.get("/api/v1/leadership/patterns")
-async def get_pattern_statistics():
-    """Get learning patterns statistics - proxies to leadership service."""
-    try:
-        pattern_stats = leadership_insights_service.get_pattern_statistics()
-        return pattern_stats
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get pattern statistics: {str(e)}")
-
-@app.get("/api/v1/leadership/status")
-async def get_leadership_service_status():
-    """Get leadership service health and component status."""
-    try:
-        result = leadership_insights_service.get_service_status()
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get leadership service status: {str(e)}")
+# Note: All chat functionality (advisor, leadership, etc.) is now handled
+# by the single /api/v1/advisor/chat endpoint with the role parameter.
+# This simplifies the API and reduces redundant code.
 
 
 # ===============================================
-# ADVISOR ENDPOINTS - BORROWER-focused Claude Code
+# UNIFIED CHAT ENDPOINTS - All Roles (Advisor, Leadership, etc.)
 # ===============================================
 
 @app.post("/api/v1/advisor/chat")
 async def advisor_chat(request: AdvisorChatRequest):
-    """Main chat interface for advisors - like Claude Code for BORROWER workflows.
+    """Universal chat interface for all roles - like Claude Code for any workflow type.
 
-    This is the single endpoint that makes the advisor agent work like Claude Code.
-    The agent autonomously decides what tools to call based on the message.
+    This is the single endpoint that handles all user roles (advisor, leadership, etc.).
+    The agent behavior is determined by the 'role' parameter which loads role-specific prompts.
+    The agent autonomously decides what tools to call based on the message and role.
     """
     try:
         # Initialize advisor service
@@ -944,7 +828,8 @@ async def advisor_chat(request: AdvisorChatRequest):
             message=request.message,
             session_id=request.session_id,
             transcript_id=request.transcript_id,
-            plan_id=request.plan_id
+            plan_id=request.plan_id,
+            role=request.role
         )
 
         return result
@@ -977,7 +862,8 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
                     message=request.message,
                     session_id=request.session_id,
                     transcript_id=request.transcript_id,
-                    plan_id=request.plan_id
+                    plan_id=request.plan_id,
+                    role=request.role
                 ):
                     # Format as Server-Sent Events
                     event_data = {

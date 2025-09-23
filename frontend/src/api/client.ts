@@ -449,20 +449,40 @@ export const orchestrationApi = {
     ),
 };
 
-// Leadership API
-export const leadershipApi = {
-  chat: (data: LeadershipChatRequest) =>
-    apiCall<LeadershipChatResponse>(() =>
-      api.post('/api/v1/leadership/chat', data)
-    ),
-};
-
-// Advisor API
-export const advisorApi = {
-  chat: (data: AdvisorChatRequest) =>
+// Unified Chat API - Single endpoint for all roles
+export const chatApi = {
+  send: (data: { advisor_id: string; message: string; role: string; session_id?: string; transcript_id?: string; plan_id?: string }) =>
     apiCall<AdvisorChatResponse>(() =>
       api.post('/api/v1/advisor/chat', data)
     ),
+
+  sendStream: (data: { advisor_id: string; message: string; role: string; session_id?: string; transcript_id?: string; plan_id?: string }) =>
+    api.post('/api/v1/advisor/chat/stream', data),
+};
+
+// Legacy APIs - kept for backward compatibility but use unified chatApi instead
+export const leadershipApi = {
+  chat: (data: LeadershipChatRequest) =>
+    // Route to unified endpoint with leadership role
+    chatApi.send({
+      advisor_id: data.executive_id,
+      message: data.query,
+      role: 'leadership',
+      session_id: data.session_id
+    }),
+};
+
+export const advisorApi = {
+  chat: (data: AdvisorChatRequest) =>
+    // Route to unified endpoint with advisor role
+    chatApi.send({
+      advisor_id: data.advisor_id,
+      message: data.message,
+      role: data.role || 'advisor',
+      session_id: data.session_id,
+      transcript_id: data.transcript_id,
+      plan_id: data.plan_id
+    }),
 
   getSessions: (advisorId: string, limit: number = 5) =>
     apiCall<{ sessions: any[] }>(() =>

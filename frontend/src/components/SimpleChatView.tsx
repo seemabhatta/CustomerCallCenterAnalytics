@@ -166,6 +166,7 @@ export function SimpleChatView({
         body: JSON.stringify({
           advisor_id: userId,
           message: messageToSend,
+          role: role, // Add role parameter for unified endpoint
           session_id: sessionId || undefined,
           transcript_id: context.transcriptId || undefined,
           plan_id: context.planId || undefined

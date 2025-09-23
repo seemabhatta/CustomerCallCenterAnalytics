@@ -611,6 +611,7 @@ export interface LeadershipChatResponse {
 export interface AdvisorChatRequest {
   advisor_id: string;
   message: string;
+  role?: string; // Role parameter for unified endpoint ("advisor", "leadership", etc.)
   session_id?: string;
   transcript_id?: string;
   plan_id?: string;

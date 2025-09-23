@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, AsyncIterator
 from agents import Runner, SQLiteSession, RunResultStreaming
 from agents.stream_events import StreamEvent, RunItemStreamEvent, RawResponsesStreamEvent
 
-from src.call_center_agents.advisor_agent_v2 import advisor_agent
+from src.call_center_agents.role_based_agent import create_role_based_agent
 
 
 class AdvisorService:
@@ -35,7 +35,8 @@ class AdvisorService:
         self.db_path = db_path
 
     async def chat(self, advisor_id: str, message: str, session_id: Optional[str] = None,
-                   transcript_id: Optional[str] = None, plan_id: Optional[str] = None) -> Dict[str, Any]:
+                   transcript_id: Optional[str] = None, plan_id: Optional[str] = None,
+                   role: str = "advisor") -> Dict[str, Any]:
         """Process a chat message using OpenAI Agents.
 
         Clean agentic approach - the LLM decides what tools to call.
@@ -71,8 +72,11 @@ class AdvisorService:
             # Create SQLite session for conversation persistence
             session = SQLiteSession(actual_session_id, db_path=self.db_path)
 
+            # Create role-based agent
+            agent = create_role_based_agent(role)
+
             # Run the agent with the message - OpenAI Agents handles everything
-            result = await Runner.run(advisor_agent, message, session=session)
+            result = await Runner.run(agent, message, session=session)
 
             return {
                 "response": result.final_output,
@@ -86,7 +90,8 @@ class AdvisorService:
             raise Exception(f"Chat processing failed: {error_msg}")
 
     async def chat_stream(self, advisor_id: str, message: str, session_id: Optional[str] = None,
-                         transcript_id: Optional[str] = None, plan_id: Optional[str] = None) -> AsyncIterator[Dict[str, Any]]:
+                         transcript_id: Optional[str] = None, plan_id: Optional[str] = None,
+                         role: str = "advisor") -> AsyncIterator[Dict[str, Any]]:
         """Process a chat message using OpenAI Agents with streaming support.
 
         Yields streaming events showing thinking steps, tool calls, and response text.
@@ -127,8 +132,11 @@ class AdvisorService:
             # Create SQLite session for conversation persistence
             session = SQLiteSession(actual_session_id, db_path=self.db_path)
 
+            # Create role-based agent
+            agent = create_role_based_agent(role)
+
             # Run the agent in streaming mode
-            result = Runner.run_streamed(advisor_agent, message, session=session)
+            result = Runner.run_streamed(agent, message, session=session)
 
             # Stream events as they arrive
             final_output = ""
