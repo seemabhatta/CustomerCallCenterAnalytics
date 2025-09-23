@@ -38,6 +38,7 @@ interface ChatMessage {
   metadata?: any;
   type?: 'message' | 'thinking' | 'tool_call' | 'streaming';
   isComplete?: boolean;
+  isThinking?: boolean;
 }
 
 interface SimpleChatViewProps {
@@ -133,7 +134,8 @@ export function SimpleChatView({
         content: '',
         timestamp: new Date(),
         type: 'streaming',
-        isComplete: false
+        isComplete: false,
+        isThinking: false
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -279,25 +281,25 @@ export function SimpleChatView({
 
       switch (eventData.type) {
         case 'thinking':
-          // Add thinking indicator with animated dots
-          if (!currentMessage.content.includes('<span class="thinking-dots">')) {
-            currentMessage.content = '<span class="thinking-dots">...</span>\n\n' + currentMessage.content;
-          }
+          // Add thinking indicator flag
+          currentMessage.isThinking = true;
           break;
 
         case 'tool_call':
           // Add tool call indicator
           const toolContent = eventData.content + '\n\n';
           if (!currentMessage.content.includes(toolContent)) {
-            currentMessage.content = currentMessage.content.replace(/<span class="thinking-dots">.*?<\/span>\n\n/g, '') + toolContent;
+            currentMessage.isThinking = false;
+            currentMessage.content = currentMessage.content + toolContent;
           }
           break;
 
         case 'response_delta':
-          // Append text delta
+          // Append text delta and stop thinking
+          currentMessage.isThinking = false;
           const deltaContent = eventData.content;
-          // Remove thinking/tool indicators when real content starts
-          let baseContent = currentMessage.content.replace(/<span class="thinking-dots">.*?<\/span>\n\n/g, '').replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
+          // Remove tool indicators when real content starts
+          let baseContent = currentMessage.content.replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
           currentMessage.content = baseContent + deltaContent;
           break;
 
@@ -468,6 +470,9 @@ export function SimpleChatView({
                           }}
                         >
                           <div className="text-sm prose prose-sm w-full overflow-x-auto break-words">
+                            {message.isThinking && (
+                              <span className="thinking-dots">...</span>
+                            )}
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               rehypePlugins={[rehypeHighlight]}
