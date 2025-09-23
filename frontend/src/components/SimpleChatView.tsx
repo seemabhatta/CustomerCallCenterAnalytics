@@ -294,18 +294,26 @@ export function SimpleChatView({
           break;
 
         case 'response_delta':
-          // Append text delta
+          // Append text delta and mark that we have streaming content
           const deltaContent = eventData.content;
-          // Remove thinking indicators when real content starts
-          if (!currentMessage.content.includes(deltaContent)) {
-            let baseContent = currentMessage.content.replace(/🤔 Thinking\.\.\.\n\n/g, '').replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
-            currentMessage.content = baseContent + deltaContent;
-          }
+          // Remove thinking/tool indicators when real content starts
+          let baseContent = currentMessage.content.replace(/🤔 Thinking\.\.\.\n\n/g, '').replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
+          currentMessage.content = baseContent + deltaContent;
+          // Mark that we've received streaming content
+          currentMessage.metadata = { ...currentMessage.metadata, hasStreamingContent: true };
           break;
 
         case 'completed':
-          // Mark as complete and set final content
-          currentMessage.content = eventData.content;
+          // Only replace content if we haven't been streaming deltas
+          const hasStreamingContent = currentMessage.metadata?.hasStreamingContent;
+
+          if (!hasStreamingContent && eventData.content) {
+            // No streaming occurred, use the final content
+            currentMessage.content = eventData.content;
+          }
+          // Otherwise keep the accumulated streaming content
+
+          // Always mark as complete
           currentMessage.isComplete = true;
           currentMessage.type = 'message';
           break;
