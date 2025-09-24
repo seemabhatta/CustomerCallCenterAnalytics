@@ -1,0 +1,49 @@
+Conversation (borrower mode)
+Hello! I'm your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?
+
+12:36:36 PM
+
+show me all the calls
+
+12:37:00 PM
+
+...
+{"limit":10}Here are all the recent calls available in the system:
+
+Call ID: CALL_F1438D7A
+Date: September 22, 2025
+Topic: Payment issues
+Customer: John Doe (CUST_001)
+Summary: Customer called regarding a $1,500 payment not reflected in their account.
+Call ID: CALL_B3286CDE
+Date: October 10, 2023
+Topic: Late payment
+Customer: John Smith (CUST_001)
+Summary: Customer expressed frustration about being notified of a late payment despite having made it on time.
+Call ID: CALL_BA5FD120
+Date: October 10, 2023
+Topic: Payment issues
+Customer: John Doe (CUST_001)
+Summary: Customer inquired about refinancing their mortgage.
+Call ID: CALL_D0173D49
+Date: October 10, 2023
+Topic: Payment issues
+Customer: John Doe (CUST_001)
+Summary: Customer called about issues with their mortgage payment.
+Call ID: CALL_8174A2F3
+Date: October 10, 2023
+Topic: Payment issues
+Customer: John Smith (CUST_001)
+Summary: Discussion about payment processing and confirming a manual payment.
+If you need more details about any specific calls or need assistance with particular actions, feel free to ask!
+
+12:37:00 PM
+
+lets take CALL_F1438D7A call find pending workflow items
+
+12:38:01 PM
+
+Chat processing failed: Your input exceeds the context window of this model. Please adjust your input and try again.
+
+12:38:01 PM
+

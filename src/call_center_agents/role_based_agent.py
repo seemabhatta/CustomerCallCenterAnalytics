@@ -308,6 +308,136 @@ async def get_pending_borrower_workflows(limit: int = 10) -> List[Dict[str, Any]
 
 
 @function_tool
+async def create_todo_plan(task_description: str, steps: List[str]) -> Dict[str, Any]:
+    """Create a structured plan for multi-step tasks.
+
+    Args:
+        task_description: What the user wants to accomplish
+        steps: List of step descriptions in execution order
+
+    Returns:
+        Todo plan with formatted display for user approval
+    """
+    import time
+    plan_id = f"TODO_{int(time.time())}"
+
+    # Format the todo list display
+    formatted_steps = []
+    for i, step in enumerate(steps, 1):
+        formatted_steps.append(f"□ {i}. {step}")
+
+    formatted_display = f"""📋 **Plan {plan_id}: {task_description}**
+{chr(10).join(formatted_steps)}
+
+**Approve this plan?** (yes/no/modify)"""
+
+    return {
+        "plan_id": plan_id,
+        "task_description": task_description,
+        "steps": [{"number": i+1, "description": step, "status": "pending"}
+                  for i, step in enumerate(steps)],
+        "formatted_display": formatted_display,
+        "approval_needed": True,
+        "step_count": len(steps)
+    }
+
+
+@function_tool
+async def update_todo_status(plan_id: str, step_number: int, status: str, result: str = None) -> Dict[str, Any]:
+    """Update the status of a todo step and show progress.
+
+    Args:
+        plan_id: Todo plan identifier from create_todo_plan
+        step_number: Which step to update (1-based)
+        status: "in_progress", "completed", "failed"
+        result: Brief summary of what was accomplished (optional)
+
+    Returns:
+        Updated progress display
+    """
+    # Status icons
+    status_icons = {
+        "pending": "□",
+        "in_progress": "▶️",
+        "completed": "✅",
+        "failed": "❌"
+    }
+
+    icon = status_icons.get(status, "□")
+
+    if status == "in_progress":
+        message = f"{icon} {step_number}. Step in progress..."
+    elif status == "completed" and result:
+        message = f"{icon} {step_number}. {result}"
+    elif status == "failed" and result:
+        message = f"{icon} {step_number}. Failed: {result}"
+    else:
+        message = f"{icon} {step_number}. {status}"
+
+    return {
+        "plan_id": plan_id,
+        "step_number": step_number,
+        "status": status,
+        "result": result,
+        "formatted_update": f"📋 **Progress Update:**\n{message}",
+        "next_step": step_number + 1 if status == "completed" else step_number
+    }
+
+
+@function_tool
+async def show_todo_progress(plan_id: str, task_description: str, completed_steps_json: str, current_step: int = None, total_steps: int = None) -> Dict[str, Any]:
+    """Display current todo plan progress with all step statuses.
+
+    Args:
+        plan_id: Plan identifier
+        task_description: Original task description
+        completed_steps_json: JSON string of completed steps with results
+        current_step: Currently active step number (optional)
+        total_steps: Total number of steps (optional)
+
+    Returns:
+        Formatted progress display
+    """
+    import json
+
+    progress_lines = [f"📋 **Progress for {plan_id}: {task_description}**"]
+
+    try:
+        completed_steps = json.loads(completed_steps_json)
+    except json.JSONDecodeError:
+        completed_steps = []
+
+    for step in completed_steps:
+        step_num = step.get("step_number", step.get("number", "?"))
+        result = step.get("result", step.get("description", ""))
+        status = step.get("status", "completed")
+
+        if status == "completed":
+            progress_lines.append(f"✅ {step_num}. {result}")
+        elif status == "in_progress":
+            progress_lines.append(f"▶️ {step_num}. {result}")
+        elif status == "failed":
+            progress_lines.append(f"❌ {step_num}. {result}")
+        else:
+            progress_lines.append(f"□ {step_num}. {result}")
+
+    # Add pending steps if we know the total
+    if current_step and total_steps:
+        for i in range(current_step + 1, total_steps + 1):
+            progress_lines.append(f"□ {i}. Pending...")
+
+    formatted_display = "\n".join(progress_lines)
+
+    return {
+        "plan_id": plan_id,
+        "formatted_display": formatted_display,
+        "completed_count": len([s for s in completed_steps if s.get("status") == "completed"]),
+        "current_step": current_step,
+        "total_steps": total_steps
+    }
+
+
+@function_tool
 async def approve_workflow(workflow_id: str, approved_by: str, reasoning: str = "Approved by AI Agent on user's behalf") -> Dict[str, Any]:
     """Approve a workflow on behalf of the user.
 
@@ -388,7 +518,11 @@ def create_role_based_agent(role: str) -> Agent:
             execute_workflow_step,
             approve_workflow,
             get_full_pipeline_for_transcript,
-            get_pending_borrower_workflows
+            get_pending_borrower_workflows,
+            # Todo management tools
+            create_todo_plan,
+            update_todo_status,
+            show_todo_progress
         ]
     )
 

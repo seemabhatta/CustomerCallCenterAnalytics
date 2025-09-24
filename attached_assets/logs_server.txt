@@ -4,108 +4,59 @@
 📚 API Documentation: http://localhost:8000/docs
 🌐 Server URL: http://0.0.0.0:8000
 ✅ Streamlined API with core endpoints only
-INFO:     Started server process [257707]
+INFO:     Started server process [133010]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:36388 - "POST /api/v1/advisor/chat HTTP/1.1" 200 OK
-INFO:     127.0.0.1:36994 - "GET /api/v1/transcripts?limit=1 HTTP/1.1" 200 OK
-🔍 DEBUG: recent_transcripts type: <class 'list'>, content: [{'id': 'CALL_85029437', 'messages': [{'speaker': '**Date', 'text': '** October 10, 2023', 'timestamp': '', 'sentiment': None}, {'speaker': '**Time', 'text': '** 10:15 AM', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer ID', 'text': '** CUST_001', 'timestamp': '', 'sentiment': None}, {'speaker': '**Representative', 'text': '** Sarah Thompson', 'timestamp': '', 'sentiment': None}, {'speaker': '**Duration', 'text': '** 12 minutes', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Thank you for calling Mortgage Servicing, this is Sarah. How can I assist you today?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Hi Sarah, this is John Smith. My customer ID is CUST_001. I’m calling about a payment issue I’m experiencing.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Hi John, thank you for providing your customer ID. I see you have a mortgage with us for the property located at 123 Elm Street. Can you tell me more about the issue you’re facing?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Yes, I made my payment last week, but I received a notification saying it hasn’t been processed yet. My payment was for $1,200.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Let me pull up your account and check the payment status for you. Please hold for a moment.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Thank you for holding, John. I see that your payment was initiated on October 3rd, but it appears that there was a delay in processing. It hasn’t been applied to your account yet.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** That’s what I thought. Is there a reason for the delay?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Sometimes, payments can be delayed due to bank processing times or system updates. I can assure you that we’re actively working to resolve this and get your payment applied as soon as possible.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Okay, I understand. Will I be charged any late fees since the payment hasn’t gone through yet?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Since your payment was made on time, you will not incur any late fees. We will honor the date of your payment initiation. Just to clarify, you are still within the grace period.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** That’s good to hear. How can I confirm once the payment has been processed?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** You will receive a confirmation email once your payment is applied to your account. Additionally, you can check your online account balance. It should update within the next 24 to 48 hours.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Great, I appreciate that. Is there anything else I should keep in mind while waiting for this to be resolved?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Just keep an eye on your email for the confirmation. If you don’t see the update within two days, feel free to call us back. We’ll be happy to assist you further.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Sounds good. Thank you for your help today, Sarah.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** You’re welcome, John! Thank you for calling, and have a great day!', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** You too. Bye.', 'timestamp': '', 'sentiment': None}], 'customer_id': 'CUST_001', 'advisor_id': '', 'timestamp': '2025-09-21T00:32:26.421336Z', 'topic': 'payment_issues', 'duration': 0, 'compliance_flags': [], 'outcome': None, 'urgency': 'medium'}]
-🔍 DEBUG: latest_transcript type: <class 'dict'>, content: {'id': 'CALL_85029437', 'messages': [{'speaker': '**Date', 'text': '** October 10, 2023', 'timestamp': '', 'sentiment': None}, {'speaker': '**Time', 'text': '** 10:15 AM', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer ID', 'text': '** CUST_001', 'timestamp': '', 'sentiment': None}, {'speaker': '**Representative', 'text': '** Sarah Thompson', 'timestamp': '', 'sentiment': None}, {'speaker': '**Duration', 'text': '** 12 minutes', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Thank you for calling Mortgage Servicing, this is Sarah. How can I assist you today?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Hi Sarah, this is John Smith. My customer ID is CUST_001. I’m calling about a payment issue I’m experiencing.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Hi John, thank you for providing your customer ID. I see you have a mortgage with us for the property located at 123 Elm Street. Can you tell me more about the issue you’re facing?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Yes, I made my payment last week, but I received a notification saying it hasn’t been processed yet. My payment was for $1,200.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Let me pull up your account and check the payment status for you. Please hold for a moment.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Thank you for holding, John. I see that your payment was initiated on October 3rd, but it appears that there was a delay in processing. It hasn’t been applied to your account yet.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** That’s what I thought. Is there a reason for the delay?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Sometimes, payments can be delayed due to bank processing times or system updates. I can assure you that we’re actively working to resolve this and get your payment applied as soon as possible.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Okay, I understand. Will I be charged any late fees since the payment hasn’t gone through yet?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Since your payment was made on time, you will not incur any late fees. We will honor the date of your payment initiation. Just to clarify, you are still within the grace period.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** That’s good to hear. How can I confirm once the payment has been processed?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** You will receive a confirmation email once your payment is applied to your account. Additionally, you can check your online account balance. It should update within the next 24 to 48 hours.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Great, I appreciate that. Is there anything else I should keep in mind while waiting for this to be resolved?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Just keep an eye on your email for the confirmation. If you don’t see the update within two days, feel free to call us back. We’ll be happy to assist you further.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Sounds good. Thank you for your help today, Sarah.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** You’re welcome, John! Thank you for calling, and have a great day!', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** You too. Bye.', 'timestamp': '', 'sentiment': None}], 'customer_id': 'CUST_001', 'advisor_id': '', 'timestamp': '2025-09-21T00:32:26.421336Z', 'topic': 'payment_issues', 'duration': 0, 'compliance_flags': [], 'outcome': None, 'urgency': 'medium'}
-🔍 DEBUG: transcript_id: CALL_85029437
-🔍 DEBUG: get_pipeline_for_transcript query result type: <class 'kuzu.query_result.QueryResult'>
-🔍 DEBUG: record type: <class 'list'>, length: 5
-🔍 DEBUG: returning pipeline_data type: <class 'dict'>, keys: ['transcript', 'analysis', 'plan', 'workflows', 'steps']
-🔍 SessionContext DEBUG: pipeline_data type: <class 'dict'>
-🎯 Updated session context with latest transcript: CALL_85029437
-
-🧠 LLM DECISION DEBUG: Processing user input: 'last call'
-🤖 Raw LLM Response:
+INFO:     127.0.0.1:42664 - "GET /api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42666 - "GET /api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42680 - "GET /api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42696 - "GET /api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42710 - "GET /api/v1/orchestrate/runs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42664 - "GET /api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42666 - "GET /api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42680 - "GET /api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42710 - "GET /api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38606 - "POST /api/v1/advisor/chat/stream HTTP/1.1" 200 OK
+[12:37:01] ✓ POST | 1.3s | http.method=POST http.url=https://api.... http.statuscode=200
+[12:37:06] ✓ POST | 0.9s | http.method=POST http.url=https://api.... http.statuscode=204
+INFO:     127.0.0.1:38576 - "GET /api/v1/transcripts?limit=10 HTTP/1.1" 200 OK
+[12:37:09] ✓ POST | 1.2s | http.method=POST http.url=https://api.... http.statuscode=200
+[12:37:11] ✓ POST | 1.7s | http.method=POST http.url=https://api.... http.statuscode=204
+[12:37:23] ✓ POST | 0.8s | http.method=POST http.url=https://api.... http.statuscode=204
+INFO:     127.0.0.1:35652 - "POST /api/v1/advisor/chat/stream HTTP/1.1" 200 OK
+[12:38:01] ✓ POST | 0.8s | http.method=POST http.url=https://api.... http.statuscode=200
+INFO:     127.0.0.1:49396 - "GET /api/v1/orchestrate/transcript/CALL_F1438D7A/pipeline HTTP/1.1" 404 Not Found
+[12:38:04] ✓ POST | 0.4s | http.method=POST http.url=https://api.... http.statuscode=204
+[12:38:08] ✓ POST | 0.7s | http.method=POST http.url=https://api.... http.statuscode=200
+INFO:     127.0.0.1:49404 - "GET /api/v1/workflows?plan_id=PLAN_ANALYSIS_CALL_F HTTP/1.1" 200 OK
 {
-    "reasoning": "The advisor requested the last call, which requires retrieving the most recent customer call transcript. I will use the 'get_transcripts' tool to fetch this information.",
-    "tool_calls": [
-        {"tool_name": "get_transcripts", "parameters": {"limit": 1}}
-    ],
-    "response": null
+    "body": "Error streaming response: Your input exceeds the context window of this model. Please adjust your input and try again.",
+    "severity_number": 17,
+    "severity_text": "ERROR",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/agents/models/openai_responses.py",
+        "code.function.name": "stream_response",
+        "code.line.number": 196
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-09-24T16:38:12.567593Z",
+    "observed_timestamp": "2025-09-24T16:38:12.567773Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
 }
-📋 Parsed Decision:
-   Reasoning: The advisor requested the last call, which requires retrieving the most recent customer call transcript. I will use the 'get_transcripts' tool to fetch this information.
-   Tool Calls: [{'tool_name': 'get_transcripts', 'parameters': {'limit': 1}}]
-   Direct Response: None
-  📝 Stored tool call decision: 1 tools
-
-🔧 TOOL EXECUTION DEBUG: Executing 1 tool calls
-  🎯 Context available: transcript_id = CALL_85029437
-  🛠️  Tool 1: get_transcripts
-      Parameters: {'limit': 1}
-INFO:     127.0.0.1:37004 - "GET /api/v1/transcripts?limit=1 HTTP/1.1" 200 OK
-      ✅ Result: [{'id': 'CALL_85029437', 'messages': [{'speaker': '**Date', 'text': '** October 10, 2023', 'timestamp': '', 'sentiment': None}, {'speaker': '**Time', 'text': '** 10:15 AM', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer ID', 'text': '** CUST_001', 'timestamp': '', 'sentiment': None}, {'speaker': '**Representative', 'text': '** Sarah Thompson', 'timestamp': '', 'sentiment': None}, {'speaker': '**Duration', 'text': '** 12 minutes', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Thank you for calling Mortgage Servicing, this is Sarah. How can I assist you today?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Hi Sarah, this is John Smith. My customer ID is CUST_001. I’m calling about a payment issue I’m experiencing.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Hi John, thank you for providing your customer ID. I see you have a mortgage with us for the property located at 123 Elm Street. Can you tell me more about the issue you’re facing?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Yes, I made my payment last week, but I received a notification saying it hasn’t been processed yet. My payment was for $1,200.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Let me pull up your account and check the payment status for you. Please hold for a moment.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Thank you for holding, John. I see that your payment was initiated on October 3rd, but it appears that there was a delay in processing. It hasn’t been applied to your account yet.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** That’s what I thought. Is there a reason for the delay?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Sometimes, payments can be delayed due to bank processing times or system updates. I can assure you that we’re actively working to resolve this and get your payment applied as soon as possible.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Okay, I understand. Will I be charged any late fees since the payment hasn’t gone through yet?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Since your payment was made on time, you will not incur any late fees. We will honor the date of your payment initiation. Just to clarify, you are still within the grace period.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** That’s good to hear. How can I confirm once the payment has been processed?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** You will receive a confirmation email once your payment is applied to your account. Additionally, you can check your online account balance. It should update within the next 24 to 48 hours.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Great, I appreciate that. Is there anything else I should keep in mind while waiting for this to be resolved?', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** Just keep an eye on your email for the confirmation. If you don’t see the update within two days, feel free to call us back. We’ll be happy to assist you further.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** Sounds good. Thank you for your help today, Sarah.', 'timestamp': '', 'sentiment': None}, {'speaker': '**Sarah', 'text': '** You’re welcome, John! Thank you for calling, and have a great day!', 'timestamp': '', 'sentiment': None}, {'speaker': '**Customer', 'text': '** You too. Bye.', 'timestamp': '', 'sentiment': None}], 'customer_id': 'CUST_001', 'advisor_id': '', 'timestamp': '2025-09-21T00:32:26.421336Z', 'topic': 'payment_issues', 'duration': 0, 'compliance_flags': [], 'outcome': None, 'urgency': 'medium'}]
-  🔍 Extracting context from get_transcripts
-🔍 DEBUG: get_pipeline_for_transcript query result type: <class 'kuzu.query_result.QueryResult'>
-🔍 DEBUG: record type: <class 'list'>, length: 5
-🔍 DEBUG: returning pipeline_data type: <class 'dict'>, keys: ['transcript', 'analysis', 'plan', 'workflows', 'steps']
-🔍 SessionContext DEBUG: pipeline_data type: <class 'dict'>
-      📋 Set active transcript: CALL_85029437
-  📝 Stored tool results: 1 total
-
-💬 RESPONSE FORMATTING DEBUG:
-   User Input: last call
-   Tool Results Summary: 1 successful, 0 failed
-[01:03:15] ✓ POST | 4.9s | http.method=POST http.url=https://api.... http.statuscode=200
-[01:03:15] ✓ openai.response | 5.0s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68cf871... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=3076
-[01:03:15] ✓ openai.llm.arun | 5.0s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=4987.0075920... llm.responseid=resp_68cf871...
-   🎯 Final Response: The last call was on **October 10, 2023**, at **10:15 AM**, with the customer **John Smith** (Customer ID: **CUST_001**). The call lasted for **12 minutes** and focused on a **payment issue**.
-
-### Key Details from the Call:
-- **Issue Raised:** John reported that he made a payment of **$1,200** on **October 3rd**, but it hasn't been processed yet.
-- **Response:** Sarah Thompson, the representative, confirmed that there was a delay in processing the payment but assured John that he would not incur any late fees since the payment was made on time and he is still within the grace period.
-- **Next Steps for John:** He will receive a confirmation email once the payment is applied to his account, which should update within **24 to 48 hours**. Sarah advised him to check his online account balance and to call back if he doesn't see the update within two days.
-
-### Urgency Level:
-- The urgency of this issue is rated as **MEDIUM**.
-
-Would you like to proceed with any specific actions regarding this payment issue for John?
-INFO:     127.0.0.1:36388 - "POST /api/v1/advisor/chat HTTP/1.1" 200 OK
-[01:03:20] ✓ POST | 5.1s | http.method=POST http.url=https://api.... http.statuscode=200
-[01:03:20] ✓ openai.response | 5.1s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68cf871... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=4283
-[01:03:20] ✓ openai.llm.arun | 5.1s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=5076.9240200... llm.responseid=resp_68cf871...
-
-🧠 LLM DECISION DEBUG: Processing user input: 'pending items'
-🤖 Raw LLM Response:
-{
-    "reasoning": "The advisor has requested pending items, and since there is no specific transcript ID mentioned in the conversation history, I will use the tool to fetch all pending borrower workflows to provide a comprehensive response.",
-    "tool_calls": [
-        {"tool_name": "get_pending_borrower_workflows", "parameters": {"limit": 10}}
-    ],
-    "response": null
-}
-📋 Parsed Decision:
-   Reasoning: The advisor has requested pending items, and since there is no specific transcript ID mentioned in the conversation history, I will use the tool to fetch all pending borrower workflows to provide a comprehensive response.
-   Tool Calls: [{'tool_name': 'get_pending_borrower_workflows', 'parameters': {'limit': 10}}]
-   Direct Response: None
-  📝 Stored tool call decision: 1 tools
-
-🔧 TOOL EXECUTION DEBUG: Executing 1 tool calls
-  🛠️  Tool 1: get_pending_borrower_workflows
-      Parameters: {'limit': 10}
-INFO:     127.0.0.1:50462 - "GET /api/v1/workflows?status=PENDING_ASSESSMENT&workflow_type=BORROWER&limit=10 HTTP/1.1" 200 OK
-      ✅ Result: []
-  📝 Stored tool results: 1 total
-
-💬 RESPONSE FORMATTING DEBUG:
-   User Input: pending items
-   Tool Results Summary: 1 successful, 0 failed
-   🎯 Final Response: It looks like there are currently no pending borrower workflows to address at this time. This means there are no immediate action items that require your attention right now.
-
-If you’d like, you can check recent customer calls to see if there are any new issues that may need to be followed up on. Would you like me to list the recent calls for you?
-INFO:     127.0.0.1:50450 - "POST /api/v1/advisor/chat HTTP/1.1" 200 OK
-[01:03:33] ✓ POST | 2.6s | http.method=POST http.url=https://api.... http.statuscode=200
-[01:03:33] ✓ openai.response | 2.6s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68cf872... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=3076
-[01:03:33] ✓ openai.llm.arun | 2.6s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=2566.3269999... llm.responseid=resp_68cf872...
-[01:03:36] ✓ POST | 1.9s | http.method=POST http.url=https://api.... http.statuscode=200
-[01:03:36] ✓ openai.response | 1.9s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_68cf872... genai.response.model=gpt-4o-mini-... genai.usage.inputtokens=3067
-[01:03:36] ✓ openai.llm.arun | 1.9s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=1866.7077049... llm.responseid=resp_68cf872...
-
-
-
-
+[12:38:10] ✓ POST | 0.5s | http.method=POST http.url=https://api.... http.statuscode=204
+[12:38:11] ✓ POST | 0.9s | http.method=POST http.url=https://api.... http.statuscode=200
+[12:38:15] ✓ POST | 0.9s | http.method=POST http.url=https://api.... http.statuscode=204
