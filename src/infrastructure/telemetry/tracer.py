@@ -56,26 +56,31 @@ def simple_span_formatter(span: ReadableSpan) -> str:
     # Extract key attributes for display
     key_attrs = []
     if span.attributes:
-        # Priority attributes to show first
-        priority_keys = ["workflow_type", "risk_level", "transcript_id", "analysis_id", 
-                        "plan_id", "workflow_count", "action_item_id", "model", "pipeline_status"]
-        
+        # Priority attributes to show first (including HTTP details)
+        priority_keys = ["http.method", "http.url", "http.status_code", "workflow_type",
+                        "risk_level", "transcript_id", "analysis_id", "plan_id",
+                        "workflow_count", "action_item_id", "model", "pipeline_status"]
+
         # Show priority attributes first
         for key in priority_keys:
             if key in span.attributes:
                 value = str(span.attributes[key])
-                # Truncate long values
-                if len(value) > 20:
-                    value = value[:17] + "..."
+                # Configurable truncation for priority attributes (URLs, etc.)
+                max_length = int(os.getenv("OTEL_MAX_ATTR_LENGTH", "100"))
+                if len(value) > max_length:
+                    value = value[:max_length-3] + "..."
                 key_attrs.append(f"{key.replace('_', '')}={value}")
-        
+
         # Add other important attributes (limit total display)
+        max_attrs = int(os.getenv("OTEL_MAX_ATTRS", "8"))
         for key, value in span.attributes.items():
-            if key not in priority_keys and len(key_attrs) < 5:
+            if key not in priority_keys and len(key_attrs) < max_attrs:
                 if key not in ["service", "operation", "class", "function", "success"]:
                     value_str = str(value)
-                    if len(value_str) > 15:
-                        value_str = value_str[:12] + "..."
+                    # Use same configurable max length for other attributes
+                    secondary_max_length = int(os.getenv("OTEL_MAX_SECONDARY_ATTR_LENGTH", "50"))
+                    if len(value_str) > secondary_max_length:
+                        value_str = value_str[:secondary_max_length-3] + "..."
                     key_attrs.append(f"{key.replace('_', '')}={value_str}")
     
     # Build the main line
