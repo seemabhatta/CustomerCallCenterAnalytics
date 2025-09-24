@@ -503,7 +503,7 @@ def create_role_based_agent(role: str) -> Agent:
     # Create agent with role-specific configuration
     agent = Agent(
         name=agent_name,
-        model="gpt-4o-mini",  # Use cheaper model with higher token limits
+        model="gpt-4o",  # Use model with larger context window to prevent TODO instruction loss
         instructions=instructions,
         tools=[
             # All agents get the same tool set - the prompt determines behavior
