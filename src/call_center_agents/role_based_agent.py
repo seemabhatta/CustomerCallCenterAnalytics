@@ -218,7 +218,7 @@ async def get_workflow_steps(workflow_id: str) -> List[Dict[str, Any]]:
 
 @function_tool
 async def execute_workflow_step(workflow_id: str, step_number: int, executed_by: str = "advisor") -> Dict[str, Any]:
-    """Execute a specific workflow step.
+    """Execute a specific workflow step with approval error handling.
 
     Args:
         workflow_id: Workflow identifier
@@ -226,16 +226,46 @@ async def execute_workflow_step(workflow_id: str, step_number: int, executed_by:
         executed_by: Who is executing the step (default: advisor)
 
     Returns:
-        Execution result
+        Execution result or structured error information
     """
     async with aiohttp.ClientSession() as session:
         async with session.post(
             f"http://localhost:8000/api/v1/workflows/{workflow_id}/steps/{step_number}/execute",
             json={"executed_by": executed_by}
         ) as response:
-            if response.status != 200:
-                raise Exception(f"Failed to execute step: {response.status}")
-            return await response.json()
+            if response.status == 400:
+                # Check if it's an approval error
+                error_text = await response.text()
+                if "must be approved" in error_text:
+                    return {
+                        "success": False,
+                        "error_type": "approval_required",
+                        "message": "Workflow requires approval before execution",
+                        "workflow_id": workflow_id,
+                        "step_number": step_number,
+                        "requires_approval": True
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error_type": "bad_request",
+                        "message": error_text,
+                        "workflow_id": workflow_id,
+                        "step_number": step_number
+                    }
+            elif response.status != 200:
+                return {
+                    "success": False,
+                    "error_type": "execution_failed",
+                    "message": f"HTTP {response.status}",
+                    "workflow_id": workflow_id,
+                    "step_number": step_number
+                }
+
+            # Success case
+            result = await response.json()
+            result["success"] = True
+            return result
 
 
 @function_tool
@@ -274,6 +304,28 @@ async def get_pending_borrower_workflows(limit: int = 10) -> List[Dict[str, Any]
         ) as response:
             if response.status != 200:
                 raise Exception(f"Failed to get pending workflows: {response.status}")
+            return await response.json()
+
+
+@function_tool
+async def approve_workflow(workflow_id: str, approved_by: str, reasoning: str = "Approved by AI Agent on user's behalf") -> Dict[str, Any]:
+    """Approve a workflow on behalf of the user.
+
+    Args:
+        workflow_id: Workflow identifier
+        approved_by: User ID/name who is approving
+        reasoning: Approval reasoning (optional)
+
+    Returns:
+        Updated workflow with APPROVED status
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"http://localhost:8000/api/v1/workflows/{workflow_id}/approve",
+            json={"approved_by": approved_by, "reasoning": reasoning}
+        ) as response:
+            if response.status != 200:
+                raise Exception(f"Failed to approve workflow: {response.status}")
             return await response.json()
 
 
@@ -334,6 +386,7 @@ def create_role_based_agent(role: str) -> Agent:
             get_workflow,
             get_workflow_steps,
             execute_workflow_step,
+            approve_workflow,
             get_full_pipeline_for_transcript,
             get_pending_borrower_workflows
         ]
