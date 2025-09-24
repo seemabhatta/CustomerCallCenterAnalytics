@@ -40,7 +40,8 @@ When any approach fails:
 
 **Todo Management:**
 - create_todo_plan(task_description, steps) - Plan multi-step tasks
-- update_todo_status(plan_id, step_number, status, result) - Track progress
+- simple_progress_update(step_description, status) - Easy progress updates (no plan_id needed)
+- update_todo_status(plan_id, step_number, status, result) - Full progress tracking
 - show_todo_progress(plan_id, task_description, completed_steps_json) - Display status
 
 ## WORKFLOW EXAMPLE - MANDATORY TODO PATTERN
@@ -49,15 +50,15 @@ User: "show pending items for CALL_123"
 STEP 1 - MANDATORY: create_todo_plan("Find pending items for CALL_123", ["Get analysis", "Get plan", "Get workflows"])
 STEP 2 - Show formatted_display, get user approval
 STEP 3 - Execute loop with todo updates (EXACT PATTERN):
-  → update_todo_status(plan_id, 1, "in_progress", "Getting analysis")
+  → simple_progress_update("Getting analysis for CALL_123", "starting")
   → get_transcript_analysis("CALL_123")
-  → update_todo_status(plan_id, 1, "completed", "Found analysis with sentiment data")
-  → update_todo_status(plan_id, 2, "in_progress", "Getting plan")
+  → simple_progress_update("Analysis completed - found high urgency payment issue", "completed")
+  → simple_progress_update("Getting plan for CALL_123", "starting")
   → get_plan_for_transcript("CALL_123")
-  → update_todo_status(plan_id, 2, "completed", "Found plan with 3 action items")
-  → update_todo_status(plan_id, 3, "in_progress", "Getting workflows")
+  → simple_progress_update("Plan completed - 3 action items identified", "completed")
+  → simple_progress_update("Getting workflows for plan", "starting")
   → get_workflows_for_plan(plan_id)
-  → update_todo_status(plan_id, 3, "completed", "Found 2 workflows requiring approval")
+  → simple_progress_update("Workflows completed - 2 pending approval", "completed")
 
 ❌ WRONG: Direct API calls without TODO plan
 ✅ RIGHT: TODO plan → approval → step-by-step execution
@@ -65,11 +66,11 @@ STEP 3 - Execute loop with todo updates (EXACT PATTERN):
 ## TODO PATTERN FOR COMPLEX REQUESTS - EVERY STEP MANDATORY
 1. create_todo_plan() with clear steps
 2. Show formatted_display to user, get approval
-3. For EVERY SINGLE STEP: ALWAYS call update_todo_status("in_progress") → execute API → ALWAYS call update_todo_status("completed", result)
-4. NEVER skip update_todo_status calls - user needs progress updates
+3. For EVERY SINGLE STEP: ALWAYS call simple_progress_update("step description", "starting") → execute API → ALWAYS call simple_progress_update("result summary", "completed")
+4. NEVER skip progress updates - user needs real-time feedback
 5. Display all todo tool results for real-time streaming
 
-⚠️ CRITICAL: After user approves TODO plan, EVERY API call MUST be wrapped with update_todo_status calls
+⚠️ CRITICAL: After user approves TODO plan, EVERY API call MUST be wrapped with simple_progress_update calls
 
 ## ERROR RECOVERY
 Never say "It seems there's an issue" and stop. Instead:

@@ -1,50 +1,69 @@
 Hello! I'm your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?
 
-1:39:05 PM
+2:48:21 PM
 
-show me all the calls
+hi
 
-1:39:12 PM
+2:48:25 PM
 
 ...
-Here are all the recent calls available in the system:
+Hello! How can I assist you today?
 
-Call ID: CALL_F1438D7A
+2:48:25 PM
+
+show me the last 10 calls
+
+2:48:45 PM
+
+...
+{"limit":10}Here are the last 5 calls:
+
+CALL_F1438D7A
 Date: September 22, 2025
 Topic: Payment issues
-Customer: John Doe (CUST_001)
-Summary: Customer called regarding a $1,500 payment not reflected in their account.
-Call ID: CALL_B3286CDE
+Summary: Concern about a $1,500 payment not reflecting in the account.
+CALL_B3286CDE
 Date: October 10, 2023
 Topic: Late payment
-Customer: John Smith (CUST_001)
-Summary: Customer expressed frustration about being notified of a late payment despite having made it on time.
-Call ID: CALL_BA5FD120
+Summary: Frustration about a late payment notice despite on-time payment.
+CALL_BA5FD120
+Date: October 10, 2023
+Topic: Refinancing inquiry
+Summary: Inquiring about refinancing options for better rates.
+CALL_D0173D49
 Date: October 10, 2023
 Topic: Payment issues
-Customer: John Doe (CUST_001)
-Summary: Customer inquired about refinancing their mortgage.
-Call ID: CALL_D0173D49
+Summary: Payment of $1,200 not applied to the account.
+CALL_8174A2F3
 Date: October 10, 2023
 Topic: Payment issues
-Customer: John Doe (CUST_001)
-Summary: Customer called about issues with their mortgage payment.
-Call ID: CALL_8174A2F3
-Date: October 10, 2023
-Topic: Payment issues
-Customer: John Smith (CUST_001)
-Summary: Discussion about payment processing and confirming a manual payment.
-If you'd like details from any specific call or want to proceed with actions related to them, just let me know!
+Summary: Issue with payment not deducted on the scheduled date.
+If you need more details or want to proceed with any specific actions, let me know!
 
-1:39:12 PM
+2:48:45 PM
 
-lets take the 1st call - CALL_F1438D7A and show me any pending workflow items
+lets start with the 1st one - see what pending items are there for me to complete
 
-1:40:06 PM
+2:49:41 PM
+
+Chat processing failed: Your input exceeds the context window of this model. Please adjust your input and try again.
+
+2:49:41 PM
+
+did u create any todo list?
+
+2:50:06 PM
 
 ...
-{"transcript_id":"CALL_F1438D7A"}It seems there’s an issue retrieving the pending workflow items for call ID CALL_F1438D7A.
+No todo list has been created yet. If you'd like me to create one for specific actions or tasks, just let me know!
 
-Would you like to manually review the immediate actions from the strategic plan, or should we focus on a different aspect? Let me know how you’d like to proceed!
+2:50:06 PM
 
-1:40:06 PM
+nevermind, just give me the workflow list for the 1st call
+
+2:50:49 PM
+
+Chat processing failed: Your input exceeds the context window of this model. Please adjust your input and try again.
+
+2:50:49 PM
+

@@ -385,6 +385,33 @@ async def update_todo_status(plan_id: str, step_number: int, status: str, result
 
 
 @function_tool
+async def simple_progress_update(step_description: str, status: str) -> Dict[str, Any]:
+    """Simple progress update that doesn't require plan_id state management.
+
+    Args:
+        step_description: What step is being updated (e.g. "Getting analysis for CALL_123")
+        status: "starting", "completed", "failed"
+
+    Returns:
+        Formatted progress message for streaming
+    """
+    status_icons = {
+        "starting": "▶️",
+        "completed": "✅",
+        "failed": "❌"
+    }
+
+    icon = status_icons.get(status, "□")
+    message = f"{icon} {step_description}"
+
+    return {
+        "formatted_update": message,
+        "step_description": step_description,
+        "status": status
+    }
+
+
+@function_tool
 async def show_todo_progress(plan_id: str, task_description: str, completed_steps_json: str, current_step: int = None, total_steps: int = None) -> Dict[str, Any]:
     """Display current todo plan progress with all step statuses.
 
@@ -522,6 +549,7 @@ def create_role_based_agent(role: str) -> Agent:
             # Todo management tools
             create_todo_plan,
             update_todo_status,
+            simple_progress_update,
             show_todo_progress
         ]
     )
