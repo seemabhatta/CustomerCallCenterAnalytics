@@ -362,9 +362,9 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
         return pipeline_data
 
     except Exception as e:
-        # If we can't get the transcript, that's a real error
-        if "transcript" in str(e).lower():
-            logger.error(f"💥 Critical error getting transcript {transcript_id}: {str(e)}")
+        # NO FALLBACK: Fail fast for FunctionTool errors and transcript errors
+        if "transcript" in str(e).lower() or "FunctionTool" in str(e):
+            logger.error(f"💥 Critical error getting pipeline for {transcript_id}: {str(e)}")
             raise e
         # Otherwise, return partial pipeline data
         logger.warning(f"⚠️ Partial pipeline data returned for {transcript_id}: {str(e)}")
