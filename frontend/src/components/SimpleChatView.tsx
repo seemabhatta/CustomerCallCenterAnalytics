@@ -331,9 +331,14 @@ export function SimpleChatView({
           // Append text delta and stop thinking
           currentMessage.isThinking = false;
           const deltaContent = eventData.content;
-          // Remove tool indicators when real content starts
-          let baseContent = currentMessage.content.replace(/🔧 Calling.*?\.\.\.\n\n/g, '');
-          currentMessage.content = baseContent + deltaContent;
+
+          // If this is the first delta, clear any tool indicators
+          if (!currentMessage.content || currentMessage.content.includes('🔧 Calling')) {
+            currentMessage.content = deltaContent;
+          } else {
+            // Simply append the delta
+            currentMessage.content += deltaContent;
+          }
           break;
 
         case 'completed':

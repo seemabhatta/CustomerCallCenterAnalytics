@@ -873,7 +873,7 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
                         "metadata": event.get("metadata", {})
                     }
 
-                    # Send as SSE format
+                    # Send as proper SSE format
                     yield f"data: {json.dumps(event_data)}\n\n"
 
                     # If this is the final event, close the stream
@@ -892,11 +892,13 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
 
         return StreamingResponse(
             generate_events(),
-            media_type="text/plain",
+            media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Cache-Control",
+                "X-Accel-Buffering": "no",  # Disable nginx buffering
             }
         )
 
