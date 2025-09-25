@@ -434,11 +434,12 @@ async def approve_workflow(workflow_id: str, approved_by: str, reasoning: str = 
             return await response.json()
 
 
-def load_prompt_from_file(role: str) -> str:
-    """Load role-specific prompt from prompts folder.
+def load_prompt_from_file(role: str, mode: str = "borrower") -> str:
+    """Load role and mode specific prompt from prompts folder.
 
     Args:
         role: Role identifier (advisor, leadership)
+        mode: Mode identifier (borrower, selfreflection)
 
     Returns:
         Prompt text content
@@ -446,7 +447,7 @@ def load_prompt_from_file(role: str) -> str:
     Raises:
         FileNotFoundError: If prompt file doesn't exist
     """
-    prompt_file = f"prompts/{role}_agent/system_prompt.txt"
+    prompt_file = f"prompts/{role}_agent/{mode}_system_prompt.md"
 
     if not os.path.exists(prompt_file):
         raise FileNotFoundError(f"Prompt file not found: {prompt_file}")
@@ -455,17 +456,18 @@ def load_prompt_from_file(role: str) -> str:
         return f.read().strip()
 
 
-def create_role_based_agent(role: str) -> Agent:
-    """Create an agent with role-specific prompts and shared tools.
+def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
+    """Create an agent with role and mode specific prompts and shared tools.
 
     Args:
         role: Role identifier (advisor, leadership)
+        mode: Mode identifier (borrower, selfreflection)
 
     Returns:
         Configured Agent instance
     """
-    # Load role-specific prompt
-    instructions = load_prompt_from_file(role)
+    # Load role and mode specific prompt
+    instructions = load_prompt_from_file(role, mode)
 
     # Agent name mapping
     agent_names = {
@@ -474,6 +476,10 @@ def create_role_based_agent(role: str) -> Agent:
     }
 
     agent_name = agent_names.get(role, f"{role.title()} Assistant")
+
+    # Add mode to agent name for clarity
+    if mode != "borrower":
+        agent_name = f"{agent_name} ({mode.title()} Mode)"
 
     # Get model from environment variable or use default
     model = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
@@ -506,5 +512,8 @@ def create_role_based_agent(role: str) -> Agent:
 
 
 # Create pre-configured agents for common roles
-advisor_agent = create_role_based_agent("advisor")
-leadership_agent = create_role_based_agent("leadership")
+advisor_agent = create_role_based_agent("advisor", "borrower")
+leadership_agent = create_role_based_agent("leadership", "borrower")
+
+# Additional mode-specific agents
+advisor_selfreflection_agent = create_role_based_agent("advisor", "selfreflection")
