@@ -18,9 +18,7 @@ import {
   CheckCircle,
   DollarSign,
   Crown,
-  Settings,
   Users,
-  Shield,
   ClipboardList
 } from 'lucide-react';
 import {
@@ -517,18 +515,6 @@ export function SimpleChatView({
                     Self-Reflection
                   </div>
                 </SelectItem>
-                <SelectItem value="supervisor">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    Supervisor
-                  </div>
-                </SelectItem>
-                <SelectItem value="compliance">
-                  <div className="flex items-center gap-1">
-                    <Shield className="h-3 w-3" />
-                    Compliance
-                  </div>
-                </SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -770,10 +756,6 @@ function getPlaceholderText(role: ChatRole, agentMode: AgentMode): string {
   switch (agentMode) {
     case 'borrower':
       return "Ask about borrower-specific actions and workflows...";
-    case 'supervisor':
-      return "Ask about supervision and escalation workflows...";
-    case 'compliance':
-      return "Ask about compliance requirements and regulations...";
     case 'selfreflection':
       return "Ask about your performance, learning opportunities, or professional development...";
     default:
@@ -870,54 +852,6 @@ function getQuickActionsForRole(role: ChatRole, agentMode: AgentMode = 'borrower
           icon: Zap,
           label: "Show Plan",
           message: "Show the plan for this call"
-        }
-      ];
-
-    case 'supervisor':
-      return [
-        {
-          icon: Users,
-          label: "Team Overview",
-          message: "Show me the team performance overview"
-        },
-        {
-          icon: Shield,
-          label: "Escalations",
-          message: "Show me pending escalations that need supervisor review"
-        },
-        {
-          icon: CheckCircle,
-          label: "Quality Review",
-          message: "Show me calls that need quality review"
-        },
-        {
-          icon: FileText,
-          label: "Reports",
-          message: "Generate supervisor performance reports"
-        }
-      ];
-
-    case 'compliance':
-      return [
-        {
-          icon: Shield,
-          label: "Compliance Check",
-          message: "Run compliance check on recent calls"
-        },
-        {
-          icon: FileText,
-          label: "Audit Trail",
-          message: "Show me the audit trail for compliance activities"
-        },
-        {
-          icon: CheckCircle,
-          label: "Risk Assessment",
-          message: "Show me high-risk calls that need compliance review"
-        },
-        {
-          icon: Settings,
-          label: "Policy Updates",
-          message: "Check for recent compliance policy updates"
         }
       ];
 
