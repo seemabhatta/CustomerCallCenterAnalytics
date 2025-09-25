@@ -63,7 +63,7 @@ async def get_transcript(transcript_id: str) -> Dict[str, Any]:
 # ============================================
 
 @function_tool
-async def get_transcript_analysis(transcript_id: str) -> Dict[str, Any]:
+async def get_analysis_by_transcript(transcript_id: str) -> Dict[str, Any]:
     """Get detailed analysis of a call transcript.
 
     This provides sentiment analysis, risk scores, compliance issues.
@@ -111,7 +111,7 @@ async def get_analysis(analysis_id: str) -> Dict[str, Any]:
 # ============================================
 
 @function_tool
-async def get_plan_for_transcript(transcript_id: str) -> Dict[str, Any]:
+async def get_plan_by_transcript(transcript_id: str) -> Dict[str, Any]:
     """Generate strategic plan for a call transcript.
 
     Args:
@@ -269,7 +269,7 @@ async def execute_workflow_step(workflow_id: str, step_number: int, executed_by:
 
 
 @function_tool
-async def get_full_pipeline_for_transcript(transcript_id: str) -> Dict[str, Any]:
+async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
     """Get complete pipeline (analysis + plan + workflows) for a transcript.
 
     Args:
@@ -288,7 +288,7 @@ async def get_full_pipeline_for_transcript(transcript_id: str) -> Dict[str, Any]
 
 
 @function_tool
-async def get_pending_borrower_workflows(limit: int = 10) -> List[Dict[str, Any]]:
+async def get_borrower_pending_workflows(limit: int = 10) -> List[Dict[str, Any]]:
     """Get pending workflows that need borrower action.
 
     Args:
@@ -528,7 +528,7 @@ def create_role_based_agent(role: str) -> Agent:
     agent_name = agent_names.get(role, f"{role.title()} Assistant")
 
     # Get model from environment variable or use default
-    model = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
+    model = os.getenv("OPENAI_AGENT_MODEL")
 
     # Create agent with role-specific configuration
     agent = Agent(
@@ -539,21 +539,17 @@ def create_role_based_agent(role: str) -> Agent:
             # All agents get the same tool set - the prompt determines behavior
             get_transcripts,
             get_transcript,
-            get_transcript_analysis,
-            get_plan_for_transcript,
+            get_analysis_by_transcript,
+            get_analysis,  # Added missing tool for direct analysis access
+            get_plan_by_transcript,
             get_plan,
             get_workflows_for_plan,
             get_workflow,
             get_workflow_steps,
             execute_workflow_step,
             approve_workflow,
-            get_full_pipeline_for_transcript,
-            get_pending_borrower_workflows,
-            # Todo management tools
-            create_todo_plan,
-            update_todo_status,
-            simple_progress_update,
-            show_todo_progress
+            get_transcript_pipeline,
+            get_borrower_pending_workflows
         ]
     )
 
