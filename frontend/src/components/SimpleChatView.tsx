@@ -20,7 +20,8 @@ import {
   Crown,
   Settings,
   Users,
-  Shield
+  Shield,
+  ClipboardList
 } from 'lucide-react';
 import {
   ChatRole,
@@ -402,7 +403,7 @@ export function SimpleChatView({
     }
   };
 
-  const quickActions = getQuickActionsForRole(role);
+  const quickActions = getQuickActionsForRole(role, currentAgentMode);
 
   return (
     <>
@@ -753,7 +754,7 @@ function getPlaceholderText(role: ChatRole, agentMode: AgentMode): string {
   }
 }
 
-function getQuickActionsForRole(role: ChatRole) {
+function getQuickActionsForRole(role: ChatRole, agentMode: AgentMode = 'borrower') {
   if (role === 'leadership') {
     return [
       {
@@ -779,26 +780,126 @@ function getQuickActionsForRole(role: ChatRole) {
     ];
   }
 
-  return [
-    {
-      icon: FileText,
-      label: "Last Call ID",
-      message: "What was the last call ID?"
-    },
-    {
-      icon: CheckCircle,
-      label: "Show Analysis",
-      message: "Tell me the analysis result for the call"
-    },
-    {
-      icon: Zap,
-      label: "Show Plan",
-      message: "Show me the strategic plan for this call"
-    },
-    {
-      icon: DollarSign,
-      label: "Show Workflows",
-      message: "What workflows are available for this plan?"
-    }
-  ];
+  // Advisor role - contextual by mode
+  switch (agentMode) {
+    case 'borrower':
+      return [
+        {
+          icon: FileText,
+          label: "Show All Call IDs",
+          message: "Show me all the call IDs"
+        },
+        {
+          icon: ClipboardList,
+          label: "Pending Workflows",
+          message: "Show me the pending workflows that need borrower action"
+        },
+        {
+          icon: CheckCircle,
+          label: "Show Analysis",
+          message: "Show the analysis for this call"
+        },
+        {
+          icon: Zap,
+          label: "Show Plan",
+          message: "Show the plan for this call"
+        }
+      ];
+
+    case 'supervisor':
+      return [
+        {
+          icon: Users,
+          label: "Team Overview",
+          message: "Show me the team performance overview"
+        },
+        {
+          icon: Shield,
+          label: "Escalations",
+          message: "Show me pending escalations that need supervisor review"
+        },
+        {
+          icon: CheckCircle,
+          label: "Quality Review",
+          message: "Show me calls that need quality review"
+        },
+        {
+          icon: FileText,
+          label: "Reports",
+          message: "Generate supervisor performance reports"
+        }
+      ];
+
+    case 'compliance':
+      return [
+        {
+          icon: Shield,
+          label: "Compliance Check",
+          message: "Run compliance check on recent calls"
+        },
+        {
+          icon: FileText,
+          label: "Audit Trail",
+          message: "Show me the audit trail for compliance activities"
+        },
+        {
+          icon: CheckCircle,
+          label: "Risk Assessment",
+          message: "Show me high-risk calls that need compliance review"
+        },
+        {
+          icon: Settings,
+          label: "Policy Updates",
+          message: "Check for recent compliance policy updates"
+        }
+      ];
+
+    case 'selfreflection':
+      return [
+        {
+          icon: CheckCircle,
+          label: "Performance Review",
+          message: "Analyze my recent call handling performance and provide feedback"
+        },
+        {
+          icon: FileText,
+          label: "Learning Opportunities",
+          message: "What skills should I focus on improving based on recent calls?"
+        },
+        {
+          icon: Users,
+          label: "Customer Satisfaction",
+          message: "How well am I meeting customer needs based on recent interactions?"
+        },
+        {
+          icon: Zap,
+          label: "Best Practices",
+          message: "Show me examples of best practices from my recent successful calls"
+        }
+      ];
+
+    default:
+      return [
+        {
+          icon: FileText,
+          label: "Show All Call IDs",
+          message: "Show me all the call IDs"
+        },
+        {
+          icon: ClipboardList,
+          label: "Pending Action Items",
+          message: "Show me the pending action items assigned to me"
+        },
+        {
+          icon: CheckCircle,
+          label: "Show Analysis",
+          message: "Show the analysis for this call"
+        },
+        {
+          icon: Zap,
+          label: "Show Plan",
+          message: "Show the plan for this call"
+        }
+      ];
+  }
 }

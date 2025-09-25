@@ -1,69 +1,35 @@
+Conversation (borrower mode)
 Hello! I'm your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?
 
-2:48:21 PM
+9:39:04 AM
 
-hi
+show me the pending items
 
-2:48:25 PM
-
-...
-Hello! How can I assist you today?
-
-2:48:25 PM
-
-show me the last 10 calls
-
-2:48:45 PM
+9:39:13 AM
 
 ...
-{"limit":10}Here are the last 5 calls:
+Found 15 total workflows, showing 2 borrower workflows (filtered to BORROWER only).
 
-CALL_F1438D7A
-Date: September 22, 2025
-Topic: Payment issues
-Summary: Concern about a $1,500 payment not reflecting in the account.
-CALL_B3286CDE
-Date: October 10, 2023
-Topic: Late payment
-Summary: Frustration about a late payment notice despite on-time payment.
-CALL_BA5FD120
-Date: October 10, 2023
-Topic: Refinancing inquiry
-Summary: Inquiring about refinancing options for better rates.
-CALL_D0173D49
-Date: October 10, 2023
-Topic: Payment issues
-Summary: Payment of $1,200 not applied to the account.
-CALL_8174A2F3
-Date: October 10, 2023
-Topic: Payment issues
-Summary: Issue with payment not deducted on the scheduled date.
-If you need more details or want to proceed with any specific actions, let me know!
+Pending borrower workflow(s):
 
-2:48:45 PM
+Workflow ID: 08c29a70-eb03-4877-a4f3-65a409eca1c5
+Action: Confirm the successful processing of the payment to the borrower via email
+Priority: Medium
+Timeline / Due: October 11, 2023
+Owner: CSR
+Status: Awaiting approval
+Requires human approval: Yes
+Steps (summary): • Retrieve payment processing status (servicing_api)
+• Confirm payment processing was successful (internal task)
+• Draft confirmation email (email)
+• Send confirmation email to borrower (email)
+• Log payment confirmation in CRM (crm)
+Notes / recommendation:
 
-lets start with the 1st one - see what pending items are there for me to complete
+This follow-up should be approved and executed so the borrower receives confirmation and the CRM is updated.
+Options: I can approve & execute it now, schedule it for the due date, or assign it to CSR to send manually.
+Which would you like me to do?
 
-2:49:41 PM
+9:39:13 AM
 
-Chat processing failed: Your input exceeds the context window of this model. Please adjust your input and try again.
-
-2:49:41 PM
-
-did u create any todo list?
-
-2:50:06 PM
-
-...
-No todo list has been created yet. If you'd like me to create one for specific actions or tasks, just let me know!
-
-2:50:06 PM
-
-nevermind, just give me the workflow list for the 1st call
-
-2:50:49 PM
-
-Chat processing failed: Your input exceeds the context window of this model. Please adjust your input and try again.
-
-2:50:49 PM
-
+Ask about borrower-specific actions and workflows...
