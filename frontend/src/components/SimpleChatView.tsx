@@ -739,7 +739,14 @@ function getWelcomeMessage(role: ChatRole): string {
 
 function getPlaceholderText(role: ChatRole, agentMode: AgentMode): string {
   if (role === 'leadership') {
-    return "Ask about portfolio insights, metrics, or strategic opportunities...";
+    switch (agentMode) {
+      case 'borrower':
+        return "Ask about portfolio insights, metrics, or strategic opportunities...";
+      case 'selfreflection':
+        return "Ask about team performance, leadership effectiveness, or organizational development...";
+      default:
+        return "Ask about portfolio insights, metrics, or strategic opportunities...";
+    }
   }
 
   switch (agentMode) {
@@ -749,6 +756,8 @@ function getPlaceholderText(role: ChatRole, agentMode: AgentMode): string {
       return "Ask about supervision and escalation workflows...";
     case 'compliance':
       return "Ask about compliance requirements and regulations...";
+    case 'selfreflection':
+      return "Ask about your performance, learning opportunities, or professional development...";
     default:
       return "Ask me anything about customer workflows...";
   }
@@ -756,28 +765,68 @@ function getPlaceholderText(role: ChatRole, agentMode: AgentMode): string {
 
 function getQuickActionsForRole(role: ChatRole, agentMode: AgentMode = 'borrower') {
   if (role === 'leadership') {
-    return [
-      {
-        icon: CheckCircle,
-        label: "Portfolio Health",
-        message: "Show me the current portfolio health and key metrics"
-      },
-      {
-        icon: FileText,
-        label: "Risk Analysis",
-        message: "Analyze current risk patterns and provide recommendations"
-      },
-      {
-        icon: DollarSign,
-        label: "Revenue Impact",
-        message: "Show revenue opportunities and cost optimization insights"
-      },
-      {
-        icon: Zap,
-        label: "Strategic Actions",
-        message: "What strategic actions should we prioritize this quarter?"
-      }
-    ];
+    // Leadership role - contextual by mode
+    switch (agentMode) {
+      case 'borrower':
+        return [
+          {
+            icon: CheckCircle,
+            label: "Portfolio Health",
+            message: "Show me the current portfolio health and key metrics"
+          },
+          {
+            icon: FileText,
+            label: "Risk Analysis",
+            message: "Analyze current risk patterns and provide recommendations"
+          },
+          {
+            icon: DollarSign,
+            label: "Revenue Impact",
+            message: "Show revenue opportunities and cost optimization insights"
+          },
+          {
+            icon: Zap,
+            label: "Strategic Actions",
+            message: "What strategic actions should we prioritize this quarter?"
+          }
+        ];
+      case 'selfreflection':
+        return [
+          {
+            icon: CheckCircle,
+            label: "Team Performance",
+            message: "Analyze our team's recent performance trends and identify leadership opportunities"
+          },
+          {
+            icon: FileText,
+            label: "Strategic Effectiveness",
+            message: "How effective have our recent strategic decisions been? What can we learn?"
+          },
+          {
+            icon: Users,
+            label: "Organizational Health",
+            message: "Assess our organizational culture and team development needs"
+          },
+          {
+            icon: Zap,
+            label: "Leadership Growth",
+            message: "What leadership skills should we focus on developing based on recent challenges?"
+          }
+        ];
+      default:
+        return [
+          {
+            icon: CheckCircle,
+            label: "Portfolio Health",
+            message: "Show me the current portfolio health and key metrics"
+          },
+          {
+            icon: FileText,
+            label: "Strategic Overview",
+            message: "Provide strategic overview and recommendations"
+          }
+        ];
+    }
   }
 
   // Advisor role - contextual by mode

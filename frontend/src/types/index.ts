@@ -545,7 +545,7 @@ export type UserRole = 'leadership' | 'supervisor' | 'advisor' | 'admin';
 
 // Unified Chat Types
 export type ChatRole = 'leadership' | 'advisor';
-export type AgentMode = 'borrower' | 'supervisor' | 'compliance' | 'general';
+export type AgentMode = 'borrower' | 'supervisor' | 'compliance' | 'general' | 'selfreflection';
 
 export interface UnifiedChatRequest {
   role: ChatRole;
