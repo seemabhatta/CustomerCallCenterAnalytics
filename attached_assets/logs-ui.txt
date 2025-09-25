@@ -1,35 +1,70 @@
-Conversation (borrower mode)
 Hello! I'm your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?
 
-9:39:04 AM
+12:33:58 PM
 
-show me the pending items
+Show me all the call IDs
 
-9:39:13 AM
+12:34:01 PM
 
 ...
-Found 15 total workflows, showing 2 borrower workflows (filtered to BORROWER only).
+Call Transcripts — Call IDs
+Summary
+Requested: 50
+Returned: 3
+Total available: 3
+✅ Found 3 transcripts, showing 3 call IDs (fewer than requested; results are complete per metadata)
+Call IDs
+CALL_97AED43D
+Timestamp: 2025-09-25T12:01:08.088062Z
+Topic: pmi_removal
+Customer ID: UB_0099
+CALL_788328D6
+Timestamp: 2025-09-25T12:01:39.685973Z
+Topic: payment_issues
+Customer ID: UB_0099
+CALL_DF91CD2B
+Timestamp: 2025-09-25T12:02:15.960959Z
+Topic: escrow_analysis
+Customer ID: SB_0099
+Next Steps — choose one
+📋 View full transcript for a call ID (will call get_transcript).
+Example: “Show CALL_97AED43D”
+⚡ Get complete pipeline (analysis + plan + workflows) for a call (will call get_transcript_pipeline).
+Example: “Get pipeline for CALL_97AED43D”
+✅ Get analysis only or get plan only — tell me which call ID and which data you want.
+Progress markers: [▶1] Ready to fetch details — tell me which call ID to open.
 
-Pending borrower workflow(s):
+12:34:01 PM
 
-Workflow ID: 08c29a70-eb03-4877-a4f3-65a409eca1c5
-Action: Confirm the successful processing of the payment to the borrower via email
-Priority: Medium
-Timeline / Due: October 11, 2023
-Owner: CSR
-Status: Awaiting approval
-Requires human approval: Yes
-Steps (summary): • Retrieve payment processing status (servicing_api)
-• Confirm payment processing was successful (internal task)
-• Draft confirmation email (email)
-• Send confirmation email to borrower (email)
-• Log payment confirmation in CRM (crm)
-Notes / recommendation:
+CALL_97AED43D - get me the plan details
 
-This follow-up should be approved and executed so the borrower receives confirmation and the CRM is updated.
-Options: I can approve & execute it now, schedule it for the due date, or assign it to CSR to send manually.
-Which would you like me to do?
+12:34:31 PM
 
-9:39:13 AM
+...
+Plan Details for CALL_97AED43D
+Current Status
+Transcript: ✅ Found (CALL_97AED43D)
+Analysis: ❌ Not found
+Plan: ❌ Not found
+Workflows: ⚡ 0 total workflows
+Found 0 total workflows, showing 0 borrower workflows (no workflows to display).
 
-Ask about borrower-specific actions and workflows...
+What happened
+I requested the full transcript pipeline for CALL_97AED43D. The pipeline returned no analysis, no plan, and no workflows (empty response). This means a plan hasn't been generated (or is not available) for this call yet.
+Recommended next steps (pick one)
+📋 Run analysis for the transcript (recommended) — call get_analysis_by_transcript to produce the call analysis which can then be used to generate a plan.
+Action: I will run the analysis for CALL_97AED43D.
+Question: Should I proceed with running the analysis for CALL_97AED43D? [▶1]
+⚡ Request plan directly — call get_plan_by_transcript to fetch or create the plan for the transcript without an explicit analysis step (less recommended).
+Action: I will request the plan for CALL_97AED43D.
+Question: Or should I request the plan now? [▶2]
+✅ View the full transcript — review the call content first to confirm details before running analysis/plan.
+Action: I will fetch the transcript text (get_transcript) for CALL_97AED43D.
+Question: Want me to open the transcript now? [▶3]
+Quick decision guide
+If you want the structured plan and recommended borrower workflows: choose option 1 (run analysis) → then I’ll generate/get the plan.
+If you just want to inspect the call before committing: choose option 3 (view transcript).
+Please tell me which option to proceed with (reply with 1, 2, or 3).
+
+12:34:31 PM
+

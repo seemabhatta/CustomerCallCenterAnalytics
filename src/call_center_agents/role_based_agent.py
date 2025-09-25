@@ -270,6 +270,7 @@ async def execute_workflow_step(workflow_id: str, step_number: int, executed_by:
 
 @function_tool
 async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
+    print(f"🚀 get_transcript_pipeline called with transcript_id: {transcript_id}")
     """Get complete pipeline (analysis + plan + workflows) for a transcript.
 
     Orchestrates multiple API calls to build the complete pipeline data.
@@ -296,7 +297,9 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
         # Get analysis data
         try:
             pipeline_data["analysis"] = await get_analysis_by_transcript(transcript_id)
-        except Exception:
+            print(f"✅ Analysis retrieved for {transcript_id}")
+        except Exception as e:
+            print(f"❌ Analysis failed for {transcript_id}: {str(e)}")
             # Analysis might not exist yet, that's okay
             pass
 
@@ -304,15 +307,19 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
         try:
             plan_data = await get_plan_by_transcript(transcript_id)
             pipeline_data["plan"] = plan_data
+            print(f"✅ Plan retrieved for {transcript_id}")
 
             # If plan exists, get associated workflows
             if plan_data and plan_data.get("id"):
                 try:
                     pipeline_data["workflows"] = await get_workflows_for_plan(plan_data["id"])
-                except Exception:
+                    print(f"✅ Workflows retrieved for plan {plan_data.get('id')}")
+                except Exception as e:
+                    print(f"❌ Workflows failed for plan {plan_data.get('id')}: {str(e)}")
                     # Workflows might not exist yet, that's okay
                     pass
-        except Exception:
+        except Exception as e:
+            print(f"❌ Plan failed for {transcript_id}: {str(e)}")
             # Plan might not exist yet, that's okay
             pass
 
