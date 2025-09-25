@@ -499,9 +499,9 @@ export function SimpleChatView({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {role === 'advisor' && (
+          {(role === 'advisor' || role === 'leadership') && (
             <Select value={currentAgentMode} onValueChange={(value: AgentMode) => handleAgentModeChange(value)}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -509,6 +509,24 @@ export function SimpleChatView({
                   <div className="flex items-center gap-1">
                     <User className="h-3 w-3" />
                     Borrower
+                  </div>
+                </SelectItem>
+                <SelectItem value="selfreflection">
+                  <div className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Self-Reflection
+                  </div>
+                </SelectItem>
+                <SelectItem value="supervisor">
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    Supervisor
+                  </div>
+                </SelectItem>
+                <SelectItem value="compliance">
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3 w-3" />
+                    Compliance
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -531,7 +549,7 @@ export function SimpleChatView({
           <Card className="h-[600px] flex flex-col overflow-hidden">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-slate-600">
-                Conversation {role === 'advisor' && `(${currentAgentMode} mode)`}
+                Conversation {(role === 'advisor' || role === 'leadership') && `(${currentAgentMode} mode)`}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0">
