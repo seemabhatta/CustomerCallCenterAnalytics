@@ -4,6 +4,7 @@ Creates agents with role-specific prompts while maintaining the same tool set.
 Follows core principles: agentic, no fallback logic, prompt separation.
 """
 import os
+import logging
 import aiohttp
 from typing import Dict, Any, List
 from dotenv import load_dotenv
@@ -11,6 +12,9 @@ from agents import Agent, function_tool
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Initialize logger
+logger = logging.getLogger(__name__)
 
 
 # ============================================
@@ -47,15 +51,21 @@ async def get_transcript(transcript_id: str) -> Dict[str, Any]:
     Returns:
         Transcript details with messages and metadata
     """
+    logger.info(f"🔍 get_transcript called with transcript_id: {transcript_id}")
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f"http://localhost:8000/api/v1/transcripts/{transcript_id}"
         ) as response:
+            logger.info(f"📡 Transcript API response status: {response.status}")
             if response.status == 404:
+                logger.error(f"❌ Transcript {transcript_id} not found")
                 raise Exception(f"Transcript {transcript_id} not found")
             elif response.status != 200:
+                logger.error(f"❌ Failed to get transcript: HTTP {response.status}")
                 raise Exception(f"Failed to get transcript: {response.status}")
-            return await response.json()
+            result = await response.json()
+            logger.info(f"✅ Transcript retrieved successfully for {transcript_id}")
+            return result
 
 
 # ============================================
@@ -74,15 +84,21 @@ async def get_analysis_by_transcript(transcript_id: str) -> Dict[str, Any]:
     Returns:
         Analysis with sentiment, urgency, risks, compliance flags
     """
+    logger.info(f"🔍 get_analysis_by_transcript called with transcript_id: {transcript_id}")
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f"http://localhost:8000/api/v1/analyses/by-transcript/{transcript_id}"
         ) as response:
+            logger.info(f"📡 Analysis API response status: {response.status}")
             if response.status == 404:
+                logger.error(f"❌ Analysis for transcript {transcript_id} not found")
                 raise Exception(f"Analysis for transcript {transcript_id} not found")
             elif response.status != 200:
+                logger.error(f"❌ Failed to get analysis: HTTP {response.status}")
                 raise Exception(f"Failed to get analysis: {response.status}")
-            return await response.json()
+            result = await response.json()
+            logger.info(f"✅ Analysis retrieved successfully for {transcript_id}")
+            return result
 
 
 @function_tool
@@ -120,15 +136,22 @@ async def get_plan_by_transcript(transcript_id: str) -> Dict[str, Any]:
     Returns:
         Strategic plan with high-level actions
     """
+    logger.info(f"🔍 get_plan_by_transcript called with transcript_id: {transcript_id}")
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f"http://localhost:8000/api/v1/plans/by-transcript/{transcript_id}"
         ) as response:
+            logger.info(f"📡 Plan API response status: {response.status}")
             if response.status == 404:
+                logger.error(f"❌ Plan for transcript {transcript_id} not found")
                 raise Exception(f"Plan for transcript {transcript_id} not found")
             elif response.status != 200:
+                logger.error(f"❌ Failed to get plan: HTTP {response.status}")
                 raise Exception(f"Failed to get plan: {response.status}")
-            return await response.json()
+            result = await response.json()
+            plan_id = result.get('plan_id', 'unknown')
+            logger.info(f"✅ Plan retrieved successfully for {transcript_id}, plan_id: {plan_id}")
+            return result
 
 
 @function_tool
@@ -166,14 +189,20 @@ async def get_workflows_for_plan(plan_id: str) -> List[Dict[str, Any]]:
     Returns:
         List of workflow details
     """
+    logger.info(f"🔍 get_workflows_for_plan called with plan_id: {plan_id}")
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f"http://localhost:8000/api/v1/workflows",
             params={"plan_id": plan_id}
         ) as response:
+            logger.info(f"📡 Workflows API response status: {response.status}")
             if response.status != 200:
+                logger.error(f"❌ Failed to get workflows: HTTP {response.status}")
                 raise Exception(f"Failed to get workflows: {response.status}")
-            return await response.json()
+            result = await response.json()
+            workflow_count = len(result) if isinstance(result, list) else 0
+            logger.info(f"✅ Workflows retrieved successfully for plan {plan_id}, count: {workflow_count}")
+            return result
 
 
 @function_tool
@@ -270,7 +299,6 @@ async def execute_workflow_step(workflow_id: str, step_number: int, executed_by:
 
 @function_tool
 async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
-    print(f"🚀 get_transcript_pipeline called with transcript_id: {transcript_id}")
     """Get complete pipeline (analysis + plan + workflows) for a transcript.
 
     Orchestrates multiple API calls to build the complete pipeline data.
@@ -281,6 +309,8 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
     Returns:
         Complete pipeline data with transcript, analysis, plan, and workflows
     """
+    logger.info(f"🚀 get_transcript_pipeline called with transcript_id: {transcript_id}")
+
     # Initialize pipeline data structure
     pipeline_data = {
         "transcript_id": transcript_id,
@@ -297,9 +327,9 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
         # Get analysis data
         try:
             pipeline_data["analysis"] = await get_analysis_by_transcript(transcript_id)
-            print(f"✅ Analysis retrieved for {transcript_id}")
+            logger.info(f"✅ Analysis retrieved for {transcript_id}")
         except Exception as e:
-            print(f"❌ Analysis failed for {transcript_id}: {str(e)}")
+            logger.warning(f"❌ Analysis failed for {transcript_id}: {str(e)}")
             # Analysis might not exist yet, that's okay
             pass
 
@@ -307,29 +337,37 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
         try:
             plan_data = await get_plan_by_transcript(transcript_id)
             pipeline_data["plan"] = plan_data
-            print(f"✅ Plan retrieved for {transcript_id}")
+            logger.info(f"✅ Plan retrieved for {transcript_id}")
 
-            # If plan exists, get associated workflows
-            if plan_data and plan_data.get("id"):
+            # If plan exists, get associated workflows - check for plan_id field
+            plan_id = plan_data.get("plan_id") or plan_data.get("id")
+            if plan_data and plan_id:
                 try:
-                    pipeline_data["workflows"] = await get_workflows_for_plan(plan_data["id"])
-                    print(f"✅ Workflows retrieved for plan {plan_data.get('id')}")
+                    pipeline_data["workflows"] = await get_workflows_for_plan(plan_id)
+                    workflow_count = len(pipeline_data["workflows"]) if isinstance(pipeline_data["workflows"], list) else 0
+                    logger.info(f"✅ Workflows retrieved for plan {plan_id}, count: {workflow_count}")
                 except Exception as e:
-                    print(f"❌ Workflows failed for plan {plan_data.get('id')}: {str(e)}")
+                    logger.error(f"❌ Workflows failed for plan {plan_id}: {str(e)}")
                     # Workflows might not exist yet, that's okay
                     pass
+            else:
+                logger.warning(f"⚠️ No plan_id found in plan data for {transcript_id}")
         except Exception as e:
-            print(f"❌ Plan failed for {transcript_id}: {str(e)}")
+            logger.warning(f"❌ Plan failed for {transcript_id}: {str(e)}")
             # Plan might not exist yet, that's okay
             pass
 
+        final_workflow_count = len(pipeline_data["workflows"]) if isinstance(pipeline_data["workflows"], list) else 0
+        logger.info(f"🎯 Pipeline complete for {transcript_id}: transcript={bool(pipeline_data['transcript'])}, analysis={bool(pipeline_data['analysis'])}, plan={bool(pipeline_data['plan'])}, workflows={final_workflow_count}")
         return pipeline_data
 
     except Exception as e:
         # If we can't get the transcript, that's a real error
         if "transcript" in str(e).lower():
+            logger.error(f"💥 Critical error getting transcript {transcript_id}: {str(e)}")
             raise e
         # Otherwise, return partial pipeline data
+        logger.warning(f"⚠️ Partial pipeline data returned for {transcript_id}: {str(e)}")
         return pipeline_data
 
 
