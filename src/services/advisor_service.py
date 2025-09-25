@@ -68,6 +68,7 @@ class AdvisorService:
         try:
             # Use session_id or advisor_id as the session identifier
             actual_session_id = session_id or advisor_id
+            print(f"🆔 AdvisorService.chat received session_id: {session_id}, using actual_session_id: {actual_session_id}")
 
             # Create SQLite session for conversation persistence
             session = SQLiteSession(actual_session_id, db_path=self.db_path)
@@ -128,6 +129,7 @@ class AdvisorService:
         try:
             # Use session_id or advisor_id as the session identifier
             actual_session_id = session_id or advisor_id
+            print(f"🆔 AdvisorService.chat_stream received session_id: {session_id}, using actual_session_id: {actual_session_id}")
 
             # Create SQLite session for conversation persistence
             session = SQLiteSession(actual_session_id, db_path=self.db_path)

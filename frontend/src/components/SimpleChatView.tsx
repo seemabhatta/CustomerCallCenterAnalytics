@@ -61,6 +61,16 @@ export function SimpleChatView({
   context = {},
   onChatResponse
 }: SimpleChatViewProps) {
+  // Generate unique session ID with role_mode_timestamp_random format
+  const generateSessionId = (mode?: AgentMode) => {
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substr(2, 9);
+    const sessionMode = mode || agentMode || 'default';
+    const newSessionId = `${role}_${sessionMode}_${timestamp}_${randomStr}`;
+    console.log(`🆔 Generated session ID: ${newSessionId}`);
+    return newSessionId;
+  };
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -71,7 +81,7 @@ export function SimpleChatView({
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string>(generateSessionId());
   const [currentAgentMode, setCurrentAgentMode] = useState<AgentMode>(agentMode);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -361,7 +371,7 @@ export function SimpleChatView({
   };
 
   const handleClearChat = () => {
-    setSessionId(null);
+    setSessionId(generateSessionId(currentAgentMode));
     setMessages([
       {
         id: '1',
@@ -375,6 +385,7 @@ export function SimpleChatView({
 
   const handleAgentModeChange = (mode: AgentMode) => {
     setCurrentAgentMode(mode);
+    setSessionId(generateSessionId(mode));
     const systemMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'assistant',
