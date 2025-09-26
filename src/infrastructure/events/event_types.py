@@ -35,6 +35,12 @@ class EventType(Enum):
     ANALYSIS_RISK_DETECTED = "analysis.risk_detected"
     ANALYSIS_COMPLIANCE_FLAGGED = "analysis.compliance_flagged"
 
+    # Knowledge Graph Events
+    KNOWLEDGE_EXTRACTED = "knowledge.extracted"
+    PATTERN_DISCOVERED = "knowledge.pattern_discovered"
+    PREDICTION_MADE = "knowledge.prediction_made"
+    PREDICTION_VALIDATED = "knowledge.prediction_validated"
+
     # Plan Events
     PLAN_GENERATED = "plan.generated"
     PLAN_APPROVED = "plan.approved"

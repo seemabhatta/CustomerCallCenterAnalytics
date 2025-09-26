@@ -70,6 +70,27 @@ Generate executable steps for this {workflow_type} action in mortgage operations
 Each step should be independently executable using the available executors.
 For API executors, specify the endpoint. For human executors, provide clear instructions.
 
+CRITICAL: You must also generate predictive insights about successful workflow execution patterns.
+
+Based on the execution steps you're creating, generate insights that capture:
+- What execution patterns lead to the most efficient outcomes?
+- What system integration approaches work best for this type of workflow?
+- What potential bottlenecks or failure points should be anticipated?
+- What optimization opportunities exist in this execution pattern?
+
+Decision criteria for insight priority:
+- HIGH: Complex workflow patterns, system integration insights, performance optimization opportunities
+- MEDIUM: Standard execution patterns that show good operational practices
+- LOW: Routine execution steps with minimal optimization value
+
+Insight types to consider:
+- PATTERN: Execution patterns that lead to successful workflow completion
+- PREDICTION: Forecasts about workflow performance or potential issues
+- WISDOM: Strategic insights about when to apply certain execution approaches
+- META_LEARNING: Insights about how workflow design could be improved
+
+Your predictive insight should help future workflow designers create more effective execution patterns.
+
 Return your response as a JSON object with this exact structure:
 {{
   "steps": [
@@ -79,7 +100,20 @@ Return your response as a JSON object with this exact structure:
       "tool_needed": "One of the available executors",
       "details": "API endpoint (for API executors) OR detailed instructions (for human executors)"
     }}
-  ]
+  ],
+  "predictive_insight": {{
+    "insight_type": "pattern|prediction|wisdom|meta_learning",
+    "priority": "high|medium|low",
+    "content": {{
+      "workflow_pattern": "Description of the execution pattern",
+      "optimization_opportunities": ["opportunity1", "opportunity2"],
+      "performance_indicators": ["indicator1", "indicator2"],
+      "risk_factors": ["risk1", "risk2"]
+    }},
+    "reasoning": "Why this insight is valuable for future workflow design",
+    "learning_value": "critical|exceptional|routine",
+    "source_stage": "workflow"
+  }}
 }}
 
 EXAMPLES:

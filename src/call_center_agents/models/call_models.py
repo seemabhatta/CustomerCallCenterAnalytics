@@ -1,4 +1,5 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 
@@ -23,6 +24,21 @@ class AdvisorMetrics(BaseModel):
     coaching_opportunities: List[str] = Field(description="List of coaching opportunities")
 
 
+class PredictiveInsight(BaseModel):
+    """Simplified insight structure for pipeline contributions."""
+    insight_type: str = Field(description="Type: pattern, prediction, wisdom, meta_learning")
+    priority: str = Field(description="Priority: high, medium, low")
+    content: Dict[str, Any] = Field(description="The actual insight content")
+    reasoning: str = Field(description="Why this insight is valuable")
+    learning_value: str = Field(description="Learning value: critical, exceptional, routine")
+    source_stage: str = Field(description="Pipeline stage that generated this insight")
+
+    # Context
+    transcript_id: str = Field(description="Source transcript")
+    customer_context: Dict[str, Any] = Field(description="Customer context for this insight")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
 class CallAnalysis(BaseModel):
     call_summary: str = Field(description="Summary of the call")
     primary_intent: str = Field(description="Primary intent of the call")
@@ -40,3 +56,4 @@ class CallAnalysis(BaseModel):
     product_opportunities: List[str] = Field(description="Product opportunities identified")
     payment_concerns: List[str] = Field(description="Payment concerns")
     property_related_issues: List[str] = Field(description="Property-related issues")
+    predictive_insight: Optional[PredictiveInsight] = Field(default=None, description="Optional predictive knowledge insight")

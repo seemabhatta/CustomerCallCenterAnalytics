@@ -39,6 +39,27 @@ Based on the COMPLETE mortgage servicing conversation and analysis above, genera
 4. LEADERSHIP PLAN: What strategic insights or patterns emerged from this mortgage call?
    - Examples: portfolio risk patterns, process improvements, training needs, customer satisfaction trends
 
+CRITICAL: You must also generate predictive insights about successful planning strategies.
+
+Based on the action plans you're creating, generate insights that capture:
+- What strategic patterns emerge from these plans that could be reused?
+- What early intervention opportunities were identified?
+- What successful resolution strategies could be applied to similar situations?
+- What planning approaches lead to better customer outcomes?
+
+Decision criteria for insight priority:
+- HIGH: Strategic planning patterns, successful intervention strategies, innovative solutions
+- MEDIUM: Standard planning approaches that show good strategic thinking
+- LOW: Routine planning patterns with minimal strategic value
+
+Insight types to consider:
+- PATTERN: Strategic planning patterns that lead to successful outcomes
+- PREDICTION: Forecasts about plan effectiveness or customer response
+- WISDOM: Strategic insights about when and how to apply certain approaches
+- META_LEARNING: Insights about how the planning process itself could improve
+
+Your predictive insight should help future planners make better strategic decisions.
+
 Focus on mortgage servicing specifics: loan servicing, payment processing, escrow management, insurance requirements, regulatory compliance.
 
 Use the actual conversation details. Be specific and actionable for mortgage operations.

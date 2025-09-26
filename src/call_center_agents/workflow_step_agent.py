@@ -87,9 +87,10 @@ class WorkflowStepAgent:
                 print(f"[STEP_GEN] Invalid JSON response for {workflow_type}: {cleaned_text[:200]}...")
                 raise ValueError(f"LLM response is not valid JSON: {str(e)}")
 
-            # Extract steps array
+            # Extract steps array and predictive insight
             if isinstance(response_data, dict) and 'steps' in response_data:
                 steps = response_data['steps']
+                predictive_insight = response_data.get('predictive_insight')
             else:
                 raise ValueError("LLM response missing 'steps' array")
 
@@ -107,7 +108,17 @@ class WorkflowStepAgent:
                     }
 
             print(f"[STEP_GEN] Successfully parsed {len(steps)} steps for {workflow_type}")
-            return steps
+
+            # Return steps and predictive insight
+            result = {'steps': steps}
+
+            # Ensure predictive_insight is included even if None (for service layer)
+            if predictive_insight:
+                result['predictive_insight'] = predictive_insight
+            else:
+                result['predictive_insight'] = None
+
+            return result
 
         except Exception as e:
             raise Exception(f"Failed to generate steps for {workflow_type} action: {str(e)}")

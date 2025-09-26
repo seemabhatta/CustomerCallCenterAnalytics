@@ -1,94 +1,111 @@
-🆔 AdvisorService.chat_stream received session_id: advisor_selfreflection_1758824512043_g2gvy00xn, using actual_session_id: advisor_selfreflection_1758824512043_g2gvy00xn
-[14:23:08] ✓ POST | 0.5s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-[14:23:09] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
-[14:23:19] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
-INFO:     127.0.0.1:40178 - "POST /api/v1/advisor/chat/stream HTTP/1.1" 200 OK
-🆔 AdvisorService.chat_stream received session_id: advisor_selfreflection_1758824512043_g2gvy00xn, using actual_session_id: advisor_selfreflection_1758824512043_g2gvy00xn
-{
-    "body": "\u26a0\ufe0f Partial pipeline data returned for CALL_97AED43D: 'FunctionTool' object is not callable",
-    "severity_number": 13,
-    "severity_text": "WARN",
-    "attributes": {
-        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/call_center_agents/role_based_agent.py",
-        "code.function.name": "get_transcript_pipeline",
-        "code.line.number": 370
-    },
-    "dropped_attributes": 0,
-    "timestamp": "2025-09-25T18:23:32.602417Z",
-    "observed_timestamp": "2025-09-25T18:23:32.602499Z",
-    "trace_id": "0x00000000000000000000000000000000",
-    "span_id": "0x0000000000000000",
-    "trace_flags": 0,
-    "resource": {
-        "attributes": {
-            "telemetry.sdk.language": "python",
-            "telemetry.sdk.name": "opentelemetry",
-            "telemetry.sdk.version": "1.36.0",
-            "service.name": "xai",
-            "service.version": "1.0.0"
-        },
-        "schema_url": ""
-    },
-    "event_name": ""
-}
-{
-    "body": "\u26a0\ufe0f Partial pipeline data returned for CALL_DF91CD2B: 'FunctionTool' object is not callable",
-    "severity_number": 13,
-    "severity_text": "WARN",
-    "attributes": {
-        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/call_center_agents/role_based_agent.py",
-        "code.function.name": "get_transcript_pipeline",
-        "code.line.number": 370
-    },
-    "dropped_attributes": 0,
-    "timestamp": "2025-09-25T18:23:34.316354Z",
-    "observed_timestamp": "2025-09-25T18:23:34.316419Z",
-    "trace_id": "0x00000000000000000000000000000000",
-    "span_id": "0x0000000000000000",
-    "trace_flags": 0,
-    "resource": {
-        "attributes": {
-            "telemetry.sdk.language": "python",
-            "telemetry.sdk.name": "opentelemetry",
-            "telemetry.sdk.version": "1.36.0",
-            "service.name": "xai",
-            "service.version": "1.0.0"
-        },
-        "schema_url": ""
-    },
-    "event_name": ""
-}
-[14:23:30] ✓ POST | 0.6s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-[14:23:32] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-{
-    "body": "\u26a0\ufe0f Partial pipeline data returned for CALL_788328D6: 'FunctionTool' object is not callable",
-    "severity_number": 13,
-    "severity_text": "WARN",
-    "attributes": {
-        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/call_center_agents/role_based_agent.py",
-        "code.function.name": "get_transcript_pipeline",
-        "code.line.number": 370
-    },
-    "dropped_attributes": 0,
-    "timestamp": "2025-09-25T18:23:35.889864Z",
-    "observed_timestamp": "2025-09-25T18:23:35.889906Z",
-    "trace_id": "0x00000000000000000000000000000000",
-    "span_id": "0x0000000000000000",
-    "trace_flags": 0,
-    "resource": {
-        "attributes": {
-            "telemetry.sdk.language": "python",
-            "telemetry.sdk.name": "opentelemetry",
-            "telemetry.sdk.version": "1.36.0",
-            "service.name": "xai",
-            "service.version": "1.0.0"
-        },
-        "schema_url": ""
-    },
-    "event_name": ""
-}
-[14:23:34] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-[14:23:35] ✓ POST | 0.3s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
-[14:23:35] ✓ POST | 0.5s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-[14:23:40] ✓ POST | 0.3s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
-[14:23:51] ✓ POST | 0.7s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+client.ts:44 API Request: GET /api/v1/transcripts
+client.ts:44 API Request: GET /api/v1/analyses
+client.ts:44 API Request: GET /api/v1/plans
+client.ts:44 API Request: GET /api/v1/workflows
+client.ts:44 API Request: GET /api/v1/orchestrate/runs
+client.ts:44 API Request: GET /api/v1/transcripts
+client.ts:44 API Request: GET /api/v1/analyses
+client.ts:44 API Request: GET /api/v1/plans
+client.ts:44 API Request: GET /api/v1/workflows
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/orchestrate/runs' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/orchestrate/runs:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+client.ts:44 API Request: GET /api/v1/orchestrate/runs
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/orchestrate/runs' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/orchestrate/runs:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+client.ts:44 API Request: GET /api/v1/transcripts
+client.ts:44 API Request: GET /api/v1/analyses
+client.ts:44 API Request: GET /api/v1/plans
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/transcripts?client=%5Bobject+Object%5D&queryKey%5B%5D=transcripts&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/analyses?client=%5Bobject+Object%5D&queryKey%5B%5D=analyses&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/plans?client=%5Bobject+Object%5D&queryKey%5B%5D=plans&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+client.ts:44 API Request: GET /api/v1/workflows
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/workflows?client=%5Bobject+Object%5D&queryKey%5B%5D=workflows&signal=%5Bobject+AbortSignal%5D:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+client.ts:44 API Request: GET /api/v1/transcripts
+client.ts:44 API Request: GET /api/v1/analyses
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/transcripts' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/transcripts:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/analyses' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/analyses:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+client.ts:44 API Request: GET /api/v1/transcripts
+client.ts:44 API Request: GET /api/v1/analyses
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/transcripts' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/transcripts:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/analyses' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/analyses:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+client.ts:44 API Request: GET /api/v1/transcripts
+client.ts:44 API Request: GET /api/v1/analyses
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/transcripts' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/transcripts:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/analyses' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/analyses:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+client.ts:44 API Request: GET /api/v1/transcripts
+client.ts:44 API Request: GET /api/v1/analyses
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/transcripts' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/transcripts:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1 Access to XMLHttpRequest at 'http://localhost:8000/api/v1/analyses' from origin 'http://localhost:5000' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+client.ts:59 API Response Error: Network Error
+(anonymous) @ client.ts:59Understand this error
+:8000/api/v1/analyses:1  Failed to load resource: net::ERR_FAILEDUnderstand this error

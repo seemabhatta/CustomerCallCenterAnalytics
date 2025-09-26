@@ -3,13 +3,18 @@ Analysis Service - Business logic for analysis operations
 Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
+import logging
+import uuid
+from datetime import datetime
 from ..storage.analysis_store import AnalysisStore
 from ..call_center_agents.call_analysis_agent import CallAnalysisAgent
+
+logger = logging.getLogger(__name__)
 from ..infrastructure.events import (
-    EventType,
     create_analysis_event,
     publish_event
 )
+from ..infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
 
 
 class AnalysisService:
@@ -60,9 +65,26 @@ class AnalysisService:
         message_count = len(transcript.messages) if hasattr(transcript, 'messages') else 0
         add_span_event("analysis.transcript_loaded", transcript_id=transcript_id, message_count=message_count)
         
-        # Generate analysis using call analyzer
+        # Query relevant patterns before analysis to influence LLM decisions
+        from ..infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
+        knowledge_extractor = get_predictive_knowledge_extractor()
+
+        # Get context for pattern matching
+        context = {
+            'customer_id': getattr(transcript, 'customer_id', 'UNKNOWN'),
+            'topic': getattr(transcript, 'topic', 'unknown'),
+            'urgency': getattr(transcript, 'urgency', 'medium')
+        }
+
+        # Retrieve relevant patterns to inform analysis
+        relevant_patterns = await knowledge_extractor.get_relevant_patterns(context)
+        pattern_insights = [f"{p.title}: {p.description}" for p in relevant_patterns[:3]] if relevant_patterns else []
+
+        add_span_event("analysis.patterns_retrieved", transcript_id=transcript_id, pattern_count=len(relevant_patterns))
+
+        # Generate analysis using call analyzer with pattern context
         add_span_event("analysis.analyzer_started", transcript_id=transcript_id)
-        analysis_result = self.analyzer.analyze(transcript)
+        analysis_result = self.analyzer.analyze(transcript, pattern_insights)
         result_keys = list(analysis_result.keys()) if isinstance(analysis_result, dict) else []
         add_span_event("analysis.analyzer_completed", transcript_id=transcript_id, result_keys_count=len(result_keys))
         
@@ -75,30 +97,67 @@ class AnalysisService:
         if should_store:
             self.store.store(analysis_result)
 
-            # Publish ANALYSIS_COMPLETED event for knowledge graph and other systems
-            try:
-                # Get customer_id from transcript
-                customer_id = getattr(transcript, 'customer_id', 'UNKNOWN')
+            # Extract predictive knowledge and publish events
+            customer_id = getattr(transcript, 'customer_id', 'UNKNOWN')
 
-                # Create and publish analysis completed event
-                analysis_event = create_analysis_event(
-                    analysis_id=analysis_result["analysis_id"],
+            # Extract predictive knowledge from analysis insights (NO FALLBACK)
+            predictive_insight = analysis_result.get('predictive_insight')
+            if predictive_insight:
+                # Convert to PredictiveInsight object and extract knowledge
+                from ..infrastructure.graph.knowledge_types import PredictiveInsight
+                insight = PredictiveInsight(
+                    insight_type=predictive_insight.get('insight_type', 'pattern'),
+                    priority=predictive_insight.get('priority', 'medium'),
+                    content=predictive_insight.get('content', {}),
+                    reasoning=predictive_insight.get('reasoning', 'Analysis insight'),
+                    learning_value=predictive_insight.get('learning_value', 'routine'),
+                    source_stage='analysis',
                     transcript_id=transcript_id,
-                    customer_id=customer_id,
-                    intent=analysis_result.get('intent', 'unknown'),
-                    urgency=analysis_result.get('urgency_level', 'medium'),
-                    sentiment=analysis_result.get('sentiment', 'neutral'),
-                    risk_score=analysis_result.get('risk_score', 0.5)
+                    customer_context={
+                        'customer_id': customer_id,
+                        'intent': analysis_result.get('primary_intent', 'unknown'),
+                        'sentiment': analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
+                        'risk_score': analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5)
+                    }
                 )
 
-                publish_event(analysis_event)
-                add_span_event("analysis.event_published", analysis_id=analysis_result["analysis_id"])
-                print(f"📢 Published ANALYSIS_COMPLETED event for {analysis_result['analysis_id']}")
+                knowledge_extractor = get_predictive_knowledge_extractor()
+                context = {
+                    'transcript_id': transcript_id,
+                    'customer_id': customer_id,
+                    'analysis_id': analysis_result["analysis_id"]
+                }
+                # NO FALLBACK: If knowledge extraction fails, entire operation fails
+                await knowledge_extractor.extract_knowledge(insight, context)
+                add_span_event("analysis.knowledge_extracted", analysis_id=analysis_result["analysis_id"])
 
-            except Exception as e:
-                # NO FALLBACK: Fail fast on event publishing errors
-                add_span_event("analysis.event_publish_failed", error=str(e))
-                raise RuntimeError(f"Failed to publish ANALYSIS_COMPLETED event: {str(e)}")
+            # Schedule prediction validation via event system (avoids circular dependency)
+            # Use existing factory function for consistency and proper event structure
+            validation_event = create_analysis_event(
+                analysis_id=analysis_result["analysis_id"],
+                transcript_id=transcript_id,
+                customer_id=customer_id,
+                intent=analysis_result.get('primary_intent', 'unknown'),
+                urgency=analysis_result.get('urgency_level', 'medium'),
+                sentiment=analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
+                risk_score=analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5)
+            )
+            publish_event(validation_event)
+
+            add_span_event("analysis.predictions_validated", analysis_id=analysis_result["analysis_id"])
+
+            # Publish standard analysis event
+            analysis_event = create_analysis_event(
+                analysis_id=analysis_result["analysis_id"],
+                transcript_id=transcript_id,
+                customer_id=customer_id,
+                intent=analysis_result.get('primary_intent', 'unknown'),
+                urgency=analysis_result.get('urgency_level', 'medium'),
+                sentiment=analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
+                risk_score=analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5)
+            )
+            publish_event(analysis_event)
+            add_span_event("analysis.event_published", analysis_id=analysis_result["analysis_id"])
 
         return analysis_result
     

@@ -1,5 +1,6 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
+from .call_models import PredictiveInsight
 
 
 class ImmediateAction(BaseModel):
@@ -72,3 +73,4 @@ class FourLayerActionPlan(BaseModel):
     advisor_plan: AdvisorPlan = Field(description="Advisor action plan")
     supervisor_plan: SupervisorPlan = Field(description="Supervisor action plan")
     leadership_plan: LeadershipPlan = Field(description="Leadership action plan")
+    predictive_insight: Optional[PredictiveInsight] = Field(default=None, description="Optional predictive knowledge insight")

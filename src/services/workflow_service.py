@@ -53,7 +53,7 @@ class WorkflowService:
 
     async def generate_steps_for_action(self, action_item: Dict[str, Any],
                                        workflow_type: str,
-                                       context: Dict[str, Any]) -> List[Dict[str, Any]]:
+                                       context: Dict[str, Any]) -> Dict[str, Any]:
         """Generate detailed execution steps for an action item using WorkflowStepAgent.
 
         Delegates to WorkflowStepAgent to maintain separation of concerns.
@@ -64,7 +64,7 @@ class WorkflowService:
             context: Full context for step generation
 
         Returns:
-            List of detailed execution steps
+            Dictionary containing steps and graph guidance
 
         Raises:
             ValueError: Invalid inputs (NO FALLBACK)
@@ -159,29 +159,53 @@ class WorkflowService:
         workflow_id = self.workflow_store.create(workflow_data)
         workflow_data['id'] = workflow_id
 
-        # Publish WORKFLOW_CREATED event for knowledge graph and other systems
-        try:
-            # Count steps in the workflow
-            workflow_steps = workflow_data.get('steps', [])
-            step_count = len(workflow_steps) if isinstance(workflow_steps, list) else 0
+        # Extract predictive knowledge from workflow insights (NO FALLBACK)
+        workflow_steps = workflow_data.get('steps', [])
+        step_count = len(workflow_steps) if isinstance(workflow_steps, list) else 0
 
-            # Create and publish workflow created event
-            workflow_event = create_workflow_created_event(
-                workflow_id=workflow_id,
-                plan_id=plan_id,
-                workflow_type=workflow_data.get('workflow_type', 'BORROWER'),
-                approval_status=workflow_data.get('status', 'pending'),
-                risk_level=workflow_data.get('risk_level', 'medium'),
-                step_count=step_count
+        # Check for predictive insight from workflow generation
+        predictive_insight = workflow_data.get('predictive_insight')
+        if predictive_insight:
+            from ..infrastructure.graph.knowledge_types import PredictiveInsight
+            from ..infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
+
+            insight = PredictiveInsight(
+                insight_type=predictive_insight.get('insight_type', 'pattern'),
+                priority=predictive_insight.get('priority', 'medium'),
+                content=predictive_insight.get('content', {}),
+                reasoning=predictive_insight.get('reasoning', 'Workflow insight'),
+                learning_value=predictive_insight.get('learning_value', 'routine'),
+                source_stage='workflow',
+                transcript_id=context_data.get('transcript_id', 'UNKNOWN'),
+                customer_context={
+                    'plan_id': plan_id,
+                    'workflow_complexity': step_count,
+                    'workflow_type': workflow_data.get('workflow_type', 'BORROWER')
+                }
             )
 
-            publish_event(workflow_event)
-            logger.info(f"📢 Published WORKFLOW_CREATED event for {workflow_id}")
+            knowledge_extractor = get_predictive_knowledge_extractor()
+            context = {
+                'plan_id': plan_id,
+                'workflow_id': workflow_id,
+                'transcript_id': context_data.get('transcript_id'),
+                'customer_id': context_data.get('customer_id')
+            }
+            # NO FALLBACK: If knowledge extraction fails, entire operation fails
+            await knowledge_extractor.extract_knowledge(insight, context)
+            logger.info(f"📊 Extracted workflow knowledge for {workflow_id}")
 
-        except Exception as e:
-            # NO FALLBACK: Fail fast on event publishing errors
-            logger.error(f"Failed to publish WORKFLOW_CREATED event: {str(e)}")
-            raise RuntimeError(f"Failed to publish WORKFLOW_CREATED event: {str(e)}")
+        # Publish workflow created event
+        workflow_event = create_workflow_created_event(
+            workflow_id=workflow_id,
+            plan_id=plan_id,
+            workflow_type=workflow_data.get('workflow_type', 'BORROWER'),
+            approval_status=workflow_data.get('status', 'pending'),
+            risk_level='medium',
+            step_count=step_count
+        )
+        publish_event(workflow_event)
+        logger.info(f"📢 Published WORKFLOW_CREATED event for {workflow_id}")
 
         return workflow_data
     
@@ -683,11 +707,15 @@ class WorkflowService:
                     add_span_event("action_item.generating_steps", workflow_type=workflow_type, description=item_description)
 
                     try:
-                        steps = await self.generate_steps_for_action(
+                        step_result = await self.generate_steps_for_action(
                             action_item=item,
                             workflow_type=workflow_type,
                             context=context_data
                         )
+
+                        # Extract steps from response
+                        steps = step_result.get('steps', [])
+
                         add_span_event("action_item.steps_generated", workflow_type=workflow_type,
                                       step_count=len(steps))
                     except Exception as e:

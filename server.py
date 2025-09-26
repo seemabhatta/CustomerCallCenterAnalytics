@@ -16,6 +16,17 @@ load_dotenv()
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
+# NO FALLBACK: Comprehensive configuration validation at startup
+print("🔍 Validating system configuration...")
+try:
+    from src.infrastructure.config.database_config import validate_all_configuration
+    validate_all_configuration()
+    print("✅ Configuration validation passed")
+except Exception as e:
+    print(f"❌ Configuration validation failed: {e}")
+    print("System cannot start. Please fix configuration issues.")
+    sys.exit(1)
+
 # Initialize OpenTelemetry tracing IMMEDIATELY after env loading for complete observability coverage
 try:
     from src.infrastructure.telemetry import initialize_tracing
@@ -76,19 +87,138 @@ system_service = SystemService(api_key=api_key)
 
 print("✅ All services initialized successfully")
 
+# Initialize knowledge event handling system
+try:
+    from src.infrastructure.graph.knowledge_event_handler import initialize_knowledge_event_handling
+    initialize_knowledge_event_handling()
+    print("✅ Knowledge event handling system initialized")
+except ImportError as e:
+    print(f"⚠️  Knowledge event handling not available: {e}")
+except Exception as e:
+    print(f"❌ Failed to initialize knowledge event handling: {e}")
+    # NO FALLBACK: Continue with degraded functionality but log the issue
+    import logging
+    logging.getLogger(__name__).error(f"Knowledge event handling initialization failed: {e}")
+
+# Initialize prediction cleanup system
+# NO FALLBACK: Proper background task management with FastAPI lifecycle
+background_tasks = set()
+prediction_cleanup = None
+
+try:
+    from src.infrastructure.graph.prediction_cleanup import get_prediction_cleanup
+    prediction_cleanup = get_prediction_cleanup()
+    print("✅ Prediction cleanup system initialized")
+except ImportError as e:
+    print(f"❌ Prediction cleanup not available: {e}")
+    # NO FALLBACK: If cleanup is critical, fail here
+    raise RuntimeError(f"Critical component missing: {e}")
+except Exception as e:
+    print(f"❌ Failed to initialize prediction cleanup: {e}")
+    # NO FALLBACK: If cleanup fails, entire system fails
+    raise RuntimeError(f"Cannot proceed without prediction cleanup: {e}")
+
+# NO FALLBACK: Define lifespan function BEFORE FastAPI app creation to avoid undefined reference
+# Modern FastAPI lifespan management - NO FALLBACK
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan management for background tasks following NO FALLBACK principles."""
+    global background_tasks, prediction_cleanup
+
+    # Startup
+    print("🚀 Starting application lifespan...")
+
+    if prediction_cleanup is not None:
+        import asyncio
+
+        async def run_cleanup_with_recovery():
+            """Background cleanup task with automatic error recovery - NO FALLBACK."""
+            max_retries = 3
+            base_delay = 60  # seconds
+
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"🔄 Starting prediction cleanup (attempt {attempt + 1}/{max_retries})")
+                    await prediction_cleanup.schedule_periodic_cleanup(interval_hours=24)
+                    # If successful, exit retry loop
+                    break
+
+                except Exception as e:
+                    logger.error(f"❌ Prediction cleanup failed (attempt {attempt + 1}/{max_retries}): {e}")
+
+                    if attempt < max_retries - 1:
+                        # Exponential backoff for retries
+                        delay = base_delay * (2 ** attempt)
+                        logger.info(f"⏳ Retrying in {delay} seconds...")
+                        await asyncio.sleep(delay)
+                    else:
+                        # NO FALLBACK: After max retries, log critical failure
+                        logger.critical(f"🚨 Prediction cleanup permanently failed after {max_retries} attempts")
+                        # Schedule a restart task
+                        asyncio.create_task(schedule_cleanup_restart())
+
+        async def schedule_cleanup_restart():
+            """Schedule cleanup restart after permanent failure."""
+            restart_delay = 3600  # 1 hour
+            logger.info(f"📅 Scheduling cleanup restart in {restart_delay} seconds")
+            await asyncio.sleep(restart_delay)
+
+            # Restart the cleanup task
+            restart_task = asyncio.create_task(run_cleanup_with_recovery())
+            background_tasks.add(restart_task)
+            restart_task.add_done_callback(lambda t: background_tasks.discard(t))
+            logger.info("🔄 Cleanup task restarted after failure recovery")
+
+        # Create and track the background task with recovery
+        cleanup_task = asyncio.create_task(run_cleanup_with_recovery())
+        background_tasks.add(cleanup_task)
+
+        # Clean up completed tasks to prevent memory leaks
+        cleanup_task.add_done_callback(lambda t: background_tasks.discard(t))
+
+        print("✅ Background prediction cleanup task started with error recovery")
+    else:
+        print("⚠️  Prediction cleanup not available - skipping background task")
+
+    yield  # Application runs here
+
+    # Shutdown
+    print("🛑 Shutting down application...")
+
+    # Cancel all background tasks
+    for task in background_tasks:
+        if not task.done():
+            task.cancel()
+
+    # Wait for tasks to complete cancellation
+    if background_tasks:
+        import asyncio
+        await asyncio.gather(*background_tasks, return_exceptions=True)
+
+    print("✅ All background tasks shut down")
+
 app = FastAPI(
     title="Customer Call Center Analytics API",
     description="AI-powered system for generating and analyzing call center transcripts",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
-# Add CORS middleware for frontend connectivity
+# Add CORS middleware for frontend connectivity - NO FALLBACK security
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific frontend URL
+    allow_origins=[
+        "http://localhost:3000",  # React dev server
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:8000",  # FastAPI dev server
+        os.getenv("FRONTEND_URL", "").split(",") if os.getenv("FRONTEND_URL") else []
+    ] if os.getenv("ENVIRONMENT", "development") == "development"
+    else [os.getenv("FRONTEND_URL", "https://production-frontend.example.com")],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # Pydantic models for request/response validation
@@ -165,14 +295,100 @@ async def root():
 
 @app.get("/api/v1/health")
 async def health_check():
-    """Health check endpoint - proxies to system service."""
+    """Comprehensive health check endpoint - NO FALLBACK monitoring."""
     try:
-        result = await system_service.health_check()
-        if result.get("status") == "unhealthy":
-            return JSONResponse(status_code=503, content=result)
-        return result
+        # Get basic system health from system service
+        system_health = await system_service.health_check()
+
+        # Add database connectivity checks
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "components": {
+                "system": system_health,
+                "databases": await _check_database_health(),
+                "knowledge_graph": await _check_knowledge_graph_health(),
+                "event_system": await _check_event_system_health()
+            }
+        }
+
+        # Determine overall health status
+        unhealthy_components = [
+            name for name, component in health_status["components"].items()
+            if component.get("status") != "healthy"
+        ]
+
+        if unhealthy_components:
+            health_status["status"] = "unhealthy"
+            health_status["unhealthy_components"] = unhealthy_components
+            return JSONResponse(status_code=503, content=health_status)
+
+        return health_status
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
+        error_health = {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": f"Health check failed: {str(e)}"
+        }
+        return JSONResponse(status_code=500, content=error_health)
+
+async def _check_database_health() -> Dict[str, Any]:
+    """Check main SQLite database health."""
+    try:
+        from src.infrastructure.config.database_config import get_main_database_path
+        import sqlite3
+        import os
+
+        db_path = get_main_database_path()
+
+        # Check if database file exists and is accessible
+        if not os.path.exists(db_path):
+            return {"status": "unhealthy", "error": "Database file not found"}
+
+        # Test connection
+        with sqlite3.connect(db_path) as conn:
+            conn.execute("SELECT 1").fetchone()
+
+        return {"status": "healthy", "database_path": db_path}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+async def _check_knowledge_graph_health() -> Dict[str, Any]:
+    """Check KuzuDB knowledge graph health."""
+    try:
+        from src.infrastructure.graph.predictive_graph_manager import PredictiveGraphManager
+        from src.infrastructure.config.database_config import get_knowledge_graph_database_path
+        import os
+
+        db_path = get_knowledge_graph_database_path()
+
+        # Check if database directory exists
+        if not os.path.exists(os.path.dirname(db_path)):
+            return {"status": "unhealthy", "error": "Knowledge graph directory not found"}
+
+        # Test KuzuDB connection
+        manager = PredictiveGraphManager(db_path)
+        manager.close()  # Clean up test connection
+
+        return {"status": "healthy", "database_path": db_path}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+async def _check_event_system_health() -> Dict[str, Any]:
+    """Check event system health."""
+    try:
+        from src.infrastructure.events.event_system import get_event_system
+
+        event_system = get_event_system()
+
+        # Check if event system is properly initialized
+        if not hasattr(event_system, '_signal'):
+            return {"status": "unhealthy", "error": "Event system not initialized"}
+
+        return {"status": "healthy", "subscribers": len(event_system._signal.receivers)}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
 
 @app.get("/api/v1/config")
 async def get_configuration():

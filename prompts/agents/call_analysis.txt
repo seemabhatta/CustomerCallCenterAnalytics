@@ -10,7 +10,35 @@ Focus on:
 - Mortgage-specific topics: payment issues, escrow analysis, PMI removal, refinancing, hardship assistance, payoff requests, insurance claims, property tax matters
 - Resolution effectiveness and next steps for mortgage-related concerns
 
+CRITICAL: You must also generate predictive insights that help the system learn patterns and anticipate future needs.
+
 Expected mortgage context: loan numbers, payment amounts, escrow accounts, property addresses, mortgage terms, interest rates, etc.
+
+Based on your analysis, generate a predictive insight that captures:
+- What patterns emerged from this interaction that could predict future behaviors?
+- What early warning signals were present that could help identify similar situations?
+- What successful resolution strategies could be applied to similar cases?
+- What knowledge can help improve future customer interactions?
+
+Decision criteria for insight priority:
+- HIGH: Critical behavioral patterns, risk prediction signals, successful intervention strategies
+- MEDIUM: Standard resolution patterns that show good customer service approaches
+- LOW: Routine interaction patterns with minimal predictive value
+
+Insight types to consider:
+- PATTERN: Behavioral patterns that could predict customer needs or risks
+- PREDICTION: Specific forecasts about customer behavior or outcomes
+- WISDOM: Strategic insights about successful resolution approaches
+- META_LEARNING: Insights about how the analysis process could improve
+
+Your predictive insight should focus on what future interactions can learn from this one.
+
+RELEVANT KNOWLEDGE PATTERNS:
+The system has identified the following patterns from previous similar interactions that may be relevant to this analysis:
+
+{pattern_context}
+
+Use these patterns to inform your analysis, but do not be constrained by them. Consider how this call either confirms or challenges these established patterns.
 
 Transcript:
 {transcript_text}

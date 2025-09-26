@@ -72,34 +72,59 @@ class PlanService:
         if should_store:
             self.store.store(plan_result)
 
-            # Publish PLAN_GENERATED event for knowledge graph and other systems
-            try:
-                # Get customer_id from transcript
-                customer_id = getattr(transcript, 'customer_id', 'UNKNOWN')
+            # Extract predictive knowledge from plan insights (NO FALLBACK)
+            customer_id = getattr(transcript, 'customer_id', 'UNKNOWN')
+            predictive_insight = plan_result.get('predictive_insight')
+            if predictive_insight:
+                # Convert to PredictiveInsight object and extract knowledge
+                from ..infrastructure.graph.knowledge_types import PredictiveInsight
+                from ..infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
 
-                # Count actions in the plan
-                actions = plan_result.get('actions', [])
-                action_count = len(actions) if isinstance(actions, list) else 0
-
-                # Create and publish plan generated event
-                plan_event = create_plan_generated_event(
-                    plan_id=plan_result["plan_id"],
-                    analysis_id=analysis_id,
+                insight = PredictiveInsight(
+                    insight_type=predictive_insight.get('insight_type', 'wisdom'),
+                    priority=predictive_insight.get('priority', 'medium'),
+                    content=predictive_insight.get('content', {}),
+                    reasoning=predictive_insight.get('reasoning', 'Plan insight'),
+                    learning_value=predictive_insight.get('learning_value', 'routine'),
+                    source_stage='planning',
                     transcript_id=transcript_id,
-                    customer_id=customer_id,
-                    priority_level=plan_result.get('urgency_level', 'medium'),
-                    action_count=action_count,
-                    urgency_level=plan_result.get('urgency_level', 'medium')
+                    customer_context={
+                        'customer_id': customer_id,
+                        'analysis_id': analysis_id,
+                        'plan_complexity': len(str(plan_result))
+                    }
                 )
 
-                publish_event(plan_event)
-                add_span_event("plan.event_published", plan_id=plan_result["plan_id"])
-                print(f"📢 Published PLAN_GENERATED event for {plan_result['plan_id']}")
+                knowledge_extractor = get_predictive_knowledge_extractor()
+                context = {
+                    'transcript_id': transcript_id,
+                    'customer_id': customer_id,
+                    'plan_id': plan_result["plan_id"],
+                    'analysis_id': analysis_id
+                }
+                # NO FALLBACK: If knowledge extraction fails, entire operation fails
+                await knowledge_extractor.extract_knowledge(insight, context)
+                add_span_event("plan.knowledge_extracted", plan_id=plan_result["plan_id"])
 
-            except Exception as e:
-                # NO FALLBACK: Fail fast on event publishing errors
-                add_span_event("plan.event_publish_failed", error=str(e))
-                raise RuntimeError(f"Failed to publish PLAN_GENERATED event: {str(e)}")
+            # Count actions in the plan for event publishing
+            borrower_actions = plan_result.get('borrower_plan', {}).get('immediate_actions', [])
+            advisor_actions = plan_result.get('advisor_plan', {}).get('coaching_items', [])
+            supervisor_actions = plan_result.get('supervisor_plan', {}).get('escalation_items', [])
+            leadership_actions = plan_result.get('leadership_plan', {}).get('strategic_opportunities', [])
+            action_count = len(borrower_actions) + len(advisor_actions) + len(supervisor_actions) + len(leadership_actions)
+
+            # Publish plan generated event
+            plan_event = create_plan_generated_event(
+                plan_id=plan_result["plan_id"],
+                analysis_id=analysis_id,
+                transcript_id=transcript_id,
+                customer_id=customer_id,
+                priority_level='medium',
+                action_count=action_count,
+                urgency_level='medium'
+            )
+            publish_event(plan_event)
+            add_span_event("plan.event_published", plan_id=plan_result["plan_id"])
 
         return plan_result
     

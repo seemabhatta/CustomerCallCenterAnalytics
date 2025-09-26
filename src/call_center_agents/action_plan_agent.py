@@ -66,6 +66,10 @@ class ActionPlanAgent:
             action_plans['transcript_id'] = transcript.id
             action_plans['generator_version'] = "1.0"
 
+            # Ensure predictive_insight is included even if None (for service layer)
+            if 'predictive_insight' not in action_plans:
+                action_plans['predictive_insight'] = None
+
             return action_plans
 
         except Exception as e:

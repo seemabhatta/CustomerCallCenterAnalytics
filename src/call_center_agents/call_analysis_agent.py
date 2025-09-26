@@ -1,6 +1,6 @@
 """Post-call intelligence analyzer for mortgage servicing."""
 import uuid
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
 from src.models.transcript import Transcript
@@ -18,11 +18,12 @@ class CallAnalysisAgent:
         """Initialize the analyzer."""
         self.llm = OpenAIWrapper()
     
-    def analyze(self, transcript: Transcript) -> Dict[str, Any]:
+    def analyze(self, transcript: Transcript, pattern_insights: List[str] = None) -> Dict[str, Any]:
         """Analyze a transcript for mortgage servicing insights.
 
         Args:
             transcript: Transcript to analyze
+            pattern_insights: Optional list of relevant patterns to inform analysis
 
         Returns:
             Analysis results with mortgage-specific insights
@@ -31,10 +32,19 @@ class CallAnalysisAgent:
             # Build transcript text for analysis
             transcript_text = self._build_transcript_text(transcript)
 
-            # Create analysis prompt using external template
+            # Format pattern insights for LLM context
+            pattern_context = "No specific patterns found for this interaction context."
+            if pattern_insights:
+                pattern_context = ""
+                for i, pattern in enumerate(pattern_insights, 1):
+                    pattern_context += f"{i}. {pattern}\n"
+                pattern_context = pattern_context.strip()
+
+            # Create analysis prompt using external template with pattern context
             prompt = prompt_loader.format(
                 'agents/call_analysis.txt',
                 transcript_text=transcript_text,
+                pattern_context=pattern_context,
                 customer_id=getattr(transcript, 'customer_id', 'N/A'),
                 advisor_id=getattr(transcript, 'advisor_id', 'N/A'),
                 duration=getattr(transcript, 'duration', 'N/A')
@@ -52,6 +62,19 @@ class CallAnalysisAgent:
             analysis['transcript_id'] = transcript.id
             analysis['analysis_id'] = str(uuid.uuid4())
             analysis['analyzer_version'] = "1.0"
+
+            # NO FALLBACK: Validate predictive insight generation
+            # LLM should generate meaningful insights, not null/empty objects
+            predictive_insight = analysis.get('predictive_insight')
+
+            if predictive_insight is None:
+                # NO FALLBACK: If LLM doesn't generate insight, fail the analysis
+                raise ValueError("LLM failed to generate required predictive_insight - analysis incomplete")
+
+            # Validate insight content is meaningful
+            if not self._validate_predictive_insight(predictive_insight):
+                # NO FALLBACK: If insight is invalid/empty, fail the analysis
+                raise ValueError("LLM generated invalid predictive_insight - analysis incomplete")
 
             return analysis
 
@@ -84,3 +107,47 @@ class CallAnalysisAgent:
             lines.append(f"{message.speaker}{timestamp_str}: {message.text}")
         
         return "\n".join(lines)
+
+    def _validate_predictive_insight(self, insight: Dict[str, Any]) -> bool:
+        """Validate that predictive insight contains meaningful content.
+
+        Args:
+            insight: PredictiveInsight dictionary from LLM
+
+        Returns:
+            True if insight is valid and meaningful
+        """
+        if not isinstance(insight, dict):
+            return False
+
+        # Required fields must be present and non-empty
+        required_fields = ['insight_type', 'priority', 'content', 'reasoning', 'learning_value']
+        for field in required_fields:
+            if field not in insight or not insight[field] or str(insight[field]).strip() == '':
+                return False
+
+        # Insight type must be valid
+        valid_types = ['pattern', 'prediction', 'wisdom', 'meta_learning']
+        if insight['insight_type'] not in valid_types:
+            return False
+
+        # Priority must be valid
+        valid_priorities = ['high', 'medium', 'low']
+        if insight['priority'] not in valid_priorities:
+            return False
+
+        # Learning value must be valid
+        valid_learning_values = ['critical', 'exceptional', 'routine']
+        if insight['learning_value'] not in valid_learning_values:
+            return False
+
+        # Content must be a non-empty dict
+        if not isinstance(insight['content'], dict) or len(insight['content']) == 0:
+            return False
+
+        # Reasoning must be meaningful (at least 10 characters)
+        reasoning = str(insight['reasoning']).strip()
+        if len(reasoning) < 10:
+            return False
+
+        return True

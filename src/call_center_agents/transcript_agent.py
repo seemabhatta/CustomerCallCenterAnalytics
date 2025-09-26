@@ -54,16 +54,16 @@ class TranscriptAgent:
         
         # Parse conversation
         parsed_data = self.response_parser.parse_response(conversation_text)
-        
+
         # Create messages
         messages = []
         for msg_data in parsed_data.get("messages", []):
             if isinstance(msg_data, dict) and "speaker" in msg_data and "text" in msg_data:
                 messages.append(Message(**msg_data))
-        
+
         # Create transcript with any additional attributes from parsing
         transcript_attrs = {k: v for k, v in parsed_data.items() if k != "messages"}
-        
+
         return Transcript(
             id=f"CALL_{uuid.uuid4().hex[:8].upper()}",
             messages=messages,
