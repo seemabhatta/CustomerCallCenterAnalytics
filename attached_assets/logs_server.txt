@@ -1,21 +1,21 @@
-INFO:     127.0.0.1:60018 - "GET /api/v1/transcripts?limit=10 HTTP/1.1" 200 OK
-[13:46:08] ✓ POST | 0.5s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-[13:46:10] ✓ POST | 0.3s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-INFO:     127.0.0.1:60034 - "GET /api/v1/analyses/by-transcript/CALL_97AED43D HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60050 - "GET /api/v1/analyses/by-transcript/CALL_DF91CD2B HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:42880 - "GET /api/v1/analyses/by-transcript/CALL_788328D6 HTTP/1.1" 404 Not Found
+🆔 AdvisorService.chat_stream received session_id: advisor_selfreflection_1758824512043_g2gvy00xn, using actual_session_id: advisor_selfreflection_1758824512043_g2gvy00xn
+[14:23:08] ✓ POST | 0.5s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
+[14:23:09] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
+[14:23:19] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
+INFO:     127.0.0.1:40178 - "POST /api/v1/advisor/chat/stream HTTP/1.1" 200 OK
+🆔 AdvisorService.chat_stream received session_id: advisor_selfreflection_1758824512043_g2gvy00xn, using actual_session_id: advisor_selfreflection_1758824512043_g2gvy00xn
 {
-    "body": "\u274c Analysis for transcript CALL_DF91CD2B not found",
-    "severity_number": 17,
-    "severity_text": "ERROR",
+    "body": "\u26a0\ufe0f Partial pipeline data returned for CALL_97AED43D: 'FunctionTool' object is not callable",
+    "severity_number": 13,
+    "severity_text": "WARN",
     "attributes": {
         "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/call_center_agents/role_based_agent.py",
-        "code.function.name": "get_analysis_by_transcript",
-        "code.line.number": 94
+        "code.function.name": "get_transcript_pipeline",
+        "code.line.number": 370
     },
     "dropped_attributes": 0,
-    "timestamp": "2025-09-25T17:46:12.982964Z",
-    "observed_timestamp": "2025-09-25T17:46:12.983098Z",
+    "timestamp": "2025-09-25T18:23:32.602417Z",
+    "observed_timestamp": "2025-09-25T18:23:32.602499Z",
     "trace_id": "0x00000000000000000000000000000000",
     "span_id": "0x0000000000000000",
     "trace_flags": 0,
@@ -32,17 +32,17 @@ INFO:     127.0.0.1:42880 - "GET /api/v1/analyses/by-transcript/CALL_788328D6 HT
     "event_name": ""
 }
 {
-    "body": "\u274c Analysis for transcript CALL_788328D6 not found",
-    "severity_number": 17,
-    "severity_text": "ERROR",
+    "body": "\u26a0\ufe0f Partial pipeline data returned for CALL_DF91CD2B: 'FunctionTool' object is not callable",
+    "severity_number": 13,
+    "severity_text": "WARN",
     "attributes": {
         "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/call_center_agents/role_based_agent.py",
-        "code.function.name": "get_analysis_by_transcript",
-        "code.line.number": 94
+        "code.function.name": "get_transcript_pipeline",
+        "code.line.number": 370
     },
     "dropped_attributes": 0,
-    "timestamp": "2025-09-25T17:46:16.152174Z",
-    "observed_timestamp": "2025-09-25T17:46:16.152229Z",
+    "timestamp": "2025-09-25T18:23:34.316354Z",
+    "observed_timestamp": "2025-09-25T18:23:34.316419Z",
     "trace_id": "0x00000000000000000000000000000000",
     "span_id": "0x0000000000000000",
     "trace_flags": 0,
@@ -58,9 +58,37 @@ INFO:     127.0.0.1:42880 - "GET /api/v1/analyses/by-transcript/CALL_788328D6 HT
     },
     "event_name": ""
 }
-[13:46:12] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
-[13:46:13] ✓ POST | 0.2s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
-[13:46:13] ✓ POST | 1.5s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-[13:46:16] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
-[13:46:18] ✓ POST | 0.2s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
-[13:46:28] ✓ POST | 0.5s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
+[14:23:30] ✓ POST | 0.6s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
+[14:23:32] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
+{
+    "body": "\u26a0\ufe0f Partial pipeline data returned for CALL_788328D6: 'FunctionTool' object is not callable",
+    "severity_number": 13,
+    "severity_text": "WARN",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/call_center_agents/role_based_agent.py",
+        "code.function.name": "get_transcript_pipeline",
+        "code.line.number": 370
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-09-25T18:23:35.889864Z",
+    "observed_timestamp": "2025-09-25T18:23:35.889906Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
+[14:23:34] ✓ POST | 0.4s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
+[14:23:35] ✓ POST | 0.3s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
+[14:23:35] ✓ POST | 0.5s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
+[14:23:40] ✓ POST | 0.3s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=204
+[14:23:51] ✓ POST | 0.7s | http.method=POST http.url=https://api.openai.com/v1/traces/ingest http.statuscode=
