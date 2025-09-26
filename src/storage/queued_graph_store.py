@@ -146,34 +146,6 @@ def get_queued_graph_store() -> QueuedGraphStore:
     """Get the global queued graph store instance."""
     return QueuedGraphStore()
 
-# Async-style helper functions that return results instead of futures
-
-def add_customer_sync(customer_id: str, profile_type: str = "standard", risk_level: str = "low") -> bool:
-    """Add customer and wait for result."""
-    future = get_queued_graph_store().add_customer(customer_id, profile_type, risk_level)
-    return future.result(timeout=10)
-
-def add_transcript_sync(transcript_id: str, topic: str, message_count: int) -> bool:
-    """Add transcript and wait for result."""
-    future = get_queued_graph_store().add_transcript(transcript_id, topic, message_count)
-    return future.result(timeout=10)
-
-def add_analysis_sync(analysis_data: Dict[str, Any]) -> bool:
-    """Add analysis and wait for result."""
-    future = get_queued_graph_store().add_analysis_with_relationships(analysis_data)
-    return future.result(timeout=10)
-
-def add_plan_sync(plan_data: Dict[str, Any]) -> bool:
-    """Add plan and wait for result."""
-    future = get_queued_graph_store().add_plan_with_relationships(plan_data)
-    return future.result(timeout=10)
-
-def add_workflow_sync(workflow_data: Dict[str, Any]) -> bool:
-    """Add workflow and wait for result."""
-    future = get_queued_graph_store().add_workflow_with_steps(workflow_data)
-    return future.result(timeout=10)
-
-def add_execution_sync(execution_data: Dict[str, Any]) -> bool:
-    """Add execution and wait for result."""
-    future = get_queued_graph_store().add_execution_with_relationships(execution_data)
-    return future.result(timeout=10)
+# NOTE: Legacy sync helper functions removed
+# These were replaced by the event-driven architecture in Knowledge Graph 2.0
+# Graph updates now happen automatically via event handlers
