@@ -1,0 +1,90 @@
+# Prompt Mapping Configuration for Role-Based Agents
+# This file defines the mapping between roles, modes, and their corresponding prompt files
+
+roles:
+  advisor:
+    display_name: "Mortgage Advisor Assistant"
+    description: "AI assistant for mortgage advisors"
+    modes:
+      borrower:
+        prompt_file: "prompts/advisor_agent/borrower_system_prompt.md"
+        description: "Helps advisors with borrower workflows and operational tasks"
+        icon: "User"
+
+      selfreflection:
+        prompt_file: "prompts/advisor_agent/selfreflection_system_prompt.md"
+        description: "Helps advisors reflect on performance and professional development"
+        icon: "CheckCircle"
+
+  leadership:
+    display_name: "Leadership Analytics Assistant"
+    description: "AI assistant for mortgage company leadership"
+    modes:
+      borrower:
+        prompt_file: "prompts/leadership_agent/borrower_system_prompt.md"
+        description: "Provides strategic insights for leadership on customer portfolio"
+        icon: "User"
+
+      selfreflection:
+        prompt_file: "prompts/leadership_agent/selfreflection_system_prompt.md"
+        description: "Helps leadership reflect on organizational performance and strategic effectiveness"
+        icon: "CheckCircle"
+
+# Future roles - marked as TBD for implementation
+future_roles:
+  supervisor:
+    display_name: "Supervisor Assistant"
+    description: "AI assistant for mortgage supervisors"
+    status: "TBD"
+    planned_release: "Q1 2025"
+    modes: {}
+
+  admin:
+    display_name: "Admin Assistant"
+    description: "AI assistant for system administrators"
+    status: "TBD"
+    planned_release: "Q2 2025"
+    modes: {}
+
+# Global configuration settings
+settings:
+  default_mode: "borrower"
+  default_model: "gpt-4o-mini"
+
+  # Model configuration
+  models:
+    default: "gpt-4o-mini"
+    fallback: "gpt-4o"
+
+  # Validation settings
+  validation:
+    require_prompt_files: true
+    fail_on_missing_prompt: true
+
+  # UI settings
+  ui:
+    show_future_roles: false
+    show_mode_descriptions: true
+
+# Validation rules
+validation:
+  required_files:
+    - "prompts/advisor_agent/borrower_system_prompt.md"
+    - "prompts/advisor_agent/selfreflection_system_prompt.md"
+    - "prompts/leadership_agent/borrower_system_prompt.md"
+    - "prompts/leadership_agent/selfreflection_system_prompt.md"
+
+  supported_roles:
+    - "advisor"
+    - "leadership"
+
+  supported_modes:
+    - "borrower"
+    - "selfreflection"
+
+# Metadata
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-09-25"
+  description: "Configuration for role-based agent prompt mapping"
+  maintainer: "Customer Call Center Analytics Team"

@@ -6,7 +6,8 @@ Follows core principles: agentic, no fallback logic, prompt separation.
 import os
 import logging
 import aiohttp
-from typing import Dict, Any, List
+import yaml
+from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 from agents import Agent, function_tool
 
@@ -15,6 +16,9 @@ load_dotenv()
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+# Configuration cache
+_config_cache: Optional[Dict[str, Any]] = None
 
 
 # ============================================
@@ -472,8 +476,121 @@ async def approve_workflow(workflow_id: str, approved_by: str, reasoning: str = 
             return await response.json()
 
 
+# ============================================
+# CONFIGURATION MANAGEMENT
+# ============================================
+
+def load_prompt_config() -> Dict[str, Any]:
+    """Load prompt configuration from YAML file with caching.
+
+    Returns:
+        Configuration dictionary containing role/mode mappings
+
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        yaml.YAMLError: If config file is invalid YAML
+    """
+    global _config_cache
+
+    if _config_cache is not None:
+        return _config_cache
+
+    config_file = "config/prompt_mapping.yaml"
+
+    if not os.path.exists(config_file):
+        raise FileNotFoundError(f"Configuration file not found: {config_file}")
+
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+
+        # Validate required structure
+        if 'roles' not in config:
+            raise ValueError("Configuration missing 'roles' section")
+
+        # Cache the configuration
+        _config_cache = config
+        logger.info(f"✅ Loaded prompt configuration from {config_file}")
+        return config
+
+    except yaml.YAMLError as e:
+        raise yaml.YAMLError(f"Invalid YAML in configuration file: {e}")
+
+
+def get_prompt_file_for_role_mode(role: str, mode: str = "borrower") -> str:
+    """Get prompt file path for role and mode from configuration.
+
+    Args:
+        role: Role identifier (advisor, leadership)
+        mode: Mode identifier (borrower, selfreflection)
+
+    Returns:
+        Prompt file path
+
+    Raises:
+        ValueError: If role or mode not found in configuration
+    """
+    config = load_prompt_config()
+
+    # Check if role exists
+    if role not in config['roles']:
+        available_roles = list(config['roles'].keys())
+        raise ValueError(f"Role '{role}' not found. Available roles: {available_roles}")
+
+    role_config = config['roles'][role]
+
+    # Check if mode exists for this role
+    if 'modes' not in role_config or mode not in role_config['modes']:
+        available_modes = list(role_config.get('modes', {}).keys())
+        raise ValueError(f"Mode '{mode}' not found for role '{role}'. Available modes: {available_modes}")
+
+    mode_config = role_config['modes'][mode]
+
+    # Get prompt file path
+    prompt_file = mode_config.get('prompt_file')
+    if not prompt_file:
+        raise ValueError(f"No prompt_file specified for role '{role}' mode '{mode}'")
+
+    return prompt_file
+
+
+def get_agent_display_name(role: str, mode: str = "borrower") -> str:
+    """Get display name for agent from configuration.
+
+    Args:
+        role: Role identifier
+        mode: Mode identifier
+
+    Returns:
+        Agent display name
+    """
+    try:
+        config = load_prompt_config()
+        role_config = config['roles'][role]
+        base_name = role_config.get('display_name', f"{role.title()} Assistant")
+
+        # Add mode to name if not default
+        if mode != config.get('settings', {}).get('default_mode', 'borrower'):
+            mode_display = mode.replace('_', ' ').title()
+            return f"{base_name} ({mode_display} Mode)"
+
+        return base_name
+
+    except (KeyError, ValueError) as e:
+        logger.warning(f"⚠️ Failed to get display name from config: {e}")
+        # Fallback to hardcoded names
+        agent_names = {
+            "advisor": "Mortgage Advisor Assistant",
+            "leadership": "Leadership Analytics Assistant"
+        }
+        base_name = agent_names.get(role, f"{role.title()} Assistant")
+        if mode != "borrower":
+            return f"{base_name} ({mode.title()} Mode)"
+        return base_name
+
+
 def load_prompt_from_file(role: str, mode: str = "borrower") -> str:
-    """Load role and mode specific prompt from prompts folder.
+    """Load role and mode specific prompt from configuration.
 
     Args:
         role: Role identifier (advisor, leadership)
@@ -484,14 +601,25 @@ def load_prompt_from_file(role: str, mode: str = "borrower") -> str:
 
     Raises:
         FileNotFoundError: If prompt file doesn't exist
+        ValueError: If role/mode combination not found in configuration
     """
-    prompt_file = f"prompts/{role}_agent/{mode}_system_prompt.md"
+    try:
+        # Get prompt file path from configuration
+        prompt_file = get_prompt_file_for_role_mode(role, mode)
+        logger.info(f"📄 Loading prompt from config: {role}/{mode} -> {prompt_file}")
+
+    except ValueError as e:
+        # Fallback to legacy path construction if config fails
+        logger.warning(f"⚠️ Config lookup failed, using legacy path: {e}")
+        prompt_file = f"prompts/{role}_agent/{mode}_system_prompt.md"
 
     if not os.path.exists(prompt_file):
         raise FileNotFoundError(f"Prompt file not found: {prompt_file}")
 
     with open(prompt_file, 'r', encoding='utf-8') as f:
-        return f.read().strip()
+        content = f.read().strip()
+        logger.info(f"✅ Loaded prompt for {role}/{mode} ({len(content)} characters)")
+        return content
 
 
 def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
@@ -507,20 +635,17 @@ def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
     # Load role and mode specific prompt
     instructions = load_prompt_from_file(role, mode)
 
-    # Agent name mapping
-    agent_names = {
-        "advisor": "Mortgage Advisor Assistant",
-        "leadership": "Leadership Analytics Assistant"
-    }
+    # Get agent name from configuration
+    agent_name = get_agent_display_name(role, mode)
 
-    agent_name = agent_names.get(role, f"{role.title()} Assistant")
-
-    # Add mode to agent name for clarity
-    if mode != "borrower":
-        agent_name = f"{agent_name} ({mode.title()} Mode)"
-
-    # Get model from environment variable or use default
-    model = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
+    # Get model from environment variable, config, or use default
+    model = os.getenv("OPENAI_AGENT_MODEL")
+    if not model:
+        try:
+            config = load_prompt_config()
+            model = config.get('settings', {}).get('default_model', 'gpt-4o-mini')
+        except Exception:
+            model = 'gpt-4o-mini'
 
     # Create agent with role-specific configuration
     agent = Agent(
