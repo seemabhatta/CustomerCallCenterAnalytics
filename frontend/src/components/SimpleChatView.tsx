@@ -24,9 +24,18 @@ import {
 import {
   ChatRole,
   AgentMode,
-  UnifiedChatResponse
+  UnifiedChatResponse,
+  SystemConfiguration
 } from '@/types';
 import { sendUnifiedChatMessage } from '@/services/chatService';
+import {
+  fetchSystemConfiguration,
+  getModesForRole,
+  getDisplayName,
+  getModeDescription,
+  getModeIcon,
+  getQuickActions
+} from '@/services/configService';
 
 interface ChatMessage {
   id: string;
@@ -83,6 +92,9 @@ export function SimpleChatView({
   const [sessionId, setSessionId] = useState<string>(generateSessionId());
   const [currentAgentMode, setCurrentAgentMode] = useState<AgentMode>(agentMode);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
+  const [config, setConfig] = useState<SystemConfiguration | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [configError, setConfigError] = useState<string | null>(null);
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const lastAutoScrolledMessageIdRef = useRef<string | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -96,6 +108,26 @@ export function SimpleChatView({
     });
     setIsAtBottom(true);
   };
+
+  // Load configuration on component mount
+  useEffect(() => {
+    const loadConfiguration = async () => {
+      try {
+        setConfigLoading(true);
+        setConfigError(null);
+        const systemConfig = await fetchSystemConfiguration();
+        setConfig(systemConfig);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load configuration';
+        setConfigError(errorMessage);
+        console.error('Configuration loading failed:', error);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+
+    loadConfiguration();
+  }, []);
 
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
@@ -401,7 +433,18 @@ export function SimpleChatView({
     }
   };
 
-  const quickActions = getQuickActionsForRole(role, currentAgentMode);
+  const quickActions = config ? getQuickActions(config, role, currentAgentMode) : [];
+
+  // Icon mapping for quick actions
+  const iconMapping: Record<string, React.ComponentType<any>> = {
+    FileText,
+    ClipboardList,
+    CheckCircle,
+    Zap,
+    DollarSign,
+    Users,
+    User
+  };
 
   return (
     <>
@@ -503,18 +546,18 @@ export function SimpleChatView({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="borrower">
-                  <div className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Borrower
-                  </div>
-                </SelectItem>
-                <SelectItem value="selfreflection">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    Self-Reflection
-                  </div>
-                </SelectItem>
+                {config && getModesForRole(config, role).map((mode) => {
+                  const description = getModeDescription(config, role, mode);
+                  const IconComponent = getModeIcon(config, role, mode) === 'CheckCircle' ? CheckCircle : User;
+                  return (
+                    <SelectItem key={mode} value={mode}>
+                      <div className="flex items-center gap-1">
+                        <IconComponent className="h-3 w-3" />
+                        {description || mode.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           )}
@@ -659,7 +702,7 @@ export function SimpleChatView({
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={getPlaceholderText(role, currentAgentMode)}
+                  placeholder={config ? getPlaceholderText(role, currentAgentMode, config) : 'Loading configuration...'}
                   disabled={isLoading}
                   className="flex-1"
                 />
@@ -683,21 +726,24 @@ export function SimpleChatView({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {quickActions.map((action, index) => (
-                <Button
-                  key={index}
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-left h-auto p-3"
-                  onClick={() => handleSendMessage(action.message)}
-                  disabled={isLoading}
-                >
-                  <div className="flex items-start gap-2">
-                    <action.icon className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                    <span className="text-xs">{action.label}</span>
-                  </div>
-                </Button>
-              ))}
+              {quickActions.map((action, index) => {
+                const IconComponent = iconMapping[action.icon] || FileText;
+                return (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-left h-auto p-3"
+                    onClick={() => handleSendMessage(action.message)}
+                    disabled={isLoading}
+                  >
+                    <div className="flex items-start gap-2">
+                      <IconComponent className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span className="text-xs">{action.label}</span>
+                    </div>
+                  </Button>
+                );
+              })}
             </CardContent>
           </Card>
 
@@ -741,166 +787,16 @@ function getWelcomeMessage(role: ChatRole): string {
   return "Hello! I'm your AI assistant for mortgage servicing workflows. I can help you with customer requests, compliance checks, document generation, and system actions. How can I assist you today?";
 }
 
-function getPlaceholderText(role: ChatRole, agentMode: AgentMode): string {
-  if (role === 'leadership') {
-    switch (agentMode) {
-      case 'borrower':
-        return "Ask about portfolio insights, metrics, or strategic opportunities...";
-      case 'selfreflection':
-        return "Ask about team performance, leadership effectiveness, or organizational development...";
-      default:
-        return "Ask about portfolio insights, metrics, or strategic opportunities...";
+function getPlaceholderText(role: ChatRole, agentMode: AgentMode, config?: SystemConfiguration | null): string {
+  // If configuration is available, use description from config
+  if (config) {
+    const description = getModeDescription(config, role, agentMode);
+    if (description) {
+      return `${description}...`;
     }
   }
 
-  switch (agentMode) {
-    case 'borrower':
-      return "Ask about borrower-specific actions and workflows...";
-    case 'selfreflection':
-      return "Ask about your performance, learning opportunities, or professional development...";
-    default:
-      return "Ask me anything about customer workflows...";
-  }
+  // NO FALLBACK: If configuration is not available, fail fast
+  throw new Error('Configuration not available for placeholder text');
 }
 
-function getQuickActionsForRole(role: ChatRole, agentMode: AgentMode = 'borrower') {
-  if (role === 'leadership') {
-    // Leadership role - contextual by mode
-    switch (agentMode) {
-      case 'borrower':
-        return [
-          {
-            icon: CheckCircle,
-            label: "Portfolio Health",
-            message: "Show me the current portfolio health and key metrics"
-          },
-          {
-            icon: FileText,
-            label: "Risk Analysis",
-            message: "Analyze current risk patterns and provide recommendations"
-          },
-          {
-            icon: DollarSign,
-            label: "Revenue Impact",
-            message: "Show revenue opportunities and cost optimization insights"
-          },
-          {
-            icon: Zap,
-            label: "Strategic Actions",
-            message: "What strategic actions should we prioritize this quarter?"
-          }
-        ];
-      case 'selfreflection':
-        return [
-          {
-            icon: CheckCircle,
-            label: "Team Performance",
-            message: "Analyze our team's recent performance trends and identify leadership opportunities"
-          },
-          {
-            icon: FileText,
-            label: "Strategic Effectiveness",
-            message: "How effective have our recent strategic decisions been? What can we learn?"
-          },
-          {
-            icon: Users,
-            label: "Organizational Health",
-            message: "Assess our organizational culture and team development needs"
-          },
-          {
-            icon: Zap,
-            label: "Leadership Growth",
-            message: "What leadership skills should we focus on developing based on recent challenges?"
-          }
-        ];
-      default:
-        return [
-          {
-            icon: CheckCircle,
-            label: "Portfolio Health",
-            message: "Show me the current portfolio health and key metrics"
-          },
-          {
-            icon: FileText,
-            label: "Strategic Overview",
-            message: "Provide strategic overview and recommendations"
-          }
-        ];
-    }
-  }
-
-  // Advisor role - contextual by mode
-  switch (agentMode) {
-    case 'borrower':
-      return [
-        {
-          icon: FileText,
-          label: "Show All Call IDs",
-          message: "Show me all the call IDs"
-        },
-        {
-          icon: ClipboardList,
-          label: "Pending Workflows",
-          message: "Show me the pending workflows that need borrower action"
-        },
-        {
-          icon: CheckCircle,
-          label: "Show Analysis",
-          message: "Show the analysis for this call"
-        },
-        {
-          icon: Zap,
-          label: "Show Plan",
-          message: "Show the plan for this call"
-        }
-      ];
-
-    case 'selfreflection':
-      return [
-        {
-          icon: CheckCircle,
-          label: "Performance Review",
-          message: "Analyze my recent call handling performance and provide feedback"
-        },
-        {
-          icon: FileText,
-          label: "Learning Opportunities",
-          message: "What skills should I focus on improving based on recent calls?"
-        },
-        {
-          icon: Users,
-          label: "Customer Satisfaction",
-          message: "How well am I meeting customer needs based on recent interactions?"
-        },
-        {
-          icon: Zap,
-          label: "Best Practices",
-          message: "Show me examples of best practices from my recent successful calls"
-        }
-      ];
-
-    default:
-      return [
-        {
-          icon: FileText,
-          label: "Show All Call IDs",
-          message: "Show me all the call IDs"
-        },
-        {
-          icon: ClipboardList,
-          label: "Pending Action Items",
-          message: "Show me the pending action items assigned to me"
-        },
-        {
-          icon: CheckCircle,
-          label: "Show Analysis",
-          message: "Show the analysis for this call"
-        },
-        {
-          icon: Zap,
-          label: "Show Plan",
-          message: "Show the plan for this call"
-        }
-      ];
-  }
-}

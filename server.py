@@ -174,6 +174,50 @@ async def health_check():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")
 
+@app.get("/api/v1/config")
+async def get_configuration():
+    """Get system configuration for frontend.
+
+    Returns:
+        Frontend-compatible configuration with roles, settings, and UI preferences
+
+    Raises:
+        HTTPException: 500 if configuration cannot be loaded or is invalid
+    """
+    try:
+        from call_center_agents.role_based_agent import load_prompt_config
+
+        # NO FALLBACK: Fail fast if configuration cannot be loaded
+        config = load_prompt_config()
+
+        # Validate required structure exists
+        if "roles" not in config:
+            raise ValueError("Configuration missing required 'roles' section")
+
+        # Build frontend-safe response with explicit key checking
+        response = {
+            "roles": config["roles"],
+            "settings": config.get("settings", {}),
+            "ui": config.get("settings", {}).get("ui", {}),
+            "metadata": config.get("metadata", {})
+        }
+
+        # Validate that we have at least some roles for frontend
+        if not response["roles"]:
+            raise ValueError("No roles defined in configuration")
+
+        return response
+
+    except ImportError as e:
+        logger.error(f"Failed to import configuration module: {e}")
+        raise HTTPException(status_code=500, detail="Configuration system unavailable")
+    except (FileNotFoundError, ValueError) as e:
+        logger.error(f"Configuration error: {e}")
+        raise HTTPException(status_code=500, detail=f"Invalid configuration: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error loading configuration: {e}")
+        raise HTTPException(status_code=500, detail="Configuration system error")
+
 @app.get("/api/v1/metrics")
 async def get_dashboard_metrics():
     """Dashboard metrics endpoint - proxies to system service."""

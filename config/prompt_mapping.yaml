@@ -8,13 +8,39 @@ roles:
     modes:
       borrower:
         prompt_file: "prompts/advisor_agent/borrower_system_prompt.md"
-        description: "Helps advisors with borrower workflows and operational tasks"
+        description: "Borrower"
         icon: "User"
+        quick_actions:
+          - icon: "FileText"
+            label: "Show All Call IDs"
+            message: "Show me all the call IDs"
+          - icon: "ClipboardList"
+            label: "Pending Workflows"
+            message: "Show me the pending workflows that need borrower action"
+          - icon: "CheckCircle"
+            label: "Show Analysis"
+            message: "Show the analysis for this call"
+          - icon: "Zap"
+            label: "Show Plan"
+            message: "Show the plan for this call"
 
       selfreflection:
         prompt_file: "prompts/advisor_agent/selfreflection_system_prompt.md"
-        description: "Helps advisors reflect on performance and professional development"
+        description: "Personal Performance"
         icon: "CheckCircle"
+        quick_actions:
+          - icon: "CheckCircle"
+            label: "Performance Review"
+            message: "Analyze my recent call handling performance and provide feedback"
+          - icon: "FileText"
+            label: "Learning Opportunities"
+            message: "What skills should I focus on improving based on recent calls?"
+          - icon: "Users"
+            label: "Customer Satisfaction"
+            message: "How well am I meeting customer needs based on recent interactions?"
+          - icon: "Zap"
+            label: "Best Practices"
+            message: "Show me examples of best practices from my recent successful calls"
 
   leadership:
     display_name: "Leadership Analytics Assistant"
@@ -22,13 +48,39 @@ roles:
     modes:
       borrower:
         prompt_file: "prompts/leadership_agent/borrower_system_prompt.md"
-        description: "Provides strategic insights for leadership on customer portfolio"
+        description: "Portfolio"
         icon: "User"
+        quick_actions:
+          - icon: "CheckCircle"
+            label: "Portfolio Health"
+            message: "Show me the current portfolio health and key metrics"
+          - icon: "FileText"
+            label: "Risk Analysis"
+            message: "Analyze current risk patterns and provide recommendations"
+          - icon: "DollarSign"
+            label: "Revenue Impact"
+            message: "Show revenue opportunities and cost optimization insights"
+          - icon: "Zap"
+            label: "Strategic Actions"
+            message: "What strategic actions should we prioritize this quarter?"
 
       selfreflection:
         prompt_file: "prompts/leadership_agent/selfreflection_system_prompt.md"
-        description: "Helps leadership reflect on organizational performance and strategic effectiveness"
+        description: "Performance"
         icon: "CheckCircle"
+        quick_actions:
+          - icon: "CheckCircle"
+            label: "Team Performance"
+            message: "Analyze our team's recent performance trends and identify leadership opportunities"
+          - icon: "FileText"
+            label: "Strategic Effectiveness"
+            message: "How effective have our recent strategic decisions been? What can we learn?"
+          - icon: "Users"
+            label: "Organizational Health"
+            message: "Assess our organizational culture and team development needs"
+          - icon: "Zap"
+            label: "Leadership Growth"
+            message: "What leadership skills should we focus on developing based on recent challenges?"
 
 # Future roles - marked as TBD for implementation
 future_roles:

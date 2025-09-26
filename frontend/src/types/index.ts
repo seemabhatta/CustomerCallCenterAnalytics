@@ -624,6 +624,54 @@ export interface AdvisorChatResponse {
   context?: Record<string, any>;
 }
 
+// Configuration Types
+export interface QuickAction {
+  icon: string;
+  label: string;
+  message: string;
+}
+
+export interface ConfigMode {
+  prompt_file: string;
+  description: string;
+  icon: string;
+  quick_actions?: QuickAction[];
+}
+
+export interface ConfigRole {
+  display_name: string;
+  description: string;
+  modes: Record<string, ConfigMode>;
+}
+
+export interface ConfigSettings {
+  default_mode: string;
+  default_model: string;
+  models?: {
+    default: string;
+    fallback: string;
+  };
+  validation?: {
+    require_prompt_files: boolean;
+    fail_on_missing_prompt: boolean;
+  };
+  ui?: {
+    show_future_roles: boolean;
+    show_mode_descriptions: boolean;
+  };
+}
+
+export interface SystemConfiguration {
+  roles: Record<string, ConfigRole>;
+  settings: ConfigSettings;
+  ui: ConfigSettings['ui'];
+  metadata: {
+    version: string;
+    last_updated: string;
+    description: string;
+  };
+}
+
 // Error Types
 export interface ApiError {
   detail: string;
