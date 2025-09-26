@@ -3,8 +3,14 @@ Transcript Service - Business logic for transcript operations
 Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 from ..storage.transcript_store import TranscriptStore
 from ..call_center_agents.transcript_agent import TranscriptAgent
+from ..infrastructure.events import (
+    EventType,
+    create_transcript_event,
+    publish_event
+)
 
 
 class TranscriptService:
@@ -57,25 +63,27 @@ class TranscriptService:
         if should_store:
             self.store.store(transcript)
 
-            # Store transcript in knowledge graph for two-layer memory architecture
+            # Publish TRANSCRIPT_CREATED event for knowledge graph and other systems
             try:
-                from ..storage.queued_graph_store import add_customer_sync, add_transcript_sync
+                # Determine advisor_id (could be from request or derived)
+                advisor_id = request_data.get("advisor_id", "ADVISOR_SYSTEM")
 
-                # Add customer first (idempotent operation)
-                add_customer_sync(transcript.customer_id)
-
-                # Add transcript node
-                success = add_transcript_sync(
+                # Create and publish transcript created event
+                transcript_event = create_transcript_event(
                     transcript_id=transcript.id,
+                    customer_id=transcript.customer_id,
+                    advisor_id=advisor_id,
                     topic=topic,
-                    message_count=len(transcript.messages)
+                    urgency=urgency,
+                    channel="system"  # Default channel, could be parameterized
                 )
 
-                print(f"📊 Transcript stored in knowledge graph: {success}")
+                publish_event(transcript_event)
+                print(f"📢 Published TRANSCRIPT_CREATED event for {transcript.id}")
 
             except Exception as e:
-                # Log but don't fail - graph storage is supplementary
-                print(f"⚠️  Failed to store transcript in knowledge graph: {str(e)}")
+                # NO FALLBACK: Fail fast on event publishing errors
+                raise RuntimeError(f"Failed to publish TRANSCRIPT_CREATED event: {str(e)}")
 
         return transcript.to_dict()
     

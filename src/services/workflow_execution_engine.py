@@ -26,6 +26,11 @@ from src.infrastructure.adapters.workflow_mock_adapters import (
 )
 from src.storage.workflow_store import WorkflowStore
 from src.storage.workflow_execution_store import WorkflowExecutionStore
+from src.infrastructure.events import (
+    EventType,
+    create_execution_step_completed_event,
+    publish_event
+)
 
 
 class WorkflowExecutionEngine:
@@ -176,27 +181,27 @@ class WorkflowExecutionEngine:
 
             step_execution_id = await self.execution_store.create(step_execution_record)
 
-            # Store execution in knowledge graph for two-layer memory architecture
+            # Publish EXECUTION_STEP_COMPLETED event for knowledge graph and other systems
             try:
-                from ..storage.queued_graph_store import add_execution_sync
+                # Create and publish execution step completed event
+                execution_event = create_execution_step_completed_event(
+                    execution_id=step_execution_id,
+                    workflow_id=workflow_id,
+                    step_number=step_number,
+                    step_description=step.get('step', f'Step {step_number}'),
+                    executor_type=executor_type,
+                    execution_result=str(step_result.get('status', 'completed')),
+                    executed_by=executed_by,
+                    execution_time_ms=int(step_duration)
+                )
 
-                execution_graph_data = {
-                    'execution_id': step_execution_id,
-                    'workflow_id': workflow_id,
-                    'step_number': step_number,
-                    'status': 'success',
-                    'executor_type': executor_type,
-                    'executed_by': executed_by,
-                    'duration_ms': step_duration,
-                    'executed_at': step_execution_record['executed_at']
-                }
-
-                success = add_execution_sync(execution_graph_data)
-                self.logger.info(f"📊 Execution stored in knowledge graph: {success}")
+                publish_event(execution_event)
+                self.logger.info(f"📢 Published EXECUTION_STEP_COMPLETED event for {step_execution_id}")
 
             except Exception as e:
-                # Log but don't fail - graph storage is supplementary
-                self.logger.warning(f"⚠️  Failed to store execution in knowledge graph: {str(e)}")
+                # NO FALLBACK: Fail fast on event publishing errors
+                self.logger.error(f"Failed to publish EXECUTION_STEP_COMPLETED event: {str(e)}")
+                raise RuntimeError(f"Failed to publish EXECUTION_STEP_COMPLETED event: {str(e)}")
 
             # Step 10: Return structured result
             return {

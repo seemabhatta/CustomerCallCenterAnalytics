@@ -5,6 +5,11 @@ Clean separation from routing layer
 from typing import List, Optional, Dict, Any
 from ..storage.analysis_store import AnalysisStore
 from ..call_center_agents.call_analysis_agent import CallAnalysisAgent
+from ..infrastructure.events import (
+    EventType,
+    create_analysis_event,
+    publish_event
+)
 
 
 class AnalysisService:
@@ -70,26 +75,30 @@ class AnalysisService:
         if should_store:
             self.store.store(analysis_result)
 
-            # Store analysis in knowledge graph for two-layer memory architecture
+            # Publish ANALYSIS_COMPLETED event for knowledge graph and other systems
             try:
-                from ..storage.queued_graph_store import add_analysis_sync
+                # Get customer_id from transcript
+                customer_id = getattr(transcript, 'customer_id', 'UNKNOWN')
 
-                analysis_graph_data = {
-                    'analysis_id': analysis_result["analysis_id"],
-                    'transcript_id': transcript_id,
-                    'intent': analysis_result.get('intent', 'unknown'),
-                    'urgency_level': analysis_result.get('urgency_level', 'medium'),
-                    'sentiment': analysis_result.get('sentiment', 'neutral'),
-                    'confidence_score': analysis_result.get('confidence_score', 0.0),
-                    'analysis_time': 0.0  # Could track actual analysis time if needed
-                }
+                # Create and publish analysis completed event
+                analysis_event = create_analysis_event(
+                    analysis_id=analysis_result["analysis_id"],
+                    transcript_id=transcript_id,
+                    customer_id=customer_id,
+                    intent=analysis_result.get('intent', 'unknown'),
+                    urgency=analysis_result.get('urgency_level', 'medium'),
+                    sentiment=analysis_result.get('sentiment', 'neutral'),
+                    risk_score=analysis_result.get('risk_score', 0.5)
+                )
 
-                success = add_analysis_sync(analysis_graph_data)
-                add_span_event("analysis.graph_stored", analysis_id=analysis_result["analysis_id"], success=success)
+                publish_event(analysis_event)
+                add_span_event("analysis.event_published", analysis_id=analysis_result["analysis_id"])
+                print(f"📢 Published ANALYSIS_COMPLETED event for {analysis_result['analysis_id']}")
 
             except Exception as e:
-                # Log but don't fail - graph storage is supplementary
-                add_span_event("analysis.graph_storage_failed", error=str(e))
+                # NO FALLBACK: Fail fast on event publishing errors
+                add_span_event("analysis.event_publish_failed", error=str(e))
+                raise RuntimeError(f"Failed to publish ANALYSIS_COMPLETED event: {str(e)}")
 
         return analysis_result
     

@@ -5,6 +5,11 @@ Clean separation from routing layer
 from typing import List, Optional, Dict, Any
 from ..storage.action_plan_store import ActionPlanStore
 from ..call_center_agents.action_plan_agent import ActionPlanAgent
+from ..infrastructure.events import (
+    EventType,
+    create_plan_generated_event,
+    publish_event
+)
 
 
 class PlanService:
@@ -67,24 +72,34 @@ class PlanService:
         if should_store:
             self.store.store(plan_result)
 
-            # Store plan in knowledge graph for two-layer memory architecture
+            # Publish PLAN_GENERATED event for knowledge graph and other systems
             try:
-                from ..storage.queued_graph_store import add_plan_sync
+                # Get customer_id from transcript
+                customer_id = getattr(transcript, 'customer_id', 'UNKNOWN')
 
-                plan_graph_data = {
-                    'plan_id': plan_result["plan_id"],
-                    'analysis_id': analysis_id,
-                    'status': 'generated',
-                    'priority_level': plan_result.get('urgency_level', 'medium'),
-                    'generation_time': 0.0  # Could track actual generation time if needed
-                }
+                # Count actions in the plan
+                actions = plan_result.get('actions', [])
+                action_count = len(actions) if isinstance(actions, list) else 0
 
-                success = add_plan_sync(plan_graph_data)
-                add_span_event("plan.graph_stored", plan_id=plan_result["plan_id"], success=success)
+                # Create and publish plan generated event
+                plan_event = create_plan_generated_event(
+                    plan_id=plan_result["plan_id"],
+                    analysis_id=analysis_id,
+                    transcript_id=transcript_id,
+                    customer_id=customer_id,
+                    priority_level=plan_result.get('urgency_level', 'medium'),
+                    action_count=action_count,
+                    urgency_level=plan_result.get('urgency_level', 'medium')
+                )
+
+                publish_event(plan_event)
+                add_span_event("plan.event_published", plan_id=plan_result["plan_id"])
+                print(f"📢 Published PLAN_GENERATED event for {plan_result['plan_id']}")
 
             except Exception as e:
-                # Log but don't fail - graph storage is supplementary
-                add_span_event("plan.graph_storage_failed", error=str(e))
+                # NO FALLBACK: Fail fast on event publishing errors
+                add_span_event("plan.event_publish_failed", error=str(e))
+                raise RuntimeError(f"Failed to publish PLAN_GENERATED event: {str(e)}")
 
         return plan_result
     

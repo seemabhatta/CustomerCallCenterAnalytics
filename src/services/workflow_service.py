@@ -17,6 +17,11 @@ from src.storage.action_plan_store import ActionPlanStore
 from src.call_center_agents.risk_assessment_agent import RiskAssessmentAgent
 from src.call_center_agents.workflow_step_agent import WorkflowStepAgent
 from src.utils.prompt_loader import prompt_loader
+from src.infrastructure.events import (
+    EventType,
+    create_workflow_created_event,
+    publish_event
+)
 
 logger = logging.getLogger(__name__)
 
@@ -154,38 +159,29 @@ class WorkflowService:
         workflow_id = self.workflow_store.create(workflow_data)
         workflow_data['id'] = workflow_id
 
-        # Store workflow in knowledge graph for two-layer memory architecture
+        # Publish WORKFLOW_CREATED event for knowledge graph and other systems
         try:
-            from src.storage.graph_store import GraphStore
-            graph_store = GraphStore()
-
-            # Extract steps from workflow data - FIXED: steps are directly in workflow_data
-            steps = []
+            # Count steps in the workflow
             workflow_steps = workflow_data.get('steps', [])
-            for i, step in enumerate(workflow_steps):
-                steps.append({
-                    'action': step.get('step', ''),
-                    'executor_type': step.get('executor', ''),
-                    'status': 'pending',
-                    'estimated_duration': step.get('estimated_time_minutes', 60)
-                })
+            step_count = len(workflow_steps) if isinstance(workflow_steps, list) else 0
 
-            workflow_graph_data = {
-                'workflow_id': workflow_id,
-                'plan_id': plan_id,
-                'workflow_type': workflow_data.get('workflow_type', 'BORROWER'),
-                'priority': workflow_data.get('risk_level', 'medium'),
-                'status': workflow_data.get('status', 'pending'),
-                'execution_order': 1,  # Could be derived from action order
-                'steps': steps
-            }
+            # Create and publish workflow created event
+            workflow_event = create_workflow_created_event(
+                workflow_id=workflow_id,
+                plan_id=plan_id,
+                workflow_type=workflow_data.get('workflow_type', 'BORROWER'),
+                approval_status=workflow_data.get('status', 'pending'),
+                risk_level=workflow_data.get('risk_level', 'medium'),
+                step_count=step_count
+            )
 
-            success = graph_store.add_workflow_with_steps(workflow_graph_data)
-            logger.info(f"Workflow {workflow_id} stored in graph: {success}")
+            publish_event(workflow_event)
+            logger.info(f"📢 Published WORKFLOW_CREATED event for {workflow_id}")
 
         except Exception as e:
-            # Log but don't fail - graph storage is supplementary
-            logger.warning(f"Failed to store workflow in graph: {str(e)}")
+            # NO FALLBACK: Fail fast on event publishing errors
+            logger.error(f"Failed to publish WORKFLOW_CREATED event: {str(e)}")
+            raise RuntimeError(f"Failed to publish WORKFLOW_CREATED event: {str(e)}")
 
         return workflow_data
     
@@ -825,44 +821,32 @@ class WorkflowService:
                 workflow_ids = self.workflow_store.create_bulk(all_workflows)
                 add_span_event("workflow.bulk_create_success", created_count=len(workflow_ids))
 
-                # Store workflows in knowledge graph for two-layer memory architecture
+                # Publish WORKFLOW_CREATED events for all created workflows
                 try:
-                    from src.storage.queued_graph_store import add_workflow_sync
-
                     for i, workflow_id in enumerate(workflow_ids):
                         workflow_data = all_workflows[i]
 
-                        # Extract steps from workflow data - FIXED: steps are directly in workflow_data
-                        steps = []
+                        # Count steps in the workflow
                         workflow_steps = workflow_data.get('steps', [])
+                        step_count = len(workflow_steps) if isinstance(workflow_steps, list) else 0
 
-                        logger.info(f"DEBUG: workflow_steps count: {len(workflow_steps)}")
-                        for j, step in enumerate(workflow_steps):
-                            steps.append({
-                                'action': step.get('step', ''),
-                                'executor_type': step.get('executor', ''),
-                                'status': 'pending',
-                                'estimated_duration': step.get('estimated_time_minutes', 60)
-                            })
+                        # Create and publish workflow created event
+                        workflow_event = create_workflow_created_event(
+                            workflow_id=workflow_id,
+                            plan_id=workflow_data.get('plan_id'),
+                            workflow_type=workflow_data.get('workflow_type', 'BORROWER'),
+                            approval_status=workflow_data.get('status', 'pending'),
+                            risk_level=workflow_data.get('risk_level', 'medium'),
+                            step_count=step_count
+                        )
 
-                        logger.info(f"DEBUG: Final steps count for workflow {workflow_id}: {len(steps)}")
-
-                        workflow_graph_data = {
-                            'workflow_id': workflow_id,
-                            'plan_id': workflow_data.get('plan_id'),
-                            'workflow_type': workflow_data.get('workflow_type', 'BORROWER'),
-                            'priority': workflow_data.get('risk_level', 'medium'),
-                            'status': workflow_data.get('status', 'pending'),
-                            'execution_order': i + 1,
-                            'steps': steps
-                        }
-
-                        success = add_workflow_sync(workflow_graph_data)
-                        logger.info(f"Bulk workflow {workflow_id} stored in graph: {success}")
+                        publish_event(workflow_event)
+                        logger.info(f"📢 Published WORKFLOW_CREATED event for bulk workflow {workflow_id}")
 
                 except Exception as e:
-                    # Log but don't fail - graph storage is supplementary
-                    logger.warning(f"Failed to store bulk workflows in graph: {str(e)}")
+                    # NO FALLBACK: Fail fast on event publishing errors
+                    logger.error(f"Failed to publish WORKFLOW_CREATED events for bulk workflows: {str(e)}")
+                    raise RuntimeError(f"Failed to publish WORKFLOW_CREATED events: {str(e)}")
 
                 # Return workflows with their assigned IDs
                 created_workflows = []
