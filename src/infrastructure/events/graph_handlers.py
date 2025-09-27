@@ -10,7 +10,11 @@ from datetime import datetime
 
 from .event_system import subscribe_to_events
 from .event_types import EventType, Event
-from ..graph.graph_manager import get_graph_manager, GraphManagerError
+from ..graph.unified_graph_manager import get_unified_graph_manager
+
+class GraphManagerError(Exception):
+    """Exception raised for graph manager errors."""
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,7 @@ def handle_transcript_created(sender, **kwargs):
         event: Event = kwargs['event']
         payload = event.payload
 
-        graph_manager = get_graph_manager()
+        graph_manager = get_unified_graph_manager()
 
         # Extract data from payload
         transcript_id = payload['transcript_id']
@@ -33,8 +37,8 @@ def handle_transcript_created(sender, **kwargs):
         started_at = payload['started_at']
 
         # Create or update entities
-        graph_manager.create_or_update_customer(customer_id)
-        graph_manager.create_or_update_advisor(advisor_id)
+        graph_manager.create_or_update_customer_sync(customer_id)
+        graph_manager.create_or_update_advisor_sync(advisor_id)
 
         # Create transcript node with rich attributes
         graph_manager.create_transcript(
@@ -63,7 +67,7 @@ def handle_analysis_completed(sender, **kwargs):
         event: Event = kwargs['event']
         payload = event.payload
 
-        graph_manager = get_graph_manager()
+        graph_manager = get_unified_graph_manager()
 
         # Extract analysis data
         analysis_id = payload['analysis_id']
@@ -110,7 +114,7 @@ def handle_workflow_escalated(sender, **kwargs):
         event: Event = kwargs['event']
         payload = event.payload
 
-        graph_manager = get_graph_manager()
+        graph_manager = get_unified_graph_manager()
 
         # Extract escalation data
         workflow_id = payload['workflow_id']
@@ -151,7 +155,7 @@ def handle_issue_resolved(sender, **kwargs):
         event: Event = kwargs['event']
         payload = event.payload
 
-        graph_manager = get_graph_manager()
+        graph_manager = get_unified_graph_manager()
 
         # Extract resolution data
         issue_id = payload['issue_id']
@@ -200,7 +204,7 @@ def handle_document_acknowledged(sender, **kwargs):
         event: Event = kwargs['event']
         payload = event.payload
 
-        graph_manager = get_graph_manager()
+        graph_manager = get_unified_graph_manager()
 
         # Extract document data
         document_id = payload['document_id']
@@ -238,14 +242,14 @@ def handle_customer_events(sender, **kwargs):
         event: Event = kwargs['event']
         payload = event.payload
 
-        graph_manager = get_graph_manager()
+        graph_manager = get_unified_graph_manager()
 
         # Extract customer data
         customer_id = payload['customer_id']
 
         # Create or update customer with any additional data
         customer_data = {k: v for k, v in payload.items() if k != 'customer_id'}
-        graph_manager.create_or_update_customer(customer_id, **customer_data)
+        graph_manager.create_or_update_customer_sync(customer_id, **customer_data)
 
         logger.info(f"✅ Graph updated for customer event: {customer_id}")
         return True
@@ -262,14 +266,14 @@ def handle_advisor_events(sender, **kwargs):
         event: Event = kwargs['event']
         payload = event.payload
 
-        graph_manager = get_graph_manager()
+        graph_manager = get_unified_graph_manager()
 
         # Extract advisor data
         advisor_id = payload['advisor_id']
 
         # Create or update advisor with any additional data
         advisor_data = {k: v for k, v in payload.items() if k != 'advisor_id'}
-        graph_manager.create_or_update_advisor(advisor_id, **advisor_data)
+        graph_manager.create_or_update_advisor_sync(advisor_id, **advisor_data)
 
         logger.info(f"✅ Graph updated for advisor event: {advisor_id}")
         return True

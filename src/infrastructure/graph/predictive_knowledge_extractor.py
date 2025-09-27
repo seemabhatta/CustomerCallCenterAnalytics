@@ -219,6 +219,12 @@ class PredictiveKnowledgeExtractor:
         await self.graph_manager.update_pattern_evidence(pattern_id, new_observation)
         logger.info(f"📊 Updated pattern {pattern_id} with new evidence")
 
+    async def store_meta_learning(self, meta_learning: MetaLearning) -> None:
+        """Store meta-learning insight directly."""
+        # NO FALLBACK: Store meta-learning or fail
+        await self.graph_manager.store_meta_learning(meta_learning)
+        logger.info(f"🔄 Stored meta-learning: {meta_learning.learning_insight[:50]}...")
+
 
 # Global instance
 _knowledge_extractor = None

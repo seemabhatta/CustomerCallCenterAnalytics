@@ -16,16 +16,12 @@ from .predictive_knowledge_extractor import (
     get_predictive_knowledge_extractor
 )
 
-# Legacy graph manager - optional import to avoid kuzu dependency issues
-try:
-    from .graph_manager import (
-        GraphManager,
-        GraphManagerError,
-        get_graph_manager
-    )
-    LEGACY_GRAPH_AVAILABLE = True
-except ImportError:
-    LEGACY_GRAPH_AVAILABLE = False
+# Unified graph manager
+from .unified_graph_manager import (
+    UnifiedGraphManager,
+    get_unified_graph_manager,
+    close_unified_graph_manager
+)
 
 __all__ = [
     'Pattern',
@@ -34,8 +30,8 @@ __all__ = [
     'MetaLearning',
     'PredictiveInsight',
     'PredictiveKnowledgeExtractor',
-    'get_predictive_knowledge_extractor'
+    'get_predictive_knowledge_extractor',
+    'UnifiedGraphManager',
+    'get_unified_graph_manager',
+    'close_unified_graph_manager'
 ]
-
-if LEGACY_GRAPH_AVAILABLE:
-    __all__.extend(['GraphManager', 'GraphManagerError', 'get_graph_manager'])

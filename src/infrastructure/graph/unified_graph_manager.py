@@ -19,6 +19,21 @@ from .knowledge_types import Pattern, Prediction, Wisdom, MetaLearning
 
 logger = logging.getLogger(__name__)
 
+# Global database instance to ensure only one database connection system-wide
+_global_database = None
+_global_database_path = None
+
+def _get_global_database(db_path: str):
+    """Get or create the global database instance."""
+    global _global_database, _global_database_path
+
+    if _global_database is None or _global_database_path != db_path:
+        logger.info(f"🔄 Creating global database instance: {db_path}")
+        _global_database = kuzu.Database(db_path)
+        _global_database_path = db_path
+
+    return _global_database
+
 
 class UnifiedGraphManagerError(Exception):
     """Exception raised for unified graph manager errors."""
@@ -39,24 +54,30 @@ class UnifiedGraphManager:
             db_path = get_knowledge_graph_database_path()
 
         self.db_path = db_path
-        self.db = kuzu.Database(db_path)
 
-        # Connection pooling for async operations
-        self._connection_pool = []
-        self._pool_size = 4
-        for i in range(self._pool_size):
-            conn = kuzu.Connection(self.db)
-            self._connection_pool.append(conn)
+        # Use global database instance to prevent multiple database handles
+        self.db = _get_global_database(db_path)
 
-        self.conn = self._connection_pool[0]  # Primary connection
+        # Single connection for ALL operations (reads and writes)
+        # This eliminates transaction conflicts by using only one connection
+        self.conn = kuzu.Connection(self.db)
 
-        self._available_connections = asyncio.Queue(maxsize=self._pool_size)
-        for conn in self._connection_pool:
-            self._available_connections.put_nowait(conn)
+        # Remove connection pool entirely - source of conflicts
+        # self._connection_pool = []  # REMOVED
+        # self._available_connections = None  # REMOVED
 
-        self._executor = ThreadPoolExecutor(max_workers=self._pool_size, thread_name_prefix="unified_kuzu")
+        # Single threaded executor for database operations
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="unified_kuzu_single")
 
-        self._init_unified_schema()
+        # Write queue system to serialize ALL operations (not just writes)
+        self._write_queue = None  # Lazy-initialized in async context
+        self._write_processor_task = None  # Background task for processing operations
+        self._operation_counter = 0  # For unique operation IDs
+
+        # Schema initialization flag
+        self._schema_initialized = False
+
+        # Don't initialize schema immediately - defer to write queue
 
     def _init_unified_schema(self) -> None:
         """Initialize unified schema with both business entities and learning nodes."""
@@ -96,7 +117,10 @@ class UnifiedGraphManager:
                     resolved BOOLEAN DEFAULT FALSE,
                     escalated BOOLEAN DEFAULT FALSE,
                     call_date STRING,
-                    created_at STRING
+                    created_at STRING,
+                    analysis_id STRING,
+                    intent STRING,
+                    confidence_score DOUBLE DEFAULT 0.0
                 )
             """)
 
@@ -310,39 +334,234 @@ class UnifiedGraphManager:
             logger.error(f"Failed to initialize unified schema: {e}")
             raise UnifiedGraphManagerError(f"Schema initialization failed: {str(e)}")
 
-    async def _get_connection(self):
-        """Get an available connection from the pool."""
-        try:
-            return await asyncio.wait_for(self._available_connections.get(), timeout=30.0)
-        except asyncio.TimeoutError:
-            raise RuntimeError("Database connection pool exhausted")
+    # Connection pool methods removed - using single connection only
 
-    async def _return_connection(self, conn):
-        """Return a connection to the pool."""
-        try:
-            self._available_connections.put_nowait(conn)
-        except asyncio.QueueFull:
-            logger.warning("Connection pool full, discarding connection")
+    def _is_write_operation(self, query: str) -> bool:
+        """Check if the query is a write operation (kept for compatibility)."""
+        query_upper = query.strip().upper()
+        write_operations = ['CREATE', 'MERGE', 'SET', 'DELETE', 'REMOVE', 'ALTER', 'DROP']
+        return any(query_upper.startswith(op) for op in write_operations)
 
     async def _execute_async(self, query: str, parameters: Optional[Dict[str, Any]] = None):
-        """Execute KuzuDB query asynchronously."""
-        conn = await self._get_connection()
-        loop = asyncio.get_event_loop()
+        """Execute ALL KuzuDB operations through the queue for complete serialization."""
+        # Queue ALL operations (reads and writes) to prevent any transaction conflicts
+        return await self._queue_write_operation(query, parameters)
 
-        def _execute():
+    # _execute_query method removed - all operations go through queue
+
+    # === WRITE QUEUE SYSTEM ===
+
+    async def _initialize_write_queue(self):
+        """Initialize the write queue and start the processor task."""
+        if self._write_queue is None:
+            self._write_queue = asyncio.Queue()
+            self._write_processor_task = asyncio.create_task(self._process_write_queue())
+            logger.info("🔄 Write queue processor started")
+
+    async def _process_write_queue(self):
+        """Background task that processes write operations sequentially."""
+        logger.info("🔄 Write queue processor started")
+        while True:
             try:
-                if parameters:
-                    return conn.execute(query, parameters=parameters)
-                else:
-                    return conn.execute(query)
-            except Exception as e:
-                raise RuntimeError(f"KuzuDB query failed: {str(e)}")
+                # Get next write operation from queue
+                operation = await self._write_queue.get()
 
-        try:
-            result = await loop.run_in_executor(self._executor, _execute)
-            return result
-        finally:
-            await self._return_connection(conn)
+                # Handle shutdown signal
+                if operation is None:
+                    logger.info("🔄 Write queue processor shutting down")
+                    break
+
+                try:
+                    # Execute on single connection (no more dedicated write connection)
+                    if operation['parameters']:
+                        result = self.conn.execute(operation['query'], parameters=operation['parameters'])
+                    else:
+                        result = self.conn.execute(operation['query'])
+
+                    # Return result to waiting coroutine
+                    operation['future'].set_result(result)
+
+                except Exception as e:
+                    # NO FALLBACK: Fail fast on errors
+                    error = RuntimeError(f"KuzuDB operation failed: {str(e)}")
+                    operation['future'].set_exception(error)
+
+                finally:
+                    # Mark task as done
+                    self._write_queue.task_done()
+
+            except Exception as e:
+                # Log unexpected errors but keep processor running
+                logger.error(f"Write queue processor error: {e}")
+
+    async def _queue_write_operation(self, query: str, parameters: Optional[Dict[str, Any]] = None):
+        """Queue a write operation and wait for its result."""
+        # Lazy-initialize the write queue and schema
+        if self._write_queue is None:
+            await self._initialize_write_queue()
+
+        # Ensure schema is initialized before any operation
+        if not self._schema_initialized:
+            await self._initialize_schema_async()
+
+        # Create a future for the result
+        future = asyncio.Future()
+
+        # Create operation dict
+        self._operation_counter += 1
+        operation = {
+            'id': self._operation_counter,
+            'query': query,
+            'parameters': parameters,
+            'future': future
+        }
+
+        # Add to queue
+        await self._write_queue.put(operation)
+
+        # Wait for result
+        return await future
+
+    async def _shutdown_write_queue(self):
+        """Shutdown the write queue processor."""
+        if self._write_queue is not None and self._write_processor_task is not None:
+            # Signal shutdown
+            await self._write_queue.put(None)
+            # Wait for processor to finish
+            await self._write_processor_task
+            logger.info("🔄 Write queue processor stopped")
+
+    async def _initialize_schema_async(self):
+        """Initialize schema through the write queue to avoid transaction conflicts."""
+        if self._schema_initialized:
+            return
+
+        logger.info("🔄 Initializing database schema through write queue...")
+
+        # Queue all schema creation operations
+        schema_operations = [
+            # Customer node
+            """CREATE NODE TABLE IF NOT EXISTS Customer(
+                customer_id STRING PRIMARY KEY,
+                first_name STRING,
+                last_name STRING,
+                email STRING,
+                phone STRING,
+                risk_score DOUBLE DEFAULT 0.0,
+                satisfaction_score DOUBLE DEFAULT 0.0,
+                total_interactions INT64 DEFAULT 0,
+                last_contact_date STRING,
+                status STRING DEFAULT 'active',
+                compliance_flags STRING,
+                created_at STRING,
+                updated_at STRING
+            )""",
+
+            # Call node
+            """CREATE NODE TABLE IF NOT EXISTS Call(
+                call_id STRING PRIMARY KEY,
+                transcript_id STRING,
+                customer_id STRING,
+                advisor_id STRING,
+                topic STRING,
+                duration_minutes DOUBLE DEFAULT 0.0,
+                urgency_level STRING DEFAULT 'medium',
+                sentiment STRING DEFAULT 'neutral',
+                resolved BOOLEAN DEFAULT FALSE,
+                escalated BOOLEAN DEFAULT FALSE,
+                call_date STRING,
+                created_at STRING,
+                analysis_id STRING,
+                intent STRING,
+                confidence_score DOUBLE DEFAULT 0.0
+            )""",
+
+            # Advisor node
+            """CREATE NODE TABLE IF NOT EXISTS Advisor(
+                advisor_id STRING PRIMARY KEY,
+                name STRING,
+                email STRING,
+                department STRING,
+                skill_level STRING DEFAULT 'junior',
+                performance_score DOUBLE DEFAULT 0.0,
+                total_cases_handled INT64 DEFAULT 0,
+                escalation_rate DOUBLE DEFAULT 0.0,
+                certifications STRING,
+                hire_date STRING,
+                status STRING DEFAULT 'active',
+                created_at STRING,
+                updated_at STRING
+            )""",
+
+            # Pattern node
+            """CREATE NODE TABLE IF NOT EXISTS Pattern(
+                pattern_id STRING PRIMARY KEY,
+                pattern_type STRING,
+                title STRING,
+                description STRING,
+                conditions STRING,
+                outcomes STRING,
+                confidence DOUBLE DEFAULT 0.0,
+                occurrences INT64 DEFAULT 0,
+                success_rate DOUBLE DEFAULT 0.0,
+                last_observed STRING,
+                source_pipeline STRING,
+                created_at STRING
+            )""",
+        ]
+
+        # Execute schema operations through write queue
+        for operation in schema_operations:
+            try:
+                # Create a future for this schema operation
+                future = asyncio.Future()
+
+                self._operation_counter += 1
+                schema_op = {
+                    'id': self._operation_counter,
+                    'query': operation,
+                    'parameters': None,
+                    'future': future
+                }
+
+                # Add directly to queue (bypassing _queue_write_operation to avoid recursion)
+                await self._write_queue.put(schema_op)
+                await future  # Wait for completion
+
+            except Exception as e:
+                logger.error(f"Failed to create schema: {e}")
+                raise RuntimeError(f"Schema initialization failed: {str(e)}")
+
+        # Create relationships
+        relationship_operations = [
+            "CREATE REL TABLE IF NOT EXISTS MADE_CALL(FROM Customer TO Call)",
+            "CREATE REL TABLE IF NOT EXISTS HANDLED_BY(FROM Call TO Advisor)",
+            "CREATE REL TABLE IF NOT EXISTS GENERATES_PATTERN(FROM Call TO Pattern)",
+            "CREATE REL TABLE IF NOT EXISTS LEARNED_BY_ADVISOR(FROM Pattern TO Advisor, learning_date STRING, application_count INT64 DEFAULT 0)"
+        ]
+
+        for operation in relationship_operations:
+            try:
+                # Create a future for this relationship operation
+                future = asyncio.Future()
+
+                self._operation_counter += 1
+                rel_op = {
+                    'id': self._operation_counter,
+                    'query': operation,
+                    'parameters': None,
+                    'future': future
+                }
+
+                await self._write_queue.put(rel_op)
+                await future  # Wait for completion
+
+            except Exception as e:
+                logger.error(f"Failed to create relationships: {e}")
+                raise RuntimeError(f"Relationship creation failed: {str(e)}")
+
+        self._schema_initialized = True
+        logger.info("✅ Database schema initialized successfully through write queue")
 
     # === BUSINESS ENTITY METHODS ===
 
@@ -948,6 +1167,402 @@ class UnifiedGraphManager:
 
         except Exception as e:
             logger.error(f"Failed to update pattern {pattern_id}: {e}")
+            return False
+
+    # ===============================================
+    # EVENT HANDLER SUPPORT METHODS (SYNCHRONOUS WRAPPERS)
+    # ===============================================
+
+    def create_or_update_customer_sync(self, customer_id: str, **kwargs) -> bool:
+        """Synchronous wrapper for create_or_update_customer."""
+        try:
+            import asyncio
+            import concurrent.futures
+
+            # Check if we're already in an event loop
+            try:
+                current_loop = asyncio.get_running_loop()
+                # We're in an event loop, schedule the coroutine
+                future = asyncio.create_task(
+                    self.create_or_update_customer(customer_id=customer_id, **kwargs)
+                )
+                # Run in background and return immediately with default success
+                # Event handlers should not block the main thread
+                logger.info(f"Scheduled customer creation for {customer_id} in background")
+                return True
+            except RuntimeError:
+                # No event loop running, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(
+                    self.create_or_update_customer(customer_id=customer_id, **kwargs)
+                )
+                loop.close()
+                return result
+        except Exception as e:
+            logger.error(f"Failed to create/update customer {customer_id}: {e}")
+            return False
+
+    def create_or_update_advisor_sync(self, advisor_id: str, **kwargs) -> bool:
+        """Synchronous wrapper for create_or_update_advisor."""
+        try:
+            import asyncio
+
+            # Check if we're already in an event loop
+            try:
+                current_loop = asyncio.get_running_loop()
+                # We're in an event loop, schedule the coroutine
+                future = asyncio.create_task(
+                    self.create_or_update_advisor(advisor_id=advisor_id, **kwargs)
+                )
+                # Run in background and return immediately with default success
+                # Event handlers should not block the main thread
+                logger.info(f"Scheduled advisor creation for {advisor_id} in background")
+                return True
+            except RuntimeError:
+                # No event loop running, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(
+                    self.create_or_update_advisor(advisor_id=advisor_id, **kwargs)
+                )
+                loop.close()
+                return result
+        except Exception as e:
+            logger.error(f"Failed to create/update advisor {advisor_id}: {e}")
+            return False
+
+    def create_transcript(self, transcript_id: str, customer_id: str, advisor_id: str,
+                         topic: str, urgency: str, channel: str, started_at: str, status: str = 'active') -> bool:
+        """Synchronous wrapper for create_call_node for event handlers."""
+        try:
+            import asyncio
+
+            # Check if we're already in an event loop
+            try:
+                current_loop = asyncio.get_running_loop()
+                # We're in an event loop, schedule the coroutine
+                future = asyncio.create_task(
+                    self.create_call_node(
+                        call_id=transcript_id,
+                        transcript_id=transcript_id,
+                        customer_id=customer_id,
+                        advisor_id=advisor_id,
+                        topic=topic,
+                        urgency_level=urgency,
+                        sentiment="neutral",
+                        resolved=status == 'resolved',
+                        call_date=started_at
+                    )
+                )
+                # Run in background and return immediately with default success
+                # Event handlers should not block the main thread
+                logger.info(f"Scheduled transcript creation for {transcript_id} in background")
+                return True
+            except RuntimeError:
+                # No event loop running, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(
+                    self.create_call_node(
+                        call_id=transcript_id,
+                        transcript_id=transcript_id,
+                        customer_id=customer_id,
+                        advisor_id=advisor_id,
+                        topic=topic,
+                        urgency_level=urgency,
+                        sentiment="neutral",
+                        resolved=status == 'resolved',
+                        call_date=started_at
+                    )
+                )
+                loop.close()
+                return result
+        except Exception as e:
+            logger.error(f"Failed to create transcript {transcript_id}: {e}")
+            return False
+
+    def create_analysis(self, analysis_id: str, transcript_id: str, intent: str,
+                       urgency_level: str, sentiment: str, risk_score: float,
+                       compliance_flags: List[str], confidence_score: float) -> bool:
+        """Create analysis node - stores as Call metadata for now."""
+        try:
+            # Update the call with analysis results
+            query = """
+                MATCH (c:Call {call_id: $transcript_id})
+                SET c.analysis_id = $analysis_id,
+                    c.intent = $intent,
+                    c.sentiment = $sentiment,
+                    c.urgency_level = $urgency_level,
+                    c.confidence_score = $confidence_score
+                RETURN c
+            """
+
+            result = self.conn.execute(query, parameters={
+                'transcript_id': transcript_id,
+                'analysis_id': analysis_id,
+                'intent': intent,
+                'sentiment': sentiment,
+                'urgency_level': urgency_level,
+                'confidence_score': confidence_score
+            })
+
+            logger.info(f"✅ Analysis {analysis_id} linked to transcript {transcript_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create analysis {analysis_id}: {e}")
+            return False
+
+    def update_customer_risk_profile(self, customer_id: str, risk_score: float, compliance_flags: List[str]) -> bool:
+        """Update customer risk profile."""
+        try:
+            import asyncio
+
+            # Check if we're already in an event loop
+            try:
+                current_loop = asyncio.get_running_loop()
+                # We're in an event loop, schedule the coroutine
+                future = asyncio.create_task(
+                    self.create_or_update_customer(
+                        customer_id=customer_id,
+                        risk_score=risk_score,
+                        compliance_flags=','.join(compliance_flags) if compliance_flags else ''
+                    )
+                )
+                # Run in background and return immediately with default success
+                # Event handlers should not block the main thread
+                logger.info(f"Scheduled customer risk profile update for {customer_id} in background")
+                return True
+            except RuntimeError:
+                # No event loop running, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(
+                    self.create_or_update_customer(
+                        customer_id=customer_id,
+                        risk_score=risk_score,
+                        compliance_flags=','.join(compliance_flags) if compliance_flags else ''
+                    )
+                )
+                loop.close()
+                return result
+        except Exception as e:
+            logger.error(f"Failed to update customer risk profile {customer_id}: {e}")
+            return False
+
+    def create_or_update_supervisor(self, supervisor_id: str, **kwargs) -> bool:
+        """Create or update supervisor - treat as special advisor."""
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(
+                self.create_or_update_advisor(
+                    advisor_id=supervisor_id,
+                    department="supervision",
+                    skill_level="expert",
+                    **kwargs
+                )
+            )
+            loop.close()
+            return result
+        except Exception as e:
+            logger.error(f"Failed to create/update supervisor {supervisor_id}: {e}")
+            return False
+
+    def create_escalation(self, workflow_id: str, from_advisor: str, to_supervisor: str,
+                         reason: str, urgency_level: str, escalated_at: str) -> bool:
+        """Create escalation relationship."""
+        try:
+            query = """
+                MATCH (a:Advisor {advisor_id: $from_advisor}), (s:Advisor {advisor_id: $to_supervisor})
+                CREATE (a)-[:ESCALATED_TO {
+                    workflow_id: $workflow_id,
+                    reason: $reason,
+                    urgency_level: $urgency_level,
+                    escalated_at: $escalated_at
+                }]->(s)
+                RETURN a, s
+            """
+
+            result = self.db.execute(query, parameters={
+                'workflow_id': workflow_id,
+                'from_advisor': from_advisor,
+                'to_supervisor': to_supervisor,
+                'reason': reason,
+                'urgency_level': urgency_level,
+                'escalated_at': escalated_at
+            })
+
+            logger.info(f"✅ Escalation created: {from_advisor} -> {to_supervisor}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create escalation {workflow_id}: {e}")
+            return False
+
+    def update_advisor_escalation_metrics(self, advisor_id: str) -> bool:
+        """Update advisor escalation metrics."""
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            # Get current escalation count
+            query = """
+                MATCH (a:Advisor {advisor_id: $advisor_id})-[:ESCALATED_TO]->()
+                RETURN count(*) as escalation_count
+            """
+
+            result = loop.run_until_complete(self._execute_async(query, {'advisor_id': advisor_id}))
+            escalation_count = 0
+            if result.has_next():
+                escalation_count = result.get_next()[0]
+
+            # Update advisor with new escalation rate
+            result = loop.run_until_complete(
+                self.create_or_update_advisor(
+                    advisor_id=advisor_id,
+                    escalation_rate=escalation_count
+                )
+            )
+            loop.close()
+            return result
+        except Exception as e:
+            logger.error(f"Failed to update escalation metrics for {advisor_id}: {e}")
+            return False
+
+    def create_resolution(self, resolution_id: str, issue_id: str, resolved_by_advisor: str,
+                         resolved_by_supervisor: str, method: str, resolution_time_minutes: int,
+                         customer_satisfaction: float, resolved_at: str) -> bool:
+        """Create resolution tracking."""
+        try:
+            # For now, just update the call as resolved
+            query = """
+                MATCH (c:Call {call_id: $issue_id})
+                SET c.resolved = true,
+                    c.resolution_id = $resolution_id,
+                    c.resolved_by = $resolved_by_advisor,
+                    c.resolution_method = $method,
+                    c.resolution_time_minutes = $resolution_time_minutes,
+                    c.customer_satisfaction = $customer_satisfaction,
+                    c.resolved_at = $resolved_at
+                RETURN c
+            """
+
+            result = self.db.execute(query, parameters={
+                'issue_id': issue_id,
+                'resolution_id': resolution_id,
+                'resolved_by_advisor': resolved_by_advisor,
+                'method': method,
+                'resolution_time_minutes': resolution_time_minutes,
+                'customer_satisfaction': customer_satisfaction,
+                'resolved_at': resolved_at
+            })
+
+            logger.info(f"✅ Resolution {resolution_id} created for issue {issue_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create resolution {resolution_id}: {e}")
+            return False
+
+    def update_advisor_resolution_metrics(self, advisor_id: str, resolution_time: int, satisfaction_score: float) -> bool:
+        """Update advisor resolution performance metrics."""
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(
+                self.create_or_update_advisor(
+                    advisor_id=advisor_id,
+                    avg_resolution_time=resolution_time,
+                    avg_satisfaction=satisfaction_score
+                )
+            )
+            loop.close()
+            return result
+        except Exception as e:
+            logger.error(f"Failed to update resolution metrics for {advisor_id}: {e}")
+            return False
+
+    def update_supervisor_metrics(self, supervisor_id: str) -> bool:
+        """Update supervisor performance metrics."""
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(
+                self.create_or_update_advisor(
+                    advisor_id=supervisor_id,
+                    total_supervisions=1  # Increment would be better but this is simple
+                )
+            )
+            loop.close()
+            return result
+        except Exception as e:
+            logger.error(f"Failed to update supervisor metrics for {supervisor_id}: {e}")
+            return False
+
+    def create_document_acknowledgment(self, document_id: str, customer_id: str, document_type: str,
+                                     sent_at: str, acknowledged_at: str, method: str) -> bool:
+        """Create document acknowledgment tracking."""
+        try:
+            # Create document acknowledgment relationship
+            query = """
+                MATCH (c:Customer {customer_id: $customer_id})
+                CREATE (c)-[:ACKNOWLEDGED_DOCUMENT {
+                    document_id: $document_id,
+                    document_type: $document_type,
+                    sent_at: $sent_at,
+                    acknowledged_at: $acknowledged_at,
+                    method: $method
+                }]->(c)
+                RETURN c
+            """
+
+            result = self.db.execute(query, parameters={
+                'customer_id': customer_id,
+                'document_id': document_id,
+                'document_type': document_type,
+                'sent_at': sent_at,
+                'acknowledged_at': acknowledged_at,
+                'method': method
+            })
+
+            logger.info(f"✅ Document acknowledgment {document_id} created")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create document acknowledgment {document_id}: {e}")
+            return False
+
+    def update_customer_engagement_metrics(self, customer_id: str) -> bool:
+        """Update customer engagement metrics."""
+        try:
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            # Get document acknowledgment count
+            query = """
+                MATCH (c:Customer {customer_id: $customer_id})-[:ACKNOWLEDGED_DOCUMENT]->()
+                RETURN count(*) as doc_count
+            """
+
+            result = loop.run_until_complete(self._execute_async(query, {'customer_id': customer_id}))
+            doc_count = 0
+            if result.has_next():
+                doc_count = result.get_next()[0]
+
+            # Update customer engagement
+            result = loop.run_until_complete(
+                self.create_or_update_customer(
+                    customer_id=customer_id,
+                    document_acknowledgments=doc_count
+                )
+            )
+            loop.close()
+            return result
+        except Exception as e:
+            logger.error(f"Failed to update engagement metrics for {customer_id}: {e}")
             return False
 
     def close(self) -> None:

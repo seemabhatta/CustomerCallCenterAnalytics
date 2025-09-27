@@ -3,6 +3,8 @@ Plan Service - Business logic for action plan operations
 Clean separation from routing layer
 """
 from typing import List, Optional, Dict, Any
+import logging
+import uuid
 from ..storage.action_plan_store import ActionPlanStore
 from ..call_center_agents.action_plan_agent import ActionPlanAgent
 from ..infrastructure.events import (
@@ -10,6 +12,8 @@ from ..infrastructure.events import (
     create_plan_generated_event,
     publish_event
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PlanService:
@@ -139,15 +143,40 @@ class PlanService:
                             performance_score=0.85
                         )
 
-                        # Link pattern to advisor (if pattern exists)
+                        # Create and link pattern to advisor (if wisdom pattern exists)
                         if predictive_insight and predictive_insight.get('insight_type') == 'wisdom':
+                            # Import Pattern here to avoid circular dependency
+                            from ..infrastructure.graph.knowledge_types import Pattern
+
                             pattern_id = f"PATTERN_{uuid.uuid4().hex[:8]}"
+
+                            # Create the Pattern object from the predictive insight
+                            pattern = Pattern(
+                                pattern_id=pattern_id,
+                                pattern_type='success_workflow',  # Wisdom patterns are often about successful approaches
+                                title=predictive_insight.get('reasoning', 'Planning wisdom pattern')[:100],
+                                description=predictive_insight.get('reasoning', 'Wisdom pattern discovered during action planning'),
+                                conditions={'planning_stage': 'action_planning', 'insight_source': 'wisdom_extraction'},
+                                outcomes={'wisdom_strength': predictive_insight.get('confidence', 0.8)},
+                                confidence=predictive_insight.get('confidence', 0.8),
+                                occurrences=1,  # First occurrence
+                                success_rate=0.8,  # Default until more data
+                                last_observed=datetime.utcnow(),
+                                source_pipeline='planning'
+                            )
+
+                            # Store the pattern in the graph first
+                            await unified_graph.store_pattern(pattern)
+                            logger.info(f"🧠 Created wisdom pattern {pattern_id} from planning insight")
+
+                            # Now link the pattern to the advisor
                             await unified_graph.link_pattern_to_advisor(
                                 pattern_id=pattern_id,
                                 advisor_id=advisor_id,
                                 learning_date=datetime.utcnow().isoformat(),
                                 application_count=1
                             )
+                            logger.info(f"🔗 Linked pattern {pattern_id} to advisor {advisor_id}")
 
                     add_span_event("plan.advisor_patterns_linked", advisor_id=advisor_id)
 

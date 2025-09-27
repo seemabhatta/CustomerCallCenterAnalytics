@@ -172,10 +172,36 @@ class AnalysisService:
                     call_date=datetime.utcnow().isoformat()
                 )
 
-                # Link call to pattern if pattern was generated
+                # Create and link pattern if pattern was generated
                 if predictive_insight and predictive_insight.get('insight_type') == 'pattern':
+                    # Import Pattern here to avoid circular dependency
+                    from ..infrastructure.graph.knowledge_types import Pattern
+                    from datetime import datetime
+
                     pattern_id = f"PATTERN_{uuid.uuid4().hex[:8]}"
+
+                    # Create the Pattern object from the predictive insight
+                    pattern = Pattern(
+                        pattern_id=pattern_id,
+                        pattern_type='risk_escalation',  # Could be determined from analysis
+                        title=predictive_insight.get('reasoning', 'Analysis-derived pattern')[:100],
+                        description=predictive_insight.get('reasoning', 'Pattern discovered during call analysis'),
+                        conditions={'analysis_stage': 'call_analysis', 'insight_source': 'predictive_analysis'},
+                        outcomes={'pattern_strength': predictive_insight.get('confidence', 0.8)},
+                        confidence=predictive_insight.get('confidence', 0.8),
+                        occurrences=1,  # First occurrence
+                        success_rate=0.8,  # Default until more data
+                        last_observed=datetime.utcnow(),
+                        source_pipeline='analysis'
+                    )
+
+                    # Store the pattern in the graph first
+                    await unified_graph.store_pattern(pattern)
+                    logger.info(f"📊 Created pattern {pattern_id} from analysis insight")
+
+                    # Now link the call to the stored pattern
                     await unified_graph.link_call_to_pattern(call_id, pattern_id, strength=0.8)
+                    logger.info(f"🔗 Linked call {call_id} to pattern {pattern_id}")
 
                 add_span_event("analysis.business_entities_created", call_id=call_id, customer_id=customer_id)
 

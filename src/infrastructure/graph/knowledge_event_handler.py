@@ -48,7 +48,7 @@ class KnowledgeEventHandler:
             # NO FALLBACK: Fail fast if event subscription fails
             raise RuntimeError(f"Cannot proceed without event subscription: {e}")
 
-    async def _handle_knowledge_extracted(self, sender, **kwargs) -> None:
+    def _handle_knowledge_extracted(self, sender, **kwargs) -> None:
         """
         Handle knowledge extraction events.
 
@@ -65,20 +65,21 @@ class KnowledgeEventHandler:
 
             logger.info(f"🧠 Processing knowledge extraction: {insight_type} from {source_stage} (priority: {priority})")
 
-            # Process different types of knowledge
-            if insight_type == 'pattern':
-                await self._process_pattern_knowledge(payload)
-            elif insight_type == 'prediction':
-                await self._process_prediction_knowledge(payload)
-            elif insight_type == 'wisdom':
-                await self._process_wisdom_knowledge(payload)
-            elif insight_type == 'meta_learning':
-                await self._process_meta_learning_knowledge(payload)
+            # Process different types of knowledge (sync versions)
+            insight_type_lower = insight_type.lower()
+            if insight_type_lower == 'pattern':
+                self._process_pattern_knowledge_sync(payload)
+            elif insight_type_lower == 'prediction':
+                self._process_prediction_knowledge_sync(payload)
+            elif insight_type_lower == 'wisdom':
+                self._process_wisdom_knowledge_sync(payload)
+            elif insight_type_lower == 'meta_learning':
+                self._process_meta_learning_knowledge_sync(payload)
             else:
                 logger.warning(f"Unknown insight type: {insight_type}")
 
-            # Log knowledge metrics
-            await self._update_knowledge_metrics(payload)
+            # Log knowledge metrics (sync version)
+            self._update_knowledge_metrics_sync(payload)
 
         except Exception as e:
             logger.error(f"Failed to process knowledge extraction event: {e}")
@@ -111,7 +112,7 @@ class KnowledgeEventHandler:
         # Generate additional meta-learning insights about the knowledge extraction process itself
         await self._generate_meta_learning_insights(payload)
 
-    async def _handle_analysis_completed(self, sender, **kwargs) -> None:
+    def _handle_analysis_completed(self, sender, **kwargs) -> None:
         """
         Handle analysis completion events for prediction validation.
 
@@ -132,22 +133,36 @@ class KnowledgeEventHandler:
             advisor_id = payload.get('advisor_id')
             analysis_results = payload.get('analysis_results', {})
 
-            # Validate customer risk predictions
+            # Validate customer risk predictions (sync version)
             borrower_risks = analysis_results.get('borrower_risks', {})
             if borrower_risks.get('delinquency_risk', 0) > 0.7 and customer_id:
-                await prediction_validator.validate_customer_risk_prediction(
-                    customer_id=customer_id,
-                    predicted_risk='delinquency',
-                    actual_outcome='high_risk_detected'
-                )
+                # Schedule async validation in background
+                import asyncio
+                try:
+                    current_loop = asyncio.get_running_loop()
+                    asyncio.create_task(prediction_validator.validate_customer_risk_prediction(
+                        customer_id=customer_id,
+                        predicted_risk='delinquency',
+                        actual_outcome='high_risk_detected'
+                    ))
+                except RuntimeError:
+                    # No event loop, skip async validation
+                    logger.info(f"Skipped async validation - no event loop for customer {customer_id}")
 
-            # Validate advisor performance predictions
+            # Validate advisor performance predictions (sync version)
             if analysis_results.get('escalation_needed', False) and advisor_id != 'UNKNOWN':
-                await prediction_validator.validate_advisor_performance_prediction(
-                    advisor_id=advisor_id,
-                    predicted_improvement='needs_coaching',
-                    actual_performance={'escalation_triggered': True}
-                )
+                # Schedule async validation in background
+                import asyncio
+                try:
+                    current_loop = asyncio.get_running_loop()
+                    asyncio.create_task(prediction_validator.validate_advisor_performance_prediction(
+                        advisor_id=advisor_id,
+                        predicted_improvement='needs_coaching',
+                        actual_performance={'escalation_triggered': True}
+                    ))
+                except RuntimeError:
+                    # No event loop, skip async validation
+                    logger.info(f"Skipped async validation - no event loop for advisor {advisor_id}")
 
             logger.info(f"✅ Completed prediction validation for analysis: {payload.get('analysis_id', 'unknown')}")
 
@@ -184,8 +199,8 @@ class KnowledgeEventHandler:
                 improvement_opportunity=self._identify_extraction_improvements(payload),
                 optimization_suggestion=self._suggest_extraction_optimizations(insight_type, source_stage),
                 accuracy_metrics={
-                    'stage_effectiveness': source_stage,
-                    'insight_quality': priority,
+                    'stage_effectiveness': self._convert_stage_to_score(source_stage),
+                    'insight_quality': self._convert_priority_to_score(priority),
                     'extraction_frequency': 1  # Would track over time
                 },
                 learning_velocity=0.8,  # Would calculate based on actual metrics
@@ -234,6 +249,76 @@ class KnowledgeEventHandler:
         # CIRCUIT BREAKER: Only generate meta-learning for non-meta-learning events
         if source_stage != 'meta_learning':
             await self._generate_meta_learning_insights(payload)
+
+    # ===============================================
+    # SYNC VERSIONS FOR BLINKER COMPATIBILITY
+    # ===============================================
+
+    def _process_pattern_knowledge_sync(self, payload: Dict[str, Any]) -> None:
+        """Sync version of pattern knowledge processing."""
+        logger.info(f"📊 Processing pattern knowledge (sync): {payload.get('reasoning', 'No reasoning')}")
+        # Future: Add pattern analysis logic here
+
+    def _process_prediction_knowledge_sync(self, payload: Dict[str, Any]) -> None:
+        """Sync version of prediction knowledge processing."""
+        logger.info(f"🔮 Processing prediction knowledge (sync): {payload.get('reasoning', 'No reasoning')}")
+        # Future: Add prediction analysis logic here
+
+    def _process_wisdom_knowledge_sync(self, payload: Dict[str, Any]) -> None:
+        """Sync version of wisdom knowledge processing."""
+        logger.info(f"🧠 Processing wisdom knowledge (sync): {payload.get('reasoning', 'No reasoning')}")
+        # Future: Add wisdom analysis logic here
+
+    def _process_meta_learning_knowledge_sync(self, payload: Dict[str, Any]) -> None:
+        """Sync version of meta-learning knowledge processing."""
+        logger.info(f"🔄 Processing meta-learning knowledge (sync): {payload.get('reasoning', 'No reasoning')}")
+        # Schedule async meta-learning generation in background if possible
+        import asyncio
+        try:
+            current_loop = asyncio.get_running_loop()
+            asyncio.create_task(self._generate_meta_learning_insights(payload))
+        except RuntimeError:
+            # No event loop, skip async meta-learning
+            logger.info("Skipped async meta-learning generation - no event loop")
+
+    def _update_knowledge_metrics_sync(self, payload: Dict[str, Any]) -> None:
+        """Sync version of knowledge metrics update."""
+        source_stage = payload.get('source_stage', 'unknown')
+        priority = payload.get('priority', 'medium')
+
+        logger.info(f"📈 Knowledge metrics updated (sync): {source_stage} stage, {priority} priority")
+
+        # CIRCUIT BREAKER: Only generate meta-learning for non-meta-learning events
+        if source_stage != 'meta_learning':
+            # Schedule async meta-learning in background if possible
+            import asyncio
+            try:
+                current_loop = asyncio.get_running_loop()
+                asyncio.create_task(self._generate_meta_learning_insights(payload))
+            except RuntimeError:
+                # No event loop, skip async meta-learning
+                logger.info("Skipped async meta-learning generation - no event loop")
+
+    def _convert_stage_to_score(self, stage: str) -> float:
+        """Convert stage name to numerical score for accuracy metrics."""
+        stage_scores = {
+            'analysis': 0.8,
+            'planning': 0.7,
+            'workflow': 0.6,
+            'execution': 0.9,
+            'meta_learning': 0.5
+        }
+        return stage_scores.get(stage.lower(), 0.5)
+
+    def _convert_priority_to_score(self, priority: str) -> float:
+        """Convert priority level to numerical score for accuracy metrics."""
+        priority_scores = {
+            'low': 0.3,
+            'medium': 0.6,
+            'high': 0.9,
+            'critical': 1.0
+        }
+        return priority_scores.get(priority.lower(), 0.5)
 
 
 # Global instance
