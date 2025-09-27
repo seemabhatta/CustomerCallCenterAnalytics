@@ -358,7 +358,7 @@ async def _check_database_health() -> Dict[str, Any]:
 async def _check_knowledge_graph_health() -> Dict[str, Any]:
     """Check KuzuDB knowledge graph health."""
     try:
-        from src.infrastructure.graph.predictive_graph_manager import PredictiveGraphManager
+        from src.infrastructure.graph.unified_graph_manager import get_unified_graph_manager
         from src.infrastructure.config.database_config import get_knowledge_graph_database_path
         import os
 
@@ -368,9 +368,9 @@ async def _check_knowledge_graph_health() -> Dict[str, Any]:
         if not os.path.exists(os.path.dirname(db_path)):
             return {"status": "unhealthy", "error": "Knowledge graph directory not found"}
 
-        # Test KuzuDB connection
-        manager = PredictiveGraphManager(db_path)
-        manager.close()  # Clean up test connection
+        # Test UnifiedGraphManager connection (uses singleton so no extra connections)
+        manager = get_unified_graph_manager()
+        # Don't close here since it's a shared singleton
 
         return {"status": "healthy", "database_path": db_path}
     except Exception as e:

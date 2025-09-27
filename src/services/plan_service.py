@@ -120,6 +120,41 @@ class PlanService:
                 await knowledge_extractor.extract_knowledge(insight, context)
                 add_span_event("plan.knowledge_extracted", plan_id=plan_result["plan_id"])
 
+                # Link patterns to advisor in unified graph
+                try:
+                    from ..infrastructure.graph.unified_graph_manager import get_unified_graph_manager
+                    unified_graph = get_unified_graph_manager()
+
+                    # Create advisor if doesn't exist
+                    advisor_id = "ADV_DEFAULT"  # Could be extracted from plan metadata
+                    advisor_actions = plan_result.get('advisor_plan', {}).get('coaching_items', [])
+
+                    if advisor_actions:
+                        # Create advisor node if it has coaching items
+                        await unified_graph.create_or_update_advisor(
+                            advisor_id=advisor_id,
+                            name="Default Advisor",
+                            department="Customer Service",
+                            skill_level="senior",
+                            performance_score=0.85
+                        )
+
+                        # Link pattern to advisor (if pattern exists)
+                        if predictive_insight and predictive_insight.get('insight_type') == 'wisdom':
+                            pattern_id = f"PATTERN_{uuid.uuid4().hex[:8]}"
+                            await unified_graph.link_pattern_to_advisor(
+                                pattern_id=pattern_id,
+                                advisor_id=advisor_id,
+                                learning_date=datetime.utcnow().isoformat(),
+                                application_count=1
+                            )
+
+                    add_span_event("plan.advisor_patterns_linked", advisor_id=advisor_id)
+
+                except Exception as e:
+                    logger.warning(f"Failed to link patterns to advisor: {e}")
+                    # Continue execution - pattern linking is supplementary
+
             # Count actions in the plan for event publishing
             borrower_actions = plan_result.get('borrower_plan', {}).get('immediate_actions', [])
             advisor_actions = plan_result.get('advisor_plan', {}).get('coaching_items', [])

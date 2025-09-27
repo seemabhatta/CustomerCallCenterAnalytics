@@ -11,7 +11,7 @@ import uuid
 
 from .knowledge_types import Pattern, Prediction, Wisdom, MetaLearning, PredictiveInsight
 try:
-    from .predictive_graph_manager import PredictiveGraphManager
+    from .unified_graph_manager import UnifiedGraphManager
     GRAPH_MANAGER_AVAILABLE = True
 except ImportError:
     GRAPH_MANAGER_AVAILABLE = False
@@ -33,12 +33,11 @@ class PredictiveKnowledgeExtractor:
     """
 
     def __init__(self, db_path: Optional[str] = None):
-        if db_path is None:
-            from ..config.database_config import get_knowledge_graph_database_path
-            db_path = get_knowledge_graph_database_path()
         if not GRAPH_MANAGER_AVAILABLE:
-            raise RuntimeError("PredictiveGraphManager not available - cannot proceed without proper storage")
-        self.graph_manager = PredictiveGraphManager(db_path)
+            raise RuntimeError("UnifiedGraphManager not available - cannot proceed without proper storage")
+        # Use shared instance instead of creating new one
+        from .unified_graph_manager import get_unified_graph_manager
+        self.graph_manager = get_unified_graph_manager()
 
     async def extract_knowledge(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
         """

@@ -67,7 +67,9 @@ class AnalysisService:
         
         # Query relevant patterns before analysis to influence LLM decisions
         from ..infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
+        from ..infrastructure.graph.unified_graph_manager import get_unified_graph_manager
         knowledge_extractor = get_predictive_knowledge_extractor()
+        unified_graph = get_unified_graph_manager()
 
         # Get context for pattern matching
         context = {
@@ -144,6 +146,42 @@ class AnalysisService:
                 # NO FALLBACK: If knowledge extraction fails, entire operation fails
                 await knowledge_extractor.extract_knowledge(insight, context)
                 add_span_event("analysis.knowledge_extracted", analysis_id=analysis_result["analysis_id"])
+
+            # Create business entities in unified graph
+            try:
+                # Create/update customer node
+                await unified_graph.create_or_update_customer(
+                    customer_id=customer_id,
+                    total_interactions=1,  # Increment on each call
+                    last_contact_date=datetime.utcnow().isoformat(),
+                    risk_score=analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5),
+                    satisfaction_score=0.7  # Default, could be derived from sentiment
+                )
+
+                # Create call node
+                call_id = f"CALL_{transcript_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                await unified_graph.create_call_node(
+                    call_id=call_id,
+                    transcript_id=transcript_id,
+                    customer_id=customer_id,
+                    advisor_id="ADV_DEFAULT",  # Could be extracted from transcript metadata
+                    topic=getattr(transcript, 'topic', 'general inquiry'),
+                    urgency_level=analysis_result.get('urgency_level', 'medium'),
+                    sentiment=analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
+                    resolved=False,  # Initially not resolved
+                    call_date=datetime.utcnow().isoformat()
+                )
+
+                # Link call to pattern if pattern was generated
+                if predictive_insight and predictive_insight.get('insight_type') == 'pattern':
+                    pattern_id = f"PATTERN_{uuid.uuid4().hex[:8]}"
+                    await unified_graph.link_call_to_pattern(call_id, pattern_id, strength=0.8)
+
+                add_span_event("analysis.business_entities_created", call_id=call_id, customer_id=customer_id)
+
+            except Exception as e:
+                logger.warning(f"Failed to create business entities in unified graph: {e}")
+                # Continue execution - business entity creation is supplementary
 
             # Schedule prediction validation via event system (avoids circular dependency)
             # Use existing factory function for consistency and proper event structure
