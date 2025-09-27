@@ -104,21 +104,35 @@ class AnalysisService:
             predictive_insight = analysis_result.get('predictive_insight')
             if predictive_insight:
                 # Convert to PredictiveInsight object and extract knowledge
-                from ..infrastructure.graph.knowledge_types import PredictiveInsight
+                from ..infrastructure.graph.knowledge_types import PredictiveInsight, InsightContent, CustomerContext
+                from datetime import datetime
+
+                # Create structured content
+                content = InsightContent(
+                    key=predictive_insight.get('content', {}).get('key', 'Analysis pattern'),
+                    value=predictive_insight.get('content', {}).get('value', 'Insight from call analysis'),
+                    confidence=predictive_insight.get('content', {}).get('confidence', 0.7),
+                    impact=predictive_insight.get('content', {}).get('impact', 'Medium impact')
+                )
+
+                # Create structured customer context
+                customer_context = CustomerContext(
+                    customer_id=customer_id,
+                    loan_type='mortgage',  # Default to mortgage for this use case
+                    tenure='existing',  # Default to existing customer
+                    risk_profile='standard'  # Default risk profile
+                )
+
                 insight = PredictiveInsight(
                     insight_type=predictive_insight.get('insight_type', 'pattern'),
                     priority=predictive_insight.get('priority', 'medium'),
-                    content=predictive_insight.get('content', {}),
+                    content=content,
                     reasoning=predictive_insight.get('reasoning', 'Analysis insight'),
                     learning_value=predictive_insight.get('learning_value', 'routine'),
                     source_stage='analysis',
                     transcript_id=transcript_id,
-                    customer_context={
-                        'customer_id': customer_id,
-                        'intent': analysis_result.get('primary_intent', 'unknown'),
-                        'sentiment': analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
-                        'risk_score': analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5)
-                    }
+                    customer_context=customer_context,
+                    timestamp=datetime.utcnow().isoformat() + 'Z'
                 )
 
                 knowledge_extractor = get_predictive_knowledge_extractor()
