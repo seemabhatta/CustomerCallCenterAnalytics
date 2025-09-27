@@ -60,13 +60,14 @@ class PredictiveKnowledgeExtractor:
         logger.info(f"   Reasoning: {insight.reasoning}")
 
         try:
-            if insight.insight_type == 'pattern':
+            insight_type = insight.insight_type.lower()
+            if insight_type == 'pattern':
                 await self._extract_pattern(insight, context)
-            elif insight.insight_type == 'prediction':
+            elif insight_type == 'prediction':
                 await self._extract_prediction(insight, context)
-            elif insight.insight_type == 'wisdom':
+            elif insight_type == 'wisdom':
                 await self._extract_wisdom(insight, context)
-            elif insight.insight_type == 'meta_learning':
+            elif insight_type == 'meta_learning':
                 await self._extract_meta_learning(insight, context)
             else:
                 logger.warning(f"Unknown insight type: {insight.insight_type}")
@@ -87,15 +88,15 @@ class PredictiveKnowledgeExtractor:
 
         pattern = Pattern(
             pattern_id=f"PATTERN_{uuid.uuid4().hex[:8]}",
-            pattern_type=content.get('pattern_type', 'behavioral'),
-            title=content.get('title', f"Pattern from {insight.source_stage}"),
-            description=content.get('description', 'Pattern discovered during pipeline processing'),
-            conditions=content.get('conditions', {}),
-            outcomes=content.get('outcomes', {}),
-            confidence=content.get('confidence', 0.7),
+            pattern_type='behavioral',
+            title=content['key'] if isinstance(content, dict) else content.key,
+            description=content['value'] if isinstance(content, dict) else content.value,
+            conditions={'insight_impact': content['impact'] if isinstance(content, dict) else content.impact},
+            outcomes={'confidence': content['confidence'] if isinstance(content, dict) else content.confidence},
+            confidence=content['confidence'] if isinstance(content, dict) else content.confidence,
             occurrences=1,  # First observation
-            success_rate=content.get('success_rate', 0.5),
-            last_observed=insight.timestamp,
+            success_rate=0.5,  # Initial default
+            last_observed=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
             source_pipeline=insight.source_stage
         )
 
@@ -109,17 +110,19 @@ class PredictiveKnowledgeExtractor:
 
         prediction = Prediction(
             prediction_id=f"PRED_{uuid.uuid4().hex[:8]}",
-            prediction_type=content.get('prediction_type', 'risk_assessment'),
-            target_entity=content.get('target_entity', 'Customer'),
-            target_entity_id=context.get('customer_id', 'UNKNOWN'),
-            predicted_event=content.get('predicted_event', 'Unknown event'),
-            probability=content.get('probability', 0.5),
-            confidence=content.get('confidence', 0.7),
-            time_horizon=content.get('time_horizon', 'short_term'),
-            supporting_patterns=content.get('supporting_patterns', []),
-            evidence_strength=content.get('evidence_strength', 0.5),
-            created_at=insight.timestamp,
-            expires_at=insight.timestamp + timedelta(days=30)  # Default 30-day expiration
+            prediction_type='risk_assessment',
+            target_entity=insight.customer_context['customer_id'] if isinstance(insight.customer_context, dict) else insight.customer_context.customer_id,
+            target_entity_id=insight.customer_context['customer_id'] if isinstance(insight.customer_context, dict) else insight.customer_context.customer_id,
+            predicted_event=content['key'] if isinstance(content, dict) else content.key,
+            probability=content['confidence'] if isinstance(content, dict) else content.confidence,
+            confidence=content['confidence'] if isinstance(content, dict) else content.confidence,
+            time_horizon='short_term',
+            supporting_patterns=[content['impact'] if isinstance(content, dict) else content.impact],
+            evidence_strength=content['confidence'] if isinstance(content, dict) else content.confidence,
+            created_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
+            expires_at=(datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp) + timedelta(days=30),  # Default 30-day expiration
+            validated=None,  # Not yet validated
+            validation_date=None  # Not yet validated
         )
 
         # NO FALLBACK: Store prediction or fail
@@ -132,15 +135,15 @@ class PredictiveKnowledgeExtractor:
 
         wisdom = Wisdom(
             wisdom_id=f"WISDOM_{uuid.uuid4().hex[:8]}",
-            wisdom_type=content.get('wisdom_type', 'strategic_insight'),
-            domain=content.get('domain', 'customer_operations'),
-            insight=content.get('insight', 'Strategic insight discovered'),
-            applications=content.get('applications', []),
-            success_indicators=content.get('success_indicators', []),
-            derived_from_patterns=content.get('derived_from_patterns', []),
-            evidence_base=content.get('evidence_base', {}),
-            confidence_level=content.get('confidence_level', 0.7),
-            discovered_at=insight.timestamp,
+            wisdom_type='strategic_insight',
+            domain=insight.customer_context['loan_type'] if isinstance(insight.customer_context, dict) else insight.customer_context.loan_type,
+            insight=content['value'] if isinstance(content, dict) else content.value,
+            applications=[content['impact'] if isinstance(content, dict) else content.impact],
+            success_indicators=[content['key'] if isinstance(content, dict) else content.key],
+            derived_from_patterns=[insight.source_stage],
+            evidence_base={'confidence': content['confidence'] if isinstance(content, dict) else content.confidence, 'impact': content['impact'] if isinstance(content, dict) else content.impact},
+            confidence_level=content['confidence'] if isinstance(content, dict) else content.confidence,
+            discovered_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
             times_applied=0,
             application_success_rate=0.0
         )
@@ -155,14 +158,14 @@ class PredictiveKnowledgeExtractor:
 
         meta_learning = MetaLearning(
             meta_id=f"META_{uuid.uuid4().hex[:8]}",
-            meta_type=content.get('meta_type', 'system_improvement'),
-            learning_insight=content.get('learning_insight', 'System learning insight'),
-            improvement_opportunity=content.get('improvement_opportunity', 'Optimization opportunity'),
-            optimization_suggestion=content.get('optimization_suggestion', 'Suggested improvement'),
-            accuracy_metrics=content.get('accuracy_metrics', {}),
-            learning_velocity=content.get('learning_velocity', 0.5),
-            knowledge_gaps=content.get('knowledge_gaps', []),
-            observed_at=insight.timestamp,
+            meta_type='system_improvement',
+            learning_insight=content['value'] if isinstance(content, dict) else content.value,
+            improvement_opportunity=content['impact'] if isinstance(content, dict) else content.impact,
+            optimization_suggestion=content['key'] if isinstance(content, dict) else content.key,
+            accuracy_metrics={'confidence': content['confidence'] if isinstance(content, dict) else content.confidence},
+            learning_velocity=content['confidence'] if isinstance(content, dict) else content.confidence,
+            knowledge_gaps=[insight.reasoning],
+            observed_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
             system_version="v2.0"
         )
 
