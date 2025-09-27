@@ -89,14 +89,14 @@ class PredictiveKnowledgeExtractor:
         pattern = Pattern(
             pattern_id=f"PATTERN_{uuid.uuid4().hex[:8]}",
             pattern_type='behavioral',
-            title=content['key'] if isinstance(content, dict) else content.key,
-            description=content['value'] if isinstance(content, dict) else content.value,
-            conditions={'insight_impact': content['impact'] if isinstance(content, dict) else content.impact},
-            outcomes={'confidence': content['confidence'] if isinstance(content, dict) else content.confidence},
-            confidence=content['confidence'] if isinstance(content, dict) else content.confidence,
+            title=content.key,
+            description=content.value,
+            conditions={'insight_impact': content.impact},
+            outcomes={'confidence': content.confidence},
+            confidence=content.confidence,
             occurrences=1,  # First observation
             success_rate=0.5,  # Initial default
-            last_observed=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
+            last_observed=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
             source_pipeline=insight.source_stage
         )
 
@@ -111,16 +111,16 @@ class PredictiveKnowledgeExtractor:
         prediction = Prediction(
             prediction_id=f"PRED_{uuid.uuid4().hex[:8]}",
             prediction_type='risk_assessment',
-            target_entity=insight.customer_context['customer_id'] if isinstance(insight.customer_context, dict) else insight.customer_context.customer_id,
-            target_entity_id=insight.customer_context['customer_id'] if isinstance(insight.customer_context, dict) else insight.customer_context.customer_id,
-            predicted_event=content['key'] if isinstance(content, dict) else content.key,
-            probability=content['confidence'] if isinstance(content, dict) else content.confidence,
-            confidence=content['confidence'] if isinstance(content, dict) else content.confidence,
+            target_entity=insight.customer_context.customer_id,
+            target_entity_id=insight.customer_context.customer_id,
+            predicted_event=content.key,
+            probability=content.confidence,
+            confidence=content.confidence,
             time_horizon='short_term',
-            supporting_patterns=[content['impact'] if isinstance(content, dict) else content.impact],
-            evidence_strength=content['confidence'] if isinstance(content, dict) else content.confidence,
-            created_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
-            expires_at=(datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp) + timedelta(days=30),  # Default 30-day expiration
+            supporting_patterns=[content.impact],
+            evidence_strength=content.confidence,
+            created_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
+            expires_at=(datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp)) + timedelta(days=30),  # Default 30-day expiration
             validated=None,  # Not yet validated
             validation_date=None  # Not yet validated
         )
@@ -136,14 +136,14 @@ class PredictiveKnowledgeExtractor:
         wisdom = Wisdom(
             wisdom_id=f"WISDOM_{uuid.uuid4().hex[:8]}",
             wisdom_type='strategic_insight',
-            domain=insight.customer_context['loan_type'] if isinstance(insight.customer_context, dict) else insight.customer_context.loan_type,
-            insight=content['value'] if isinstance(content, dict) else content.value,
-            applications=[content['impact'] if isinstance(content, dict) else content.impact],
-            success_indicators=[content['key'] if isinstance(content, dict) else content.key],
+            domain=insight.customer_context.loan_type,
+            insight=content.value,
+            applications=[content.impact],
+            success_indicators=[content.key],
             derived_from_patterns=[insight.source_stage],
-            evidence_base={'confidence': content['confidence'] if isinstance(content, dict) else content.confidence, 'impact': content['impact'] if isinstance(content, dict) else content.impact},
-            confidence_level=content['confidence'] if isinstance(content, dict) else content.confidence,
-            discovered_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
+            evidence_base={'confidence': content.confidence, 'impact': content.impact},
+            confidence_level=content.confidence,
+            discovered_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
             times_applied=0,
             application_success_rate=0.0
         )
@@ -159,13 +159,13 @@ class PredictiveKnowledgeExtractor:
         meta_learning = MetaLearning(
             meta_id=f"META_{uuid.uuid4().hex[:8]}",
             meta_type='system_improvement',
-            learning_insight=content['value'] if isinstance(content, dict) else content.value,
-            improvement_opportunity=content['impact'] if isinstance(content, dict) else content.impact,
-            optimization_suggestion=content['key'] if isinstance(content, dict) else content.key,
-            accuracy_metrics={'confidence': content['confidence'] if isinstance(content, dict) else content.confidence},
-            learning_velocity=content['confidence'] if isinstance(content, dict) else content.confidence,
+            learning_insight=content.value,
+            improvement_opportunity=content.impact,
+            optimization_suggestion=content.key,
+            accuracy_metrics={'confidence': content.confidence},
+            learning_velocity=content.confidence,
             knowledge_gaps=[insight.reasoning],
-            observed_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else insight.timestamp,
+            observed_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
             system_version="v2.0"
         )
 
