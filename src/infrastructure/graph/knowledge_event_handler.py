@@ -48,13 +48,15 @@ class KnowledgeEventHandler:
             # NO FALLBACK: Fail fast if event subscription fails
             raise RuntimeError(f"Cannot proceed without event subscription: {e}")
 
-    async def _handle_knowledge_extracted(self, event: Event) -> None:
+    async def _handle_knowledge_extracted(self, sender, **kwargs) -> None:
         """
         Handle knowledge extraction events.
 
         Args:
-            event: KNOWLEDGE_EXTRACTED event
+            sender: Event system sender
+            **kwargs: Event data including 'event', 'event_type', 'payload', etc.
         """
+        event = kwargs.get('event')
         try:
             payload = event.payload
             insight_type = payload.get('insight_type', 'unknown')
@@ -109,13 +111,15 @@ class KnowledgeEventHandler:
         # Generate additional meta-learning insights about the knowledge extraction process itself
         await self._generate_meta_learning_insights(payload)
 
-    async def _handle_analysis_completed(self, event: Event) -> None:
+    async def _handle_analysis_completed(self, sender, **kwargs) -> None:
         """
         Handle analysis completion events for prediction validation.
 
         Args:
-            event: ANALYSIS_COMPLETED event
+            sender: Event system sender
+            **kwargs: Event data including 'event', 'event_type', 'payload', etc.
         """
+        event = kwargs.get('event')
         try:
             payload = event.payload
             logger.info(f"📋 Processing analysis completion for validation: {payload.get('analysis_id', 'unknown')}")
