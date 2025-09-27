@@ -77,22 +77,36 @@ class PlanService:
             predictive_insight = plan_result.get('predictive_insight')
             if predictive_insight:
                 # Convert to PredictiveInsight object and extract knowledge
-                from ..infrastructure.graph.knowledge_types import PredictiveInsight
+                from ..infrastructure.graph.knowledge_types import PredictiveInsight, InsightContent, CustomerContext
                 from ..infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
+                from datetime import datetime
+
+                # Create structured content
+                content = InsightContent(
+                    key=predictive_insight.get('content', {}).get('key', 'Plan strategy'),
+                    value=predictive_insight.get('content', {}).get('value', 'Strategic planning insight'),
+                    confidence=predictive_insight.get('content', {}).get('confidence', 0.8),
+                    impact=predictive_insight.get('content', {}).get('impact', 'High strategic impact')
+                )
+
+                # Create structured customer context
+                customer_context = CustomerContext(
+                    customer_id=customer_id,
+                    loan_type='mortgage',  # Default to mortgage for this use case
+                    tenure='existing',  # Default to existing customer
+                    risk_profile='standard'  # Default risk profile
+                )
 
                 insight = PredictiveInsight(
                     insight_type=predictive_insight.get('insight_type', 'wisdom'),
                     priority=predictive_insight.get('priority', 'medium'),
-                    content=predictive_insight.get('content', {}),
+                    content=content,
                     reasoning=predictive_insight.get('reasoning', 'Plan insight'),
                     learning_value=predictive_insight.get('learning_value', 'routine'),
                     source_stage='planning',
                     transcript_id=transcript_id,
-                    customer_context={
-                        'customer_id': customer_id,
-                        'analysis_id': analysis_id,
-                        'plan_complexity': len(str(plan_result))
-                    }
+                    customer_context=customer_context,
+                    timestamp=datetime.utcnow().isoformat() + 'Z'
                 )
 
                 knowledge_extractor = get_predictive_knowledge_extractor()
