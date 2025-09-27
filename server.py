@@ -596,6 +596,28 @@ async def get_insights_status():
         raise HTTPException(status_code=500, detail=f"Failed to get insights status: {str(e)}")
 
 # ===============================================
+# GRAPH QUERY ENDPOINTS
+# ===============================================
+
+@app.post("/api/v1/graph/ask")
+async def ask_graph_question(request: dict):
+    """Ask natural language question about the knowledge graph."""
+    try:
+        from src.services.graph_query_service import get_graph_query_service
+        graph_service = get_graph_query_service()
+
+        question = request.get("question")
+        if not question:
+            raise HTTPException(status_code=400, detail="Question is required")
+
+        result = await graph_service.ask(question)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Graph query failed: {str(e)}")
+
+# ===============================================
 # PLAN ENDPOINTS
 # ===============================================
 

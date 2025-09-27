@@ -1,0 +1,9 @@
+Explain these knowledge graph query results in clear business terms.
+
+User asked: "{question}"
+Query executed: {cypher_query}
+Results: {result_summary}
+
+Provide a concise business explanation focusing on insights and patterns.
+If no results, suggest why or what to check.
+Maximum 3 sentences.
