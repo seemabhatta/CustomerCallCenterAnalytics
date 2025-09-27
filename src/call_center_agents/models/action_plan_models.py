@@ -10,12 +10,18 @@ class ImmediateAction(BaseModel):
     auto_executable: bool = Field(description="Whether action is auto-executable")
     description: str = Field(description="Detailed description")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class FollowUp(BaseModel):
     action: str = Field(description="Follow-up action")
     due_date: str = Field(description="Due date")
     owner: str = Field(description="Owner of the action")
     trigger_condition: str = Field(description="Trigger condition")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
 
 
 class BorrowerPlan(BaseModel):
@@ -24,6 +30,9 @@ class BorrowerPlan(BaseModel):
     personalized_offers: List[str] = Field(description="List of personalized offers")
     risk_mitigation: List[str] = Field(description="List of risk mitigation strategies")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class CoachingItem(BaseModel):
     action: str = Field(description="Coaching action")
@@ -31,11 +40,17 @@ class CoachingItem(BaseModel):
     expected_improvement: str = Field(description="Expected improvement")
     priority: str = Field(description="Priority level")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class PerformanceFeedback(BaseModel):
     strengths: List[str] = Field(description="List of strengths")
     improvements: List[str] = Field(description="List of improvements")
     score_explanations: List[str] = Field(description="List of score explanations")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
 
 
 class AdvisorPlan(BaseModel):
@@ -44,12 +59,18 @@ class AdvisorPlan(BaseModel):
     training_recommendations: List[str] = Field(description="List of training recommendations")
     next_actions: List[str] = Field(description="List of next actions")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class EscalationItem(BaseModel):
     item: str = Field(description="Escalation item")
     reason: str = Field(description="Reason for escalation")
     priority: str = Field(description="Priority level")
     action_required: str = Field(description="Action required")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
 
 
 class SupervisorPlan(BaseModel):
@@ -59,6 +80,9 @@ class SupervisorPlan(BaseModel):
     approval_required: bool = Field(description="Whether approval is required")
     process_improvements: List[str] = Field(description="List of process improvements")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class LeadershipPlan(BaseModel):
     portfolio_insights: List[str] = Field(description="List of portfolio insights")
@@ -67,10 +91,16 @@ class LeadershipPlan(BaseModel):
     trend_analysis: List[str] = Field(description="List of trend analysis")
     resource_allocation: List[str] = Field(description="List of resource allocation recommendations")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class FourLayerActionPlan(BaseModel):
     borrower_plan: BorrowerPlan = Field(description="Borrower action plan")
     advisor_plan: AdvisorPlan = Field(description="Advisor action plan")
     supervisor_plan: SupervisorPlan = Field(description="Supervisor action plan")
     leadership_plan: LeadershipPlan = Field(description="Leadership action plan")
-    predictive_insight: Optional[PredictiveInsight] = Field(default=None, description="Optional predictive knowledge insight")
+    predictive_insight: PredictiveInsight = Field(description="Predictive knowledge insight")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output

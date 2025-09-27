@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
 
@@ -9,12 +9,18 @@ class BorrowerSentiment(BaseModel):
     end: str = Field(description="Ending sentiment")
     trend: str = Field(description="Sentiment trend")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class BorrowerRisks(BaseModel):
     delinquency_risk: float = Field(ge=0.0, le=1.0, description="Delinquency risk score")
     churn_risk: float = Field(ge=0.0, le=1.0, description="Churn risk score")
     complaint_risk: float = Field(ge=0.0, le=1.0, description="Complaint risk score")
     refinance_likelihood: float = Field(ge=0.0, le=1.0, description="Refinance likelihood score")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
 
 
 class AdvisorMetrics(BaseModel):
@@ -23,20 +29,48 @@ class AdvisorMetrics(BaseModel):
     solution_effectiveness: float = Field(ge=0.0, le=10.0, description="Solution effectiveness score")
     coaching_opportunities: List[str] = Field(description="List of coaching opportunities")
 
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
+
+class InsightContent(BaseModel):
+    """Structured content for predictive insights."""
+    key: str = Field(description="Primary insight key or pattern identified")
+    value: str = Field(description="Insight value or prediction details")
+    confidence: float = Field(ge=0.0, le=1.0, description="Confidence in this insight")
+    impact: str = Field(description="Expected impact or outcome")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
+
+class CustomerContext(BaseModel):
+    """Customer context for insights."""
+    customer_id: str = Field(description="Customer identifier")
+    loan_type: str = Field(description="Type of loan or product")
+    tenure: str = Field(description="Customer tenure or relationship length")
+    risk_profile: str = Field(description="Customer risk profile")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
+
 
 class PredictiveInsight(BaseModel):
     """Simplified insight structure for pipeline contributions."""
     insight_type: str = Field(description="Type: pattern, prediction, wisdom, meta_learning")
     priority: str = Field(description="Priority: high, medium, low")
-    content: Dict[str, Any] = Field(description="The actual insight content")
+    content: InsightContent = Field(description="The actual insight content")
     reasoning: str = Field(description="Why this insight is valuable")
     learning_value: str = Field(description="Learning value: critical, exceptional, routine")
     source_stage: str = Field(description="Pipeline stage that generated this insight")
 
     # Context
     transcript_id: str = Field(description="Source transcript")
-    customer_context: Dict[str, Any] = Field(description="Customer context for this insight")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    customer_context: CustomerContext = Field(description="Customer context for this insight")
+    timestamp: str = Field(description="ISO timestamp when insight was generated")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output
 
 
 class CallAnalysis(BaseModel):
@@ -56,4 +90,7 @@ class CallAnalysis(BaseModel):
     product_opportunities: List[str] = Field(description="Product opportunities identified")
     payment_concerns: List[str] = Field(description="Payment concerns")
     property_related_issues: List[str] = Field(description="Property-related issues")
-    predictive_insight: Optional[PredictiveInsight] = Field(default=None, description="Optional predictive knowledge insight")
+    predictive_insight: PredictiveInsight = Field(description="Predictive knowledge insight")
+
+    class Config:
+        extra = "forbid"  # Required for OpenAI structured output

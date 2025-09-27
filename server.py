@@ -47,7 +47,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import uvicorn
 import json
 
@@ -211,6 +211,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # React dev server
+        "http://localhost:5000",  # Frontend dev server
         "http://localhost:5173",  # Vite dev server
         "http://localhost:8000",  # FastAPI dev server
         os.getenv("FRONTEND_URL", "").split(",") if os.getenv("FRONTEND_URL") else []
@@ -303,7 +304,7 @@ async def health_check():
         # Add database connectivity checks
         health_status = {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "version": "1.0.0",
             "components": {
                 "system": system_health,
@@ -328,7 +329,7 @@ async def health_check():
     except Exception as e:
         error_health = {
             "status": "unhealthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "error": f"Health check failed: {str(e)}"
         }
         return JSONResponse(status_code=500, content=error_health)
@@ -961,7 +962,7 @@ async def orchestrate_run(request: Dict):
         "auto_approve": auto_approve,
         "status": "RUNNING",
         "stage": "INITIALIZING",
-        "started_at": datetime.utcnow().isoformat(),
+        "started_at": datetime.now(timezone.utc).isoformat(),
         "results": [],
         "errors": []
     }
@@ -983,13 +984,13 @@ async def orchestrate_run(request: Dict):
                 orchestration_runs[run_id]["errors"].append({
                     "transcript_id": transcript_id,
                     "error": str(e),
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 })
 
         # Update final status
         orchestration_runs[run_id]["status"] = "COMPLETED"
         orchestration_runs[run_id]["stage"] = "COMPLETE"
-        orchestration_runs[run_id]["completed_at"] = datetime.utcnow().isoformat()
+        orchestration_runs[run_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
 
         # Calculate summary
         total_results = len(orchestration_runs[run_id]["results"])

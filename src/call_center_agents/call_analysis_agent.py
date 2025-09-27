@@ -126,24 +126,50 @@ class CallAnalysisAgent:
             if field not in insight or not insight[field] or str(insight[field]).strip() == '':
                 return False
 
-        # Insight type must be valid
+        # Insight type must be valid (case-insensitive)
         valid_types = ['pattern', 'prediction', 'wisdom', 'meta_learning']
-        if insight['insight_type'] not in valid_types:
+        if insight['insight_type'].lower() not in valid_types:
             return False
 
-        # Priority must be valid
+        # Priority must be valid (case-insensitive)
         valid_priorities = ['high', 'medium', 'low']
-        if insight['priority'] not in valid_priorities:
+        if insight['priority'].lower() not in valid_priorities:
             return False
 
-        # Learning value must be valid
+        # Learning value must be valid (case-insensitive)
         valid_learning_values = ['critical', 'exceptional', 'routine']
-        if insight['learning_value'] not in valid_learning_values:
+        if insight['learning_value'].lower() not in valid_learning_values:
             return False
 
-        # Content must be a non-empty dict
-        if not isinstance(insight['content'], dict) or len(insight['content']) == 0:
+        # Content must be a structured object with required fields
+        content = insight['content']
+        if not isinstance(content, dict):
             return False
+
+        # Validate structured content fields
+        content_required_fields = ['key', 'value', 'confidence', 'impact']
+        for field in content_required_fields:
+            if field not in content or not content[field] or str(content[field]).strip() == '':
+                return False
+
+        # Confidence must be a valid float between 0 and 1
+        try:
+            confidence = float(content['confidence'])
+            if not (0.0 <= confidence <= 1.0):
+                return False
+        except (ValueError, TypeError):
+            return False
+
+        # Validate customer context structure
+        customer_context = insight.get('customer_context')
+        if not isinstance(customer_context, dict):
+            return False
+
+        # Validate customer context fields
+        context_required_fields = ['customer_id', 'loan_type', 'tenure', 'risk_profile']
+        for field in context_required_fields:
+            if field not in customer_context or not customer_context[field] or str(customer_context[field]).strip() == '':
+                return False
 
         # Reasoning must be meaningful (at least 10 characters)
         reasoning = str(insight['reasoning']).strip()
