@@ -97,6 +97,17 @@ except ImportError as e:
 except Exception as e:
     print(f"❌ Failed to initialize knowledge event handling: {e}")
     # NO FALLBACK: Continue with degraded functionality but log the issue
+
+# Initialize graph event handlers for complete event-driven architecture
+try:
+    from src.infrastructure.events.graph_handlers import initialize_graph_handlers
+    initialize_graph_handlers()
+    print("✅ Graph event handlers initialized - complete event-driven pipeline active")
+except ImportError as e:
+    print(f"⚠️  Graph event handlers not available: {e}")
+except Exception as e:
+    print(f"❌ Failed to initialize graph event handlers: {e}")
+    # NO FALLBACK: Continue with degraded functionality but log the issue
     import logging
     logging.getLogger(__name__).error(f"Knowledge event handling initialization failed: {e}")
 

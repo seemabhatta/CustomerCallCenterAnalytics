@@ -193,25 +193,27 @@ class KnowledgeEventHandler:
 
             # Create meta-learning insight about knowledge extraction effectiveness
             meta_learning = MetaLearning(
-                meta_id=f"META_{uuid.uuid4().hex[:8].upper()}",
-                meta_type='knowledge_extraction_optimization',
-                learning_insight=f"Knowledge extraction from {source_stage} stage is producing {insight_type} insights with {priority} priority",
-                improvement_opportunity=self._identify_extraction_improvements(payload),
-                optimization_suggestion=self._suggest_extraction_optimizations(insight_type, source_stage),
-                accuracy_metrics={
+                meta_learning_id=f"META_{uuid.uuid4().hex[:8].upper()}",
+                learning_type='system_optimization',
+                insight_source='knowledge_extraction',
+                meta_insight=f"Knowledge extraction from {source_stage} stage is producing {insight_type} insights with {priority} priority",
+                improvement_area=self._identify_extraction_improvements(payload),
+                system_component=f"{source_stage}_stage",
+                learning_context={
                     'stage_effectiveness': self._convert_stage_to_score(source_stage),
                     'insight_quality': self._convert_priority_to_score(priority),
-                    'extraction_frequency': 1  # Would track over time
+                    'extraction_frequency': 1
                 },
-                learning_velocity=0.8,  # Would calculate based on actual metrics
-                knowledge_gaps=[f"Limited {insight_type} insights from {source_stage}"],
-                observed_at=datetime.utcnow(),
-                system_version='1.0'
+                impact_assessment='medium',
+                validation_status=False,
+                validation_count=0,
+                created_at=datetime.utcnow(),
+                last_updated=datetime.utcnow()
             )
 
             # Store the meta-learning insight
             await knowledge_extractor.store_meta_learning(meta_learning)
-            logger.info(f"🔄 Generated meta-learning insight: {meta_learning.meta_id}")
+            logger.info(f"🔄 Generated meta-learning insight: {meta_learning.meta_learning_id}")
 
         except Exception as e:
             logger.error(f"Failed to generate meta-learning insights: {e}")

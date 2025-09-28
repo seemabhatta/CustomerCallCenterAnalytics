@@ -92,7 +92,7 @@ class AnalysisService:
         
         # Add metadata
         analysis_result["transcript_id"] = transcript_id
-        analysis_result["analysis_id"] = f"ANALYSIS_{transcript_id}_{len(str(analysis_result))}"[:20]
+        analysis_result["analysis_id"] = f"ANALYSIS_{transcript_id}_{uuid.uuid4().hex[:8]}"
         
         # Store if requested
         should_store = request_data.get("store", True)
@@ -153,7 +153,7 @@ class AnalysisService:
                 await unified_graph.create_or_update_customer(
                     customer_id=customer_id,
                     total_interactions=1,  # Increment on each call
-                    last_contact_date=datetime.utcnow().isoformat(),
+                    last_contact_date=datetime.utcnow(),
                     risk_score=analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5),
                     satisfaction_score=0.7  # Default, could be derived from sentiment
                 )
@@ -172,11 +172,12 @@ class AnalysisService:
                     call_date=datetime.utcnow().isoformat()
                 )
 
+                # Import types here to avoid circular dependency
+                from ..infrastructure.graph.knowledge_types import Pattern, Prediction
+                from datetime import datetime
+
                 # Create and link pattern if pattern was generated
                 if predictive_insight and predictive_insight.get('insight_type') == 'pattern':
-                    # Import Pattern here to avoid circular dependency
-                    from ..infrastructure.graph.knowledge_types import Pattern
-                    from datetime import datetime
 
                     pattern_id = f"PATTERN_{uuid.uuid4().hex[:8]}"
 
@@ -202,6 +203,37 @@ class AnalysisService:
                     # Now link the call to the stored pattern
                     await unified_graph.link_call_to_pattern(call_id, pattern_id, strength=0.8)
                     logger.info(f"🔗 Linked call {call_id} to pattern {pattern_id}")
+
+                # Create Prediction nodes from borrower risks
+                borrower_risks = analysis_result.get('borrower_risks', {})
+                if borrower_risks:
+                    from datetime import timedelta
+
+                    # Create predictions for high-risk scenarios
+                    for risk_type, risk_value in borrower_risks.items():
+                        if risk_value > 0.7:  # Only create predictions for high risks
+                            prediction_id = f"PRED_{uuid.uuid4().hex[:8]}"
+
+                            prediction = Prediction(
+                                prediction_id=prediction_id,
+                                prediction_type='risk_assessment',
+                                target_entity='customer',
+                                target_entity_id=customer_id,
+                                predicted_event=f"{risk_type}_likely",
+                                probability=risk_value,
+                                confidence=risk_value,
+                                time_horizon='short_term',
+                                supporting_patterns=[f"Analysis pattern from {transcript_id}"],
+                                evidence_strength=risk_value,
+                                created_at=datetime.utcnow(),
+                                expires_at=datetime.utcnow() + timedelta(days=90),
+                                validated=None,
+                                validation_date=None
+                            )
+
+                            # Store the prediction in the graph
+                            await unified_graph.store_prediction(prediction)
+                            logger.info(f"🔮 Created prediction {prediction_id} for {risk_type} risk ({risk_value:.2f})")
 
                 add_span_event("analysis.business_entities_created", call_id=call_id, customer_id=customer_id)
 

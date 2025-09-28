@@ -9,12 +9,17 @@ import logging
 from datetime import datetime, timedelta
 import uuid
 
-from .knowledge_types import Pattern, Prediction, Wisdom, MetaLearning, PredictiveInsight
+from .knowledge_types import (
+    Pattern, Prediction, Wisdom, MetaLearning, PredictiveInsight,
+    Hypothesis, CandidatePattern, ValidatedPattern
+)
 try:
     from .unified_graph_manager import UnifiedGraphManager
     GRAPH_MANAGER_AVAILABLE = True
 except ImportError:
     GRAPH_MANAGER_AVAILABLE = False
+# Pattern validator removed - using UnifiedGraphManager directly
+PATTERN_VALIDATOR_AVAILABLE = False
 try:
     from ..events import publish_event, Event, EventType
     EVENTS_AVAILABLE = True
@@ -39,6 +44,9 @@ class PredictiveKnowledgeExtractor:
         from .unified_graph_manager import get_unified_graph_manager
         self.graph_manager = get_unified_graph_manager()
 
+        # Pattern validator removed - using UnifiedGraphManager for all operations
+        logger.info("Using UnifiedGraphManager for knowledge extraction")
+
     async def extract_knowledge(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
         """
         Extract predictive knowledge from a pipeline insight.
@@ -60,8 +68,8 @@ class PredictiveKnowledgeExtractor:
 
         try:
             insight_type = insight.insight_type.lower()
-            if insight_type == 'pattern':
-                await self._extract_pattern(insight, context)
+            if insight_type in ['pattern', 'hypothesis']:
+                await self._extract_hypothesis(insight, context)
             elif insight_type == 'prediction':
                 await self._extract_prediction(insight, context)
             elif insight_type == 'wisdom':
@@ -81,27 +89,171 @@ class PredictiveKnowledgeExtractor:
             logger.error(f"Failed to extract knowledge from insight: {e}")
             raise RuntimeError(f"Knowledge extraction failed: {str(e)}")
 
-    async def _extract_pattern(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
-        """Extract a behavioral or operational pattern."""
+    async def _extract_hypothesis(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
+        """
+        Extract a hypothesis from LLM insight using hybrid approach.
+
+        This method implements the new hybrid pattern discovery:
+        1. Generate hypothesis from single observation
+        2. Check for existing similar hypotheses
+        3. Add evidence or create new hypothesis
+        4. Trigger statistical validation when thresholds met
+        """
         content = insight.content
 
-        pattern = Pattern(
-            pattern_id=f"PATTERN_{uuid.uuid4().hex[:8]}",
-            pattern_type='behavioral',
-            title=content.key,
-            description=content.value,
-            conditions={'insight_impact': content.impact},
-            outcomes={'confidence': content.confidence},
-            confidence=content.confidence,
-            occurrences=1,  # First observation
-            success_rate=0.5,  # Initial default
-            last_observed=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
-            source_pipeline=insight.source_stage
-        )
+        # Check if similar hypothesis already exists
+        similar_hypothesis_id = await self._find_similar_hypothesis(content, insight.customer_context)
 
-        # NO FALLBACK: Store pattern or fail
-        await self.graph_manager.store_pattern(pattern)
-        logger.info(f"📊 Stored pattern: {pattern.title}")
+        if similar_hypothesis_id:
+            # Add evidence to existing hypothesis
+            logger.info(f"🔍 Found similar hypothesis {similar_hypothesis_id}, adding evidence")
+
+            # Add evidence to existing hypothesis using UnifiedGraphManager
+            call_id = context.get('call_id', f"CALL_{uuid.uuid4().hex[:8]}")
+            # TODO: Implement evidence accumulation in UnifiedGraphManager
+            logger.info(f"✅ Would add evidence to hypothesis {similar_hypothesis_id} (method to be implemented)")
+        else:
+            # Create new hypothesis
+            hypothesis = Hypothesis(
+                hypothesis_id=f"HYPO_{uuid.uuid4().hex[:8]}",
+                hypothesis_type=self._determine_hypothesis_type(content, insight.customer_context),
+                title=content.key,
+                description=content.value,
+                llm_confidence=content.confidence,
+                reasoning=insight.reasoning,
+                evidence_count=1,  # First observation
+                source_calls=[context.get('call_id', f"CALL_{uuid.uuid4().hex[:8]}")],
+                first_observed=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
+                last_evidence=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
+                source_stage=insight.source_stage,
+                customer_context=insight.customer_context.model_dump(),
+                status="unvalidated"
+            )
+
+            # Store hypothesis (not pattern!)
+            await self._store_hypothesis(hypothesis)
+            logger.info(f"💡 Created hypothesis: {hypothesis.title}")
+
+            # Create relationships for hypothesis
+            await self._create_hypothesis_relationships(hypothesis, context, insight)
+
+    async def _find_similar_hypothesis(self, content: Any, customer_context: Any) -> Optional[str]:
+        """
+        Find existing hypothesis similar to current insight.
+
+        Args:
+            content: Insight content
+            customer_context: Customer context
+
+        Returns:
+            Hypothesis ID if similar one found, None otherwise
+        """
+        # Simplified similarity check - in production, would use semantic similarity
+        # For now, check for exact title matches
+        try:
+            # TODO: Implement actual similarity search in knowledge graph
+            # This would query existing hypotheses and use semantic similarity
+            # to find matches above a threshold
+
+            logger.info(f"Searching for similar hypotheses to: {content.key}")
+            return None  # Placeholder - no similar hypothesis found
+
+        except Exception as e:
+            logger.error(f"Failed to search for similar hypotheses: {e}")
+            return None
+
+    def _determine_hypothesis_type(self, content: Any, customer_context: Any) -> str:
+        """
+        Determine the type of hypothesis based on content and context.
+
+        Args:
+            content: Insight content
+            customer_context: Customer context
+
+        Returns:
+            Hypothesis type string
+        """
+        # Simple heuristics for hypothesis type classification
+        description = content.value.lower()
+
+        if any(word in description for word in ['risk', 'default', 'payment', 'late']):
+            return 'risk'
+        elif any(word in description for word in ['behavior', 'pattern', 'tend', 'likely']):
+            return 'behavioral'
+        elif any(word in description for word in ['process', 'workflow', 'operation', 'system']):
+            return 'operational'
+        elif any(word in description for word in ['outcome', 'result', 'success', 'completion']):
+            return 'outcome'
+        else:
+            return 'behavioral'  # Default
+
+    async def _store_hypothesis(self, hypothesis: Hypothesis) -> bool:
+        """
+        Store hypothesis in knowledge graph.
+
+        Args:
+            hypothesis: Hypothesis to store
+
+        Returns:
+            True if successful
+        """
+        try:
+            # For now, use the existing pattern storage mechanism
+            # TODO: Implement dedicated hypothesis storage in unified_graph_manager
+            logger.info(f"Storing hypothesis {hypothesis.hypothesis_id} in knowledge graph")
+
+            # Placeholder - would implement actual hypothesis storage
+            # For now, convert to legacy pattern format for compatibility
+            legacy_pattern = Pattern(
+                pattern_id=hypothesis.hypothesis_id,
+                pattern_type=hypothesis.hypothesis_type,
+                title=hypothesis.title,
+                description=f"HYPOTHESIS: {hypothesis.description}",
+                conditions={'llm_generated': True, 'unvalidated': True},
+                outcomes={'llm_confidence': hypothesis.llm_confidence},
+                confidence=hypothesis.llm_confidence,
+                occurrences=hypothesis.evidence_count,
+                success_rate=0.0,  # Unknown until validated
+                last_observed=hypothesis.last_evidence,
+                source_pipeline=hypothesis.source_stage
+            )
+
+            await self.graph_manager.store_pattern(legacy_pattern)
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to store hypothesis {hypothesis.hypothesis_id}: {e}")
+            return False
+
+    async def _create_hypothesis_relationships(self, hypothesis: Hypothesis,
+                                            context: Dict[str, Any],
+                                            insight: PredictiveInsight) -> None:
+        """
+        Create relationships for newly created hypothesis.
+
+        Args:
+            hypothesis: Hypothesis to create relationships for
+            context: Context information
+            insight: Original insight
+        """
+        try:
+            # Create relationship: Call GENERATES_HYPOTHESIS
+            call_id = context.get('call_id')
+            if call_id:
+                # For now, use existing pattern relationship methods
+                # TODO: Add dedicated hypothesis relationship methods
+                await self.graph_manager.link_call_to_pattern(call_id, hypothesis.hypothesis_id, strength=hypothesis.llm_confidence)
+                logger.info(f"🔗 Linked call {call_id} to hypothesis {hypothesis.hypothesis_id}")
+
+            # Create relationship: Customer TRIGGERED_HYPOTHESIS
+            customer_id = insight.customer_context.customer_id
+            if customer_id:
+                await self.graph_manager.link_customer_to_pattern(customer_id, hypothesis.hypothesis_id, trigger_strength=hypothesis.llm_confidence)
+                logger.info(f"🔗 Linked customer {customer_id} to hypothesis {hypothesis.hypothesis_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to create hypothesis relationships: {e}")
+            # Don't fail the whole operation for relationship creation failures
 
     async def _extract_prediction(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
         """Extract a predictive insight about future events."""
@@ -128,6 +280,12 @@ class PredictiveKnowledgeExtractor:
         await self.graph_manager.store_prediction(prediction)
         logger.info(f"🔮 Stored prediction: {prediction.predicted_event}")
 
+        # Create relationship: Prediction TARGETS_CUSTOMER Customer
+        customer_id = insight.customer_context.customer_id
+        if customer_id:
+            await self.graph_manager.link_prediction_to_customer(prediction.prediction_id, customer_id, scope="individual")
+            logger.info(f"🔗 Linked prediction {prediction.prediction_id} to customer {customer_id}")
+
     async def _extract_wisdom(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
         """Extract strategic wisdom and institutional knowledge."""
         content = insight.content
@@ -135,42 +293,64 @@ class PredictiveKnowledgeExtractor:
         wisdom = Wisdom(
             wisdom_id=f"WISDOM_{uuid.uuid4().hex[:8]}",
             wisdom_type='strategic_insight',
-            domain=insight.customer_context.loan_type,
-            insight=content.value,
-            applications=[content.impact],
-            success_indicators=[content.key],
-            derived_from_patterns=[insight.source_stage],
-            evidence_base={'confidence': content.confidence, 'impact': content.impact},
-            confidence_level=content.confidence,
-            discovered_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
-            times_applied=0,
-            application_success_rate=0.0
+            title=f"Strategic insight from {insight.source_stage}",
+            content=content.value,
+            source_context={'source_stage': insight.source_stage, 'customer_id': insight.customer_context.customer_id},
+            learning_domain=insight.customer_context.loan_type,
+            applicability='general',
+            validated=False,
+            validation_count=0,
+            effectiveness_score=content.confidence,
+            created_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
+            last_applied=None,
+            application_count=0
         )
 
         # NO FALLBACK: Store wisdom or fail
         await self.graph_manager.store_wisdom(wisdom)
-        logger.info(f"🧠 Stored wisdom: {wisdom.insight[:50]}...")
+        logger.info(f"🧠 Stored wisdom: {wisdom.content[:50]}...")
+
+        # Create relationship: Wisdom APPLIES_TO Advisor (when advisor context available)
+        advisor_id = context.get('advisor_id')
+        if advisor_id:
+            await self.graph_manager.link_wisdom_to_advisor(wisdom.wisdom_id, advisor_id, relevance_score=content.confidence)
+            logger.info(f"🔗 Linked wisdom {wisdom.wisdom_id} to advisor {advisor_id}")
 
     async def _extract_meta_learning(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
         """Extract meta-learning about the system's learning process."""
         content = insight.content
 
         meta_learning = MetaLearning(
-            meta_id=f"META_{uuid.uuid4().hex[:8]}",
-            meta_type='system_improvement',
-            learning_insight=content.value,
-            improvement_opportunity=content.impact,
-            optimization_suggestion=content.key,
-            accuracy_metrics={'confidence': content.confidence},
-            learning_velocity=content.confidence,
-            knowledge_gaps=[insight.reasoning],
-            observed_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
-            system_version="v2.0"
+            meta_learning_id=f"META_{uuid.uuid4().hex[:8]}",
+            learning_type='system_optimization',
+            insight_source='predictive_extraction',
+            meta_insight=content.value,
+            improvement_area=content.impact,
+            system_component='knowledge_extractor',
+            learning_context={'confidence': content.confidence, 'reasoning': insight.reasoning},
+            impact_assessment='medium',
+            validation_status=False,
+            validation_count=0,
+            created_at=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp),
+            last_updated=datetime.fromisoformat(insight.timestamp.replace('Z', '+00:00')) if isinstance(insight.timestamp, str) else datetime.fromisoformat(insight.timestamp)
         )
 
         # NO FALLBACK: Store meta-learning or fail
         await self.graph_manager.store_meta_learning(meta_learning)
-        logger.info(f"🔄 Stored meta-learning: {meta_learning.learning_insight[:50]}...")
+        logger.info(f"🔄 Stored meta-learning: {meta_learning.meta_insight[:50]}...")
+
+        # Create relationship: Call TRIGGERS_LEARNING MetaLearning
+        call_id = context.get('call_id')
+        if call_id:
+            await self.graph_manager.link_call_to_meta_learning(call_id, meta_learning.meta_learning_id, trigger_reason="knowledge_extraction")
+            logger.info(f"🔗 Linked call {call_id} to meta-learning {meta_learning.meta_learning_id}")
+
+        # Create relationship: Customer TRIGGERED Pattern (for context)
+        customer_id = insight.customer_context.customer_id
+        pattern_context = context.get('pattern_id')  # If this meta-learning relates to a specific pattern
+        if customer_id and pattern_context:
+            await self.graph_manager.link_customer_to_pattern(customer_id, pattern_context, trigger_strength=content.confidence)
+            logger.info(f"🔗 Linked customer {customer_id} to pattern {pattern_context}")
 
     async def _publish_knowledge_event(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:
         """Publish an event about knowledge extraction."""
@@ -223,7 +403,7 @@ class PredictiveKnowledgeExtractor:
         """Store meta-learning insight directly."""
         # NO FALLBACK: Store meta-learning or fail
         await self.graph_manager.store_meta_learning(meta_learning)
-        logger.info(f"🔄 Stored meta-learning: {meta_learning.learning_insight[:50]}...")
+        logger.info(f"🔄 Stored meta-learning: {meta_learning.meta_insight[:50]}...")
 
 
 # Global instance

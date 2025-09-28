@@ -178,6 +178,38 @@ class PlanService:
                             )
                             logger.info(f"🔗 Linked pattern {pattern_id} to advisor {advisor_id}")
 
+                        # Create Wisdom nodes from advisor coaching insights
+                        if advisor_actions:
+                            # Import Wisdom here to avoid circular dependency
+                            from ..infrastructure.graph.knowledge_types import Wisdom
+                            from datetime import datetime, timedelta
+
+                            for i, coaching_item in enumerate(advisor_actions[:3]):  # Limit to top 3 coaching items
+                                wisdom_id = f"WISDOM_{uuid.uuid4().hex[:8]}"
+
+                                # Extract wisdom from coaching content
+                                wisdom_content = coaching_item if isinstance(coaching_item, str) else str(coaching_item)
+
+                                wisdom = Wisdom(
+                                    wisdom_id=wisdom_id,
+                                    wisdom_type='coaching_insight',
+                                    title=f"Advisor coaching insight {i+1}",
+                                    content=wisdom_content,
+                                    source_context={'plan_id': plan_result["plan_id"], 'transcript_id': transcript_id},
+                                    learning_domain='customer_service',
+                                    applicability='general',
+                                    validated=False,
+                                    validation_count=0,
+                                    effectiveness_score=0.8,  # Default until validation
+                                    created_at=datetime.utcnow(),
+                                    last_applied=None,
+                                    application_count=0
+                                )
+
+                                # Store the wisdom in the graph
+                                await unified_graph.store_wisdom(wisdom)
+                                logger.info(f"🧠 Created wisdom {wisdom_id} from coaching insight")
+
                     add_span_event("plan.advisor_patterns_linked", advisor_id=advisor_id)
 
                 except Exception as e:

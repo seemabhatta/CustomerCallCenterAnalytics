@@ -38,18 +38,14 @@ def handle_transcript_created(sender, **kwargs):
 
         # Create or update entities
         graph_manager.create_or_update_customer_sync(customer_id)
-        graph_manager.create_or_update_advisor_sync(advisor_id)
 
         # Create transcript node with rich attributes
-        graph_manager.create_transcript(
+        graph_manager.create_transcript_sync(
             transcript_id=transcript_id,
             customer_id=customer_id,
-            advisor_id=advisor_id,
-            topic=topic,
-            urgency=urgency,
-            channel=channel,
-            started_at=started_at,
-            status='active'
+            content=payload.get('content', ''),
+            duration_seconds=payload.get('duration_seconds', 0),
+            channel=channel
         )
 
         logger.info(f"✅ Graph updated for transcript created: {transcript_id}")
@@ -81,19 +77,21 @@ def handle_analysis_completed(sender, **kwargs):
         confidence_score = payload.get('confidence_score', 0.0)
 
         # Create analysis node
-        graph_manager.create_analysis(
-            analysis_id=analysis_id,
-            transcript_id=transcript_id,
-            intent=intent,
-            urgency_level=urgency_level,
-            sentiment=sentiment,
-            risk_score=risk_score,
-            compliance_flags=compliance_flags,
-            confidence_score=confidence_score
-        )
+        analysis_data = {
+            'analysis_id': analysis_id,
+            'call_id': transcript_id,  # Use transcript_id as call_id
+            'transcript_id': transcript_id,
+            'intent': intent,
+            'urgency_level': urgency_level,
+            'sentiment': sentiment,
+            'confidence_score': confidence_score,
+            'risk_factors': str(risk_score),  # Convert to string
+            'compliance_issues': str(compliance_flags),  # Convert to string
+        }
+        graph_manager.create_analysis_sync(analysis_data)
 
         # Update customer risk profile based on analysis
-        graph_manager.update_customer_risk_profile(
+        graph_manager.update_customer_risk_profile_sync(
             customer_id=customer_id,
             risk_score=risk_score,
             compliance_flags=compliance_flags
@@ -198,6 +196,218 @@ def handle_issue_resolved(sender, **kwargs):
         raise GraphManagerError(error_msg)
 
 
+def handle_plan_generated(sender, **kwargs):
+    """Handle PLAN_GENERATED event by updating knowledge graph."""
+    try:
+        event: Event = kwargs['event']
+        payload = event.payload
+
+        graph_manager = get_unified_graph_manager()
+
+        # Extract plan data
+        plan_id = payload['plan_id']
+        analysis_id = payload['analysis_id']
+        transcript_id = payload['transcript_id']
+        customer_id = payload['customer_id']
+        priority_level = payload.get('priority_level', 'medium')
+        action_count = payload.get('action_count', 0)
+        urgency_level = payload.get('urgency_level', 'medium')
+
+        # Create plan node (async)
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            # Schedule async plan creation
+            loop.create_task(graph_manager.create_plan_node(
+                plan_id=plan_id,
+                analysis_id=analysis_id,
+                transcript_id=transcript_id,
+                customer_id=customer_id,
+                priority_level=priority_level,
+                action_count=action_count,
+                urgency_level=urgency_level
+            ))
+            logger.info(f"📋 Scheduled plan creation: {plan_id}")
+        except RuntimeError:
+            # No event loop, skip async operation
+            logger.warning(f"No event loop for async plan creation: {plan_id}")
+
+        logger.info(f"✅ Graph updated for plan generated: {plan_id}")
+        return True
+
+    except Exception as e:
+        error_msg = f"Failed to handle PLAN_GENERATED event: {e}"
+        logger.error(error_msg)
+        raise GraphManagerError(error_msg)
+
+
+def handle_workflow_created(sender, **kwargs):
+    """Handle WORKFLOW_CREATED event by updating knowledge graph."""
+    try:
+        event: Event = kwargs['event']
+        payload = event.payload
+
+        graph_manager = get_unified_graph_manager()
+
+        # Extract workflow data
+        workflow_id = payload['workflow_id']
+        plan_id = payload['plan_id']
+        customer_id = payload['customer_id']
+        advisor_id = payload.get('advisor_id', 'SYSTEM')
+        step_count = payload.get('step_count', 0)
+        estimated_duration = payload.get('estimated_duration', 30)
+        priority = payload.get('priority', 'medium')
+
+        # Create workflow node (async)
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            # Schedule async workflow creation
+            loop.create_task(graph_manager.create_workflow_node(
+                workflow_id=workflow_id,
+                plan_id=plan_id,
+                customer_id=customer_id,
+                advisor_id=advisor_id,
+                step_count=step_count,
+                estimated_duration=estimated_duration,
+                priority=priority
+            ))
+            logger.info(f"⚡ Scheduled workflow creation: {workflow_id}")
+        except RuntimeError:
+            # No event loop, skip async operation
+            logger.warning(f"No event loop for async workflow creation: {workflow_id}")
+
+        logger.info(f"✅ Graph updated for workflow created: {workflow_id}")
+        return True
+
+    except Exception as e:
+        error_msg = f"Failed to handle WORKFLOW_CREATED event: {e}"
+        logger.error(error_msg)
+        raise GraphManagerError(error_msg)
+
+
+def handle_execution_completed(sender, **kwargs):
+    """Handle EXECUTION_COMPLETED event by updating knowledge graph."""
+    try:
+        event: Event = kwargs['event']
+        payload = event.payload
+
+        graph_manager = get_unified_graph_manager()
+
+        # Extract execution data
+        execution_id = payload['execution_id']
+        workflow_id = payload['workflow_id']
+        step_id = payload.get('step_id')
+        success = payload.get('success', False)
+        duration_seconds = payload.get('duration_seconds', 0)
+        error_message = payload.get('error_message')
+        result_data = payload.get('result_data', {})
+
+        # Create execution result node (async)
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            # Schedule async execution result creation
+            loop.create_task(graph_manager.create_execution_result(
+                execution_id=execution_id,
+                workflow_id=workflow_id,
+                step_id=step_id,
+                success=success,
+                duration_seconds=duration_seconds,
+                error_message=error_message,
+                result_data=result_data
+            ))
+            logger.info(f"🎯 Scheduled execution result creation: {execution_id}")
+        except RuntimeError:
+            # No event loop, skip async operation
+            logger.warning(f"No event loop for async execution result creation: {execution_id}")
+
+        logger.info(f"✅ Graph updated for execution completed: {execution_id}")
+        return True
+
+    except Exception as e:
+        error_msg = f"Failed to handle EXECUTION_COMPLETED event: {e}"
+        logger.error(error_msg)
+        raise GraphManagerError(error_msg)
+
+
+def handle_knowledge_extracted(sender, **kwargs):
+    """Handle KNOWLEDGE_EXTRACTED event by updating knowledge graph."""
+    try:
+        event: Event = kwargs['event']
+        payload = event.payload
+
+        graph_manager = get_unified_graph_manager()
+
+        # Extract knowledge data
+        insight_type = payload.get('insight_type', 'unknown')
+        source_stage = payload.get('source_stage', 'unknown')
+        priority = payload.get('priority', 'medium')
+        learning_value = payload.get('learning_value', 'routine')
+        reasoning = payload.get('reasoning', '')
+        context = payload.get('context', {})
+
+        # Different handling based on insight type
+        if insight_type.lower() == 'hypothesis':
+            hypothesis_id = f"HYPO_{context.get('analysis_id', 'UNK')[:8]}"
+            # Create hypothesis node (async)
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(graph_manager.create_hypothesis_node(
+                    hypothesis_id=hypothesis_id,
+                    source_stage=source_stage,
+                    priority=priority,
+                    reasoning=reasoning,
+                    context=context
+                ))
+                logger.info(f"💡 Scheduled hypothesis creation: {hypothesis_id}")
+            except RuntimeError:
+                logger.warning(f"No event loop for async hypothesis creation: {hypothesis_id}")
+
+        elif insight_type.lower() == 'prediction':
+            prediction_id = f"PRED_{context.get('customer_id', 'UNK')[:8]}"
+            # Create prediction node (async)
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(graph_manager.create_prediction_node(
+                    prediction_id=prediction_id,
+                    source_stage=source_stage,
+                    priority=priority,
+                    reasoning=reasoning,
+                    context=context
+                ))
+                logger.info(f"🔮 Scheduled prediction creation: {prediction_id}")
+            except RuntimeError:
+                logger.warning(f"No event loop for async prediction creation: {prediction_id}")
+
+        elif insight_type.lower() == 'wisdom':
+            wisdom_id = f"WISDOM_{context.get('analysis_id', 'UNK')[:8]}"
+            # Create wisdom node (async)
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(graph_manager.create_wisdom_node(
+                    wisdom_id=wisdom_id,
+                    source_stage=source_stage,
+                    priority=priority,
+                    reasoning=reasoning,
+                    context=context
+                ))
+                logger.info(f"🧠 Scheduled wisdom creation: {wisdom_id}")
+            except RuntimeError:
+                logger.warning(f"No event loop for async wisdom creation: {wisdom_id}")
+
+        logger.info(f"✅ Graph updated for knowledge extracted: {insight_type} from {source_stage}")
+        return True
+
+    except Exception as e:
+        error_msg = f"Failed to handle KNOWLEDGE_EXTRACTED event: {e}"
+        logger.error(error_msg)
+        raise GraphManagerError(error_msg)
+
+
 def handle_document_acknowledged(sender, **kwargs):
     """Handle DOCUMENT_ACKNOWLEDGED event by updating knowledge graph."""
     try:
@@ -271,9 +481,9 @@ def handle_advisor_events(sender, **kwargs):
         # Extract advisor data
         advisor_id = payload['advisor_id']
 
-        # Create or update advisor with any additional data
-        advisor_data = {k: v for k, v in payload.items() if k != 'advisor_id'}
-        graph_manager.create_or_update_advisor_sync(advisor_id, **advisor_data)
+        # Note: Advisor schema not implemented yet - would create advisor node here
+        # advisor_data = {k: v for k, v in payload.items() if k != 'advisor_id'}
+        # graph_manager.create_or_update_advisor_sync(advisor_id, **advisor_data)
 
         logger.info(f"✅ Graph updated for advisor event: {advisor_id}")
         return True
@@ -320,6 +530,34 @@ def initialize_graph_handlers():
             "resolution_handler"
         )
 
+        # Register plan handler
+        subscribe_to_events(
+            [EventType.PLAN_GENERATED],
+            handle_plan_generated,
+            "plan_handler"
+        )
+
+        # Register workflow handler
+        subscribe_to_events(
+            [EventType.WORKFLOW_CREATED],
+            handle_workflow_created,
+            "workflow_handler"
+        )
+
+        # Register execution handler
+        subscribe_to_events(
+            [EventType.EXECUTION_COMPLETED],
+            handle_execution_completed,
+            "execution_handler"
+        )
+
+        # Register knowledge extraction handler
+        subscribe_to_events(
+            [EventType.KNOWLEDGE_EXTRACTED],
+            handle_knowledge_extracted,
+            "knowledge_handler"
+        )
+
         # Register document handler
         subscribe_to_events(
             [EventType.DOCUMENT_ACKNOWLEDGED],
@@ -345,6 +583,10 @@ def initialize_graph_handlers():
         logger.info("📊 Registered handlers for:")
         logger.info("  - TRANSCRIPT_CREATED")
         logger.info("  - ANALYSIS_COMPLETED")
+        logger.info("  - PLAN_GENERATED")
+        logger.info("  - WORKFLOW_CREATED")
+        logger.info("  - EXECUTION_COMPLETED")
+        logger.info("  - KNOWLEDGE_EXTRACTED")
         logger.info("  - WORKFLOW_ESCALATED")
         logger.info("  - ISSUE_RESOLVED")
         logger.info("  - DOCUMENT_ACKNOWLEDGED")
@@ -362,6 +604,10 @@ def initialize_graph_handlers():
 __all__ = [
     'handle_transcript_created',
     'handle_analysis_completed',
+    'handle_plan_generated',
+    'handle_workflow_created',
+    'handle_execution_completed',
+    'handle_knowledge_extracted',
     'handle_workflow_escalated',
     'handle_issue_resolved',
     'handle_document_acknowledged',

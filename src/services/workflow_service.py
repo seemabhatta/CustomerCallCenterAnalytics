@@ -195,6 +195,54 @@ class WorkflowService:
             await knowledge_extractor.extract_knowledge(insight, context)
             logger.info(f"📊 Extracted workflow knowledge for {workflow_id}")
 
+        # Create MetaLearning nodes for system improvement from workflow insights
+        try:
+            from ..infrastructure.graph.unified_graph_manager import get_unified_graph_manager
+            from ..infrastructure.graph.knowledge_types import MetaLearning
+            from datetime import datetime
+
+            unified_graph = get_unified_graph_manager()
+
+            # Extract system improvement insights from workflow complexity and risk patterns
+            workflow_complexity = workflow_data.get('workflow_data', {}).get('complexity_assessment', {})
+            risk_level = workflow_data.get('risk_level', 'medium')
+            workflow_type = workflow_data.get('workflow_type', 'BORROWER')
+
+            if workflow_complexity and risk_level:
+                meta_learning_id = f"META_{uuid.uuid4().hex[:8]}"
+
+                # Create insights about system learning opportunities
+                learning_insight = f"Workflow complexity analysis: {workflow_complexity.get('reasoning', 'Complex workflow pattern')}"
+                improvement_area = f"{workflow_type.lower()}_workflow_optimization"
+
+                meta_learning = MetaLearning(
+                    meta_learning_id=meta_learning_id,
+                    learning_type='system_optimization',
+                    insight_source='workflow_generation',
+                    meta_insight=learning_insight,
+                    improvement_area=improvement_area,
+                    system_component='workflow_engine',
+                    learning_context={
+                        'workflow_id': workflow_id,
+                        'plan_id': plan_id,
+                        'workflow_type': workflow_type,
+                        'risk_level': risk_level
+                    },
+                    impact_assessment='medium',  # Could be derived from risk level
+                    validation_status=False,
+                    validation_count=0,
+                    created_at=datetime.utcnow(),
+                    last_updated=datetime.utcnow()
+                )
+
+                # Store the meta learning in the graph
+                await unified_graph.store_meta_learning(meta_learning)
+                logger.info(f"🧠 Created meta learning {meta_learning_id} from workflow insights")
+
+        except Exception as e:
+            logger.warning(f"Failed to create meta learning nodes: {e}")
+            # Continue execution - meta learning creation is supplementary
+
         # Publish workflow created event
         workflow_event = create_workflow_created_event(
             workflow_id=workflow_id,
