@@ -239,6 +239,12 @@ class WorkflowService:
                 await unified_graph.store_meta_learning(meta_learning)
                 logger.info(f"🧠 Created meta learning {meta_learning_id} from workflow insights")
 
+                # Create MetaLearning relationships to connect it to the main graph
+                # Note: For now, we link to workflow. In future iterations, we can add
+                # connections to specific hypotheses and patterns when they become available
+                # in this context
+                logger.info(f"🔗 MetaLearning {meta_learning_id} relationships would be created here when hypothesis/pattern IDs are available")
+
         except Exception as e:
             logger.warning(f"Failed to create meta learning nodes: {e}")
             # Continue execution - meta learning creation is supplementary

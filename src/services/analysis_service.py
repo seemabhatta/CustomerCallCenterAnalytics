@@ -50,9 +50,15 @@ class AnalysisService:
         transcript_id = request_data.get("transcript_id")
         if not transcript_id:
             raise ValueError("transcript_id is required")
-        
+
         set_span_attributes(transcript_id=transcript_id, operation="create_analysis")
         add_span_event("analysis.creation_started", transcript_id=transcript_id)
+
+        # Check if analysis already exists for this transcript - NO FALLBACK
+        existing_analysis = await self.get_by_transcript_id(transcript_id)
+        if existing_analysis:
+            add_span_event("analysis.already_exists", transcript_id=transcript_id, analysis_id=existing_analysis.get('analysis_id'))
+            return existing_analysis
         
         # Get transcript from store
         add_span_event("analysis.fetching_transcript", transcript_id=transcript_id)
@@ -160,17 +166,24 @@ class AnalysisService:
 
                 # Create call node
                 call_id = f"CALL_{transcript_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                advisor_id = "ADV_DEFAULT"  # Could be extracted from transcript metadata
                 await unified_graph.create_call_node(
                     call_id=call_id,
                     transcript_id=transcript_id,
                     customer_id=customer_id,
-                    advisor_id="ADV_DEFAULT",  # Could be extracted from transcript metadata
+                    advisor_id=advisor_id,
                     topic=getattr(transcript, 'topic', 'general inquiry'),
                     urgency_level=analysis_result.get('urgency_level', 'medium'),
                     sentiment=analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
                     resolved=False,  # Initially not resolved
                     call_date=datetime.utcnow().isoformat()
                 )
+
+                # Create Call relationships to connect it to the main graph
+                await unified_graph.link_call_to_customer(call_id, customer_id)
+                await unified_graph.link_call_to_advisor(call_id, advisor_id)
+                await unified_graph.link_call_to_transcript(call_id, transcript_id)
+                logger.info(f"🔗 Created Call relationships for {call_id}")
 
                 # Import types here to avoid circular dependency
                 from ..infrastructure.graph.knowledge_types import Pattern, Prediction

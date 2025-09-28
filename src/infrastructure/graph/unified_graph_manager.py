@@ -70,6 +70,54 @@ class UnifiedGraphManager:
         # Schema initialization flag
         self._schema_initialized = False
 
+        # Check if schema already exists (initialized externally)
+        self._check_and_mark_existing_schema()
+
+    def _check_and_mark_existing_schema(self):
+        """Check if schema already exists and mark as initialized if so."""
+        try:
+            # Try to query for a core table that should exist if schema is initialized
+            # Use Customer table as it's one of the main tables that should always exist
+            result = self.conn.execute("MATCH (c:Customer) RETURN count(*)")
+            # If we can execute this query without error, schema exists
+            self._schema_initialized = True
+            logger.info("✅ Detected existing schema - skipping initialization")
+        except Exception:
+            # Schema doesn't exist yet, normal initialization needed
+            logger.debug("🔄 No existing schema detected - will initialize when needed")
+            pass
+
+    def _format_timestamp(self, dt = None) -> str:
+        """
+        Format datetime object to KuzuDB-compatible timestamp string.
+
+        Args:
+            dt: datetime object, string, or None. If None, uses current UTC time.
+                If string, validates and reformats. If datetime, formats appropriately.
+
+        Returns:
+            Timestamp string in format that KuzuDB accepts as TIMESTAMP type.
+        """
+        if dt is None:
+            dt = datetime.utcnow()
+        elif isinstance(dt, str):
+            # If it's already a string, try to parse it first to ensure valid format
+            try:
+                dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                # If parsing fails, assume it's already in the right format
+                return dt
+        elif hasattr(dt, 'isoformat'):
+            # It's a datetime-like object, use it directly
+            pass
+        else:
+            # For any other type, convert to string first
+            dt = str(dt)
+            return dt
+
+        # KuzuDB expects timestamp in format: YYYY-MM-DD HH:MM:SS[.ffffff]
+        return dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+
     async def _execute_async(self, query: str, parameters: Optional[Dict[str, Any]] = None):
         """Execute ALL KuzuDB operations through the queue for complete serialization."""
         return await self._queue_write_operation(query, parameters)
@@ -519,8 +567,8 @@ class UnifiedGraphManager:
             'duration_minutes': call_data.get('duration_minutes', 0.0),
             'resolved': call_data.get('resolved', False),
             'escalated': call_data.get('escalated', False),
-            'call_date': call_data.get('call_date', datetime.utcnow()),
-            'created_at': datetime.utcnow()
+            'call_date': call_data.get('call_date', self._format_timestamp()),
+            'created_at': self._format_timestamp()
         }
 
         await self._execute_async(query, params)
@@ -563,7 +611,7 @@ class UnifiedGraphManager:
             'customer_satisfaction': analysis_data.get('customer_satisfaction', ''),
             'analysis_summary': analysis_data.get('analysis_summary', ''),
             'llm_reasoning': analysis_data.get('llm_reasoning', ''),
-            'analyzed_at': analysis_data.get('analyzed_at', datetime.utcnow()),
+            'analyzed_at': analysis_data.get('analyzed_at', self._format_timestamp()),
             'analyzer_version': analysis_data.get('analyzer_version', 'v1.0'),
             'processing_time_ms': analysis_data.get('processing_time_ms', 0)
         }
@@ -600,8 +648,8 @@ class UnifiedGraphManager:
             'llm_confidence': hypothesis_data.get('llm_confidence', 0.0),
             'reasoning': hypothesis_data.get('reasoning', ''),
             'evidence_count': hypothesis_data.get('evidence_count', 1),
-            'first_observed': hypothesis_data.get('first_observed', datetime.utcnow()),
-            'last_evidence': hypothesis_data.get('last_evidence', datetime.utcnow()),
+            'first_observed': hypothesis_data.get('first_observed', self._format_timestamp()),
+            'last_evidence': hypothesis_data.get('last_evidence', self._format_timestamp()),
             'source_stage': hypothesis_data.get('source_stage', 'analysis'),
             'customer_context': hypothesis_data.get('customer_context', ''),
             'status': hypothesis_data.get('status', 'unvalidated')
@@ -624,7 +672,7 @@ class UnifiedGraphManager:
         params = {
             'call_id': call_id,
             'analysis_id': analysis_id,
-            'generated_at': datetime.utcnow(),
+            'generated_at': self._format_timestamp(),
             'processing_time_ms': processing_time_ms
         }
 
@@ -650,7 +698,7 @@ class UnifiedGraphManager:
             'analysis_id': analysis_id,
             'hypothesis_id': hypothesis_id,
             'llm_confidence': confidence,
-            'generated_at': datetime.utcnow()
+            'generated_at': self._format_timestamp()
         }
 
         try:
@@ -703,7 +751,7 @@ class UnifiedGraphManager:
                 'priority_level': priority_level,
                 'action_count': action_count,
                 'urgency_level': urgency_level,
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -739,7 +787,7 @@ class UnifiedGraphManager:
                 'step_count': step_count,
                 'estimated_duration': estimated_duration,
                 'priority': priority,
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -775,7 +823,7 @@ class UnifiedGraphManager:
                 'duration_seconds': duration_seconds,
                 'error_message': error_message,
                 'result_data': str(result_data),  # Convert to string for storage
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -808,7 +856,7 @@ class UnifiedGraphManager:
                 'priority': priority,
                 'reasoning': reasoning,
                 'context': str(context),  # Convert to string for storage
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -843,7 +891,7 @@ class UnifiedGraphManager:
                 'priority': priority,
                 'reasoning': reasoning,
                 'context': str(context),  # Convert to string for storage
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -877,7 +925,7 @@ class UnifiedGraphManager:
                 'priority': priority,
                 'reasoning': reasoning,
                 'context': str(context),  # Convert to string for storage
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -896,7 +944,7 @@ class UnifiedGraphManager:
             query = """
             MERGE (c:Customer {customer_id: $customer_id})
             ON CREATE SET
-                c.created_at = $created_at,
+                c.created_at = CAST($created_at AS STRING),
                 c.name = $name,
                 c.email = $email,
                 c.phone = $phone
@@ -908,7 +956,7 @@ class UnifiedGraphManager:
 
             parameters = {
                 'customer_id': customer_id,
-                'created_at': datetime.utcnow(),
+                'created_at': self._format_timestamp(),
                 'name': kwargs.get('name', f'Customer_{customer_id}'),
                 'email': kwargs.get('email', f'{customer_id}@example.com'),
                 'phone': kwargs.get('phone', '555-0000')
@@ -945,7 +993,7 @@ class UnifiedGraphManager:
                 'content': kwargs.get('content', ''),
                 'duration_seconds': kwargs.get('duration_seconds', 0),
                 'channel': kwargs.get('channel', 'phone'),
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             conn.execute(query, parameters)
@@ -994,7 +1042,7 @@ class UnifiedGraphManager:
                 'customer_satisfaction': analysis_data.get('customer_satisfaction', ''),
                 'analysis_summary': analysis_data.get('analysis_summary', ''),
                 'llm_reasoning': analysis_data.get('llm_reasoning', ''),
-                'analyzed_at': analysis_data.get('analyzed_at', datetime.utcnow()),
+                'analyzed_at': analysis_data.get('analyzed_at', self._format_timestamp()),
                 'analyzer_version': analysis_data.get('analyzer_version', 'v1.0'),
                 'processing_time_ms': analysis_data.get('processing_time_ms', 0)
             }
@@ -1020,7 +1068,7 @@ class UnifiedGraphManager:
                 'customer_id': customer_id,
                 'risk_score': risk_score,
                 'compliance_flags': str(compliance_flags),  # Convert list to string for storage
-                'last_updated': datetime.utcnow()
+                'last_updated': self._format_timestamp()
             }
             conn.execute(query, params)
             logger.info(f"🎯 Updated risk profile for customer: {customer_id}")
@@ -1056,7 +1104,7 @@ class UnifiedGraphManager:
                 'channel': channel,
                 'started_at': started_at,
                 'status': status,
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             self._connection.execute(query, parameters)
@@ -1085,6 +1133,7 @@ class UnifiedGraphManager:
     async def store_prediction(self, prediction) -> str:
         """Store prediction in knowledge graph."""
         try:
+            # Use KuzuDB Cypher syntax
             query = """
             CREATE (p:Prediction {
                 prediction_id: $prediction_id,
@@ -1094,6 +1143,7 @@ class UnifiedGraphManager:
                 predicted_event: $predicted_event,
                 probability: $probability,
                 confidence: $confidence,
+                time_horizon: $scope,
                 created_at: $created_at,
                 expires_at: $expires_at
             })
@@ -1107,55 +1157,83 @@ class UnifiedGraphManager:
                 'predicted_event': prediction.predicted_event,
                 'probability': prediction.probability,
                 'confidence': prediction.confidence,
-                'created_at': prediction.created_at if hasattr(prediction.created_at, 'isoformat') else datetime.utcnow(),
-                'expires_at': prediction.expires_at if hasattr(prediction.expires_at, 'isoformat') else datetime.utcnow()
+                'scope': getattr(prediction, 'time_horizon', 'short_term'),
+                'source_stage': 'analysis',
+                'priority': 'medium',
+                'created_at': self._format_timestamp(prediction.created_at),
+                'expires_at': self._format_timestamp(prediction.expires_at)
             }
 
             await self._execute_async(query, parameters)
             logger.info(f"🔮 Stored prediction: {prediction.prediction_id}")
+
+            # Verify the node was created
+            verify_query = "MATCH (p:Prediction) WHERE p.prediction_id = $prediction_id RETURN count(*)"
+            verify_params = {'prediction_id': prediction.prediction_id}
+            result = await self._execute_async(verify_query, verify_params)
+            logger.info(f"✅ Verified prediction {prediction.prediction_id} - count: {result}")
+
             return prediction.prediction_id
 
         except Exception as e:
+            logger.error(f"❌ Prediction storage failed for {getattr(prediction, 'prediction_id', 'unknown')}: {str(e)}")
             raise UnifiedGraphManagerError(f"Prediction storage failed: {str(e)}")
 
     async def store_pattern(self, pattern) -> str:
         """Store pattern in knowledge graph."""
         try:
-            # Store as Hypothesis (new approach)
+            # Store as Hypothesis using KuzuDB Cypher syntax
             query = """
             CREATE (h:Hypothesis {
-                hypothesis_id: $pattern_id,
-                pattern_type: $pattern_type,
+                hypothesis_id: $hypothesis_id,
+                hypothesis_text: $hypothesis_text,
                 title: $title,
                 description: $description,
                 confidence: $confidence,
-                evidence_count: $occurrences,
+                source_entity_type: $source_entity_type,
+                source_entity_id: $source_entity_id,
+                pattern_type: $pattern_type,
+                evidence_count: $evidence_count,
                 success_rate: $success_rate,
                 last_observed: $last_observed,
                 source_pipeline: $source_pipeline,
-                status: 'unvalidated',
-                created_at: $created_at
+                occurrences: $occurrences,
+                created_at: $created_at,
+                status: $status
             })
             """
 
             parameters = {
-                'pattern_id': pattern.pattern_id,
-                'pattern_type': pattern.pattern_type,
+                'hypothesis_id': pattern.pattern_id,
+                'hypothesis_text': pattern.title,  # Use title as hypothesis text
                 'title': pattern.title,
                 'description': pattern.description,
                 'confidence': pattern.confidence,
-                'occurrences': pattern.occurrences,
+                'source_entity_type': 'Pattern',
+                'source_entity_id': pattern.pattern_id,
+                'pattern_type': pattern.pattern_type,
+                'evidence_count': pattern.occurrences,
                 'success_rate': pattern.success_rate,
-                'last_observed': pattern.last_observed.isoformat() if hasattr(pattern.last_observed, 'isoformat') else str(pattern.last_observed),
+                'last_observed': self._format_timestamp(pattern.last_observed),
                 'source_pipeline': pattern.source_pipeline,
-                'created_at': datetime.utcnow()
+                'occurrences': pattern.occurrences,
+                'created_at': self._format_timestamp(),
+                'status': 'unvalidated'
             }
 
             await self._execute_async(query, parameters)
             logger.info(f"📊 Stored pattern as hypothesis: {pattern.pattern_id}")
+
+            # Verify the node was created
+            verify_query = "MATCH (h:Hypothesis) WHERE h.hypothesis_id = $pattern_id RETURN count(*)"
+            verify_params = {'pattern_id': pattern.pattern_id}
+            result = await self._execute_async(verify_query, verify_params)
+            logger.info(f"✅ Verified hypothesis {pattern.pattern_id} - count: {result}")
+
             return pattern.pattern_id
 
         except Exception as e:
+            logger.error(f"❌ Pattern storage failed for {getattr(pattern, 'pattern_id', 'unknown')}: {str(e)}")
             raise UnifiedGraphManagerError(f"Pattern storage failed: {str(e)}")
 
     async def create_or_update_customer(self, customer_id: str, **kwargs) -> str:
@@ -1177,9 +1255,9 @@ class UnifiedGraphManager:
 
             parameters = {
                 'customer_id': customer_id,
-                'created_at': datetime.utcnow(),
+                'created_at': self._format_timestamp(),
                 'total_interactions': kwargs.get('total_interactions', 1),
-                'last_contact_date': kwargs.get('last_contact_date', datetime.utcnow()),
+                'last_contact_date': kwargs.get('last_contact_date', self._format_timestamp()),
                 'risk_score': kwargs.get('risk_score', 0.5),
                 'satisfaction_score': kwargs.get('satisfaction_score', 0.7)
             }
@@ -1190,6 +1268,58 @@ class UnifiedGraphManager:
 
         except Exception as e:
             raise UnifiedGraphManagerError(f"Customer creation failed: {str(e)}")
+
+    async def create_or_update_advisor(self, advisor_id: str, **kwargs) -> str:
+        """Create or update advisor in knowledge graph."""
+        try:
+            query = """
+            MERGE (a:Advisor {advisor_id: $advisor_id})
+            ON CREATE SET
+                a.created_at = $created_at,
+                a.name = $name,
+                a.department = $department,
+                a.skill_level = $skill_level,
+                a.performance_score = $performance_score,
+                a.total_calls_handled = $total_calls_handled,
+                a.average_resolution_time = $average_resolution_time,
+                a.customer_satisfaction_rating = $customer_satisfaction_rating,
+                a.coaching_sessions_completed = $coaching_sessions_completed,
+                a.last_performance_review = $last_performance_review,
+                a.hire_date = $hire_date,
+                a.status = $status
+            ON MATCH SET
+                a.name = $name,
+                a.department = $department,
+                a.skill_level = $skill_level,
+                a.performance_score = $performance_score,
+                a.total_calls_handled = a.total_calls_handled + 1,
+                a.customer_satisfaction_rating = $customer_satisfaction_rating,
+                a.last_performance_review = $last_performance_review,
+                a.status = $status
+            """
+
+            parameters = {
+                'advisor_id': advisor_id,
+                'created_at': self._format_timestamp(),
+                'name': kwargs.get('name', 'Unknown Advisor'),
+                'department': kwargs.get('department', 'Customer Service'),
+                'skill_level': kwargs.get('skill_level', 'junior'),
+                'performance_score': kwargs.get('performance_score', 0.75),
+                'total_calls_handled': kwargs.get('total_calls_handled', 0),
+                'average_resolution_time': kwargs.get('average_resolution_time', 1200),  # 20 minutes default
+                'customer_satisfaction_rating': kwargs.get('customer_satisfaction_rating', 4.0),
+                'coaching_sessions_completed': kwargs.get('coaching_sessions_completed', 0),
+                'last_performance_review': kwargs.get('last_performance_review', self._format_timestamp()),
+                'hire_date': kwargs.get('hire_date', self._format_timestamp()),
+                'status': kwargs.get('status', 'active')
+            }
+
+            await self._execute_async(query, parameters)
+            logger.info(f"👨‍💼 Created/updated advisor: {advisor_id}")
+            return advisor_id
+
+        except Exception as e:
+            raise UnifiedGraphManagerError(f"Advisor creation failed: {str(e)}")
 
     async def create_call_node(self, call_id: str, **kwargs) -> str:
         """Create call node in knowledge graph."""
@@ -1218,8 +1348,8 @@ class UnifiedGraphManager:
                 'urgency_level': kwargs.get('urgency_level', 'medium'),
                 'sentiment': kwargs.get('sentiment', 'neutral'),
                 'resolved': kwargs.get('resolved', False),
-                'call_date': kwargs.get('call_date', datetime.utcnow()),
-                'created_at': datetime.utcnow()
+                'call_date': kwargs.get('call_date', self._format_timestamp()),
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -1241,7 +1371,7 @@ class UnifiedGraphManager:
                 'call_id': call_id,
                 'pattern_id': pattern_id,
                 'strength': kwargs.get('strength', 0.8),
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -1255,18 +1385,22 @@ class UnifiedGraphManager:
     async def store_wisdom(self, wisdom) -> str:
         """Store wisdom in knowledge graph."""
         try:
+            # Use KuzuDB Cypher syntax
             query = """
             CREATE (w:Wisdom {
                 wisdom_id: $wisdom_id,
                 wisdom_type: $wisdom_type,
                 title: $title,
                 content: $content,
+                source_context: $source_context,
                 learning_domain: $learning_domain,
                 applicability: $applicability,
                 validated: $validated,
+                validation_count: $validation_count,
                 effectiveness_score: $effectiveness_score,
-                application_count: $application_count,
-                created_at: $created_at
+                created_at: $created_at,
+                last_applied: $last_applied,
+                application_count: $application_count
             })
             """
 
@@ -1275,19 +1409,30 @@ class UnifiedGraphManager:
                 'wisdom_type': wisdom.wisdom_type,
                 'title': wisdom.title,
                 'content': wisdom.content,
+                'source_context': str(wisdom.source_context) if hasattr(wisdom, 'source_context') else '',
                 'learning_domain': wisdom.learning_domain,
                 'applicability': wisdom.applicability,
                 'validated': wisdom.validated,
+                'validation_count': getattr(wisdom, 'validation_count', 0),
                 'effectiveness_score': wisdom.effectiveness_score,
-                'application_count': wisdom.application_count,
-                'created_at': wisdom.created_at.isoformat() if hasattr(wisdom.created_at, 'isoformat') else str(wisdom.created_at)
+                'created_at': self._format_timestamp(wisdom.created_at),
+                'last_applied': self._format_timestamp(wisdom.last_applied) if wisdom.last_applied else '',
+                'application_count': wisdom.application_count
             }
 
             await self._execute_async(query, parameters)
             logger.info(f"🧠 Stored wisdom: {wisdom.wisdom_id}")
+
+            # Verify the node was created
+            verify_query = "MATCH (w:Wisdom) WHERE w.wisdom_id = $wisdom_id RETURN count(*)"
+            verify_params = {'wisdom_id': wisdom.wisdom_id}
+            result = await self._execute_async(verify_query, verify_params)
+            logger.info(f"✅ Verified wisdom {wisdom.wisdom_id} - count: {result}")
+
             return wisdom.wisdom_id
 
         except Exception as e:
+            logger.error(f"❌ Wisdom storage failed for {getattr(wisdom, 'wisdom_id', 'unknown')}: {str(e)}")
             raise UnifiedGraphManagerError(f"Wisdom storage failed: {str(e)}")
 
     async def store_meta_learning(self, meta_learning) -> str:
@@ -1318,7 +1463,7 @@ class UnifiedGraphManager:
                 'impact_assessment': meta_learning.impact_assessment,
                 'validation_status': meta_learning.validation_status,
                 'validation_count': meta_learning.validation_count,
-                'created_at': meta_learning.created_at.isoformat() if hasattr(meta_learning.created_at, 'isoformat') else str(meta_learning.created_at)
+                'created_at': self._format_timestamp(meta_learning.created_at)
             }
 
             await self._execute_async(query, parameters)
@@ -1340,7 +1485,7 @@ class UnifiedGraphManager:
                 'prediction_id': prediction_id,
                 'customer_id': customer_id,
                 'scope': kwargs.get('scope', 'individual'),
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -1363,7 +1508,7 @@ class UnifiedGraphManager:
                 'wisdom_id': wisdom_id,
                 'advisor_id': advisor_id,
                 'relevance_score': kwargs.get('relevance_score', 0.8),
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -1386,7 +1531,7 @@ class UnifiedGraphManager:
                 'call_id': call_id,
                 'meta_learning_id': meta_learning_id,
                 'trigger_reason': kwargs.get('trigger_reason', 'knowledge_extraction'),
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -1409,7 +1554,7 @@ class UnifiedGraphManager:
                 'customer_id': customer_id,
                 'pattern_id': pattern_id,
                 'trigger_strength': kwargs.get('trigger_strength', 0.8),
-                'created_at': datetime.utcnow()
+                'created_at': self._format_timestamp()
             }
 
             await self._execute_async(query, parameters)
@@ -1418,6 +1563,243 @@ class UnifiedGraphManager:
 
         except Exception as e:
             logger.error(f"Failed to link customer to pattern: {e}")
+            return False
+
+    # ===== NEW RELATIONSHIP LINKING METHODS =====
+
+    async def link_call_to_customer(self, call_id: str, customer_id: str, **kwargs) -> bool:
+        """Link call to customer using CALL_BELONGS_TO_CUSTOMER relationship."""
+        try:
+            # Use KuzuDB Cypher syntax
+            query = """
+            MATCH (c:Call {call_id: $call_id}), (cust:Customer {customer_id: $customer_id})
+            CREATE (c)-[:CALL_BELONGS_TO_CUSTOMER {created_at: $created_at}]->(cust)
+            """
+            parameters = {
+                'call_id': call_id,
+                'customer_id': customer_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked call {call_id} to customer {customer_id}")
+
+            # Verify the relationship was created
+            verify_query = """
+            MATCH (c:Call)-[r:CALL_BELONGS_TO_CUSTOMER]->(cust:Customer)
+            WHERE c.call_id = $call_id AND cust.customer_id = $customer_id
+            RETURN count(*)
+            """
+            verify_params = {'call_id': call_id, 'customer_id': customer_id}
+            result = await self._execute_async(verify_query, verify_params)
+            logger.info(f"✅ Verified relationship Call->Customer: {result}")
+
+            return True
+        except Exception as e:
+            logger.error(f"❌ Failed to link call {call_id} to customer {customer_id}: {e}")
+            return False
+
+    async def link_call_to_advisor(self, call_id: str, advisor_id: str, **kwargs) -> bool:
+        """Link call to advisor using CALL_HANDLED_BY relationship."""
+        try:
+            query = """
+            MATCH (c:Call {call_id: $call_id}), (a:Advisor {advisor_id: $advisor_id})
+            CREATE (c)-[:CALL_HANDLED_BY {created_at: $created_at}]->(a)
+            """
+            parameters = {
+                'call_id': call_id,
+                'advisor_id': advisor_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked call {call_id} to advisor {advisor_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link call to advisor: {e}")
+            return False
+
+    async def link_call_to_transcript(self, call_id: str, transcript_id: str, **kwargs) -> bool:
+        """Link call to transcript using CALL_HAS_TRANSCRIPT relationship."""
+        try:
+            query = """
+            MATCH (c:Call {call_id: $call_id}), (t:Transcript {transcript_id: $transcript_id})
+            CREATE (c)-[:CALL_HAS_TRANSCRIPT {created_at: $created_at}]->(t)
+            """
+            parameters = {
+                'call_id': call_id,
+                'transcript_id': transcript_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked call {call_id} to transcript {transcript_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link call to transcript: {e}")
+            return False
+
+    async def link_advisor_to_workflow(self, advisor_id: str, workflow_id: str, **kwargs) -> bool:
+        """Link advisor to workflow using ADVISOR_HANDLES_WORKFLOW relationship."""
+        try:
+            query = """
+            MATCH (a:Advisor {advisor_id: $advisor_id}), (w:Workflow {workflow_id: $workflow_id})
+            CREATE (a)-[:ADVISOR_HANDLES_WORKFLOW {created_at: $created_at}]->(w)
+            """
+            parameters = {
+                'advisor_id': advisor_id,
+                'workflow_id': workflow_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked advisor {advisor_id} to workflow {workflow_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link advisor to workflow: {e}")
+            return False
+
+    async def link_pattern_to_advisor(self, pattern_id: str, advisor_id: str, **kwargs) -> bool:
+        """Link validated pattern to advisor using PATTERN_TEACHES_ADVISOR relationship."""
+        try:
+            query = """
+            MATCH (vp:ValidatedPattern {pattern_id: $pattern_id}), (a:Advisor {advisor_id: $advisor_id})
+            CREATE (vp)-[:PATTERN_TEACHES_ADVISOR {learning_date: $learning_date, application_count: $application_count, created_at: $created_at}]->(a)
+            """
+            parameters = {
+                'pattern_id': pattern_id,
+                'advisor_id': advisor_id,
+                'learning_date': kwargs.get('learning_date', self._format_timestamp()),
+                'application_count': kwargs.get('application_count', 1),
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked pattern {pattern_id} to advisor {advisor_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link pattern to advisor: {e}")
+            return False
+
+    async def link_wisdom_to_plan(self, wisdom_id: str, plan_id: str, **kwargs) -> bool:
+        """Link wisdom to plan using WISDOM_DERIVED_FROM_PLAN relationship."""
+        try:
+            # Use KuzuDB Cypher syntax
+            query = """
+            MATCH (w:Wisdom {wisdom_id: $wisdom_id}), (p:Plan {plan_id: $plan_id})
+            CREATE (w)-[:WISDOM_DERIVED_FROM_PLAN {created_at: $created_at}]->(p)
+            """
+            parameters = {
+                'wisdom_id': wisdom_id,
+                'plan_id': plan_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked wisdom {wisdom_id} to plan {plan_id}")
+
+            # Verify the relationship was created
+            verify_query = """
+            MATCH (w:Wisdom)-[r:WISDOM_DERIVED_FROM_PLAN]->(p:Plan)
+            WHERE w.wisdom_id = $wisdom_id AND p.plan_id = $plan_id
+            RETURN count(*)
+            """
+            verify_params = {'wisdom_id': wisdom_id, 'plan_id': plan_id}
+            result = await self._execute_async(verify_query, verify_params)
+            logger.info(f"✅ Verified relationship Wisdom->Plan: {result}")
+
+            return True
+        except Exception as e:
+            logger.error(f"❌ Failed to link wisdom {wisdom_id} to plan {plan_id}: {e}")
+            return False
+
+    async def link_wisdom_to_execution(self, wisdom_id: str, execution_id: str, **kwargs) -> bool:
+        """Link wisdom to execution using WISDOM_GUIDES_EXECUTION relationship."""
+        try:
+            query = """
+            MATCH (w:Wisdom {wisdom_id: $wisdom_id}), (e:Execution {execution_id: $execution_id})
+            CREATE (w)-[:WISDOM_GUIDES_EXECUTION {created_at: $created_at}]->(e)
+            """
+            parameters = {
+                'wisdom_id': wisdom_id,
+                'execution_id': execution_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked wisdom {wisdom_id} to execution {execution_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link wisdom to execution: {e}")
+            return False
+
+    async def link_wisdom_to_pattern(self, wisdom_id: str, pattern_id: str, **kwargs) -> bool:
+        """Link wisdom to validated pattern using WISDOM_VALIDATES_PATTERN relationship."""
+        try:
+            query = """
+            MATCH (w:Wisdom {wisdom_id: $wisdom_id}), (vp:ValidatedPattern {pattern_id: $pattern_id})
+            CREATE (w)-[:WISDOM_VALIDATES_PATTERN {created_at: $created_at}]->(vp)
+            """
+            parameters = {
+                'wisdom_id': wisdom_id,
+                'pattern_id': pattern_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked wisdom {wisdom_id} to pattern {pattern_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link wisdom to pattern: {e}")
+            return False
+
+    async def link_metalearning_to_hypothesis(self, meta_learning_id: str, hypothesis_id: str, **kwargs) -> bool:
+        """Link meta-learning to hypothesis using METALEARNING_ANALYZES_HYPOTHESIS relationship."""
+        try:
+            query = """
+            MATCH (ml:MetaLearning {meta_learning_id: $meta_learning_id}), (h:Hypothesis {hypothesis_id: $hypothesis_id})
+            CREATE (ml)-[:METALEARNING_ANALYZES_HYPOTHESIS {created_at: $created_at}]->(h)
+            """
+            parameters = {
+                'meta_learning_id': meta_learning_id,
+                'hypothesis_id': hypothesis_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked meta-learning {meta_learning_id} to hypothesis {hypothesis_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link meta-learning to hypothesis: {e}")
+            return False
+
+    async def link_metalearning_to_pattern(self, meta_learning_id: str, pattern_id: str, **kwargs) -> bool:
+        """Link meta-learning to validated pattern using METALEARNING_IMPROVES_PATTERN relationship."""
+        try:
+            query = """
+            MATCH (ml:MetaLearning {meta_learning_id: $meta_learning_id}), (vp:ValidatedPattern {pattern_id: $pattern_id})
+            CREATE (ml)-[:METALEARNING_IMPROVES_PATTERN {created_at: $created_at}]->(vp)
+            """
+            parameters = {
+                'meta_learning_id': meta_learning_id,
+                'pattern_id': pattern_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked meta-learning {meta_learning_id} to pattern {pattern_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link meta-learning to pattern: {e}")
+            return False
+
+    async def link_metalearning_to_wisdom(self, meta_learning_id: str, wisdom_id: str, **kwargs) -> bool:
+        """Link meta-learning to wisdom using METALEARNING_GENERATES_WISDOM relationship."""
+        try:
+            query = """
+            MATCH (ml:MetaLearning {meta_learning_id: $meta_learning_id}), (w:Wisdom {wisdom_id: $wisdom_id})
+            CREATE (ml)-[:METALEARNING_GENERATES_WISDOM {created_at: $created_at}]->(w)
+            """
+            parameters = {
+                'meta_learning_id': meta_learning_id,
+                'wisdom_id': wisdom_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked meta-learning {meta_learning_id} to wisdom {wisdom_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link meta-learning to wisdom: {e}")
             return False
 
     async def _create_advisor_async(self, advisor_data: Dict[str, Any]) -> str:
@@ -1437,7 +1819,7 @@ class UnifiedGraphManager:
 
             parameters = {
                 'advisor_id': advisor_data['advisor_id'],
-                'created_at': datetime.utcnow(),
+                'created_at': self._format_timestamp(),
                 'performance_score': advisor_data.get('performance_score', 0.8),
                 'skill_level': advisor_data.get('skill_level', 'intermediate')
             }

@@ -76,19 +76,9 @@ def handle_analysis_completed(sender, **kwargs):
         compliance_flags = payload.get('compliance_flags', [])
         confidence_score = payload.get('confidence_score', 0.0)
 
-        # Create analysis node
-        analysis_data = {
-            'analysis_id': analysis_id,
-            'call_id': transcript_id,  # Use transcript_id as call_id
-            'transcript_id': transcript_id,
-            'intent': intent,
-            'urgency_level': urgency_level,
-            'sentiment': sentiment,
-            'confidence_score': confidence_score,
-            'risk_factors': str(risk_score),  # Convert to string
-            'compliance_issues': str(compliance_flags),  # Convert to string
-        }
-        graph_manager.create_analysis_sync(analysis_data)
+        # NO FALLBACK: Analysis node creation is handled by analysis_service.py
+        # This event handler only handles secondary effects of analysis completion
+        logger.info(f"📊 Processing analysis completion event for {analysis_id} (analysis node created by service)")
 
         # Update customer risk profile based on analysis
         graph_manager.update_customer_risk_profile_sync(
@@ -252,7 +242,7 @@ def handle_workflow_created(sender, **kwargs):
         # Extract workflow data
         workflow_id = payload['workflow_id']
         plan_id = payload['plan_id']
-        customer_id = payload['customer_id']
+        customer_id = payload.get('customer_id', 'UNKNOWN')
         advisor_id = payload.get('advisor_id', 'SYSTEM')
         step_count = payload.get('step_count', 0)
         estimated_duration = payload.get('estimated_duration', 30)

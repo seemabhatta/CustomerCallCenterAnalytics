@@ -210,6 +210,10 @@ class PlanService:
                                 await unified_graph.store_wisdom(wisdom)
                                 logger.info(f"🧠 Created wisdom {wisdom_id} from coaching insight")
 
+                                # Create Wisdom relationships to connect it to the main graph
+                                await unified_graph.link_wisdom_to_plan(wisdom_id, plan_result["plan_id"])
+                                logger.info(f"🔗 Linked wisdom {wisdom_id} to plan {plan_result['plan_id']}")
+
                     add_span_event("plan.advisor_patterns_linked", advisor_id=advisor_id)
 
                 except Exception as e:

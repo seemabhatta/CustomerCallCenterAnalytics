@@ -34,11 +34,11 @@ def initialize_kuzu_schema():
                 phone STRING,
                 risk_score DOUBLE,
                 compliance_flags STRING,
-                total_interactions INT64,
-                last_updated TIMESTAMP,
+                total_interactions INT32,
+                last_updated STRING,
                 last_contact_date TIMESTAMP,
                 satisfaction_score DOUBLE,
-                created_at TIMESTAMP,
+                created_at STRING,
                 PRIMARY KEY (customer_id)
             """),
 
@@ -46,9 +46,9 @@ def initialize_kuzu_schema():
                 transcript_id STRING,
                 customer_id STRING,
                 content STRING,
-                duration_seconds INT64,
+                duration_seconds INT32,
                 channel STRING,
-                created_at TIMESTAMP,
+                created_at STRING,
                 PRIMARY KEY (transcript_id)
             """),
 
@@ -65,31 +65,42 @@ def initialize_kuzu_schema():
                 customer_satisfaction STRING,
                 analysis_summary STRING,
                 llm_reasoning STRING,
-                analyzed_at TIMESTAMP,
+                analyzed_at STRING,
                 analyzer_version STRING,
-                processing_time_ms INT64,
-                created_at TIMESTAMP,
+                processing_time_ms INT32,
+                created_at STRING,
                 PRIMARY KEY (analysis_id)
             """),
 
             ("Plan", """
                 plan_id STRING,
                 analysis_id STRING,
+                transcript_id STRING,
+                customer_id STRING,
                 actions STRING[],
                 priority STRING,
-                estimated_duration INT64,
+                priority_level STRING,
+                action_count INT32,
+                urgency_level STRING,
+                estimated_duration INT32,
                 source_stage STRING,
-                created_at TIMESTAMP,
+                status STRING,
+                created_at STRING,
                 PRIMARY KEY (plan_id)
             """),
 
             ("Workflow", """
                 workflow_id STRING,
                 plan_id STRING,
+                customer_id STRING,
+                advisor_id STRING,
                 steps STRING[],
-                current_step INT64,
+                step_count INT32,
+                current_step INT32,
                 status STRING,
-                created_at TIMESTAMP,
+                estimated_duration INT32,
+                priority STRING,
+                created_at STRING,
                 PRIMARY KEY (workflow_id)
             """),
 
@@ -98,9 +109,26 @@ def initialize_kuzu_schema():
                 workflow_id STRING,
                 step_results STRING[],
                 status STRING,
-                completed_at TIMESTAMP,
-                created_at TIMESTAMP,
+                completed_at STRING,
+                created_at STRING,
                 PRIMARY KEY (execution_id)
+            """),
+
+            ("Advisor", """
+                advisor_id STRING,
+                name STRING,
+                department STRING,
+                skill_level STRING,
+                performance_score DOUBLE,
+                total_calls_handled INT32,
+                average_resolution_time INT32,
+                customer_satisfaction_rating DOUBLE,
+                coaching_sessions_completed INT32,
+                last_performance_review STRING,
+                hire_date STRING,
+                status STRING,
+                created_at STRING,
+                PRIMARY KEY (advisor_id)
             """),
 
             # Knowledge graph learning nodes
@@ -113,7 +141,12 @@ def initialize_kuzu_schema():
                 source_entity_type STRING,
                 source_entity_id STRING,
                 pattern_type STRING,
-                created_at TIMESTAMP,
+                evidence_count INT32,
+                success_rate DOUBLE,
+                last_observed STRING,
+                source_pipeline STRING,
+                occurrences INT32,
+                created_at STRING,
                 status STRING,
                 PRIMARY KEY (hypothesis_id)
             """),
@@ -122,10 +155,10 @@ def initialize_kuzu_schema():
                 pattern_id STRING,
                 pattern_type STRING,
                 pattern_data STRING,
-                support_count INT64,
+                support_count INT32,
                 confidence_score DOUBLE,
                 source_hypotheses STRING[],
-                created_at TIMESTAMP,
+                created_at STRING,
                 PRIMARY KEY (pattern_id)
             """),
 
@@ -136,7 +169,7 @@ def initialize_kuzu_schema():
                 validation_method STRING,
                 validation_data STRING,
                 impact_score DOUBLE,
-                created_at TIMESTAMP,
+                created_at STRING,
                 PRIMARY KEY (pattern_id)
             """),
 
@@ -150,8 +183,9 @@ def initialize_kuzu_schema():
                 confidence DOUBLE,
                 scope STRING,
                 source_stage STRING,
-                created_at TIMESTAMP,
-                expires_at TIMESTAMP,
+                priority STRING,
+                created_at STRING,
+                expires_at STRING,
                 PRIMARY KEY (prediction_id)
             """),
 
@@ -161,7 +195,7 @@ def initialize_kuzu_schema():
                 content STRING,
                 confidence DOUBLE,
                 source_entities STRING[],
-                created_at TIMESTAMP,
+                created_at STRING,
                 PRIMARY KEY (learning_id)
             """),
 
@@ -172,7 +206,7 @@ def initialize_kuzu_schema():
                 properties STRING,
                 confidence DOUBLE,
                 source STRING,
-                created_at TIMESTAMP,
+                created_at STRING,
                 PRIMARY KEY (entity_id)
             """),
 
@@ -186,10 +220,48 @@ def initialize_kuzu_schema():
                 improvement_area STRING,
                 system_component STRING,
                 impact_assessment STRING,
+                validation_status STRING,
+                validation_count INT32,
                 confidence DOUBLE,
                 source_entities STRING[],
-                created_at TIMESTAMP,
-                PRIMARY KEY (meta_id)
+                created_at STRING,
+                PRIMARY KEY (meta_learning_id)
+            """),
+
+            ("Wisdom", """
+                wisdom_id STRING,
+                wisdom_type STRING,
+                title STRING,
+                content STRING,
+                source_context STRING,
+                learning_domain STRING,
+                applicability STRING,
+                validated BOOLEAN,
+                validation_count INT32,
+                effectiveness_score DOUBLE,
+                created_at STRING,
+                last_applied STRING,
+                application_count INT32,
+                PRIMARY KEY (wisdom_id)
+            """),
+
+            # Call table for business entity creation
+            ("Call", """
+                call_id STRING,
+                transcript_id STRING,
+                customer_id STRING,
+                advisor_id STRING,
+                duration_seconds INT32,
+                start_time STRING,
+                end_time STRING,
+                status STRING,
+                topic STRING,
+                urgency_level STRING,
+                sentiment STRING,
+                resolved BOOLEAN,
+                call_date STRING,
+                created_at STRING,
+                PRIMARY KEY (call_id)
             """)
         ]
 
@@ -236,6 +308,26 @@ def initialize_kuzu_schema():
             ("HYPOTHESIS_CONNECTS", "Hypothesis", "KnowledgeEntity", "MANY_MANY"),
             ("PATTERN_INVOLVES", "CandidatePattern", "KnowledgeEntity", "MANY_MANY"),
             ("TRIGGERED_HYPOTHESIS", "Customer", "Hypothesis", "MANY_MANY"),
+
+            # Call node relationships - Connect Call to main graph
+            ("CALL_BELONGS_TO_CUSTOMER", "Call", "Customer", "MANY_ONE"),
+            ("CALL_HANDLED_BY", "Call", "Advisor", "MANY_ONE"),
+            ("CALL_HAS_TRANSCRIPT", "Call", "Transcript", "ONE_ONE"),
+
+            # Advisor node relationships - Connect Advisor to main graph
+            ("ADVISOR_HANDLES_WORKFLOW", "Advisor", "Workflow", "ONE_MANY"),
+            ("ADVISOR_LEARNS_FROM", "Advisor", "Wisdom", "MANY_MANY"),
+            ("PATTERN_TEACHES_ADVISOR", "ValidatedPattern", "Advisor", "MANY_MANY"),
+
+            # Wisdom node relationships - Connect Wisdom to main graph
+            ("WISDOM_DERIVED_FROM_PLAN", "Wisdom", "Plan", "MANY_ONE"),
+            ("WISDOM_GUIDES_EXECUTION", "Wisdom", "Execution", "MANY_MANY"),
+            ("WISDOM_VALIDATES_PATTERN", "Wisdom", "ValidatedPattern", "MANY_MANY"),
+
+            # MetaLearning node relationships - Connect MetaLearning to main graph
+            ("METALEARNING_ANALYZES_HYPOTHESIS", "MetaLearning", "Hypothesis", "MANY_MANY"),
+            ("METALEARNING_IMPROVES_PATTERN", "MetaLearning", "ValidatedPattern", "MANY_MANY"),
+            ("METALEARNING_GENERATES_WISDOM", "MetaLearning", "Wisdom", "ONE_MANY"),
         ]
 
         # Create relationship tables
@@ -243,11 +335,11 @@ def initialize_kuzu_schema():
             try:
                 # Add specific properties for certain relationships
                 if rel_name == "TARGETS_CUSTOMER":
-                    query = f"CREATE REL TABLE {rel_name}(FROM {from_table} TO {to_table}, prediction_scope STRING, target_date STRING, created_at TIMESTAMP DEFAULT current_timestamp())"
+                    query = f"CREATE REL TABLE {rel_name}(FROM {from_table} TO {to_table}, prediction_scope STRING, target_date STRING, created_at STRING DEFAULT current_timestamp())"
                 elif rel_name == "TRIGGERED_HYPOTHESIS":
-                    query = f"CREATE REL TABLE {rel_name}(FROM {from_table} TO {to_table}, trigger_strength DOUBLE, triggered_at STRING, created_at TIMESTAMP DEFAULT current_timestamp())"
+                    query = f"CREATE REL TABLE {rel_name}(FROM {from_table} TO {to_table}, trigger_strength DOUBLE, triggered_at STRING, created_at STRING DEFAULT current_timestamp())"
                 else:
-                    query = f"CREATE REL TABLE {rel_name}(FROM {from_table} TO {to_table}, created_at TIMESTAMP DEFAULT current_timestamp())"
+                    query = f"CREATE REL TABLE {rel_name}(FROM {from_table} TO {to_table}, created_at STRING DEFAULT current_timestamp())"
                 print(f"Creating {rel_name}...")
                 conn.execute(query)
                 print(f"✅ {rel_name} created successfully")

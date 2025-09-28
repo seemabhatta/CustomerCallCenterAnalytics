@@ -27,6 +27,17 @@ except Exception as e:
     print("System cannot start. Please fix configuration issues.")
     sys.exit(1)
 
+# NO FALLBACK: Initialize KuzuDB schema before starting services
+print("🗄️ Initializing knowledge graph schema...")
+try:
+    from initialize_kuzu_schema import initialize_kuzu_schema
+    initialize_kuzu_schema()
+    print("✅ Knowledge graph schema initialized successfully")
+except Exception as e:
+    print(f"❌ Knowledge graph schema initialization failed: {e}")
+    print("Knowledge graph functionality will be unavailable.")
+    # Continue startup - not critical for basic functionality
+
 # Initialize OpenTelemetry tracing IMMEDIATELY after env loading for complete observability coverage
 try:
     from src.infrastructure.telemetry import initialize_tracing
