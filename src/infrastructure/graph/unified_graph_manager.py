@@ -534,9 +534,9 @@ class UnifiedGraphManager:
 
         # Create relationships
         relationship_operations = [
-            "CREATE REL TABLE IF NOT EXISTS MADE_CALL(FROM Customer TO Call)",
-            "CREATE REL TABLE IF NOT EXISTS HANDLED_BY(FROM Call TO Advisor)",
-            "CREATE REL TABLE IF NOT EXISTS GENERATES_PATTERN(FROM Call TO Pattern)",
+            "CREATE REL TABLE IF NOT EXISTS MADE_CALL(FROM Customer TO Call, contact_date STRING)",
+            "CREATE REL TABLE IF NOT EXISTS HANDLED_BY(FROM Call TO Advisor, started_at STRING, completed_at STRING)",
+            "CREATE REL TABLE IF NOT EXISTS GENERATES_PATTERN(FROM Call TO Pattern, pattern_strength DOUBLE, generated_at STRING)",
             "CREATE REL TABLE IF NOT EXISTS LEARNED_BY_ADVISOR(FROM Pattern TO Advisor, learning_date STRING, application_count INT64 DEFAULT 0)"
         ]
 
@@ -681,6 +681,12 @@ class UnifiedGraphManager:
                 })
             """, params)
 
+            # Ensure Customer exists
+            await self._execute_async(
+                "MERGE (c:Customer {customer_id: $customer_id})",
+                {'customer_id': customer_id}
+            )
+
             # Create relationship: Customer MADE_CALL Call
             await self._execute_async("""
                 MATCH (c:Customer {customer_id: $customer_id})
@@ -694,6 +700,13 @@ class UnifiedGraphManager:
 
             # Create relationship: Call HANDLED_BY Advisor (if advisor exists)
             if advisor_id and advisor_id != 'UNKNOWN':
+                # Ensure Advisor exists
+                await self._execute_async(
+                    "MERGE (a:Advisor {advisor_id: $advisor_id})",
+                    {'advisor_id': advisor_id}
+                )
+
+                # Create relationship: Call HANDLED_BY Advisor
                 await self._execute_async("""
                     MATCH (call:Call {call_id: $call_id})
                     MATCH (a:Advisor {advisor_id: $advisor_id})
