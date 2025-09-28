@@ -756,10 +756,52 @@ class UnifiedGraphManager:
 
             await self._execute_async(query, parameters)
             logger.info(f"📋 Created Plan node: {plan_id}")
+
+            # Link the Plan to the Analysis
+            await self.link_plan_to_analysis(plan_id, analysis_id)
+
             return plan_id
 
         except Exception as e:
             raise UnifiedGraphManagerError(f"Plan creation failed: {str(e)}")
+
+    async def create_analysis_node(self, analysis_id: str, transcript_id: str, call_id: str,
+                                  intent: str, urgency_level: str, sentiment: str,
+                                  confidence_score: float, analysis_summary: str) -> str:
+        """Create an Analysis node in the knowledge graph."""
+        try:
+            query = """
+            CREATE (a:Analysis {
+                analysis_id: $analysis_id,
+                call_id: $call_id,
+                transcript_id: $transcript_id,
+                intent: $intent,
+                urgency_level: $urgency_level,
+                sentiment: $sentiment,
+                confidence_score: $confidence_score,
+                analysis_summary: $analysis_summary,
+                created_at: $created_at
+            })
+            """
+
+            parameters = {
+                'analysis_id': analysis_id,
+                'call_id': call_id,
+                'transcript_id': transcript_id,
+                'intent': intent,
+                'urgency_level': urgency_level,
+                'sentiment': sentiment,
+                'confidence_score': confidence_score,
+                'analysis_summary': analysis_summary,
+                'created_at': self._format_timestamp()
+            }
+
+            await self._execute_async(query, parameters)
+            logger.info(f"🔍 Created Analysis node: {analysis_id}")
+            return analysis_id
+
+        except Exception as e:
+            raise UnifiedGraphManagerError(f"Analysis creation failed: {str(e)}")
 
     async def create_workflow_node(self, workflow_id: str, plan_id: str, customer_id: str,
                                   advisor_id: str, step_count: int, estimated_duration: int, priority: str) -> str:
@@ -866,40 +908,6 @@ class UnifiedGraphManager:
         except Exception as e:
             raise UnifiedGraphManagerError(f"Hypothesis creation failed: {str(e)}")
 
-    async def create_prediction_node(self, prediction_id: str, source_stage: str, priority: str,
-                                    reasoning: str, context: Dict[str, Any]) -> str:
-        """Create a Prediction node in the knowledge graph."""
-        try:
-            query = """
-            CREATE (p:Prediction {
-                prediction_id: $prediction_id,
-                source_stage: $source_stage,
-                priority: $priority,
-                reasoning: $reasoning,
-                context: $context,
-                probability: 0.7,
-                confidence: 0.7,
-                time_horizon: 'short_term',
-                created_at: $created_at,
-                status: 'active'
-            })
-            """
-
-            parameters = {
-                'prediction_id': prediction_id,
-                'source_stage': source_stage,
-                'priority': priority,
-                'reasoning': reasoning,
-                'context': str(context),  # Convert to string for storage
-                'created_at': self._format_timestamp()
-            }
-
-            await self._execute_async(query, parameters)
-            logger.info(f"🔮 Created Prediction node: {prediction_id}")
-            return prediction_id
-
-        except Exception as e:
-            raise UnifiedGraphManagerError(f"Prediction creation failed: {str(e)}")
 
     async def create_wisdom_node(self, wisdom_id: str, source_stage: str, priority: str,
                                 reasoning: str, context: Dict[str, Any]) -> str:
@@ -1143,7 +1151,9 @@ class UnifiedGraphManager:
                 predicted_event: $predicted_event,
                 probability: $probability,
                 confidence: $confidence,
-                time_horizon: $scope,
+                scope: $scope,
+                source_stage: $source_stage,
+                priority: $priority,
                 created_at: $created_at,
                 expires_at: $expires_at
             })
@@ -1478,13 +1488,12 @@ class UnifiedGraphManager:
         try:
             query = """
             MATCH (p:Prediction {prediction_id: $prediction_id}), (c:Customer {customer_id: $customer_id})
-            CREATE (p)-[:TARGETS_CUSTOMER {scope: $scope, created_at: $created_at}]->(c)
+            CREATE (p)-[:TARGETS_CUSTOMER {created_at: $created_at}]->(c)
             """
 
             parameters = {
                 'prediction_id': prediction_id,
                 'customer_id': customer_id,
-                'scope': kwargs.get('scope', 'individual'),
                 'created_at': self._format_timestamp()
             }
 
@@ -1634,6 +1643,63 @@ class UnifiedGraphManager:
             return True
         except Exception as e:
             logger.error(f"Failed to link call to transcript: {e}")
+            return False
+
+    async def link_analysis_to_transcript(self, analysis_id: str, transcript_id: str, **kwargs) -> bool:
+        """Link analysis to transcript using ANALYSIS_ANALYZES relationship."""
+        try:
+            query = """
+            MATCH (a:Analysis {analysis_id: $analysis_id}), (t:Transcript {transcript_id: $transcript_id})
+            CREATE (a)-[:ANALYSIS_ANALYZES {created_at: $created_at}]->(t)
+            """
+            parameters = {
+                'analysis_id': analysis_id,
+                'transcript_id': transcript_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked analysis {analysis_id} to transcript {transcript_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link analysis to transcript: {e}")
+            return False
+
+    async def link_workflow_to_plan(self, workflow_id: str, plan_id: str, **kwargs) -> bool:
+        """Link workflow to plan using WORKFLOW_IMPLEMENTS relationship."""
+        try:
+            query = """
+            MATCH (w:Workflow {workflow_id: $workflow_id}), (p:Plan {plan_id: $plan_id})
+            CREATE (w)-[:WORKFLOW_IMPLEMENTS {created_at: $created_at}]->(p)
+            """
+            parameters = {
+                'workflow_id': workflow_id,
+                'plan_id': plan_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked workflow {workflow_id} to plan {plan_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link workflow to plan: {e}")
+            return False
+
+    async def link_plan_to_analysis(self, plan_id: str, analysis_id: str, **kwargs) -> bool:
+        """Link plan to analysis using PLAN_PLANS_FOR relationship."""
+        try:
+            query = """
+            MATCH (p:Plan {plan_id: $plan_id}), (a:Analysis {analysis_id: $analysis_id})
+            CREATE (p)-[:PLAN_PLANS_FOR {created_at: $created_at}]->(a)
+            """
+            parameters = {
+                'plan_id': plan_id,
+                'analysis_id': analysis_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked plan {plan_id} to analysis {analysis_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link plan to analysis: {e}")
             return False
 
     async def link_advisor_to_workflow(self, advisor_id: str, workflow_id: str, **kwargs) -> bool:
@@ -1800,6 +1866,25 @@ class UnifiedGraphManager:
             return True
         except Exception as e:
             logger.error(f"Failed to link meta-learning to wisdom: {e}")
+            return False
+
+    async def link_meta_learning_to_plan(self, meta_learning_id: str, plan_id: str, **kwargs) -> bool:
+        """Link meta-learning to plan using METALEARNING_ANALYZES_PLAN relationship."""
+        try:
+            query = """
+            MATCH (ml:MetaLearning {meta_learning_id: $meta_learning_id}), (p:Plan {plan_id: $plan_id})
+            CREATE (ml)-[:METALEARNING_ANALYZES_PLAN {created_at: $created_at}]->(p)
+            """
+            parameters = {
+                'meta_learning_id': meta_learning_id,
+                'plan_id': plan_id,
+                'created_at': self._format_timestamp()
+            }
+            await self._execute_async(query, parameters)
+            logger.info(f"🔗 Linked meta-learning {meta_learning_id} to plan {plan_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to link meta-learning to plan: {e}")
             return False
 
     async def _create_advisor_async(self, advisor_data: Dict[str, Any]) -> str:

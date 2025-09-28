@@ -253,16 +253,22 @@ def handle_workflow_created(sender, **kwargs):
         try:
             loop = asyncio.get_running_loop()
             # Schedule async workflow creation
-            loop.create_task(graph_manager.create_workflow_node(
-                workflow_id=workflow_id,
-                plan_id=plan_id,
-                customer_id=customer_id,
-                advisor_id=advisor_id,
-                step_count=step_count,
-                estimated_duration=estimated_duration,
-                priority=priority
-            ))
-            logger.info(f"⚡ Scheduled workflow creation: {workflow_id}")
+            # Create workflow node and link to plan
+            async def create_and_link_workflow():
+                await graph_manager.create_workflow_node(
+                    workflow_id=workflow_id,
+                    plan_id=plan_id,
+                    customer_id=customer_id,
+                    advisor_id=advisor_id,
+                    step_count=step_count,
+                    estimated_duration=estimated_duration,
+                    priority=priority
+                )
+                # Link workflow to plan
+                await graph_manager.link_workflow_to_plan(workflow_id, plan_id)
+
+            loop.create_task(create_and_link_workflow())
+            logger.info(f"⚡ Scheduled workflow creation and linking: {workflow_id}")
         except RuntimeError:
             # No event loop, skip async operation
             logger.warning(f"No event loop for async workflow creation: {workflow_id}")
@@ -357,20 +363,8 @@ def handle_knowledge_extracted(sender, **kwargs):
 
         elif insight_type.lower() == 'prediction':
             prediction_id = f"PRED_{context.get('customer_id', 'UNK')[:8]}"
-            # Create prediction node (async)
-            import asyncio
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(graph_manager.create_prediction_node(
-                    prediction_id=prediction_id,
-                    source_stage=source_stage,
-                    priority=priority,
-                    reasoning=reasoning,
-                    context=context
-                ))
-                logger.info(f"🔮 Scheduled prediction creation: {prediction_id}")
-            except RuntimeError:
-                logger.warning(f"No event loop for async prediction creation: {prediction_id}")
+            # Prediction creation handled by store_prediction method in analysis service
+            logger.info(f"🔮 Prediction creation handled by analysis service: {prediction_id}")
 
         elif insight_type.lower() == 'wisdom':
             wisdom_id = f"WISDOM_{context.get('analysis_id', 'UNK')[:8]}"

@@ -105,6 +105,29 @@ class AnalysisService:
         if should_store:
             self.store.store(analysis_result)
 
+            # Create Analysis node in knowledge graph
+            call_id = f"CALL_{transcript_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            try:
+                await unified_graph.create_analysis_node(
+                    analysis_id=analysis_result["analysis_id"],
+                    transcript_id=transcript_id,
+                    call_id=call_id,
+                    intent=analysis_result.get('intent', 'unknown'),
+                    urgency_level=analysis_result.get('urgency_level', 'medium'),
+                    sentiment=analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
+                    confidence_score=0.8,  # Default confidence
+                    analysis_summary=analysis_result.get('summary', 'Analysis completed')
+                )
+
+                # Link Analysis to Transcript
+                await unified_graph.link_analysis_to_transcript(
+                    analysis_id=analysis_result["analysis_id"],
+                    transcript_id=transcript_id
+                )
+                logger.info(f"🔍 Created Analysis node and linked to Transcript: {analysis_result['analysis_id']}")
+            except Exception as e:
+                logger.error(f"Failed to create Analysis node: {e}")
+
             # Extract predictive knowledge and publish events
             customer_id = getattr(transcript, 'customer_id', 'UNKNOWN')
 
@@ -113,7 +136,6 @@ class AnalysisService:
             if predictive_insight:
                 # Convert to PredictiveInsight object and extract knowledge
                 from ..infrastructure.graph.knowledge_types import PredictiveInsight, InsightContent, CustomerContext
-                from datetime import datetime
 
                 # Create structured content
                 content = InsightContent(
@@ -187,7 +209,6 @@ class AnalysisService:
 
                 # Import types here to avoid circular dependency
                 from ..infrastructure.graph.knowledge_types import Pattern, Prediction
-                from datetime import datetime
 
                 # Create and link pattern if pattern was generated
                 if predictive_insight and predictive_insight.get('insight_type') == 'pattern':
