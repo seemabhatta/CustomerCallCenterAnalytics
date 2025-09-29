@@ -317,6 +317,9 @@ class AnalysisService:
             publish_event(analysis_event)
             add_span_event("analysis.event_published", analysis_id=analysis_result["analysis_id"])
 
+        # Extract meta_learning from analysis process
+        await self._extract_meta_learning_from_analysis(analysis_result, transcript_id, customer_id)
+
         return analysis_result
     
     async def get_by_id(self, analysis_id: str) -> Optional[Dict[str, Any]]:
@@ -430,3 +433,93 @@ class AnalysisService:
             "urgency_levels": urgency_levels,
             "avg_processing_time": sum(processing_times) / len(processing_times) if processing_times else 0.0
         }
+
+    async def _extract_meta_learning_from_analysis(self, analysis_result: Dict[str, Any], transcript_id: str, customer_id: str) -> None:
+        """Extract meta-learning insights from the analysis process"""
+        from src.infrastructure.telemetry import add_span_event
+        try:
+            from src.infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
+            knowledge_extractor = get_predictive_knowledge_extractor()
+
+            # Analyze the analysis process for improvement opportunities
+            confidence = analysis_result.get('confidence_score', get_default_confidence())
+            processing_success = confidence > get_learning_threshold('analysis')
+
+            analysis_type = analysis_result.get('primary_intent', 'unknown')
+            risk_level = analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5)
+
+            # Identify meta-learning opportunities
+            meta_learning_insight = None
+
+            if confidence < 0.5:
+                # Low confidence analysis - identify what could be improved
+                meta_learning_insight = {
+                    'type': 'META_LEARNING',
+                    'insight': f"Analysis confidence below threshold ({confidence:.2f}) for {analysis_type} intent - may need prompt refinement or additional training data",
+                    'reasoning': f"Analysis struggled with {analysis_type} classification, achieving only {confidence:.2f} confidence. This suggests the analysis prompt may need refinement for this intent type.",
+                    'priority': 'HIGH',
+                    'context': {
+                        'analysis_type': analysis_type,
+                        'confidence_achieved': confidence,
+                        'risk_level': risk_level,
+                        'transcript_id': transcript_id,
+                        'customer_id': customer_id
+                    }
+                }
+            elif 'missing_information' in analysis_result:
+                # Analysis identified data gaps
+                missing_info = analysis_result.get('missing_information', [])
+                meta_learning_insight = {
+                    'type': 'META_LEARNING',
+                    'insight': f"Analysis identified missing information patterns: {', '.join(missing_info)} - transcript collection process may need enhancement",
+                    'reasoning': f"Consistent gaps in {', '.join(missing_info)} suggest either agent training needs or system prompts should guide better information collection during calls.",
+                    'priority': 'MEDIUM',
+                    'context': {
+                        'missing_data_types': missing_info,
+                        'analysis_type': analysis_type,
+                        'transcript_id': transcript_id,
+                        'customer_id': customer_id
+                    }
+                }
+            elif confidence > 0.9 and processing_success:
+                # High-performing analysis - capture what worked well
+                meta_learning_insight = {
+                    'type': 'META_LEARNING',
+                    'insight': f"Highly effective analysis approach for {analysis_type} intent achieved {confidence:.2f} confidence - analysis patterns should be replicated",
+                    'reasoning': f"Analysis excelled at {analysis_type} classification with {confidence:.2f} confidence. The prompt structure and approach used here demonstrates optimal performance.",
+                    'priority': 'MEDIUM',
+                    'context': {
+                        'analysis_type': analysis_type,
+                        'confidence_achieved': confidence,
+                        'successful_patterns': analysis_result.get('key_factors', []),
+                        'transcript_id': transcript_id,
+                        'customer_id': customer_id
+                    }
+                }
+
+            # Extract the meta-learning if we identified an opportunity
+            if meta_learning_insight:
+                context = {
+                    'stage': 'analysis',
+                    'transcript_id': transcript_id,
+                    'customer_id': customer_id,
+                    'analysis_id': analysis_result.get('analysis_id'),
+                    'analysis_performance': {
+                        'confidence': confidence,
+                        'processing_success': processing_success,
+                        'analysis_type': analysis_type
+                    }
+                }
+
+                await knowledge_extractor.extract_knowledge(meta_learning_insight, context)
+                add_span_event("analysis.meta_learning_extracted",
+                              analysis_id=analysis_result.get('analysis_id'),
+                              insight_type=meta_learning_insight['type'],
+                              priority=meta_learning_insight['priority'])
+
+        except Exception as e:
+            print(f"Error extracting meta-learning from analysis: {e}")
+            # Don't fail the entire analysis process for meta-learning extraction errors
+            add_span_event("analysis.meta_learning_extraction_failed",
+                          analysis_id=analysis_result.get('analysis_id'),
+                          error=str(e))
