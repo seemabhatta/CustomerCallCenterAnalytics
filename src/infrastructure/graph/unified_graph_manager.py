@@ -10,6 +10,12 @@ from typing import Dict, Any, List, Optional
 import logging
 from datetime import datetime
 import asyncio
+from ..config.config_loader import (
+    get_default_satisfaction,
+    get_default_risk_score,
+    get_default_effectiveness_score,
+    get_default_customer_rating
+)
 from concurrent.futures import ThreadPoolExecutor
 import kuzu
 import uuid
@@ -1268,8 +1274,8 @@ class UnifiedGraphManager:
                 'created_at': self._format_timestamp(),
                 'total_interactions': kwargs.get('total_interactions', 1),
                 'last_contact_date': kwargs.get('last_contact_date', self._format_timestamp()),
-                'risk_score': kwargs.get('risk_score', 0.5),
-                'satisfaction_score': kwargs.get('satisfaction_score', 0.7)
+                'risk_score': kwargs.get('risk_score', get_default_risk_score()),
+                'satisfaction_score': kwargs.get('satisfaction_score', get_default_satisfaction())
             }
 
             await self._execute_async(query, parameters)
@@ -1314,10 +1320,10 @@ class UnifiedGraphManager:
                 'name': kwargs.get('name', 'Unknown Advisor'),
                 'department': kwargs.get('department', 'Customer Service'),
                 'skill_level': kwargs.get('skill_level', 'junior'),
-                'performance_score': kwargs.get('performance_score', 0.75),
+                'performance_score': kwargs.get('performance_score', get_default_effectiveness_score()),
                 'total_calls_handled': kwargs.get('total_calls_handled', 0),
                 'average_resolution_time': kwargs.get('average_resolution_time', 1200),  # 20 minutes default
-                'customer_satisfaction_rating': kwargs.get('customer_satisfaction_rating', 4.0),
+                'customer_satisfaction_rating': kwargs.get('customer_satisfaction_rating', get_default_customer_rating()),
                 'coaching_sessions_completed': kwargs.get('coaching_sessions_completed', 0),
                 'last_performance_review': kwargs.get('last_performance_review', self._format_timestamp()),
                 'hire_date': kwargs.get('hire_date', self._format_timestamp()),

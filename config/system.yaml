@@ -1,0 +1,94 @@
+# Customer Call Center Analytics System Configuration
+# Centralized configuration for all system parameters
+
+# Analysis & Prediction Configuration
+analysis:
+  risk_threshold_prediction_creation: 0.3
+  default_confidence_score: 0.8
+  default_satisfaction_score: 0.7
+  pattern_link_strength: 0.8
+  default_risk_score: 0.5
+  default_effectiveness_score: 0.8
+  default_customer_rating: 4.0
+
+# Temperature Configuration by Agent Type
+temperature:
+  analysis: 0.3
+  generation: 0.7
+  risk_assessment: 0.1
+  workflow: 0.2
+  observation: 0.3
+  insights: 0.4
+  default: 0.2
+
+# Knowledge Graph Configuration
+knowledge_graph:
+  database_path: "./data/knowledge_graph_v2.db"
+  prediction_cleanup_interval: 3600  # seconds
+  max_prediction_age: 86400  # 24 hours in seconds
+  node_defaults:
+    customer:
+      satisfaction_score: 0.7
+      risk_score: 0.5
+    workflow:
+      effectiveness_score: 0.8
+      priority: "medium"
+    pattern:
+      confidence_threshold: 0.6
+      success_rate: 0.8
+
+# Prediction System Configuration
+predictions:
+  cleanup_enabled: true
+  cleanup_interval: 3600  # 1 hour
+  max_age: 86400  # 24 hours
+  confidence_threshold: 0.6
+  validation_enabled: true
+
+# Learning System Configuration
+learning:
+  hypothesis_generation: true
+  pattern_validation: true
+  meta_learning_enabled: true
+  wisdom_extraction: true
+  confidence_thresholds:
+    hypothesis: 0.6
+    pattern: 0.7
+    wisdom: 0.8
+
+# Agent-Specific Configuration
+agents:
+  call_analysis:
+    temperature: 0.3
+    max_retries: 3
+    timeout: 30
+
+  risk_assessment:
+    temperature: 0.1
+    confidence_threshold: 0.8
+    high_risk_threshold: 0.7
+
+  workflow_execution:
+    temperature: 0.2
+    max_concurrent_steps: 5
+    step_timeout: 60
+
+  advisor:
+    temperature: 0.1
+    escalation_threshold: 0.8
+    response_time_limit: 300
+
+# System Limits
+limits:
+  max_transcript_length: 50000
+  max_analysis_time: 300  # 5 minutes
+  max_workflow_steps: 20
+  max_concurrent_analyses: 10
+
+# Feature Flags
+features:
+  predictive_knowledge_extraction: true
+  real_time_learning: true
+  advisor_assistance: true
+  auto_escalation: true
+  pattern_recognition: true

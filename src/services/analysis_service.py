@@ -5,28 +5,23 @@ Clean separation from routing layer
 from typing import List, Optional, Dict, Any
 import logging
 import uuid
-import os
 from datetime import datetime
 from ..storage.analysis_store import AnalysisStore
 from ..call_center_agents.call_analysis_agent import CallAnalysisAgent
 
 logger = logging.getLogger(__name__)
 
-# Configuration helpers - Load from environment with defaults
-def _get_risk_threshold() -> float:
-    return float(os.getenv('RISK_THRESHOLD_PREDICTION_CREATION', '0.3'))
-
-def _get_default_confidence() -> float:
-    return float(os.getenv('DEFAULT_CONFIDENCE_SCORE', '0.8'))
-
-def _get_default_satisfaction() -> float:
-    return float(os.getenv('DEFAULT_SATISFACTION_SCORE', '0.7'))
-
-def _get_pattern_strength() -> float:
-    return float(os.getenv('PATTERN_LINK_STRENGTH', '0.8'))
-
-def _get_default_risk_score() -> float:
-    return float(os.getenv('DEFAULT_RISK_SCORE', '0.5'))
+# Configuration helpers - Load from YAML config with environment fallbacks
+from ..infrastructure.config.config_loader import (
+    get_risk_threshold as _get_risk_threshold,
+    get_default_confidence as _get_default_confidence,
+    get_default_satisfaction as _get_default_satisfaction,
+    get_pattern_strength as _get_pattern_strength,
+    get_default_risk_score as _get_default_risk_score,
+    is_feature_enabled,
+    is_learning_enabled,
+    get_learning_threshold
+)
 
 from ..infrastructure.events import (
     create_analysis_event,
@@ -151,7 +146,7 @@ class AnalysisService:
 
             # Extract predictive knowledge from analysis insights (NO FALLBACK)
             predictive_insight = analysis_result.get('predictive_insight')
-            if predictive_insight:
+            if predictive_insight and is_feature_enabled('predictive_knowledge_extraction'):
                 # Convert to PredictiveInsight object and extract knowledge
                 from ..infrastructure.graph.knowledge_types import PredictiveInsight, InsightContent, CustomerContext
 
@@ -229,7 +224,8 @@ class AnalysisService:
                 from ..infrastructure.graph.knowledge_types import Pattern, Prediction
 
                 # Create and link pattern if pattern was generated
-                if predictive_insight and predictive_insight.get('insight_type') == 'pattern':
+                if (predictive_insight and predictive_insight.get('insight_type') == 'pattern'
+                    and is_feature_enabled('pattern_recognition')):
 
                     pattern_id = f"PATTERN_{uuid.uuid4().hex[:8]}"
 

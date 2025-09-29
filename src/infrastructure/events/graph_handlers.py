@@ -11,6 +11,11 @@ from datetime import datetime
 from .event_system import subscribe_to_events
 from .event_types import EventType, Event
 from ..graph.unified_graph_manager import get_unified_graph_manager
+from ..config.config_loader import (
+    is_feature_enabled,
+    is_learning_enabled,
+    get_learning_threshold
+)
 
 class GraphManagerError(Exception):
     """Exception raised for graph manager errors."""
@@ -345,21 +350,28 @@ def handle_knowledge_extracted(sender, **kwargs):
 
         # Different handling based on insight type
         if insight_type.lower() == 'hypothesis':
-            hypothesis_id = f"HYPO_{context.get('analysis_id', 'UNK')[:8]}"
-            # Create hypothesis node (async)
-            import asyncio
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(graph_manager.create_hypothesis_node(
-                    hypothesis_id=hypothesis_id,
-                    source_stage=source_stage,
-                    priority=priority,
-                    reasoning=reasoning,
-                    context=context
-                ))
-                logger.info(f"💡 Scheduled hypothesis creation: {hypothesis_id}")
-            except RuntimeError:
-                logger.warning(f"No event loop for async hypothesis creation: {hypothesis_id}")
+            # Check if hypothesis generation is enabled and meets confidence threshold
+            confidence = context.get('confidence', 0.0)
+            if (is_learning_enabled('hypothesis_generation')
+                and confidence >= get_learning_threshold('hypothesis')):
+
+                hypothesis_id = f"HYPO_{context.get('analysis_id', 'UNK')[:8]}"
+                # Create hypothesis node (async)
+                import asyncio
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(graph_manager.create_hypothesis_node(
+                        hypothesis_id=hypothesis_id,
+                        source_stage=source_stage,
+                        priority=priority,
+                        reasoning=reasoning,
+                        context=context
+                    ))
+                    logger.info(f"💡 Scheduled hypothesis creation: {hypothesis_id} (confidence: {confidence})")
+                except RuntimeError:
+                    logger.warning(f"No event loop for async hypothesis creation: {hypothesis_id}")
+            else:
+                logger.debug(f"Hypothesis creation skipped - feature disabled or low confidence ({confidence})")
 
         elif insight_type.lower() == 'prediction':
             prediction_id = f"PRED_{context.get('customer_id', 'UNK')[:8]}"
