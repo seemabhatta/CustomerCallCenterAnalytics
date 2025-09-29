@@ -61,3 +61,6 @@ frontend/.DS_Store
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
+data/explorer.db
+attached_assets/logs-ui.txt
+attached_assets/logs_server.txt

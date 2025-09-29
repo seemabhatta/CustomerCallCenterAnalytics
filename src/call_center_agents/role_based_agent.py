@@ -476,6 +476,40 @@ async def approve_workflow(workflow_id: str, approved_by: str, reasoning: str = 
             return await response.json()
 
 
+@function_tool
+async def query_knowledge_graph(question: str) -> Dict[str, Any]:
+    """Query the knowledge graph using natural language.
+
+    Use this to explore connections, patterns, and insights in the knowledge graph.
+    Great for questions like:
+    - "Show me all high-risk customers"
+    - "What patterns lead to successful resolutions?"
+    - "How are wisdom nodes connected to plans?"
+    - "Show me all MetaLearning insights"
+    - "What wisdom has been extracted from successful plans?"
+    - "How many nodes are in the knowledge graph?"
+
+    Args:
+        question: Natural language question about the graph
+
+    Returns:
+        Graph query results with nodes, relationships, and explanation
+    """
+    logger.info(f"🔍 query_knowledge_graph called with question: {question}")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            "http://localhost:8000/api/v1/graph/ask",
+            json={"question": question}
+        ) as response:
+            logger.info(f"📡 Graph API response status: {response.status}")
+            if response.status != 200:
+                logger.error(f"❌ Failed to query graph: HTTP {response.status}")
+                raise Exception(f"Failed to query graph: {response.status}")
+            result = await response.json()
+            logger.info(f"✅ Graph query executed successfully")
+            return result
+
+
 # ============================================
 # CONFIGURATION MANAGEMENT
 # ============================================
@@ -667,7 +701,8 @@ def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
             approve_workflow,
             get_transcript_pipeline,
             get_borrower_pending_workflows,
-            get_pending_workflows_by_transcript
+            get_pending_workflows_by_transcript,
+            query_knowledge_graph  # Knowledge graph exploration
         ]
     )
 
