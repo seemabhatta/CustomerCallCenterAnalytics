@@ -283,7 +283,7 @@ class PredictiveKnowledgeExtractor:
         # Create relationship: Prediction TARGETS_CUSTOMER Customer
         customer_id = insight.customer_context.customer_id
         if customer_id:
-            await self.graph_manager.link_prediction_to_customer(prediction.prediction_id, customer_id, scope="individual")
+            await self.graph_manager.link_prediction_to_customer(prediction.prediction_id, customer_id)
             logger.info(f"🔗 Linked prediction {prediction.prediction_id} to customer {customer_id}")
 
     async def _extract_wisdom(self, insight: PredictiveInsight, context: Dict[str, Any]) -> None:

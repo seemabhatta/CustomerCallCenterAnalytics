@@ -240,10 +240,22 @@ class WorkflowService:
                 logger.info(f"🧠 Created meta learning {meta_learning_id} from workflow insights")
 
                 # Create MetaLearning relationships to connect it to the main graph
-                # Note: For now, we link to workflow. In future iterations, we can add
-                # connections to specific hypotheses and patterns when they become available
-                # in this context
-                logger.info(f"🔗 MetaLearning {meta_learning_id} relationships would be created here when hypothesis/pattern IDs are available")
+                try:
+                    # Link MetaLearning to Plan (from which this workflow was created)
+                    plan_id = context_data.get('plan_id')
+                    if plan_id:
+                        # Check if there's a linking method available
+                        if hasattr(unified_graph, 'link_meta_learning_to_plan'):
+                            await unified_graph.link_meta_learning_to_plan(meta_learning_id, plan_id)
+                            logger.info(f"🔗 Linked MetaLearning {meta_learning_id} to Plan {plan_id}")
+                        else:
+                            logger.info(f"🔗 MetaLearning {meta_learning_id} created but Plan linking method not available")
+                    else:
+                        logger.info(f"🔗 MetaLearning {meta_learning_id} created but plan_id not available in context")
+                except Exception as e:
+                    logger.warning(f"Failed to link MetaLearning to Plan: {e}")
+
+                # Note: For future iterations, we can add connections to specific hypotheses and patterns when they become available
 
         except Exception as e:
             logger.warning(f"Failed to create meta learning nodes: {e}")

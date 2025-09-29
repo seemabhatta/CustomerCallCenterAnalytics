@@ -5,11 +5,29 @@ Clean separation from routing layer
 from typing import List, Optional, Dict, Any
 import logging
 import uuid
+import os
 from datetime import datetime
 from ..storage.analysis_store import AnalysisStore
 from ..call_center_agents.call_analysis_agent import CallAnalysisAgent
 
 logger = logging.getLogger(__name__)
+
+# Configuration helpers - Load from environment with defaults
+def _get_risk_threshold() -> float:
+    return float(os.getenv('RISK_THRESHOLD_PREDICTION_CREATION', '0.3'))
+
+def _get_default_confidence() -> float:
+    return float(os.getenv('DEFAULT_CONFIDENCE_SCORE', '0.8'))
+
+def _get_default_satisfaction() -> float:
+    return float(os.getenv('DEFAULT_SATISFACTION_SCORE', '0.7'))
+
+def _get_pattern_strength() -> float:
+    return float(os.getenv('PATTERN_LINK_STRENGTH', '0.8'))
+
+def _get_default_risk_score() -> float:
+    return float(os.getenv('DEFAULT_RISK_SCORE', '0.5'))
+
 from ..infrastructure.events import (
     create_analysis_event,
     publish_event
@@ -115,7 +133,7 @@ class AnalysisService:
                     intent=analysis_result.get('intent', 'unknown'),
                     urgency_level=analysis_result.get('urgency_level', 'medium'),
                     sentiment=analysis_result.get('borrower_sentiment', {}).get('overall', 'neutral'),
-                    confidence_score=0.8,  # Default confidence
+                    confidence_score=_get_default_confidence(),
                     analysis_summary=analysis_result.get('summary', 'Analysis completed')
                 )
 
@@ -182,8 +200,8 @@ class AnalysisService:
                     customer_id=customer_id,
                     total_interactions=1,  # Increment on each call
                     last_contact_date=datetime.utcnow(),
-                    risk_score=analysis_result.get('borrower_risks', {}).get('delinquency_risk', 0.5),
-                    satisfaction_score=0.7  # Default, could be derived from sentiment
+                    risk_score=analysis_result.get('borrower_risks', {}).get('delinquency_risk', _get_default_risk_score()),
+                    satisfaction_score=_get_default_satisfaction()
                 )
 
                 # Create call node
@@ -225,7 +243,7 @@ class AnalysisService:
                         outcomes={'pattern_strength': predictive_insight.get('confidence', 0.8)},
                         confidence=predictive_insight.get('confidence', 0.8),
                         occurrences=1,  # First occurrence
-                        success_rate=0.8,  # Default until more data
+                        success_rate=_get_default_confidence(),
                         last_observed=datetime.utcnow(),
                         source_pipeline='analysis'
                     )
@@ -235,7 +253,7 @@ class AnalysisService:
                     logger.info(f"📊 Created pattern {pattern_id} from analysis insight")
 
                     # Now link the call to the stored pattern
-                    await unified_graph.link_call_to_pattern(call_id, pattern_id, strength=0.8)
+                    await unified_graph.link_call_to_pattern(call_id, pattern_id, strength=_get_pattern_strength())
                     logger.info(f"🔗 Linked call {call_id} to pattern {pattern_id}")
 
                 # Create Prediction nodes from borrower risks
@@ -245,7 +263,7 @@ class AnalysisService:
 
                     # Create predictions for high-risk scenarios
                     for risk_type, risk_value in borrower_risks.items():
-                        if risk_value > 0.7:  # Only create predictions for high risks
+                        if risk_value > _get_risk_threshold():  # Create predictions based on configured threshold
                             prediction_id = f"PRED_{uuid.uuid4().hex[:8]}"
 
                             prediction = Prediction(
