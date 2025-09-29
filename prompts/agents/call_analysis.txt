@@ -25,13 +25,41 @@ Decision criteria for insight priority:
 - MEDIUM: Standard resolution patterns that show good customer service approaches
 - LOW: Routine interaction patterns with minimal predictive value
 
-Insight types to consider:
-- PATTERN: Behavioral patterns that could predict customer needs or risks
-- PREDICTION: Specific forecasts about customer behavior or outcomes
-- WISDOM: Strategic insights about successful resolution approaches
-- META_LEARNING: Insights about how the analysis process could improve
+**INSIGHT TYPE SELECTION - Choose ONE based on what this call demonstrates:**
 
-Your predictive insight should focus on what future interactions can learn from this one.
+**PATTERN** - Choose when you identify behavioral patterns:
+- Customer follows predictable steps (e.g., escalation path, request sequence)
+- Advisor uses recognizable handling approach
+- Situation matches known risk indicators
+Example: "Customers who mention 'financial hardship' early typically need payment restructuring"
+
+**PREDICTION** - Choose when you can forecast specific outcomes:
+- Customer likely to take specific action
+- Risk of specific negative outcome
+- Probability of success with certain approach
+Example: "Customer 85% likely to accept modified payment plan based on cooperation level"
+
+**WISDOM** - Choose when call shows successful resolution or exceptional handling:
+- Problem was solved effectively
+- Advisor demonstrated excellent technique
+- Creative solution worked well
+- Positive customer outcome achieved
+Example: "Using empathy-first approach reduced escalation and led to voluntary payment commitment"
+
+**META_LEARNING** - Choose when you notice process improvements or system gaps:
+- Analysis could have been better
+- System missed important signals
+- Process inefficiency identified
+- Tool or approach needs improvement
+Example: "System should flag payment struggle keywords earlier to route to specialized advisors"
+
+**DECISION PRIORITY:** If multiple types apply, choose:
+1st: WISDOM (if positive outcome achieved)
+2nd: META_LEARNING (if process gap identified)
+3rd: PREDICTION (if clear forecast possible)
+4th: PATTERN (default for general observations)
+
+Your insight should be specific and actionable for future interactions.
 
 RELEVANT KNOWLEDGE PATTERNS:
 The system has identified the following patterns from previous similar interactions that may be relevant to this analysis:

@@ -7,6 +7,7 @@ import logging
 import uuid
 from ..storage.action_plan_store import ActionPlanStore
 from ..call_center_agents.action_plan_agent import ActionPlanAgent
+from ..call_center_agents.models.action_plan_models import FourLayerActionPlan
 from ..infrastructure.events import (
     EventType,
     create_plan_generated_event,
@@ -343,7 +344,10 @@ class PlanService:
         
         # Store updated plan
         self.store.update(plan_id, plan)
-        
+
+        # Extract wisdom from successful plan execution
+        await self._extract_wisdom_from_execution(plan, execution_results, execution_data)
+
         return {
             "plan_id": plan_id,
             "status": "completed",
@@ -406,3 +410,81 @@ class PlanService:
             "avg_steps_per_plan": total_steps / total if total > 0 else 0.0,
             "completion_rate": completed / total if total > 0 else 0.0
         }
+
+    async def _extract_wisdom_from_execution(self, plan: FourLayerActionPlan, execution_results: List[Dict], execution_data: Dict) -> None:
+        """Extract wisdom from successful plan execution."""
+        try:
+            from ..infrastructure.config.config_loader import is_feature_enabled
+            from ..infrastructure.graph.predictive_knowledge_extractor import get_predictive_knowledge_extractor
+            from ..infrastructure.graph.knowledge_types import PredictiveInsight, InsightContent, CustomerContext
+            from datetime import datetime
+
+            # Only extract wisdom if feature is enabled
+            if not is_feature_enabled('wisdom_extraction'):
+                return
+
+            # Check if execution was successful (at least some steps completed successfully)
+            successful_steps = [r for r in execution_results if r.get('status') == 'completed']
+            if not successful_steps:
+                return  # No wisdom to extract from failed execution
+
+            # Extract key information
+            plan_type = getattr(plan, 'plan_type', 'unknown')
+            urgency = getattr(plan, 'urgency_level', 'medium')
+            total_steps = len(execution_results)
+            success_rate = len(successful_steps) / total_steps if total_steps > 0 else 0
+
+            # Create wisdom insight based on successful execution
+            wisdom_content = f"Plan execution success: {plan_type} plan with {success_rate:.0%} success rate"
+
+            if success_rate >= 0.8:  # High success rate
+                wisdom_reasoning = f"Highly effective {plan_type} approach - {len(successful_steps)}/{total_steps} steps succeeded. Strategy demonstrates reliable resolution pattern."
+                learning_value = "exceptional"
+            elif success_rate >= 0.6:  # Moderate success rate
+                wisdom_reasoning = f"Moderately effective {plan_type} approach - partial success suggests room for optimization."
+                learning_value = "routine"
+            else:
+                return  # Don't extract wisdom from poor executions
+
+            # Create structured wisdom insight
+            content = InsightContent(
+                key="successful_execution_strategy",
+                value=wisdom_content,
+                confidence=success_rate,
+                impact="High - demonstrates effective resolution approach"
+            )
+
+            customer_context = CustomerContext(
+                customer_id=getattr(plan, 'customer_id', 'unknown'),
+                loan_type="mortgage",  # Default for mortgage servicing
+                tenure="existing",
+                risk_profile=urgency
+            )
+
+            wisdom_insight = PredictiveInsight(
+                insight_type="wisdom",
+                priority="high" if success_rate >= 0.8 else "medium",
+                content=content,
+                reasoning=wisdom_reasoning,
+                learning_value=learning_value,
+                source_stage="execution",
+                transcript_id=getattr(plan, 'transcript_id', ''),
+                customer_context=customer_context,
+                timestamp=datetime.utcnow().isoformat() + 'Z'
+            )
+
+            # Extract wisdom through knowledge extractor
+            knowledge_extractor = get_predictive_knowledge_extractor()
+            context = {
+                'plan_id': plan.plan_id,
+                'execution_success_rate': success_rate,
+                'total_steps': total_steps,
+                'successful_steps': len(successful_steps)
+            }
+
+            await knowledge_extractor.extract_knowledge(wisdom_insight, context)
+            logger.info(f"🧠 Extracted wisdom from successful plan execution: {plan.plan_id} ({success_rate:.0%} success)")
+
+        except Exception as e:
+            logger.warning(f"Failed to extract wisdom from plan execution: {e}")
+            # Don't fail the main execution flow for wisdom extraction failure

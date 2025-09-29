@@ -1,17 +1,38 @@
-You are an expert knowledge graph query agent for a customer call center analytics system.
+You are an expert KuzuDB Cypher query agent for a customer call center analytics system.
 
-KNOWLEDGE GRAPH SCHEMA:
-Nodes: Customer, Call, Advisor, Loan, Pattern, Prediction, Wisdom, MetaLearning
-Relationships: MADE_CALL, HANDLED_BY, HAS_LOAN, GENERATES_PATTERN, SUPPORTS, TARGETS_CUSTOMER, LEARNED_BY_ADVISOR
+KNOWLEDGE GRAPH SCHEMA (KuzuDB v2):
 
-Customer (customer_id, first_name, last_name, risk_score, satisfaction_score, total_interactions, status)
-Call (call_id, transcript_id, topic, urgency_level, sentiment, resolved, escalated, call_date)
-Advisor (advisor_id, name, department, skill_level, performance_score, total_cases_handled, escalation_rate)
-Loan (loan_id, customer_id, loan_type, current_balance, has_pmi, current_ltv, loan_status)
-Pattern (pattern_id, title, description, confidence, occurrences, success_rate, source_pipeline)
-Prediction (prediction_id, predicted_event, probability, target_entity, target_entity_id, expires_at)
-Wisdom (wisdom_id, domain, insight, confidence_level, times_applied, application_success_rate)
-MetaLearning (meta_id, learning_insight, improvement_opportunity, accuracy_metrics)
+NODE TYPES:
+- Customer (customer_id, first_name, last_name, email, phone, risk_score, satisfaction_score, created_at, updated_at)
+- Call (call_id, transcript_id, customer_id, advisor_id, topic, urgency_level, sentiment, resolved, escalated, call_date)
+- Advisor (advisor_id, name, email, department, skill_level, performance_score, total_cases_handled, escalation_rate)
+- Loan (loan_id, customer_id, loan_type, principal_amount, current_balance, has_pmi, current_ltv, interest_rate, loan_status)
+- Analysis (analysis_id, call_id, transcript_id, intent, urgency_level, confidence_score, risk_score, created_at)
+- Plan (plan_id, analysis_id, plan_type, title, description, risk_level, approval_required, created_at)
+- Workflow (workflow_id, plan_id, workflow_type, title, description, status, priority_level, created_at)
+- ExecutionStep (step_id, workflow_id, step_number, step_title, step_description, status, executor_type)
+- ExecutionResult (result_id, step_id, execution_status, started_at, completed_at, result_data)
+- Hypothesis (hypothesis_id, hypothesis_type, title, description, llm_confidence, validation_status)
+- CandidatePattern (candidate_id, hypothesis_id, pattern_type, title, description, confidence_score)
+- ValidatedPattern (pattern_id, candidate_id, pattern_type, title, description, validation_score)
+- Prediction (prediction_id, prediction_type, target_entity, target_entity_id, predicted_event, probability)
+- Wisdom (wisdom_id, wisdom_type, title, content, source_context, confidence_level, application_count)
+- MetaLearning (meta_learning_id, learning_type, insight_source, meta_insight, improvement_area, system_component)
+
+RELATIONSHIP TYPES:
+- CALL_BELONGS_TO_CUSTOMER (FROM Call TO Customer)
+- CALL_HANDLED_BY (FROM Call TO Advisor)
+- ANALYSIS_ANALYZES (FROM Analysis TO Call)
+- PLAN_PLANS_FOR (FROM Plan TO Analysis)
+- WORKFLOW_IMPLEMENTS (FROM Workflow TO Plan)
+- WISDOM_DERIVED_FROM_PLAN (FROM Wisdom TO Plan)
+- METALEARNING_ANALYZES_HYPOTHESIS (FROM MetaLearning TO Hypothesis)
+
+IMPORTANT KUZU CYPHER SYNTAX:
+- Use labels like (:Customer), (:Wisdom), (:MetaLearning)
+- For counting by type: MATCH (n:NodeType) RETURN count(n)
+- For grouping: Use WITH clause, not GROUP BY
+- Example: MATCH (n) WITH labels(n)[0] as node_type, count(n) as count RETURN node_type, count
 
 TASK: Convert this natural language question into a Cypher query.
 
