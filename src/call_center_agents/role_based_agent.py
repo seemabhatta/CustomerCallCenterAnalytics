@@ -657,7 +657,10 @@ def load_prompt_from_file(role: str, mode: str = "borrower") -> str:
 
 
 def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
-    """Create an agent with role and mode specific prompts and shared tools.
+    """Create an agent with role and mode specific prompts and YAML-configured tools.
+
+    Tools are now loaded from config/prompt_mapping.yaml based on role+mode.
+    This enables dynamic tool assignment without code changes.
 
     Args:
         role: Role identifier (advisor, leadership)
@@ -665,6 +668,9 @@ def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
 
     Returns:
         Configured Agent instance
+
+    Raises:
+        ValueError: If role/mode not found or tools cannot be resolved
     """
     # Load role and mode specific prompt
     instructions = load_prompt_from_file(role, mode)
@@ -681,30 +687,45 @@ def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
         except Exception:
             model = 'gpt-4o-mini'
 
-    # Create agent with role-specific configuration
+    # Load tools from YAML configuration
+    from src.infrastructure.config.tool_registry import get_agent_tool_config
+
+    # Define tool function registry (maps tool names to actual functions)
+    TOOL_FUNCTION_REGISTRY = {
+        'get_transcripts': get_transcripts,
+        'get_transcript': get_transcript,
+        'get_analysis_by_transcript': get_analysis_by_transcript,
+        'get_analysis': get_analysis,
+        'get_plan_by_transcript': get_plan_by_transcript,
+        'get_plan': get_plan,
+        'get_workflows_for_plan': get_workflows_for_plan,
+        'get_workflow': get_workflow,
+        'get_workflow_steps': get_workflow_steps,
+        'execute_workflow_step': execute_workflow_step,
+        'approve_workflow': approve_workflow,
+        'get_transcript_pipeline': get_transcript_pipeline,
+        'get_borrower_pending_workflows': get_borrower_pending_workflows,
+        'get_pending_workflows_by_transcript': get_pending_workflows_by_transcript,
+        'query_knowledge_graph': query_knowledge_graph
+    }
+
+    # Get tool configuration for this role+mode
+    tool_config = get_agent_tool_config(
+        role=role,
+        mode=mode,
+        config_path="config/prompt_mapping.yaml",
+        tool_function_map=TOOL_FUNCTION_REGISTRY
+    )
+
+    # Create agent with YAML-configured tools
     agent = Agent(
         name=agent_name,
         model=model,
         instructions=instructions,
-        tools=[
-            # All agents get the same tool set - the prompt determines behavior
-            get_transcripts,
-            get_transcript,
-            get_analysis_by_transcript,
-            get_analysis,  # Added missing tool for direct analysis access
-            get_plan_by_transcript,
-            get_plan,
-            get_workflows_for_plan,
-            get_workflow,
-            get_workflow_steps,
-            execute_workflow_step,
-            approve_workflow,
-            get_transcript_pipeline,
-            get_borrower_pending_workflows,
-            get_pending_workflows_by_transcript,
-            query_knowledge_graph  # Knowledge graph exploration
-        ]
+        tools=tool_config['tool_functions']  # Tools from YAML config
     )
+
+    logger.info(f"✅ Created {role}/{mode} agent with {len(tool_config['tool_functions'])} tools: {tool_config['tool_names']}")
 
     return agent
 

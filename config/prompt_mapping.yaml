@@ -10,6 +10,24 @@ roles:
         prompt_file: "prompts/advisor_agent/borrower_system_prompt.md"
         description: "Borrower"
         icon: "User"
+        tools:
+          - get_transcripts
+          - get_transcript
+          - get_analysis_by_transcript
+          - get_plan_by_transcript
+          - get_workflows_for_plan
+          - get_workflow
+          - get_workflow_steps
+          - execute_workflow_step
+          - get_transcript_pipeline
+          - get_borrower_pending_workflows
+          - get_pending_workflows_by_transcript
+          - approve_workflow
+          - query_knowledge_graph
+        tool_filters:
+          workflow_types:
+            - BORROWER
+          access_level: advisor
         quick_actions:
           - icon: "FileText"
             label: "Show All Call IDs"
@@ -28,6 +46,15 @@ roles:
         prompt_file: "prompts/advisor_agent/selfreflection_system_prompt.md"
         description: "Personal Performance"
         icon: "CheckCircle"
+        tools:
+          - get_transcripts
+          - get_transcript
+          - get_analysis_by_transcript
+          - get_plan_by_transcript
+          - query_knowledge_graph
+        tool_filters:
+          scope: self
+          advisor_id: "${current_user}"
         quick_actions:
           - icon: "CheckCircle"
             label: "Performance Review"
@@ -50,6 +77,24 @@ roles:
         prompt_file: "prompts/leadership_agent/borrower_system_prompt.md"
         description: "Portfolio"
         icon: "User"
+        tools:
+          - get_transcripts
+          - get_transcript
+          - get_analysis_by_transcript
+          - get_analysis
+          - get_plan_by_transcript
+          - get_plan
+          - get_workflows_for_plan
+          - get_workflow
+          - get_workflow_steps
+          - get_transcript_pipeline
+          - query_knowledge_graph
+        tool_filters:
+          workflow_types:
+            - BORROWER
+            - ADVISOR
+            - COMPLIANCE
+          access_level: leadership
         quick_actions:
           - icon: "Users"
             label: "High-Risk Customers"
@@ -68,6 +113,13 @@ roles:
         prompt_file: "prompts/leadership_agent/selfreflection_system_prompt.md"
         description: "Performance"
         icon: "CheckCircle"
+        tools:
+          - get_transcripts
+          - get_analysis_by_transcript
+          - query_knowledge_graph
+        tool_filters:
+          access_level: leadership
+          focus: strategic_insights
         quick_actions:
           - icon: "GitBranch"
             label: "MetaLearning Insights"
@@ -134,9 +186,171 @@ validation:
     - "borrower"
     - "selfreflection"
 
+# Tool Registry - Define all available tools
+tool_registry:
+  # Transcript Tools
+  get_transcripts:
+    description: "List recent customer call transcripts"
+    category: "transcript"
+    parameters:
+      - name: limit
+        type: int
+        default: 10
+
+  get_transcript:
+    description: "Get specific transcript details"
+    category: "transcript"
+    parameters:
+      - name: transcript_id
+        type: str
+        required: true
+
+  # Analysis Tools
+  get_analysis_by_transcript:
+    description: "Get detailed analysis of a call transcript"
+    category: "analysis"
+    parameters:
+      - name: transcript_id
+        type: str
+        required: true
+
+  get_analysis:
+    description: "Get analysis by analysis ID"
+    category: "analysis"
+    parameters:
+      - name: analysis_id
+        type: str
+        required: true
+
+  # Plan Tools
+  get_plan_by_transcript:
+    description: "Generate strategic plan for a call transcript"
+    category: "plan"
+    parameters:
+      - name: transcript_id
+        type: str
+        required: true
+
+  get_plan:
+    description: "Get plan by plan ID"
+    category: "plan"
+    parameters:
+      - name: plan_id
+        type: str
+        required: true
+
+  # Workflow Tools
+  get_workflows_for_plan:
+    description: "Get detailed workflows for a plan"
+    category: "workflow"
+    parameters:
+      - name: plan_id
+        type: str
+        required: true
+
+  get_workflow:
+    description: "Get workflow by ID"
+    category: "workflow"
+    parameters:
+      - name: workflow_id
+        type: str
+        required: true
+
+  get_workflow_steps:
+    description: "Get detailed steps for a workflow"
+    category: "workflow"
+    parameters:
+      - name: workflow_id
+        type: str
+        required: true
+
+  execute_workflow_step:
+    description: "Execute a specific workflow step"
+    category: "workflow"
+    access_restrictions:
+      - advisor_borrower_mode
+    parameters:
+      - name: workflow_id
+        type: str
+        required: true
+      - name: step_number
+        type: int
+        required: true
+      - name: executed_by
+        type: str
+        default: "advisor"
+
+  # Pipeline Tools
+  get_transcript_pipeline:
+    description: "Get complete pipeline (analysis + plan + workflows) for a transcript"
+    category: "pipeline"
+    parameters:
+      - name: transcript_id
+        type: str
+        required: true
+
+  get_borrower_pending_workflows:
+    description: "Get pending workflows that need borrower action"
+    category: "workflow"
+    parameters:
+      - name: plan_id
+        type: str
+        required: false
+      - name: limit
+        type: int
+        default: 10
+
+  get_pending_workflows_by_transcript:
+    description: "Get pending workflows for a specific transcript"
+    category: "workflow"
+    parameters:
+      - name: transcript_id
+        type: str
+        required: true
+      - name: limit
+        type: int
+        default: 10
+
+  # Approval Tools
+  approve_workflow:
+    description: "Approve a workflow on behalf of the user"
+    category: "workflow"
+    access_restrictions:
+      - advisor_borrower_mode
+    parameters:
+      - name: workflow_id
+        type: str
+        required: true
+      - name: approved_by
+        type: str
+        required: true
+      - name: reasoning
+        type: str
+        default: "Approved by AI Agent on user's behalf"
+
+  # Knowledge Graph Tools
+  query_knowledge_graph:
+    description: "Query the knowledge graph using natural language"
+    category: "knowledge_graph"
+    parameters:
+      - name: question
+        type: str
+        required: true
+
 # Metadata
 metadata:
-  version: "1.0.0"
-  last_updated: "2025-09-25"
-  description: "Configuration for role-based agent prompt mapping"
+  version: "2.0.0"
+  last_updated: "2025-10-02"
+  description: "Configuration for role-based agent prompt mapping and tool registry"
   maintainer: "Customer Call Center Analytics Team"
+  changelog:
+    - version: "2.0.0"
+      date: "2025-10-02"
+      changes:
+        - "Added tool configuration per role and mode"
+        - "Added tool_filters for access control"
+        - "Added comprehensive tool_registry"
+    - version: "1.0.0"
+      date: "2025-09-25"
+      changes:
+        - "Initial configuration with role and mode mappings"
