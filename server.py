@@ -94,6 +94,8 @@ analysis_service = AnalysisService(api_key=api_key)
 plan_service = PlanService(api_key=api_key)
 workflow_service = WorkflowService(db_path=db_path)
 system_service = SystemService(api_key=api_key)
+# Advisor service is reused to avoid re-initializing agents and session storage per request
+advisor_service = AdvisorService(db_path=db_path)
 # leadership_insights_service = LeadershipInsightsService(api_key=api_key, db_path=db_path)  # Temporarily disabled for queue testing
 
 print("✅ All services initialized successfully")
@@ -1137,9 +1139,6 @@ async def advisor_chat(request: AdvisorChatRequest):
     The agent autonomously decides what tools to call based on the message and role.
     """
     try:
-        # Initialize advisor service
-        advisor_service = AdvisorService(db_path=db_path)
-
         # Process chat through service layer (fully agentic)
         result = await advisor_service.chat(
             advisor_id=request.advisor_id,
@@ -1169,9 +1168,6 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
     Returns Server-Sent Events (SSE) format.
     """
     try:
-        # Initialize advisor service
-        advisor_service = AdvisorService(db_path=db_path)
-
         async def generate_events():
             """Generate SSE events from streaming chat response."""
             try:
