@@ -325,41 +325,57 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
     }
 
     try:
-        # Get transcript data
-        pipeline_data["transcript"] = await get_transcript(transcript_id)
+        # Make direct API calls instead of calling @function_tool decorated functions
+        # to avoid "FunctionTool object is not callable" error
+        async with aiohttp.ClientSession() as session:
+            # Get transcript data
+            try:
+                async with session.get(f"http://localhost:8000/api/v1/transcripts/{transcript_id}") as response:
+                    if response.status == 200:
+                        pipeline_data["transcript"] = await response.json()
+                        logger.info(f"✅ Transcript retrieved for {transcript_id}")
+            except Exception as e:
+                logger.warning(f"❌ Transcript failed for {transcript_id}: {str(e)}")
+                pass
 
-        # Get analysis data
-        try:
-            pipeline_data["analysis"] = await get_analysis_by_transcript(transcript_id)
-            logger.info(f"✅ Analysis retrieved for {transcript_id}")
-        except Exception as e:
-            logger.warning(f"❌ Analysis failed for {transcript_id}: {str(e)}")
-            # Analysis might not exist yet, that's okay
-            pass
+            # Get analysis data
+            try:
+                async with session.get(f"http://localhost:8000/api/v1/analyses/by-transcript/{transcript_id}") as response:
+                    if response.status == 200:
+                        pipeline_data["analysis"] = await response.json()
+                        logger.info(f"✅ Analysis retrieved for {transcript_id}")
+            except Exception as e:
+                logger.warning(f"❌ Analysis failed for {transcript_id}: {str(e)}")
+                # Analysis might not exist yet, that's okay
+                pass
 
-        # Get plan data
-        try:
-            plan_data = await get_plan_by_transcript(transcript_id)
-            pipeline_data["plan"] = plan_data
-            logger.info(f"✅ Plan retrieved for {transcript_id}")
+            # Get plan data
+            try:
+                async with session.get(f"http://localhost:8000/api/v1/plans/by-transcript/{transcript_id}") as response:
+                    if response.status == 200:
+                        plan_data = await response.json()
+                        pipeline_data["plan"] = plan_data
+                        logger.info(f"✅ Plan retrieved for {transcript_id}")
 
-            # If plan exists, get associated workflows - check for plan_id field
-            plan_id = plan_data.get("plan_id") or plan_data.get("id")
-            if plan_data and plan_id:
-                try:
-                    pipeline_data["workflows"] = await get_workflows_for_plan(plan_id)
-                    workflow_count = len(pipeline_data["workflows"]) if isinstance(pipeline_data["workflows"], list) else 0
-                    logger.info(f"✅ Workflows retrieved for plan {plan_id}, count: {workflow_count}")
-                except Exception as e:
-                    logger.error(f"❌ Workflows failed for plan {plan_id}: {str(e)}")
-                    # Workflows might not exist yet, that's okay
-                    pass
-            else:
-                logger.warning(f"⚠️ No plan_id found in plan data for {transcript_id}")
-        except Exception as e:
-            logger.warning(f"❌ Plan failed for {transcript_id}: {str(e)}")
-            # Plan might not exist yet, that's okay
-            pass
+                        # If plan exists, get associated workflows - check for plan_id field
+                        plan_id = plan_data.get("plan_id") or plan_data.get("id")
+                        if plan_data and plan_id:
+                            try:
+                                async with session.get(f"http://localhost:8000/api/v1/workflows?plan_id={plan_id}") as wf_response:
+                                    if wf_response.status == 200:
+                                        pipeline_data["workflows"] = await wf_response.json()
+                                        workflow_count = len(pipeline_data["workflows"]) if isinstance(pipeline_data["workflows"], list) else 0
+                                        logger.info(f"✅ Workflows retrieved for plan {plan_id}, count: {workflow_count}")
+                            except Exception as e:
+                                logger.error(f"❌ Workflows failed for plan {plan_id}: {str(e)}")
+                                # Workflows might not exist yet, that's okay
+                                pass
+                        else:
+                            logger.warning(f"⚠️ No plan_id found in plan data for {transcript_id}")
+            except Exception as e:
+                logger.warning(f"❌ Plan failed for {transcript_id}: {str(e)}")
+                # Plan might not exist yet, that's okay
+                pass
 
         final_workflow_count = len(pipeline_data["workflows"]) if isinstance(pipeline_data["workflows"], list) else 0
         logger.info(f"🎯 Pipeline complete for {transcript_id}: transcript={bool(pipeline_data['transcript'])}, analysis={bool(pipeline_data['analysis'])}, plan={bool(pipeline_data['plan'])}, workflows={final_workflow_count}")
