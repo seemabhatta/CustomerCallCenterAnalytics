@@ -397,9 +397,9 @@ async def get_borrower_pending_workflows(plan_id: str = None, limit: int = 10) -
 
     **IMPORTANT: Use this tool when the user asks for "all pending workflows" or "show me pending workflows"**
 
-    This tool retrieves workflows with status AWAITING_APPROVAL. It can:
-    - Get ALL pending workflows across all plans (when plan_id is NOT provided)
-    - Get pending workflows for a SPECIFIC plan (when plan_id IS provided)
+    This tool retrieves workflows with status AWAITING_APPROVAL or APPROVED. It can:
+    - Get ALL pending/approved workflows across all plans (when plan_id is NOT provided)
+    - Get pending/approved workflows for a SPECIFIC plan (when plan_id IS provided)
 
     **When to use:**
     - User asks: "show me all pending workflows" → Call WITHOUT plan_id parameter
@@ -408,15 +408,16 @@ async def get_borrower_pending_workflows(plan_id: str = None, limit: int = 10) -
 
     Args:
         plan_id: Optional plan ID to filter workflows.
-                 - If None/not provided: Returns ALL pending workflows across all plans
-                 - If provided: Returns only pending workflows for that specific plan
+                 - If None/not provided: Returns ALL pending/approved workflows across all plans
+                 - If provided: Returns only pending/approved workflows for that specific plan
         limit: Maximum number of workflows to return (default: 10)
 
     Returns:
-        List of workflow dictionaries with status AWAITING_APPROVAL
+        List of workflow dictionaries with status AWAITING_APPROVAL or APPROVED
     """
     async with aiohttp.ClientSession() as session:
-        params = {"status": "AWAITING_APPROVAL", "limit": limit}
+        # Get both AWAITING_APPROVAL and APPROVED workflows
+        params = {"limit": limit}
         if plan_id:
             params["plan_id"] = plan_id
 
@@ -426,7 +427,14 @@ async def get_borrower_pending_workflows(plan_id: str = None, limit: int = 10) -
         ) as response:
             if response.status != 200:
                 raise Exception(f"Failed to get pending workflows: {response.status}")
-            return await response.json()
+            all_workflows = await response.json()
+
+            # Filter for AWAITING_APPROVAL and APPROVED statuses
+            filtered_workflows = [
+                wf for wf in all_workflows
+                if wf.get("status") in ["AWAITING_APPROVAL", "APPROVED"]
+            ]
+            return filtered_workflows
 
 
 @function_tool
@@ -468,13 +476,18 @@ async def get_pending_workflows_by_transcript(transcript_id: str, limit: int = 1
 
             plan_id = plan_data["id"]
 
-            # Step 2: Get pending workflows for this plan
+            # Step 2: Get pending/approved workflows for this plan
             async with session.get(
                 "http://localhost:8000/api/v1/workflows",
-                params={"status": "AWAITING_APPROVAL", "plan_id": plan_id, "limit": limit}
+                params={"plan_id": plan_id, "limit": limit}
             ) as response:
                 if response.status == 200:
-                    pending_workflows = await response.json()
+                    all_workflows = await response.json()
+                    # Filter for AWAITING_APPROVAL and APPROVED statuses
+                    pending_workflows = [
+                        wf for wf in all_workflows
+                        if wf.get("status") in ["AWAITING_APPROVAL", "APPROVED"]
+                    ]
                     result["pending_workflows"] = pending_workflows
                     result["workflow_count"] = len(pending_workflows) if pending_workflows else 0
 
