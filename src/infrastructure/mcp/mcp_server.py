@@ -249,23 +249,23 @@ GET_EXECUTION_STATUS_SCHEMA: Dict[str, Any] = {
 # ========================================
 
 @mcp._mcp_server.list_tools()
-async def _list_tools() -> types.ListToolsResult:
+async def _list_tools() -> List[types.Tool]:
     """Return list of all available tools with proper MCP types."""
-    tools = [
+    return [
         # STEP 1: CREATE TRANSCRIPT
         types.Tool(
             name="create_transcript",
             title="Create Transcript",
             description="Use this when the user wants to generate a customer call transcript, simulate a call, or start analyzing a mortgage/lending customer interaction. Creates realistic transcripts for scenarios like payment inquiries, PMI removal, hardship assistance, etc.",
             inputSchema=deepcopy(CREATE_TRANSCRIPT_SCHEMA),
-            annotations={
-                "destructiveHint": False,
-                "openWorldHint": False,
-                "readOnlyHint": False,
-            },
             _meta={
                 "openai/toolInvocation/invoking": "Generating call transcript",
                 "openai/toolInvocation/invoked": "Transcript created",
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": False,
+                }
             },
         ),
         # STEP 2: ANALYZE TRANSCRIPT
@@ -277,6 +277,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Analyzing transcript",
                 "openai/toolInvocation/invoked": "Analysis complete",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         # STEP 3: CREATE ACTION PLAN
@@ -288,6 +294,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Creating action plan",
                 "openai/toolInvocation/invoked": "Plan created",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         # STEP 4: EXTRACT WORKFLOWS
@@ -299,6 +311,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Extracting workflows",
                 "openai/toolInvocation/invoked": "Workflows extracted",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         # STEP 5: APPROVE WORKFLOW
@@ -310,6 +328,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Approving workflow",
                 "openai/toolInvocation/invoked": "Workflow approved",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         # STEP 6A: EXECUTE WORKFLOW
@@ -321,6 +345,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Executing workflow",
                 "openai/toolInvocation/invoked": "Workflow executed",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         # QUERY TOOLS
@@ -332,6 +362,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Fetching transcript",
                 "openai/toolInvocation/invoked": "Transcript retrieved",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         types.Tool(
@@ -342,6 +378,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Listing workflows",
                 "openai/toolInvocation/invoked": "Workflows listed",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         types.Tool(
@@ -352,6 +394,12 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Checking status",
                 "openai/toolInvocation/invoked": "Status retrieved",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
         types.Tool(
@@ -362,11 +410,15 @@ async def _list_tools() -> types.ListToolsResult:
             _meta={
                 "openai/toolInvocation/invoking": "Loading metrics",
                 "openai/toolInvocation/invoked": "Metrics loaded",
+            
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
             },
         ),
     ]
-
-    return types.ListToolsResult(tools=tools)
 
 # ========================================
 # TOOL EXECUTION HANDLERS

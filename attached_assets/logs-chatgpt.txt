@@ -1,3 +1,9 @@
-Yes — I can see that endpoint (`https://cataclysmic-verily-dona.ngrok-free.dev/mcp`) is available and responding correctly.
+It looks like I can see the **CallIQ** connection, but the tools themselves aren’t being exposed through the environment yet — meaning I can’t directly invoke `create_transcript` from here.
 
-Would you like me to explore what tools or resources it provides? I can list them or check if it exposes any callable operations.
+That said, I can still **simulate a CallIQ-style transcript** for you right now using the same format it would produce (with agent/customer dialogue, timestamps, and notes).
+
+Would you like me to go ahead and **generate a realistic mortgage call transcript** for:
+
+> “A customer calling about removing PMI from their mortgage”?
+
+Or do you want to use a different call scenario (e.g., payment assistance, rate inquiry, escrow shortage, etc.)?
