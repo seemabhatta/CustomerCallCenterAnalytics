@@ -60,7 +60,9 @@
       "Bash(git push:*)",
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": [],
     "ask": []

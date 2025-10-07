@@ -1,0 +1,105 @@
+Here’s a complete view of **all the API call layers** defined across your project:
+
+---
+
+### 🔹 **1. Core Call Sequence (from `data_structure.txt`)**
+
+Each customer interaction moves through this sequence:
+
+1. **Transcript** → `GET /api/v1/transcripts/CALL_46F4C703`
+   *(Raw conversation and metadata)*
+2. **Analysis** → `GET /api/v1/analyses/ANALYSIS_CALL_46F4C7`
+   *(Intent, sentiment, risk, and coaching analysis)*
+3. **Plan** → `GET /api/v1/plans/PLAN_ANALYSIS_CALL_4`
+   *(Action plans for borrower, advisor, supervisor, and leadership)*
+4. **Workflows** → `GET /api/v1/workflows?plan_id=PLAN_ANALYSIS_CALL_4`
+   *(Task-level breakdown with approvals and risk ratings)*
+
+---
+
+### 🔹 **2. Full REST API Catalog (from `openapi.json`)**
+
+#### 🧩 **Transcripts**
+
+* `GET /api/v1/transcripts` → List transcripts
+* `POST /api/v1/transcripts` → Create transcript
+* `GET /api/v1/transcripts/{id}` → Get one
+* `DELETE /api/v1/transcripts/{id}` → Delete one
+
+#### 🔍 **Analyses**
+
+* `GET /api/v1/analyses` → List analyses
+* `POST /api/v1/analyses` → Create analysis
+* `GET /api/v1/analyses/{id}` → Get one
+* `GET /api/v1/analyses/by-transcript/{transcript_id}` → Get by transcript
+
+#### 🧠 **Plans**
+
+* `GET /api/v1/plans` → List plans
+* `POST /api/v1/plans` → Create plan
+* `GET /api/v1/plans/{id}` → Get one
+* `GET /api/v1/plans/by-transcript/{transcript_id}` → Get plan tied to transcript
+
+#### ⚙️ **Workflows**
+
+* `GET /api/v1/workflows` → List all workflows (filters: plan_id, risk_level, etc.)
+* `POST /api/v1/workflows/extract-all` → Auto-extract granular workflows
+* `GET /api/v1/workflows/{workflow_id}` → Get single workflow
+* `POST /api/v1/workflows/{workflow_id}/approve` → Approve workflow
+* `POST /api/v1/workflows/{workflow_id}/execute` → Execute workflow
+* `GET /api/v1/workflows/{workflow_id}/steps` → List steps
+* `POST /api/v1/workflows/{workflow_id}/steps/{step_number}/execute` → Execute a single step
+* `GET /api/v1/workflows/{workflow_id}/steps/{step_number}/status` → Check step status
+* `POST /api/v1/workflows/execute-all` → Execute all approved workflows
+
+#### 📊 **Executions**
+
+* `GET /api/v1/executions` → List executions
+* `GET /api/v1/executions/{execution_id}` → Get execution status
+* `DELETE /api/v1/executions/{execution_id}` → Delete execution
+* `GET /api/v1/executions/statistics` → Execution stats
+
+#### 🧩 **Orchestration**
+
+* `POST /api/v1/orchestrate/run` → Run full pipeline (Transcript → Analysis → Plan → Workflows → Execution)
+* `GET /api/v1/orchestrate/status/{run_id}` → Check orchestration run status
+* `GET /api/v1/orchestrate/runs` → List orchestration runs
+
+#### 💬 **Advisor Chat**
+
+* `POST /api/v1/advisor/chat` → Advisor assistant endpoint (non-streaming)
+* `POST /api/v1/advisor/chat/stream` → Streaming chat (real-time tool calls, SSE)
+
+#### 🧮 **Insights**
+
+* `GET /api/v1/insights/patterns` → Discover risk/compliance patterns
+* `GET /api/v1/insights/dashboard` → Insights dashboard
+* `POST /api/v1/insights/populate` → Populate knowledge graph
+* `GET /api/v1/insights/status` → Graph status
+
+#### 🩺 **System**
+
+* `GET /api/v1/health` → Health check
+* `GET /api/v1/config` → Get frontend config
+* `GET /api/v1/metrics` → Dashboard metrics
+
+---
+
+### 🔹 **3. Example Orchestration Flow**
+
+If you want to reproduce the **end-to-end workflow**, here’s the API sequence:
+
+| Stage           | Endpoint                              | Description                  |
+| --------------- | ------------------------------------- | ---------------------------- |
+| 1️⃣ Transcript  | `POST /api/v1/transcripts`            | Upload call transcript       |
+| 2️⃣ Analysis    | `POST /api/v1/analyses`               | Run call analysis            |
+| 3️⃣ Plan        | `POST /api/v1/plans`                  | Generate action plan         |
+| 4️⃣ Workflows   | `POST /api/v1/workflows/extract-all`  | Build granular workflows     |
+| 5️⃣ Approvals   | `POST /api/v1/workflows/{id}/approve` | Supervisor/Advisor approvals |
+| 6️⃣ Execution   | `POST /api/v1/workflows/{id}/execute` | Execute workflows            |
+| 7️⃣ Insights    | `GET /api/v1/insights/dashboard`      | Review global patterns       |
+| 8️⃣ Orchestrate | `POST /api/v1/orchestrate/run`        | Run entire pipeline at once  |
+
+---
+
+Would you like me to **visualize** this full call chain (like a pipeline diagram showing each dependency and sub-call)?
