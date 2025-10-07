@@ -393,16 +393,27 @@ async def get_transcript_pipeline(transcript_id: str) -> Dict[str, Any]:
 
 @function_tool
 async def get_borrower_pending_workflows(plan_id: str = None, limit: int = 10) -> List[Dict[str, Any]]:
-    """Get pending workflows that need borrower action.
+    """Get pending workflows that need borrower action/approval.
 
-    Uses the existing workflows endpoint with status and optional plan filtering.
+    **IMPORTANT: Use this tool when the user asks for "all pending workflows" or "show me pending workflows"**
+
+    This tool retrieves workflows with status AWAITING_APPROVAL. It can:
+    - Get ALL pending workflows across all plans (when plan_id is NOT provided)
+    - Get pending workflows for a SPECIFIC plan (when plan_id IS provided)
+
+    **When to use:**
+    - User asks: "show me all pending workflows" → Call WITHOUT plan_id parameter
+    - User asks: "show me pending workflows for transcript X" → First get plan_id, then call WITH plan_id
+    - User asks: "what workflows need my approval" → Call WITHOUT plan_id parameter
 
     Args:
-        plan_id: Optional plan ID to filter workflows (if None, gets all pending workflows)
-        limit: Maximum number of workflows to return
+        plan_id: Optional plan ID to filter workflows.
+                 - If None/not provided: Returns ALL pending workflows across all plans
+                 - If provided: Returns only pending workflows for that specific plan
+        limit: Maximum number of workflows to return (default: 10)
 
     Returns:
-        List of workflows awaiting approval
+        List of workflow dictionaries with status AWAITING_APPROVAL
     """
     async with aiohttp.ClientSession() as session:
         params = {"status": "AWAITING_APPROVAL", "limit": limit}
@@ -439,27 +450,40 @@ async def get_pending_workflows_by_transcript(transcript_id: str, limit: int = 1
     }
 
     try:
-        # Step 1: Get the plan for this transcript
-        plan_data = await get_plan_by_transcript(transcript_id)
-        result["plan"] = plan_data
+        # Use direct HTTP API calls instead of calling @function_tool decorated functions
+        # to avoid "FunctionTool object is not callable" error
+        async with aiohttp.ClientSession() as session:
+            # Step 1: Get the plan for this transcript
+            async with session.get(f"http://localhost:8000/api/v1/plans/by-transcript/{transcript_id}") as response:
+                if response.status == 200:
+                    plan_data = await response.json()
+                    result["plan"] = plan_data
+                else:
+                    result["message"] = f"No plan found for transcript {transcript_id}"
+                    return result
 
-        if not plan_data or not plan_data.get("id"):
-            result["message"] = f"No plan found for transcript {transcript_id}"
+            if not plan_data or not plan_data.get("id"):
+                result["message"] = f"No plan found for transcript {transcript_id}"
+                return result
+
+            plan_id = plan_data["id"]
+
+            # Step 2: Get pending workflows for this plan
+            async with session.get(
+                "http://localhost:8000/api/v1/workflows",
+                params={"status": "AWAITING_APPROVAL", "plan_id": plan_id, "limit": limit}
+            ) as response:
+                if response.status == 200:
+                    pending_workflows = await response.json()
+                    result["pending_workflows"] = pending_workflows
+                    result["workflow_count"] = len(pending_workflows) if pending_workflows else 0
+
+            if result["workflow_count"] == 0:
+                result["message"] = f"No pending workflows found for plan {plan_id} (transcript {transcript_id})"
+            else:
+                result["message"] = f"Found {result['workflow_count']} pending workflow(s) for transcript {transcript_id}"
+
             return result
-
-        plan_id = plan_data["id"]
-
-        # Step 2: Get pending workflows for this plan
-        pending_workflows = await get_borrower_pending_workflows(plan_id=plan_id, limit=limit)
-        result["pending_workflows"] = pending_workflows
-        result["workflow_count"] = len(pending_workflows) if pending_workflows else 0
-
-        if result["workflow_count"] == 0:
-            result["message"] = f"No pending workflows found for plan {plan_id} (transcript {transcript_id})"
-        else:
-            result["message"] = f"Found {result['workflow_count']} pending workflow(s) for transcript {transcript_id}"
-
-        return result
 
     except Exception as e:
         result["error"] = str(e)
