@@ -249,9 +249,9 @@ GET_EXECUTION_STATUS_SCHEMA: Dict[str, Any] = {
 # ========================================
 
 @mcp._mcp_server.list_tools()
-async def _list_tools() -> List[types.Tool]:
+async def _list_tools() -> types.ListToolsResult:
     """Return list of all available tools with proper MCP types."""
-    return [
+    tools = [
         # STEP 1: CREATE TRANSCRIPT
         types.Tool(
             name="create_transcript",
@@ -365,6 +365,8 @@ async def _list_tools() -> List[types.Tool]:
             },
         ),
     ]
+
+    return types.ListToolsResult(tools=tools)
 
 # ========================================
 # TOOL EXECUTION HANDLERS
