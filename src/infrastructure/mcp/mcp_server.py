@@ -421,6 +421,15 @@ async def _list_tools() -> List[types.Tool]:
     ]
 
 # ========================================
+# RESOURCES (Required by OpenAI Apps SDK)
+# ========================================
+
+@mcp._mcp_server.list_resources()
+async def _list_resources() -> List[types.Resource]:
+    """Return empty list - we don't use resources, only tools."""
+    return []
+
+# ========================================
 # TOOL EXECUTION HANDLERS
 # ========================================
 
