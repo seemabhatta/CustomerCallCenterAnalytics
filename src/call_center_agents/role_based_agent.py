@@ -19,6 +19,37 @@ logger = logging.getLogger(__name__)
 
 # Configuration cache
 _config_cache: Optional[Dict[str, Any]] = None
+_workflow_config_cache: Optional[Dict[str, Any]] = None
+
+
+def load_workflow_config(config_path: str = "config/workflow_config.yaml") -> Dict[str, Any]:
+    """Load workflow configuration from YAML file.
+
+    Args:
+        config_path: Path to workflow config YAML file
+
+    Returns:
+        Workflow configuration dict
+    """
+    global _workflow_config_cache
+
+    if _workflow_config_cache is not None:
+        return _workflow_config_cache
+
+    try:
+        with open(config_path, 'r') as f:
+            _workflow_config_cache = yaml.safe_load(f)
+            logger.info(f"✅ Loaded workflow config from {config_path}")
+            return _workflow_config_cache
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to load workflow config from {config_path}: {e}")
+        # Return default config
+        return {
+            "borrower_workflows": {
+                "statuses": ["AWAITING_APPROVAL", "APPROVED"],
+                "default_limit": 10
+            }
+        }
 
 
 # ============================================
@@ -415,8 +446,14 @@ async def get_borrower_pending_workflows(plan_id: str = None, limit: int = 10) -
     Returns:
         List of workflow dictionaries with status AWAITING_APPROVAL or APPROVED
     """
+    # Load workflow config to get borrower statuses
+    workflow_config = load_workflow_config()
+    borrower_statuses = workflow_config.get("borrower_workflows", {}).get("statuses", ["AWAITING_APPROVAL", "APPROVED"])
+
+    logger.info(f"🔍 Querying borrower workflows with statuses: {borrower_statuses}")
+
     async with aiohttp.ClientSession() as session:
-        # Get both AWAITING_APPROVAL and APPROVED workflows
+        # Get workflows and filter by configured statuses
         params = {"limit": limit}
         if plan_id:
             params["plan_id"] = plan_id
@@ -429,11 +466,12 @@ async def get_borrower_pending_workflows(plan_id: str = None, limit: int = 10) -
                 raise Exception(f"Failed to get pending workflows: {response.status}")
             all_workflows = await response.json()
 
-            # Filter for AWAITING_APPROVAL and APPROVED statuses
+            # Filter using configured borrower statuses
             filtered_workflows = [
                 wf for wf in all_workflows
-                if wf.get("status") in ["AWAITING_APPROVAL", "APPROVED"]
+                if wf.get("status") in borrower_statuses
             ]
+            logger.info(f"✅ Found {len(filtered_workflows)} borrower workflows")
             return filtered_workflows
 
 
@@ -477,16 +515,20 @@ async def get_pending_workflows_by_transcript(transcript_id: str, limit: int = 1
             plan_id = plan_data["id"]
 
             # Step 2: Get pending/approved workflows for this plan
+            # Load workflow config to get borrower statuses
+            workflow_config = load_workflow_config()
+            borrower_statuses = workflow_config.get("borrower_workflows", {}).get("statuses", ["AWAITING_APPROVAL", "APPROVED"])
+
             async with session.get(
                 "http://localhost:8000/api/v1/workflows",
                 params={"plan_id": plan_id, "limit": limit}
             ) as response:
                 if response.status == 200:
                     all_workflows = await response.json()
-                    # Filter for AWAITING_APPROVAL and APPROVED statuses
+                    # Filter using configured borrower statuses
                     pending_workflows = [
                         wf for wf in all_workflows
-                        if wf.get("status") in ["AWAITING_APPROVAL", "APPROVED"]
+                        if wf.get("status") in borrower_statuses
                     ]
                     result["pending_workflows"] = pending_workflows
                     result["workflow_count"] = len(pending_workflows) if pending_workflows else 0
