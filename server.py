@@ -90,13 +90,11 @@ if not api_key:
 db_path = os.getenv('DATABASE_PATH', './data/call_center.db')
 transcript_service = TranscriptService(api_key=api_key)
 analysis_service = AnalysisService(api_key=api_key)
-# insights_service = InsightsService()  # Temporarily disabled for queue testing
 plan_service = PlanService(api_key=api_key)
 workflow_service = WorkflowService(db_path=db_path)
 system_service = SystemService(api_key=api_key)
 # Advisor service is reused to avoid re-initializing agents and session storage per request
 advisor_service = AdvisorService(db_path=db_path)
-# leadership_insights_service = LeadershipInsightsService(api_key=api_key, db_path=db_path)  # Temporarily disabled for queue testing
 
 print("✅ All services initialized successfully")
 
@@ -593,44 +591,6 @@ async def delete_all_analyses():
         return {"message": f"Deleted {count} analyses successfully", "count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete all analyses: {str(e)}")
-
-# ===============================================
-# INSIGHTS ENDPOINTS (Core subset)
-# ===============================================
-
-@app.get("/api/v1/insights/patterns")
-async def discover_risk_patterns(risk_threshold: float = Query(0.7)):
-    """Discover high-risk patterns across all analyses - proxies to insights service."""
-    try:
-        return await insights_service.discover_risk_patterns(risk_threshold)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to discover risk patterns: {str(e)}")
-
-@app.get("/api/v1/insights/dashboard")
-async def get_insights_dashboard():
-    """Get comprehensive insights dashboard - proxies to insights service."""
-    try:
-        return await insights_service.get_insights_dashboard()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get insights dashboard: {str(e)}")
-
-@app.post("/api/v1/insights/populate")
-async def populate_insights_graph(request: dict):
-    """Populate knowledge graph from analysis data - proxies to insights service."""
-    try:
-        return await insights_service.populate_insights(request)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to populate insights: {str(e)}")
-
-@app.get("/api/v1/insights/status")
-async def get_insights_status():
-    """Get knowledge graph status and statistics - proxies to insights service."""
-    try:
-        return await insights_service.get_graph_status()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get insights status: {str(e)}")
 
 # ===============================================
 # GRAPH QUERY ENDPOINTS
