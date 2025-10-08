@@ -5,38 +5,63 @@ INFO:__main__:🚀 Starting MCP Server for Customer Call Center Analytics
 INFO:__main__:🌐 Server will run on http://0.0.0.0:8001
 INFO:__main__:📡 SSE endpoint: /mcp
 INFO:__main__:💬 Messages endpoint: /mcp/messages
-INFO:__main__:🔧 Tools registered: 10
+INFO:__main__:🔧 Tools registered: 11
 INFO:__main__:============================================================
 INFO:__main__:WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute
 INFO:__main__:============================================================
 INFO:src.infrastructure.mcp.mcp_server:🔧 Initializing MCP services...
 INFO:src.infrastructure.mcp.mcp_server:✅ MCP services initialized
-INFO:     Started server process [104237]
+INFO:     Started server process [111774]
 INFO:     Waiting for application startup.
 INFO:mcp.server.streamable_http_manager:StreamableHTTP session manager started
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     74.7.36.92:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     57.154.187.45:0 - "POST /mcp HTTP/1.1" 200 OK
 INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     74.7.36.90:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     57.154.187.47:0 - "POST /mcp HTTP/1.1" 200 OK
 INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     74.7.36.94:0 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     57.154.187.41:0 - "POST /mcp HTTP/1.1" 202 Accepted
 INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     74.7.36.92:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     57.154.187.32:0 - "POST /mcp HTTP/1.1" 200 OK
 INFO:mcp.server.lowlevel.server:Processing request of type ListToolsRequest
 INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     127.0.0.1:47900 - "GET /mcp HTTP/1.1" 406 Not Acceptable
+INFO:     57.154.187.44:0 - "POST /mcp HTTP/1.1" 200 OK
 INFO:mcp.server.streamable_http:Terminating session: None
-ERROR:mcp.server.streamable_http:Error in message router
-Traceback (most recent call last):
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/mcp/server/streamable_http.py", line 831, in message_router
-    async for session_message in write_stream_reader:
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/anyio/abc/_streams.py", line 41, in __anext__
-    return await self.receive()
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/anyio/streams/memory.py", line 111, in receive
-    return self.receive_nowait()
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/anyio/streams/memory.py", line 93, in receive_nowait
-    raise ClosedResourceError
-anyio.ClosedResourceError
+INFO:     57.154.187.46:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.41:0 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.41:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
+INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: list_transcripts with args: {}
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.46:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.40:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.36:0 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.45:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
+INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_transcript with args: {'transcript_id': 'CALL_001'}
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.38:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.38:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.44:0 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.34:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
+INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: list_transcripts with args: {}
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.39:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.35:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.40:0 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     57.154.187.33:0 - "POST /mcp HTTP/1.1" 200 OK
+INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
+INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: list_transcripts with args: {'limit': 5}
+INFO:mcp.server.streamable_http:Terminating session: Nones

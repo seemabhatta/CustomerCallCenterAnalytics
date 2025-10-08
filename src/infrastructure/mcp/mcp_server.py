@@ -15,6 +15,7 @@ Usage:
 import os
 import sys
 import logging
+import httpx
 from pathlib import Path
 from dotenv import load_dotenv
 from typing import Dict, Any, List
@@ -28,39 +29,23 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from mcp.server.fastmcp import FastMCP
 import mcp.types as types
-from pydantic import BaseModel, Field, ValidationError, ConfigDict
-
-# Import existing services
-from src.services.transcript_service import TranscriptService
-from src.services.analysis_service import AnalysisService
-from src.services.plan_service import PlanService
-from src.services.workflow_service import WorkflowService
-from src.services.system_service import SystemService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ========================================
-# INITIALIZE SERVICES
+# FASTAPI CLIENT CONFIGURATION
 # ========================================
 
-# Validate configuration
-api_key = os.environ.get("OPENAI_API_KEY")
-if not api_key:
-    logger.error("❌ OPENAI_API_KEY not found in environment")
-    sys.exit(1)
+# FastAPI server base URL
+API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:8000')
 
-# Initialize services (reuse from main server)
-db_path = os.getenv('DATABASE_PATH', './data/call_center.db')
+# HTTP client for calling FastAPI
+http_client = httpx.AsyncClient(base_url=API_BASE_URL, timeout=30.0)
 
-logger.info("🔧 Initializing MCP services...")
-transcript_service = TranscriptService(api_key=api_key)
-analysis_service = AnalysisService(api_key=api_key)
-plan_service = PlanService(api_key=api_key)
-workflow_service = WorkflowService(db_path=db_path)
-system_service = SystemService(api_key=api_key)
-logger.info("✅ MCP services initialized")
+logger.info(f"🔧 MCP Server will proxy requests to: {API_BASE_URL}")
+logger.info("✅ MCP HTTP client initialized")
 
 # ========================================
 # CREATE FASTMCP SERVER
@@ -526,7 +511,7 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
 # ========================================
 
 async def _handle_create_transcript(args: Dict[str, Any]) -> str:
-    """STEP 1: Create transcript."""
+    """STEP 1: Create transcript via FastAPI."""
     params = {
         "topic": args.get("topic", "payment_inquiry"),
         "urgency": args.get("urgency", "medium"),
@@ -534,7 +519,10 @@ async def _handle_create_transcript(args: Dict[str, Any]) -> str:
         "customer_sentiment": args.get("customer_sentiment", "neutral"),
         "customer_id": args.get("customer_id", "CUST_001"),
     }
-    result = await transcript_service.create(params)
+    response = await http_client.post("/api/v1/transcripts", json=params)
+    response.raise_for_status()
+    result = response.json()
+
     transcript_id = result.get('transcript_id')
     return f"""✅ STEP 1 COMPLETE: Transcript created!
 
@@ -544,7 +532,7 @@ Content preview: {result.get('content', '')[:300]}...
 ➡️ NEXT STEP: Use analyze_transcript with transcript_id="{transcript_id}" to analyze this call."""
 
 async def _handle_analyze_transcript(args: Dict[str, Any]) -> str:
-    """STEP 2: Analyze transcript."""
+    """STEP 2: Analyze transcript via FastAPI."""
     transcript_id = args.get("transcript_id")
     if not transcript_id:
         raise ValueError("transcript_id is required")
@@ -553,7 +541,10 @@ async def _handle_analyze_transcript(args: Dict[str, Any]) -> str:
         "transcript_id": transcript_id,
         "analysis_type": args.get("analysis_type", "comprehensive"),
     }
-    result = await analysis_service.create(params)
+    response = await http_client.post("/api/v1/analyses", json=params)
+    response.raise_for_status()
+    result = response.json()
+
     analysis_id = result.get('analysis_id')
     return f"""✅ STEP 2 COMPLETE: Analysis created!
 
@@ -567,7 +558,7 @@ Analysis ID: {analysis_id}
 ➡️ NEXT STEP: Use create_action_plan with analysis_id="{analysis_id}" to generate action plan."""
 
 async def _handle_create_action_plan(args: Dict[str, Any]) -> str:
-    """STEP 3: Create action plan."""
+    """STEP 3: Create action plan via FastAPI."""
     analysis_id = args.get("analysis_id")
     if not analysis_id:
         raise ValueError("analysis_id is required")
@@ -577,7 +568,10 @@ async def _handle_create_action_plan(args: Dict[str, Any]) -> str:
         "plan_type": args.get("plan_type", "standard"),
         "urgency": args.get("urgency", "medium"),
     }
-    result = await plan_service.create(params)
+    response = await http_client.post("/api/v1/plans", json=params)
+    response.raise_for_status()
+    result = response.json()
+
     plan_id = result.get('plan_id')
     actions = result.get('actions', [])
     return f"""✅ STEP 3 COMPLETE: Action plan created!
@@ -590,12 +584,14 @@ Plan ID: {plan_id}
 ➡️ NEXT STEP: Use extract_workflows with plan_id="{plan_id}" to break plan into executable workflows."""
 
 async def _handle_extract_workflows(args: Dict[str, Any]) -> str:
-    """STEP 4: Extract workflows."""
+    """STEP 4: Extract workflows via FastAPI."""
     plan_id = args.get("plan_id")
     if not plan_id:
         raise ValueError("plan_id is required")
 
-    result = await workflow_service.extract_all_workflows_background(plan_id)
+    response = await http_client.post("/api/v1/workflows/extract-all", json={"plan_id": plan_id})
+    response.raise_for_status()
+    result = response.json()
     return f"""✅ STEP 4 COMPLETE: Workflows extracted!
 
 Plan ID: {plan_id}
@@ -606,17 +602,16 @@ Plan ID: {plan_id}
 ➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see all workflows, then use approve_workflow to approve each one."""
 
 async def _handle_approve_workflow(args: Dict[str, Any]) -> str:
-    """STEP 5: Approve workflow."""
+    """STEP 5: Approve workflow via FastAPI."""
     workflow_id = args.get("workflow_id")
     approved_by = args.get("approved_by")
     if not workflow_id or not approved_by:
         raise ValueError("workflow_id and approved_by are required")
 
-    result = await workflow_service.approve_action_item_workflow(
-        workflow_id=workflow_id,
-        approved_by=approved_by,
-        reasoning=args.get("reasoning", ""),
-    )
+    response = await http_client.post(f"/api/v1/workflows/{workflow_id}/approve", json={"approved_by": approved_by, "reasoning": args.get("reasoning", "")})
+    response.raise_for_status()
+    result = response.json()
+
     return f"""✅ STEP 5 COMPLETE: Workflow approved!
 
 Workflow ID: {workflow_id}
@@ -625,16 +620,15 @@ Approved by: {approved_by}
 ➡️ NEXT STEP: Use execute_workflow with workflow_id="{workflow_id}" to run entire workflow."""
 
 async def _handle_execute_workflow(args: Dict[str, Any]) -> str:
-    """STEP 6A: Execute workflow."""
+    """STEP 6A: Execute workflow via FastAPI."""
     workflow_id = args.get("workflow_id")
     executed_by = args.get("executed_by")
     if not workflow_id or not executed_by:
         raise ValueError("workflow_id and executed_by are required")
 
-    result = await workflow_service.execute_workflow(
-        workflow_id=workflow_id,
-        executed_by=executed_by,
-    )
+    response = await http_client.post(f"/api/v1/workflows/{workflow_id}/execute", json={"executed_by": executed_by})
+    response.raise_for_status()
+    result = response.json()
     execution_id = result.get('execution_id')
     return f"""✅ STEP 6A COMPLETE: Workflow executed!
 
@@ -646,37 +640,55 @@ Steps completed: {len(result.get('results', []))}
 ➡️ WORKFLOW COMPLETE! Use get_execution_status with execution_id="{execution_id}" to see detailed results."""
 
 async def _handle_list_transcripts(args: Dict[str, Any]) -> str:
-    """Query: List transcripts - returns simple count."""
+    """Query: List transcripts via FastAPI."""
     limit = args.get("limit", 10)
 
-    result = await transcript_service.list_all(limit=limit)
-    transcripts = result.get('transcripts', [])
+    response = await http_client.get(f"/api/v1/transcripts?limit={limit}")
+    response.raise_for_status()
+    result = response.json()
 
+    transcripts = result.get('transcripts', [])
     if not transcripts:
         return "No call transcripts found in the system."
 
-    return f"Found {len(transcripts)} call transcripts in the system."
+    # Include transcript IDs and topics for ChatGPT
+    transcript_list = "\n".join([
+        f"- {t.get('transcript_id')}: {t.get('topic', 'Unknown')}"
+        for t in transcripts[:limit]
+    ])
+
+    return f"""Found {len(transcripts)} call transcript(s):
+
+{transcript_list}"""
 
 async def _handle_get_transcript(args: Dict[str, Any]) -> str:
-    """Query: Get transcript."""
+    """Query: Get transcript via FastAPI."""
     transcript_id = args.get("transcript_id")
     if not transcript_id:
         raise ValueError("transcript_id is required")
 
-    result = await transcript_service.get_by_id(transcript_id)
+    response = await http_client.get(f"/api/v1/transcripts/{transcript_id}")
+    response.raise_for_status()
+    result = response.json()
     if not result:
         return f"❌ Transcript {transcript_id} not found"
     return f"""Transcript {transcript_id}:
 {result.get('content', '')[:1000]}..."""
 
 async def _handle_list_workflows(args: Dict[str, Any]) -> str:
-    """Query: List workflows."""
-    result = await workflow_service.list_workflows(
-        plan_id=args.get("plan_id") or None,
-        status=args.get("status") or None,
-        risk_level=args.get("risk_level") or None,
-        limit=args.get("limit", 10),
-    )
+    """Query: List workflows via FastAPI."""
+    params = {}
+    if args.get("plan_id"):
+        params["plan_id"] = args["plan_id"]
+    if args.get("status"):
+        params["status"] = args["status"]
+    if args.get("risk_level"):
+        params["risk_level"] = args["risk_level"]
+    params["limit"] = args.get("limit", 10)
+    response = await http_client.get("/api/v1/workflows", params=params)
+    response.raise_for_status()
+    result = response.json()
+
     workflows = result.get('workflows', [])
     if not workflows:
         return "No workflows found with the given filters."
@@ -691,14 +703,14 @@ async def _handle_list_workflows(args: Dict[str, Any]) -> str:
 Use approve_workflow with a workflow_id to approve."""
 
 async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
-    """Query: Get execution status."""
+    """Query: Get execution status via FastAPI."""
     execution_id = args.get("execution_id")
     if not execution_id:
         raise ValueError("execution_id is required")
 
-    from src.services.workflow_execution_engine import WorkflowExecutionEngine
-    execution_engine = WorkflowExecutionEngine()
-    result = await execution_engine.get_execution_status(execution_id)
+    response = await http_client.get(f"/api/v1/executions/{execution_id}")
+    response.raise_for_status()
+    result = response.json()
     return f"""Execution {execution_id}:
 - Status: {result.get('status')}
 - Workflow: {result.get('workflow_id')}
@@ -706,9 +718,11 @@ async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
 - Completed: {result.get('completed_at', 'In progress')}"""
 
 async def _handle_get_dashboard_metrics(args: Dict[str, Any]) -> str:
-    """Query: Get dashboard metrics."""
+    """Query: Get dashboard metrics via FastAPI."""
     try:
-        result = await system_service.get_dashboard_metrics()
+        response = await http_client.get("/api/v1/metrics")
+        response.raise_for_status()
+        result = response.json()
         return f"""Dashboard Metrics:
 - Total Transcripts: {result.get('total_transcripts', 0)}
 - Total Analyses: {result.get('total_analyses', 0)}
