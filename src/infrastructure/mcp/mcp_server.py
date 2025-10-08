@@ -202,7 +202,7 @@ LIST_WORKFLOWS_SCHEMA: Dict[str, Any] = {
         },
         "status": {
             "type": "string",
-            "description": "Filter by status: 'pending', 'approved', 'executing', 'completed' (optional)",
+            "description": "Filter by status: 'pending' (not rejected/executed), 'awaiting_approval', 'approved', 'rejected', 'executed' (optional)",
         },
         "risk_level": {
             "type": "string",
@@ -959,11 +959,31 @@ async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     params = {}
     if args.get("plan_id"):
         params["plan_id"] = args["plan_id"]
-    if args.get("status"):
-        params["status"] = args["status"]
+
+    # Map user-friendly status to database statuses
+    status_filter = args.get("status")
+    if status_filter:
+        # "pending" = anything not REJECTED or EXECUTED
+        if status_filter.lower() == "pending":
+            # Get all workflows and filter client-side
+            pass  # Don't send status param, filter after retrieval
+        else:
+            # Map friendly names to database values
+            status_map = {
+                "awaiting_approval": "AWAITING_APPROVAL",
+                "approved": "APPROVED",
+                "auto_approved": "AUTO_APPROVED",
+                "rejected": "REJECTED",
+                "executed": "EXECUTED",
+                "pending_assessment": "PENDING_ASSESSMENT"
+            }
+            params["status"] = status_map.get(status_filter.lower(), status_filter.upper())
+
     if args.get("risk_level"):
-        params["risk_level"] = args["risk_level"]
-    params["limit"] = args.get("limit", 10)
+        params["risk_level"] = args["risk_level"].upper()
+
+    params["limit"] = args.get("limit", 100)  # Get more to filter client-side
+
     response = await http_client.get("/api/v1/workflows", params=params)
     response.raise_for_status()
     workflows = response.json()  # FastAPI returns list directly, not dict
@@ -971,9 +991,23 @@ async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     if not workflows or not isinstance(workflows, list):
         return "No workflows found with the given filters."
 
+    # Filter for "pending" (not REJECTED or EXECUTED)
+    if status_filter and status_filter.lower() == "pending":
+        workflows = [
+            w for w in workflows
+            if w.get('status') not in ['REJECTED', 'EXECUTED']
+        ]
+
+    # Limit results
+    limit = args.get("limit", 10)
+    workflows = workflows[:limit]
+
+    if not workflows:
+        return "No pending workflows found."
+
     workflow_list = "\n".join([
         f"- {w.get('id')}: {w.get('workflow_type')} ({w.get('status')})"
-        for w in workflows[:10]
+        for w in workflows
     ])
     return f"""Found {len(workflows)} workflows:
 {workflow_list}
