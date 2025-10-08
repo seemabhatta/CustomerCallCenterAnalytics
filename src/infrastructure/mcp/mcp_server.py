@@ -499,23 +499,7 @@ async def _list_tools() -> List[types.Tool]:
             _meta={
                 "openai/toolInvocation/invoking": "Checking status",
                 "openai/toolInvocation/invoked": "Status retrieved",
-            
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="get_dashboard_metrics",
-            title="Get Dashboard Metrics",
-            description="Use this when the user wants to see system-wide statistics including total transcripts, analyses, workflows, and executions.",
-            inputSchema={"type": "object", "properties": {}, "additionalProperties": False},
-            _meta={
-                "openai/toolInvocation/invoking": "Loading metrics",
-                "openai/toolInvocation/invoked": "Metrics loaded",
-            
+
                 "annotations": {
                     "destructiveHint": False,
                     "openWorldHint": False,
@@ -573,8 +557,6 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
             result = await _handle_list_workflows(arguments)
         elif tool_name == "get_execution_status":
             result = await _handle_get_execution_status(arguments)
-        elif tool_name == "get_dashboard_metrics":
-            result = await _handle_get_dashboard_metrics(arguments)
         else:
             return types.ServerResult(
                 types.CallToolResult(
@@ -929,21 +911,6 @@ async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
 - Started: {result.get('started_at')}
 - Completed: {result.get('completed_at', 'In progress')}"""
 
-async def _handle_get_dashboard_metrics(args: Dict[str, Any]) -> str:
-    """Query: Get dashboard metrics via FastAPI."""
-    try:
-        response = await http_client.get("/api/v1/metrics")
-        response.raise_for_status()
-        result = response.json()
-        return f"""Dashboard Metrics:
-- Total Transcripts: {result.get('total_transcripts', 0)}
-- Total Analyses: {result.get('total_analyses', 0)}
-- Total Workflows: {result.get('total_workflows', 0)}
-- Pending Workflows: {result.get('pending_workflows', 0)}
-- Completed Executions: {result.get('completed_executions', 0)}"""
-    except Exception:
-        return "Dashboard metrics temporarily unavailable"
-
 # ========================================
 # REGISTER REQUEST HANDLERS
 # ========================================
@@ -980,7 +947,7 @@ if __name__ == "__main__":
     logger.info("🌐 Server will run on http://0.0.0.0:8001")
     logger.info("📡 SSE endpoint: /mcp")
     logger.info("💬 Messages endpoint: /mcp/messages")
-    logger.info("🔧 Tools registered: 14")
+    logger.info("🔧 Tools registered: 13")
     logger.info("=" * 60)
     logger.info("WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute")
     logger.info("=" * 60)
