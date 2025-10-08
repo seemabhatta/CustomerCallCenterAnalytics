@@ -1,0 +1,194 @@
+# MCP Apps Configuration
+# Defines multiple MCP apps for ChatGPT auto-discovery
+# Each app is a separate server with focused tool subset and optimized metadata
+
+apps:
+  # Universal Analytics - All tools for admin/power users
+  universal:
+    name: "Universal Call Center Analytics"
+    description: "Complete analytics suite for mortgage call center. Full access to all transcripts, analysis, plans, workflows, orchestration, and execution tools."
+    port: 8001
+    prompt_file: null
+    tools:
+      # All 26 tools
+      - create_transcript
+      - analyze_transcript
+      - create_action_plan
+      - extract_workflows
+      - approve_workflow
+      - execute_workflow
+      - list_transcripts
+      - get_transcript
+      - get_analysis
+      - list_analyses
+      - get_analysis_by_id
+      - get_action_plan
+      - get_plan_by_id
+      - get_plan_by_transcript
+      - list_workflows
+      - get_workflow
+      - get_workflow_steps
+      - execute_workflow_step
+      - get_step_status
+      - get_execution_status
+      - list_executions
+      - get_execution_statistics
+      - run_orchestration
+      - get_orchestration_status
+      - list_orchestration_runs
+      - get_dashboard_metrics
+    discovery_keywords:
+      - "call center analytics"
+      - "mortgage servicing"
+      - "admin"
+      - "system wide"
+      - "all tools"
+      - "full access"
+
+  # Advisor Borrower Assistant - Customer service operations
+  advisor_borrower:
+    name: "Advisor Borrower Assistant"
+    description: "Help mortgage advisors resolve customer issues. Create transcripts, analyze calls, generate action plans, manage workflows for PMI removal, escrow inquiries, refinancing, and hardship assistance."
+    port: 8002
+    prompt_file: "prompts/advisor_agent/borrower_system_prompt.md"
+    tools:
+      # Pipeline operations (6)
+      - create_transcript
+      - analyze_transcript
+      - create_action_plan
+      - extract_workflows
+      - approve_workflow
+      - execute_workflow
+      # Workflow execution (3)
+      - execute_workflow_step
+      - get_step_status
+      - get_execution_status
+      # Workflow monitoring (3)
+      - list_workflows
+      - get_workflow
+      - get_workflow_steps
+      # Transcript/Analysis lookup (4)
+      - list_transcripts
+      - get_transcript
+      - get_analysis
+      - get_action_plan
+    discovery_keywords:
+      - "customer"
+      - "borrower"
+      - "PMI removal"
+      - "PMI"
+      - "escrow"
+      - "refinance"
+      - "refinancing"
+      - "hardship"
+      - "workflow"
+      - "resolve issue"
+      - "help customer"
+      - "customer service"
+
+  # Advisor Performance Coach - Personal performance review
+  advisor_performance:
+    name: "Advisor Performance Coach"
+    description: "Personal performance review and coaching for mortgage advisors. Analyze your call handling, review recent interactions, identify improvement opportunities, and track your customer satisfaction."
+    port: 8003
+    prompt_file: "prompts/advisor_agent/selfreflection_system_prompt.md"
+    tools:
+      # Transcript review (3)
+      - list_transcripts
+      - get_transcript
+      - get_analysis
+      # Performance analysis (2)
+      - list_analyses
+      - get_dashboard_metrics
+    discovery_keywords:
+      - "my performance"
+      - "how am I doing"
+      - "self review"
+      - "personal improvement"
+      - "my calls"
+      - "my customer satisfaction"
+      - "feedback"
+      - "coaching"
+      - "skills"
+      - "learning opportunities"
+
+  # Leadership Portfolio Manager - Organization-wide customer management
+  leadership_portfolio:
+    name: "Leadership Portfolio Manager"
+    description: "Portfolio management for mortgage company leadership. Monitor all customers, high-risk cases, bulk orchestration, execution tracking, and system-wide metrics."
+    port: 8004
+    prompt_file: "prompts/leadership_agent/borrower_system_prompt.md"
+    tools:
+      # Overview (6)
+      - list_transcripts
+      - list_analyses
+      - list_workflows
+      - get_transcript
+      - get_analysis
+      - get_action_plan
+      # Orchestration (3)
+      - run_orchestration
+      - get_orchestration_status
+      - list_orchestration_runs
+      # Metrics & Execution (3)
+      - get_dashboard_metrics
+      - list_executions
+      - get_execution_statistics
+    discovery_keywords:
+      - "portfolio"
+      - "all customers"
+      - "high-risk customers"
+      - "high risk"
+      - "orchestration"
+      - "batch processing"
+      - "system metrics"
+      - "leadership"
+      - "organization wide"
+      - "executive view"
+
+  # Leadership Strategy Advisor - System optimization and insights
+  leadership_strategy:
+    name: "Leadership Strategy Advisor"
+    description: "Strategic insights and system optimization for leadership. Analyze execution statistics, success rates, pipeline performance, and identify optimization opportunities."
+    port: 8005
+    prompt_file: "prompts/leadership_agent/selfreflection_system_prompt.md"
+    tools:
+      # Performance metrics (2)
+      - get_dashboard_metrics
+      - get_execution_statistics
+      # Analysis insights (2)
+      - list_analyses
+      - get_analysis_by_id
+      # Orchestration tracking (3)
+      - list_orchestration_runs
+      - get_orchestration_status
+      - list_executions
+    discovery_keywords:
+      - "system performance"
+      - "execution statistics"
+      - "success rate"
+      - "optimization"
+      - "strategic insights"
+      - "pipeline metrics"
+      - "system health"
+      - "performance trends"
+      - "analytics"
+
+# Global settings
+settings:
+  api_base_url: "http://localhost:8000"
+  http_timeout: 30.0
+  log_level: "INFO"
+
+  # Validation
+  validation:
+    require_prompt_files: true
+    fail_on_missing_tools: true
+    fail_on_port_conflict: true
+
+# Metadata
+metadata:
+  version: "1.0.0"
+  last_updated: "2025-10-08"
+  description: "Multi-app MCP architecture for ChatGPT auto-discovery"
+  maintainer: "Customer Call Center Analytics Team"

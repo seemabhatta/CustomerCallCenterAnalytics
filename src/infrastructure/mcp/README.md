@@ -1,31 +1,60 @@
-# MCP Server - ChatGPT Integration for Customer Call Center Analytics
+# MCP Multi-App Architecture - ChatGPT Integration
 
 ## Overview
 
-This MCP (Model Context Protocol) server enables ChatGPT to interact with the Customer Call Center Analytics system through natural language. ChatGPT can create transcripts, analyze calls, generate action plans, extract workflows, and execute mortgage servicing operations—all through conversational commands.
+This MCP (Model Context Protocol) implementation provides **5 focused apps** that enable ChatGPT to interact with the Customer Call Center Analytics system. Each app is optimized for specific use cases with filtered tool sets and discovery keywords, allowing ChatGPT to automatically select the right app based on user intent.
 
-## Architecture
+## Multi-App Architecture
 
 ```
 ┌─────────────┐
 │   ChatGPT   │ Natural language interface
 └──────┬──────┘
-       │ MCP Protocol
-       ↓
-┌─────────────────┐
-│   MCP Server    │ Port 8001 (this component)
-│  tool_handlers  │
-└──────┬──────────┘
-       │ Calls
-       ↓
-┌─────────────────┐
-│ Service Layer   │ Existing business logic
-│ - Transcript    │
-│ - Analysis      │
-│ - Workflow      │
-│ - Execution     │
-└─────────────────┘
+       │ MCP Protocol (auto-selects app based on intent)
+       │
+       ├─────────────────────────────────────┬──────────────────────────────┐
+       │                                     │                              │
+       ↓                                     ↓                              ↓
+┌──────────────────┐         ┌──────────────────────┐      ┌────────────────────────┐
+│ Universal (8001) │         │ Advisor Apps         │      │ Leadership Apps        │
+│ All 26 tools     │         │ - Borrower (8002)    │      │ - Portfolio (8004)     │
+│ Admin/Power      │         │ - Performance (8003) │      │ - Strategy (8005)      │
+└────────┬─────────┘         └──────────┬───────────┘      └───────────┬────────────┘
+         │                              │                              │
+         └──────────────────────────────┴──────────────────────────────┘
+                                        │
+                                        ↓
+                              ┌─────────────────┐
+                              │ Service Layer   │ Shared business logic
+                              │ - Transcript    │
+                              │ - Analysis      │
+                              │ - Workflow      │
+                              │ - Execution     │
+                              └─────────────────┘
 ```
+
+## The 5 MCP Apps
+
+| App | Port | Tools | Use Case | Discovery Keywords |
+|-----|------|-------|----------|-------------------|
+| **Universal Analytics** | 8001 | 26 | Admin/power users, full access | admin, system wide, all tools |
+| **Advisor Borrower Assistant** | 8002 | 19 | Customer service operations | customer, PMI, escrow, refinance, workflow |
+| **Advisor Performance Coach** | 8003 | 5 | Personal performance review | my performance, self review, improvement |
+| **Leadership Portfolio Manager** | 8004 | 12 | Organization-wide management | portfolio, high-risk, orchestration, batch |
+| **Leadership Strategy Advisor** | 8005 | 7 | Strategic insights & optimization | performance, statistics, optimization |
+
+### How ChatGPT Auto-Discovery Works
+
+ChatGPT's model automatically selects the appropriate app based on:
+1. **User's prompt** - Keywords and intent
+2. **Tool metadata** - Descriptions optimized for each app
+3. **Past usage patterns** - Learning from successful interactions
+
+**Example:**
+- User: "Help me with customer PMI removal" → **Advisor Borrower** (8002)
+- User: "How's my performance this week?" → **Advisor Performance** (8003)
+- User: "Show me high-risk customers" → **Leadership Portfolio** (8004)
+- User: "System execution statistics" → **Leadership Strategy** (8005)
 
 ## Available Tools (26)
 
@@ -71,30 +100,52 @@ This MCP (Model Context Protocol) server enables ChatGPT to interact with the Cu
 
 ## Quick Start
 
-### 1. Start the MCP Server
+### Option A: Start All Apps at Once
 
 ```bash
-# From project root
+# Start all 5 apps (ports 8001-8005)
+cd src/infrastructure/mcp
+./start_all_apps.sh
+
+# Stop all apps
+./stop_all_apps.sh
+```
+
+Logs are written to `logs/mcp_*.log`
+
+### Option B: Start Individual Apps
+
+```bash
+# Universal Analytics (all 26 tools)
 python src/infrastructure/mcp/mcp_server.py
+
+# Advisor Borrower Assistant
+python src/infrastructure/mcp/apps/advisor_borrower_server.py
+
+# Advisor Performance Coach
+python src/infrastructure/mcp/apps/advisor_performance_server.py
+
+# Leadership Portfolio Manager
+python src/infrastructure/mcp/apps/leadership_portfolio_server.py
+
+# Leadership Strategy Advisor
+python src/infrastructure/mcp/apps/leadership_strategy_server.py
 ```
 
-The server will start on `http://localhost:8001`
-
-### 2. Verify Server is Running
+### Verify Apps are Running
 
 ```bash
-# Check health
-curl http://localhost:8001/health
-
-# List available tools
-curl http://localhost:8001/tools
+# Check all ports
+for port in 8001 8002 8003 8004 8005; do
+  echo "Port $port: $(curl -s http://localhost:$port/mcp | head -1)"
+done
 ```
 
-### 3. Test a Tool Call
+### Test Tool Calls
 
 ```bash
-# Create a transcript
-curl -X POST http://localhost:8001/execute \
+# Example: Create transcript via Advisor Borrower app (port 8002)
+curl -X POST http://localhost:8002/execute \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "create_transcript",
@@ -108,6 +159,10 @@ curl -X POST http://localhost:8001/execute \
 
 ## ChatGPT Integration Setup
 
+### Multi-App Configuration
+
+You can configure **multiple MCP apps** in ChatGPT. ChatGPT's model will automatically select the appropriate app based on your conversation intent.
+
 ### Option 1: Local Development with ngrok
 
 1. **Install ngrok**
@@ -117,30 +172,61 @@ curl -X POST http://localhost:8001/execute \
    # or download binary for your OS
    ```
 
-2. **Expose MCP Server**
+2. **Start All Apps**
    ```bash
-   # Terminal 1: Start MCP server
-   python src/infrastructure/mcp/mcp_server.py
+   # Terminal 1: Start all 5 apps
+   cd src/infrastructure/mcp
+   ./start_all_apps.sh
+   ```
 
-   # Terminal 2: Expose via ngrok
+3. **Expose Each App via ngrok** (separate terminals)
+   ```bash
+   # Terminal 2: Universal
    ngrok http 8001
+
+   # Terminal 3: Advisor Borrower
+   ngrok http 8002
+
+   # Terminal 4: Advisor Performance
+   ngrok http 8003
+
+   # Terminal 5: Leadership Portfolio
+   ngrok http 8004
+
+   # Terminal 6: Leadership Strategy
+   ngrok http 8005
    ```
 
-   You'll get a URL like: `https://abc123.ngrok.io`
+   You'll get URLs like: `https://abc123.ngrok.io`, `https://def456.ngrok.io`, etc.
 
-3. **Configure ChatGPT Connector**
-   - Go to ChatGPT Settings
-   - Navigate to "Connectors" or "Integrations"
-   - Add new MCP server
-   - Enter ngrok URL: `https://abc123.ngrok.io`
-   - Save configuration
+4. **Configure ChatGPT Apps** (Settings → Apps → Add App)
 
-4. **Test Integration**
-   Open ChatGPT and try:
+   Add each app separately:
+
+   | App Name | ngrok URL | Description |
+   |----------|-----------|-------------|
+   | Universal Analytics | `https://abc123.ngrok.io` | Complete tool suite |
+   | Advisor - Borrower Mode | `https://def456.ngrok.io` | Customer service |
+   | Advisor - Performance | `https://ghi789.ngrok.io` | Self-review |
+   | Leadership - Portfolio | `https://jkl012.ngrok.io` | Portfolio management |
+   | Leadership - Strategy | `https://mno345.ngrok.io` | Strategic insights |
+
+5. **Test Auto-Discovery**
+
+   Open ChatGPT and try different prompts to see which app gets selected:
+
    ```
-   "Create a transcript for a PMI removal request"
-   "Analyze transcript TRANS_ABC123"
-   "Show me all high-risk workflows"
+   "Help me resolve a customer PMI removal request"
+   → ChatGPT selects: Advisor - Borrower Mode (8002)
+
+   "How's my call handling performance this week?"
+   → ChatGPT selects: Advisor - Performance (8003)
+
+   "Show me all high-risk customers in the portfolio"
+   → ChatGPT selects: Leadership - Portfolio (8004)
+
+   "What's the system-wide execution success rate?"
+   → ChatGPT selects: Leadership - Strategy (8005)
    ```
 
 ### Option 2: Production Deployment
