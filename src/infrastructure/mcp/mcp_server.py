@@ -511,14 +511,35 @@ async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     if not workflows:
         return "No pending workflows found."
 
-    workflow_list = "\n".join([
-        f"- {w.get('id')}: {w.get('workflow_type')} ({w.get('status')})"
-        for w in workflows
-    ])
-    return f"""Found {len(workflows)} workflows:
-{workflow_list}
+    # Build detailed workflow list - NO FALLBACK, fail fast on missing data
+    workflow_list = []
+    for w in workflows:
+        # Required fields - fail if missing
+        workflow_id = w['id']
+        workflow_type = w['workflow_type']
+        status = w['status']
+        risk_level = w['risk_level']
 
-Use approve_workflow with a workflow_id to approve."""
+        # Action item from workflow_data (fail if missing)
+        action = w['workflow_data']['action_item']
+
+        # Steps (can be empty list, but must exist)
+        workflow_steps = w['workflow_steps']
+        step_count = len(workflow_steps)
+
+        # Format: ID | Action | Type | Risk | Steps | Status
+        workflow_list.append(
+            f"• {workflow_id}\n"
+            f"  Action: {action}\n"
+            f"  Type: {workflow_type} | Risk: {risk_level} | Steps: {step_count} | Status: {status}"
+        )
+
+    workflows_text = "\n\n".join(workflow_list)
+    return f"""Found {len(workflows)} workflows:
+
+{workflows_text}
+
+Use get_workflow with workflow_id to see details, or approve_workflow to approve."""
 
 async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
     """Query: Get execution status via FastAPI."""
