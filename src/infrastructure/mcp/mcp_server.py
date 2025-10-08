@@ -653,7 +653,7 @@ async def _handle_list_transcripts(args: Dict[str, Any]) -> str:
 
     # Include transcript IDs and topics for ChatGPT
     transcript_list = "\n".join([
-        f"- {t.get('transcript_id')}: {t.get('topic', 'Unknown')}"
+        f"- {t.get('id')}: {t.get('topic', 'Unknown')}"
         for t in transcripts[:limit]
     ])
 
