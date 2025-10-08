@@ -53,6 +53,7 @@ class Transcript:
         """Convert to dictionary."""
         result = {
             'id': self.id,
+            'transcript_id': self.id,
             'messages': [msg.to_dict() for msg in self.messages]
         }
         

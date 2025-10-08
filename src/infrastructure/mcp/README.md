@@ -27,27 +27,47 @@ This MCP (Model Context Protocol) server enables ChatGPT to interact with the Cu
 └─────────────────┘
 ```
 
-## Available Tools (14)
+## Available Tools (26)
 
-### Pipeline Tools (6)
-1. **create_transcript** - Generate customer call transcripts
-2. **analyze_transcript** - Analyze calls for risks, sentiment, compliance
-3. **create_action_plan** - Generate strategic action plans
-4. **extract_workflows** - Break plans into executable workflows
-5. **approve_workflow** - Approve workflows for execution
-6. **execute_workflow** - Execute approved workflows
+> The tool catalog is defined once in `src/infrastructure/mcp/tool_definitions.py` and consumed by the MCP server at runtime. Update that module to add, remove, or edit tools—documentation and runtime stay in sync.
 
-### Query Tools (5)
-7. **get_transcript** - Retrieve specific transcript
-8. **get_workflow** - Get workflow details and status
-9. **list_workflows** - List workflows with filters
-10. **get_execution_status** - Check execution results
-11. **get_dashboard_metrics** - System-wide analytics
+### Pipeline Automation (6)
+1. **create_transcript** – Generate customer call transcripts.
+2. **analyze_transcript** – Analyze calls for risks, sentiment, compliance.
+3. **create_action_plan** – Generate strategic action plans.
+4. **extract_workflows** – Break plans into executable workflows.
+5. **approve_workflow** – Approve workflows for execution.
+6. **execute_workflow** – Execute approved workflows end-to-end.
 
-### Step Execution Tools (3)
-12. **get_workflow_steps** - Get workflow step breakdown
-13. **execute_workflow_step** - Execute single workflow step
-14. **get_step_status** - Check step execution status
+### Transcript & Analysis Insights (8)
+7. **list_transcripts** – List recorded calls with lightweight metadata.
+8. **get_transcript** – Retrieve the full transcript by ID.
+9. **get_analysis** – Fetch analysis details for a transcript.
+10. **list_analyses** – List all analyses in the system.
+11. **get_analysis_by_id** – Retrieve a specific analysis by its ID.
+12. **get_action_plan** – Fetch existing action plans for an analysis.
+13. **get_plan_by_id** – Retrieve a specific plan by its ID.
+14. **get_plan_by_transcript** – Retrieve a plan by its transcript ID.
+
+### Workflow Monitoring & Control (6)
+15. **get_workflow** – Inspect workflow metadata and configured steps.
+16. **list_workflows** – Filter workflows by plan, status, or risk.
+17. **get_workflow_steps** – Retrieve step-by-step instructions for a workflow.
+18. **execute_workflow_step** – Run an individual workflow step.
+19. **get_step_status** – Check execution status for a workflow step.
+20. **get_execution_status** – Review results of a workflow execution run.
+
+### Execution Tracking (2)
+21. **list_executions** – List all workflow executions with optional filters.
+22. **get_execution_statistics** – Get comprehensive execution statistics and success rates.
+
+### Orchestration Operations (3)
+23. **run_orchestration** – Kick off the full Transcript→Execute pipeline for one or more calls.
+24. **get_orchestration_status** – Track progress of an orchestration run.
+25. **list_orchestration_runs** – Review prior orchestration runs.
+
+### Analytics & Health (1)
+26. **get_dashboard_metrics** – Surface platform KPIs and pipeline stage load.
 
 ## Quick Start
 

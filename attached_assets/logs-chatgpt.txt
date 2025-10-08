@@ -2,7 +2,7 @@ Skip to content
 Chat history
 
 You said:
-show me all the pending workflows
+create a new transcript
 ChatGPT said:
 
 Looked for available tools
@@ -10,30 +10,270 @@ Looked for available tools
 Called tool
 CallIQ
 CallIQ
-list_workflows
+create_transcript
 Request
 
 {
-status: 
-'pending'
+topic: 
+'refinance_inquiry'
+, 
+urgency: 
+'medium'
+, 
+financial_impact: 
+true
+, 
+customer_sentiment: 
+'neutral'
+, 
+customer_id: 
+'CUST_1024'
 }
+topic:
+'refinance_inquiry'
+urgency:
+'medium'
+financial_impact:
+true
+customer_sentiment:
+'neutral'
+customer_id:
+'CUST_1024'
 Response
 
 {
 text: 
-'Error: Client error '400 Bad Request' for url 'http://localhost:8000/api/v1/workflows?status=pending&limit=10' For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400'
+'✅ STEP 1 COMPLETE: Transcript created! Transcript ID: CALL_F75354BF Content preview: ... ➡️ NEXT STEP: Use analyze_transcript with transcript_id="CALL_F75354BF" to analyze this call.'
+}
+✅ Transcript created successfully!
+
+Transcript ID: CALL_F75354BF
+Topic: Refinance Inquiry
+Next step: Analyze the transcript using analyze_transcript to uncover customer intent, sentiment trends, and compliance risks.
+
+Would you like me to run that analysis now?
+
+You said:
+run the orchestration pipeline
+ChatGPT said:
+
+Called tool
+CallIQ
+CallIQ
+run_orchestration
+Request
+
+{
+transcript_ids: 
+Array(1)
 , 
-is_error: 
+auto_approve: 
 true
 }
-The API call to list pending workflows returned a 400 Bad Request error — this usually means that "pending" isn’t a recognized status value for workflows.
 
-Looking at the data you provided in data_structure.txt, all the workflows currently have the status AWAITING_APPROVAL, w__
+transcript_ids:
+Array(1)
+0:
+'CALL_F75354BF'
+auto_approve:
+true
+Response
 
+{
+text: 
+'🚀 Orchestration pipeline started! Run ID: RUN_26D61F70 Transcripts to process: 1 Auto-approve: True Status: STARTED Pipeline: Transcript → Analysis → Plan → Workflows → Execute ➡️ NEXT STEP: Use get_orchestration_status with run_id="RUN_26D61F70" to check progress.'
+}
+🚀 The orchestration pipeline has started!
 
-DEVELOPER MODE
+Run ID: RUN_26D61F70
+Steps: Transcript → Analysis → Plan → Workflows → Execution
+Auto-approval: ✅ Enabled
 
+Would you like me to monitor the run and show the current status now?
 
-No file chosenNo file chosen
-ChatGPT can make mistakes. Check important info.
-ChatGPT is still generating a response...
+You said:
+yes
+ChatGPT said:
+
+Called tool
+📊 Orchestration Run: RUN_26D61F70
+Status: RUNNING
+Current Stage: ANALYSIS_COMPLETED
+Progress: 0 / 1 (0%)
+Started: 2025-10-08T17:18:05Z
+
+Would you like me to keep checking the run until it finishes automatically?
+
+You said:
+yes
+ChatGPT said:
+
+Called tool
+📊 Orchestration Run: RUN_26D61F70
+Status: RUNNING
+Current Stage: PLAN_COMPLETED
+Progress: 0 / 1 (0%)
+Started: 2025-10-08T17:18:05Z
+
+The orchestration has finished the planning phase. Would you like me to keep tracking it until workflows are fully executed?
+
+You said:
+yes
+ChatGPT said:
+
+Called tool
+✅ Orchestration Completed Successfully!
+
+Run ID: RUN_26D61F70
+Status: ✅ COMPLETED
+Progress: 1 / 1 (100%)
+Duration: ~1 minute
+Results: All stages executed successfully — no failures.
+
+Would you like to view the generated action plan or see the executed workflows next?
+
+You said:
+show me the action plan
+ChatGPT said:
+
+Called tool
+✅ Action Plan Retrieved for analysis CALL_F75354BF
+
+Plan ID: PLAN_ANALYSIS_CALL_F
+
+Borrower Immediate Actions: 2
+
+Advisor Coaching Items: 2
+
+Supervisor Escalations: 1
+
+Would you like me to list or extract the workflows linked to this plan next?
+
+You said:
+list
+ChatGPT said:
+
+Called tool
+Here are the 10 workflows linked to action plan PLAN_ANALYSIS_CALL_F — all have been executed ✅
+
+Borrower Workflows:
+
+8f597dcc-6d3e-4185-b06f-f439fc9a1f16
+
+b6075e24-80ca-429b-8dbb-441e4fdeb809
+
+41b645cd-b3c7-40c0-95f2-7eae82bfa195
+
+cbb4f769-102e-44f9-878f-84c09612b0f9
+
+Advisor Workflows:
+
+3885b407-6185-443d-9e78-d20e34d0f73f
+
+d7fda358-bdee-48bf-9013-3bffa565faba
+
+ef1d17b7-b514-4155-925d-722fd3d8ebb6
+
+3f4dfb2b-2ffc-4c85-a23e-d5b2d53c6289
+
+Supervisor Workflows:
+
+1daafdbf-4314-4cb0-a316-d5daf0dd392f
+
+b68d109e-d4b3-49ee-9ca2-e745a8dc75cc
+
+Would you like me to show the details and steps for any specific workflow (e.g., borrower or advisor)?
+
+You said:
+8f597dcc-6d3e-4185-b06f-f439fc9a1f16
+ChatGPT said:
+
+Called tool
+✅ Workflow Details: 8f597dcc-6d3e-4185-b06f-f439fc9a1f16
+
+Action: Gather updated financial information from the borrower
+Status: ✅ Executed
+Risk Level: 🟠 Medium
+
+Steps:
+
+Request John to provide his current financial situation (email)
+
+Request John's credit score details (email)
+
+Request details of any other debts (email)
+
+Log all requests in CRM (crm)
+
+Set a follow-up reminder (task)
+
+Prepare a summary report (document_api)
+
+Would you like to review the execution details or view step-by-step results next?
+
+You said:
+create a new transcript
+ChatGPT said:
+
+Called tool
+✅ New transcript created successfully!
+
+Transcript ID: CALL_9DB21148
+Topic: Hardship Assistance
+Urgency: High
+Customer Sentiment: Frustrated
+
+Would you like me to analyze this call now?
+
+You said:
+run the orchestration - donot auto approve
+ChatGPT said:
+
+Called tool
+🚀 Orchestration pipeline started!
+
+Run ID: RUN_C5524020
+Auto-approval: ❌ Disabled
+Stages: Transcript → Analysis → Plan → Workflows → Execute
+
+Would you like me to monitor the orchestration status until it completes?
+
+You said:
+yes
+ChatGPT said:
+
+Called tool
+📊 Orchestration Run: RUN_C5524020
+Status: RUNNING
+Current Stage: ANALYSIS_COMPLETED
+Progress: 0 / 1 (0%)
+Started: 2025-10-08T17:24:21Z
+
+Would you like me to keep tracking this run until the planning and workflow stages complete?
+
+You said:
+yes
+ChatGPT said:
+
+Called tool
+⚠️ Orchestration Run Completed — with Errors
+
+Run ID: RUN_C5524020
+Status: ✅ Completed (with 1 failure)
+Progress: 1 / 1 (100%)
+Successful: 0
+Failed: 1
+Duration: ~1 minute
+
+Would you like me to inspect the failed workflow to see what went wrong?
+
+You said:
+show me all the workflows created for this transcript
+ChatGPT said:
+
+Called tool
+It looks like no workflows were created yet for transcript CALL_9DB21148.
+
+This could happen if the orchestration failed during the action plan or workflow extraction stage.
+Would you like me to retrieve the action plan first to confirm whether workflows were generated?
+

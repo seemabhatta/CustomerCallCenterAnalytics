@@ -30,6 +30,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from mcp.server.fastmcp import FastMCP
 import mcp.types as types
 
+from src.infrastructure.mcp.tool_definitions import get_all_tool_definitions
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,534 +61,27 @@ mcp = FastMCP(
 )
 
 # ========================================
-# TOOL INPUT SCHEMAS
+# TOOL REGISTRATION HELPERS
 # ========================================
 
-# STEP 1: Create Transcript
-CREATE_TRANSCRIPT_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "topic": {
-            "type": "string",
-            "description": "Topic of the call (e.g., 'payment_inquiry', 'pmi_removal', 'hardship')",
-        },
-        "urgency": {
-            "type": "string",
-            "description": "Urgency level: 'low', 'medium', 'high', 'critical'",
-        },
-        "financial_impact": {
-            "type": "boolean",
-            "description": "Whether the call has financial impact",
-        },
-        "customer_sentiment": {
-            "type": "string",
-            "description": "Customer sentiment: 'positive', 'neutral', 'negative', 'frustrated'",
-        },
-        "customer_id": {
-            "type": "string",
-            "description": "Customer ID (e.g., 'CUST_001')",
-        }
-    },
-    "required": [],
-    "additionalProperties": False,
-}
 
-# STEP 2: Analyze Transcript
-ANALYZE_TRANSCRIPT_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "transcript_id": {
-            "type": "string",
-            "description": "Transcript ID from create_transcript (e.g., 'CALL_ABC123')",
-        },
-        "analysis_type": {
-            "type": "string",
-            "description": "Type of analysis: 'comprehensive', 'quick', 'detailed'",
-        }
-    },
-    "required": ["transcript_id"],
-    "additionalProperties": False,
-}
+def _tool_from_definition(definition: Dict[str, Any]) -> types.Tool:
+    """Construct a FastMCP tool from canonical definition data."""
 
-# STEP 3: Create Action Plan
-CREATE_ACTION_PLAN_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "analysis_id": {
-            "type": "string",
-            "description": "Analysis ID from analyze_transcript (e.g., 'ANALYSIS_XYZ')",
-        },
-        "plan_type": {
-            "type": "string",
-            "description": "Plan type: 'standard', 'expedited', 'comprehensive'",
-        },
-        "urgency": {
-            "type": "string",
-            "description": "Urgency: 'low', 'medium', 'high', 'critical'",
-        }
-    },
-    "required": ["analysis_id"],
-    "additionalProperties": False,
-}
+    return types.Tool(
+        name=definition["name"],
+        title=definition["title"],
+        description=definition["description"],
+        inputSchema=deepcopy(definition["input_schema"]),
+        _meta=deepcopy(definition.get("_meta")),
+    )
 
-# STEP 4: Extract Workflows
-EXTRACT_WORKFLOWS_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "plan_id": {
-            "type": "string",
-            "description": "Plan ID from create_action_plan (e.g., 'PLAN_123')",
-        }
-    },
-    "required": ["plan_id"],
-    "additionalProperties": False,
-}
-
-# STEP 5: Approve Workflow
-APPROVE_WORKFLOW_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "workflow_id": {
-            "type": "string",
-            "description": "Workflow ID from list_workflows",
-        },
-        "approved_by": {
-            "type": "string",
-            "description": "Name/ID of approver",
-        },
-        "reasoning": {
-            "type": "string",
-            "description": "Reason for approval",
-        }
-    },
-    "required": ["workflow_id", "approved_by"],
-    "additionalProperties": False,
-}
-
-# STEP 6A: Execute Workflow
-EXECUTE_WORKFLOW_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "workflow_id": {
-            "type": "string",
-            "description": "Workflow ID to execute",
-        },
-        "executed_by": {
-            "type": "string",
-            "description": "Name/ID of executor",
-        }
-    },
-    "required": ["workflow_id", "executed_by"],
-    "additionalProperties": False,
-}
-
-# Query Tools
-GET_TRANSCRIPT_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "transcript_id": {
-            "type": "string",
-            "description": "Transcript ID to retrieve",
-        }
-    },
-    "required": ["transcript_id"],
-    "additionalProperties": False,
-}
-
-LIST_WORKFLOWS_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "plan_id": {
-            "type": "string",
-            "description": "Filter by plan ID (optional)",
-        },
-        "status": {
-            "type": "string",
-            "description": "Filter by status: 'pending' (not rejected/executed), 'awaiting_approval', 'approved', 'rejected', 'executed' (optional)",
-        },
-        "risk_level": {
-            "type": "string",
-            "description": "Filter by risk level: 'low', 'medium', 'high' (optional)",
-        },
-        "limit": {
-            "type": "integer",
-            "description": "Max number of results (default: 10)",
-        }
-    },
-    "required": [],
-    "additionalProperties": False,
-}
-
-GET_EXECUTION_STATUS_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "execution_id": {
-            "type": "string",
-            "description": "Execution ID to check status",
-        }
-    },
-    "required": ["execution_id"],
-    "additionalProperties": False,
-}
-
-# List Transcripts
-LIST_TRANSCRIPTS_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "limit": {
-            "type": "integer",
-            "description": "Max number of results (default: 10)",
-        },
-        "customer_id": {
-            "type": "string",
-            "description": "Filter by customer ID (optional)",
-        }
-    },
-    "required": [],
-    "additionalProperties": False,
-}
-
-# Get Analysis
-GET_ANALYSIS_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "transcript_id": {
-            "type": "string",
-            "description": "Transcript ID to get analysis for (e.g., 'CALL_ABC123')",
-        }
-    },
-    "required": ["transcript_id"],
-    "additionalProperties": False,
-}
-
-# Get Action Plan
-GET_ACTION_PLAN_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "analysis_id": {
-            "type": "string",
-            "description": "Analysis ID to get action plan for (e.g., 'ANALYSIS_XYZ')",
-        }
-    },
-    "required": ["analysis_id"],
-    "additionalProperties": False,
-}
-
-# Get Workflow
-GET_WORKFLOW_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "workflow_id": {
-            "type": "string",
-            "description": "Workflow ID to retrieve (e.g., 'a905585d-7b09-44fa-837b-45cada8115bf')",
-        }
-    },
-    "required": ["workflow_id"],
-    "additionalProperties": False,
-}
-
-# Orchestration Tools
-RUN_ORCHESTRATION_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "transcript_ids": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "List of transcript IDs to process (e.g., ['CALL_ABC123', 'CALL_XYZ789'])",
-        },
-        "auto_approve": {
-            "type": "boolean",
-            "description": "Automatically approve all workflows (default: false)",
-        }
-    },
-    "required": ["transcript_ids"],
-    "additionalProperties": False,
-}
-
-GET_ORCHESTRATION_STATUS_SCHEMA: Dict[str, Any] = {
-    "type": "object",
-    "properties": {
-        "run_id": {
-            "type": "string",
-            "description": "Orchestration run ID (e.g., 'RUN_A1B2C3D4')",
-        }
-    },
-    "required": ["run_id"],
-    "additionalProperties": False,
-}
-
-# ========================================
-# TOOL DEFINITIONS
-# ========================================
 
 @mcp._mcp_server.list_tools()
 async def _list_tools() -> List[types.Tool]:
-    """Return list of all available tools with proper MCP types."""
-    return [
-        # STEP 1: CREATE TRANSCRIPT
-        types.Tool(
-            name="create_transcript",
-            title="Create Transcript",
-            description="Use this when the user wants to generate a customer call transcript, simulate a call, or start analyzing a mortgage/lending customer interaction. Creates realistic transcripts for scenarios like payment inquiries, PMI removal, hardship assistance, etc.",
-            inputSchema=deepcopy(CREATE_TRANSCRIPT_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Generating call transcript",
-                "openai/toolInvocation/invoked": "Transcript created",
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": False,
-                }
-            },
-        ),
-        # STEP 2: ANALYZE TRANSCRIPT
-        types.Tool(
-            name="analyze_transcript",
-            title="Analyze Transcript",
-            description="Use this when the user wants to analyze a call transcript for customer intent, sentiment, urgency, risks, or compliance issues. Extracts key insights from customer conversations.",
-            inputSchema=deepcopy(ANALYZE_TRANSCRIPT_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Analyzing transcript",
-                "openai/toolInvocation/invoked": "Analysis complete",
-            
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        # STEP 3: CREATE ACTION PLAN
-        types.Tool(
-            name="create_action_plan",
-            title="Create Action Plan",
-            description="Use this when the user wants to generate an action plan based on analysis results. Creates strategic recommendations and next steps for handling customer requests.",
-            inputSchema=deepcopy(CREATE_ACTION_PLAN_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Creating action plan",
-                "openai/toolInvocation/invoked": "Plan created",
-            
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        # STEP 4: EXTRACT WORKFLOWS
-        types.Tool(
-            name="extract_workflows",
-            title="Extract Workflows",
-            description="Use this when the user wants to break down an action plan into detailed, executable workflows. Converts high-level actions into step-by-step operational workflows.",
-            inputSchema=deepcopy(EXTRACT_WORKFLOWS_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Extracting workflows",
-                "openai/toolInvocation/invoked": "Workflows extracted",
-            
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        # STEP 5: APPROVE WORKFLOW
-        types.Tool(
-            name="approve_workflow",
-            title="Approve Workflow",
-            description="Use this when the user wants to approve a workflow for execution. Marks a workflow as ready to run.",
-            inputSchema=deepcopy(APPROVE_WORKFLOW_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Approving workflow",
-                "openai/toolInvocation/invoked": "Workflow approved",
-            
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        # STEP 6A: EXECUTE WORKFLOW
-        types.Tool(
-            name="execute_workflow",
-            title="Execute Workflow",
-            description="Use this when the user wants to execute an approved workflow. Runs all workflow steps automatically and returns execution results.",
-            inputSchema=deepcopy(EXECUTE_WORKFLOW_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Executing workflow",
-                "openai/toolInvocation/invoked": "Workflow executed",
-            
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        # QUERY TOOLS
-        types.Tool(
-            name="list_transcripts",
-            title="List Transcripts",
-            description="Use this when the user wants to see all calls, view call history, list transcripts, or count how many calls/transcripts exist. Returns a list of all call transcripts with metadata.",
-            inputSchema=deepcopy(LIST_TRANSCRIPTS_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Listing transcripts",
-                "openai/toolInvocation/invoked": "Transcripts listed",
+    """Return list of all available tools using canonical definitions."""
 
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="get_transcript",
-            title="Get Transcript",
-            description="Use this when the user wants to view the full content of a specific transcript by its ID.",
-            inputSchema=deepcopy(GET_TRANSCRIPT_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Fetching transcript",
-                "openai/toolInvocation/invoked": "Transcript retrieved",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="get_analysis",
-            title="Get Analysis",
-            description="Use this when the user wants to check if analysis exists for a transcript, view existing analysis results, or see if a call has already been analyzed. Returns analysis details if it exists.",
-            inputSchema=deepcopy(GET_ANALYSIS_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Fetching analysis",
-                "openai/toolInvocation/invoked": "Analysis retrieved",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="get_action_plan",
-            title="Get Action Plan",
-            description="Use this when the user wants to check if an action plan exists for an analysis, view existing plan details, or see borrower/advisor/supervisor plans. Returns plan if it exists.",
-            inputSchema=deepcopy(GET_ACTION_PLAN_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Fetching action plan",
-                "openai/toolInvocation/invoked": "Action plan retrieved",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="get_workflow",
-            title="Get Workflow",
-            description="Use this when the user wants to view a specific workflow's details including all steps, tools needed, and execution status.",
-            inputSchema=deepcopy(GET_WORKFLOW_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Fetching workflow",
-                "openai/toolInvocation/invoked": "Workflow retrieved",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="list_workflows",
-            title="List Workflows",
-            description="Use this when the user wants to see available workflows, filter workflows by status/risk, or find workflows for a specific plan.",
-            inputSchema=deepcopy(LIST_WORKFLOWS_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Listing workflows",
-                "openai/toolInvocation/invoked": "Workflows listed",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="get_execution_status",
-            title="Get Execution Status",
-            description="Use this when the user wants to check the status and results of a workflow execution.",
-            inputSchema=deepcopy(GET_EXECUTION_STATUS_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Checking status",
-                "openai/toolInvocation/invoked": "Status retrieved",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        # ORCHESTRATION TOOLS
-        types.Tool(
-            name="run_orchestration",
-            title="Run Orchestration Pipeline",
-            description="Use this when the user wants to run the COMPLETE pipeline for one or more transcripts automatically: Transcript → Analysis → Plan → Workflows → Execute. This orchestrates all steps end-to-end.",
-            inputSchema=deepcopy(RUN_ORCHESTRATION_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Starting orchestration pipeline",
-                "openai/toolInvocation/invoked": "Orchestration started",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": False,
-                }
-            },
-        ),
-        types.Tool(
-            name="get_orchestration_status",
-            title="Get Orchestration Status",
-            description="Use this when the user wants to check the progress and status of an orchestration run, see how many transcripts were processed, or view results and errors.",
-            inputSchema=deepcopy(GET_ORCHESTRATION_STATUS_SCHEMA),
-            _meta={
-                "openai/toolInvocation/invoking": "Checking orchestration status",
-                "openai/toolInvocation/invoked": "Status retrieved",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-        types.Tool(
-            name="list_orchestration_runs",
-            title="List Orchestration Runs",
-            description="Use this when the user wants to see all orchestration runs, view pipeline execution history, or check recent batch processing jobs.",
-            inputSchema={"type": "object", "properties": {}, "additionalProperties": False},
-            _meta={
-                "openai/toolInvocation/invoking": "Listing orchestration runs",
-                "openai/toolInvocation/invoked": "Runs listed",
-
-                "annotations": {
-                    "destructiveHint": False,
-                    "openWorldHint": False,
-                    "readOnlyHint": True,
-                }
-            },
-        ),
-    ]
+    return [_tool_from_definition(defn) for defn in get_all_tool_definitions()]
 
 # ========================================
 # RESOURCES (Required by OpenAI Apps SDK)
@@ -630,12 +125,32 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
             result = await _handle_get_analysis(arguments)
         elif tool_name == "get_action_plan":
             result = await _handle_get_action_plan(arguments)
+        elif tool_name == "list_analyses":
+            result = await _handle_list_analyses(arguments)
+        elif tool_name == "get_analysis_by_id":
+            result = await _handle_get_analysis_by_id(arguments)
+        elif tool_name == "get_plan_by_id":
+            result = await _handle_get_plan_by_id(arguments)
+        elif tool_name == "get_plan_by_transcript":
+            result = await _handle_get_plan_by_transcript(arguments)
         elif tool_name == "get_workflow":
             result = await _handle_get_workflow(arguments)
         elif tool_name == "list_workflows":
             result = await _handle_list_workflows(arguments)
         elif tool_name == "get_execution_status":
             result = await _handle_get_execution_status(arguments)
+        elif tool_name == "list_executions":
+            result = await _handle_list_executions(arguments)
+        elif tool_name == "get_execution_statistics":
+            result = await _handle_get_execution_statistics(arguments)
+        elif tool_name == "get_dashboard_metrics":
+            result = await _handle_get_dashboard_metrics(arguments)
+        elif tool_name == "get_workflow_steps":
+            result = await _handle_get_workflow_steps(arguments)
+        elif tool_name == "execute_workflow_step":
+            result = await _handle_execute_workflow_step(arguments)
+        elif tool_name == "get_step_status":
+            result = await _handle_get_step_status(arguments)
         elif tool_name == "run_orchestration":
             result = await _handle_run_orchestration(arguments)
         elif tool_name == "get_orchestration_status":
@@ -684,6 +199,9 @@ async def _handle_create_transcript(args: Dict[str, Any]) -> str:
     result = response.json()
 
     transcript_id = result.get('transcript_id')
+    if not transcript_id:
+        raise ValueError("Transcript creation response missing transcript_id")
+
     return f"""✅ STEP 1 COMPLETE: Transcript created!
 
 Transcript ID: {transcript_id}
@@ -916,6 +434,111 @@ Plan ID: {plan_id}
 
 ➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see extracted workflows, or extract_workflows to create them."""
 
+async def _handle_list_analyses(args: Dict[str, Any]) -> str:
+    """Query: List all analyses via FastAPI."""
+    params = {}
+    if args.get("limit"):
+        params["limit"] = args["limit"]
+
+    response = await http_client.get("/api/v1/analyses", params=params)
+    response.raise_for_status()
+    analyses = response.json()
+
+    if not analyses or len(analyses) == 0:
+        return "No analyses found."
+
+    # Build analysis list
+    analysis_list = []
+    for analysis in analyses:
+        analysis_id = analysis['analysis_id']
+        transcript_id = analysis['transcript_id']
+        primary_intent = analysis.get('primary_intent', 'N/A')
+        urgency = analysis.get('urgency_level', 'N/A')
+        sentiment = analysis.get('borrower_sentiment', {}).get('overall', 'N/A')
+
+        analysis_list.append(
+            f"• {analysis_id}\n"
+            f"  Transcript: {transcript_id} | Intent: {primary_intent} | Urgency: {urgency} | Sentiment: {sentiment}"
+        )
+
+    analyses_text = "\n\n".join(analysis_list)
+    return f"""Found {len(analyses)} analyses:
+
+{analyses_text}
+
+Use get_analysis_by_id with analysis_id to see details."""
+
+async def _handle_get_analysis_by_id(args: Dict[str, Any]) -> str:
+    """Query: Get specific analysis by ID via FastAPI."""
+    analysis_id = args.get("analysis_id")
+    if not analysis_id:
+        raise ValueError("analysis_id is required")
+
+    response = await http_client.get(f"/api/v1/analyses/{analysis_id}")
+    response.raise_for_status()
+    analysis = response.json()
+
+    return f"""✅ Analysis {analysis_id}
+
+Transcript ID: {analysis['transcript_id']}
+- Primary Intent: {analysis.get('primary_intent', 'N/A')}
+- Urgency: {analysis.get('urgency_level', 'N/A')}
+- Sentiment: {analysis.get('borrower_sentiment', {}).get('overall', 'N/A')}
+- Issue Resolved: {analysis.get('issue_resolved', False)}
+- First Call Resolution: {analysis.get('first_call_resolution', False)}
+- Compliance Flags: {len(analysis.get('compliance_flags', []))}
+- Topics: {', '.join(analysis.get('topics_discussed', []))}
+
+➡️ NEXT STEP: Use create_action_plan with analysis_id="{analysis_id}" to generate plan."""
+
+async def _handle_get_plan_by_id(args: Dict[str, Any]) -> str:
+    """Query: Get specific plan by ID via FastAPI."""
+    plan_id = args.get("plan_id")
+    if not plan_id:
+        raise ValueError("plan_id is required")
+
+    response = await http_client.get(f"/api/v1/plans/{plan_id}")
+    response.raise_for_status()
+    plan = response.json()
+
+    borrower_actions = len(plan.get('borrower_plan', {}).get('immediate_actions', []))
+    advisor_items = len(plan.get('advisor_plan', {}).get('coaching_items', []))
+    supervisor_items = len(plan.get('supervisor_plan', {}).get('escalation_items', []))
+
+    return f"""✅ Plan {plan_id}
+
+Analysis ID: {plan['analysis_id']}
+- Borrower Immediate Actions: {borrower_actions}
+- Advisor Coaching Items: {advisor_items}
+- Supervisor Escalations: {supervisor_items}
+
+➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see workflows."""
+
+async def _handle_get_plan_by_transcript(args: Dict[str, Any]) -> str:
+    """Query: Get plan by transcript ID via FastAPI."""
+    transcript_id = args.get("transcript_id")
+    if not transcript_id:
+        raise ValueError("transcript_id is required")
+
+    response = await http_client.get(f"/api/v1/plans/by-transcript/{transcript_id}")
+    response.raise_for_status()
+    plan = response.json()
+
+    plan_id = plan['plan_id']
+    borrower_actions = len(plan.get('borrower_plan', {}).get('immediate_actions', []))
+    advisor_items = len(plan.get('advisor_plan', {}).get('coaching_items', []))
+    supervisor_items = len(plan.get('supervisor_plan', {}).get('escalation_items', []))
+
+    return f"""✅ Plan found for transcript {transcript_id}
+
+Plan ID: {plan_id}
+Analysis ID: {plan['analysis_id']}
+- Borrower Immediate Actions: {borrower_actions}
+- Advisor Coaching Items: {advisor_items}
+- Supervisor Escalations: {supervisor_items}
+
+➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see workflows."""
+
 async def _handle_get_workflow(args: Dict[str, Any]) -> str:
     """Query: Get specific workflow with steps via FastAPI."""
     workflow_id = args.get("workflow_id")
@@ -1005,14 +628,37 @@ async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     if not workflows:
         return "No pending workflows found."
 
-    workflow_list = "\n".join([
-        f"- {w.get('id')}: {w.get('workflow_type')} ({w.get('status')})"
-        for w in workflows
-    ])
-    return f"""Found {len(workflows)} workflows:
-{workflow_list}
+    # Build detailed workflow list - NO FALLBACK, fail fast on missing data
+    workflow_list = []
+    for w in workflows:
+        # Required fields - fail if missing
+        workflow_id = w['id']
+        workflow_type = w['workflow_type']
+        status = w['status']
+        risk_level = w['risk_level']
 
-Use approve_workflow with a workflow_id to approve."""
+        # Action item from workflow_data (fail if missing)
+        action = w['workflow_data']['action_item']
+
+        # Steps (can be empty list, but must exist)
+        workflow_steps = w['workflow_steps']
+        step_count = len(workflow_steps)
+
+        # Format: ID | Action | Type | Risk | Steps | Status
+        workflow_list.append(
+            f"• {workflow_id}\n"
+            f"  Action: {action}\n"
+            f"  Type: {workflow_type} | Risk: {risk_level} | Steps: {step_count} | Status: {status}"
+        )
+
+    workflows_text = "\n\n".join(workflow_list)
+    return f"""Found {len(workflows)} workflows:
+
+{workflows_text}
+
+📊 INSTRUCTION: Present this data as a well-formatted table with columns: Workflow ID | Action | Type | Risk | Steps | Status
+
+Use get_workflow with workflow_id to see details, or approve_workflow to approve."""
 
 async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
     """Query: Get execution status via FastAPI."""
@@ -1042,6 +688,229 @@ Executed At: {executed_at}
 Mock Execution: {mock}
 
 Use get_workflow with workflow_id="{workflow_id}" to see all workflow steps."""
+
+async def _handle_list_executions(args: Dict[str, Any]) -> str:
+    """Query: List all executions via FastAPI."""
+    params = {}
+    if args.get("workflow_id"):
+        params["workflow_id"] = args["workflow_id"]
+    if args.get("limit"):
+        params["limit"] = args["limit"]
+    if args.get("status"):
+        params["status"] = args["status"]
+    if args.get("executor_type"):
+        params["executor_type"] = args["executor_type"]
+
+    response = await http_client.get("/api/v1/executions", params=params)
+    response.raise_for_status()
+    executions = response.json()
+
+    if not executions or len(executions) == 0:
+        return "No executions found."
+
+    # Build execution list - NO FALLBACK
+    execution_list = []
+    for execution in executions:
+        execution_id = execution['execution_id']
+        workflow_id = execution['workflow_id']
+        status = execution['execution_status']
+        executor_type = execution['executor_type']
+        executed_at = execution.get('executed_at', 'N/A')
+
+        execution_list.append(
+            f"• {execution_id}\n"
+            f"  Workflow: {workflow_id} | Status: {status} | Executor: {executor_type} | Executed: {executed_at}"
+        )
+
+    executions_text = "\n\n".join(execution_list)
+    return f"""Found {len(executions)} executions:
+
+{executions_text}
+
+Use get_execution_status with execution_id to see details."""
+
+async def _handle_get_execution_statistics(args: Dict[str, Any]) -> str:
+    """Analytics: Get execution statistics via FastAPI."""
+    response = await http_client.get("/api/v1/executions/statistics")
+    response.raise_for_status()
+    stats = response.json()
+
+    # NO FALLBACK - fail if keys missing
+    total = stats['total_executions']
+    successful = stats['successful_executions']
+    failed = stats['failed_executions']
+    success_rate = stats['success_rate']
+
+    by_type = stats.get('by_executor_type', {})
+    by_status = stats.get('by_status', {})
+
+    type_breakdown = "\n".join([f"  - {k}: {v}" for k, v in by_type.items()])
+    status_breakdown = "\n".join([f"  - {k}: {v}" for k, v in by_status.items()])
+
+    return f"""📊 Execution Statistics
+
+Total Executions: {total}
+Successful: {successful}
+Failed: {failed}
+Success Rate: {success_rate:.1f}%
+
+By Executor Type:
+{type_breakdown}
+
+By Status:
+{status_breakdown}"""
+
+async def _handle_get_dashboard_metrics(args: Dict[str, Any]) -> str:
+    """Analytics: Fetch dashboard metrics via FastAPI."""
+    response = await http_client.get("/api/v1/metrics")
+    response.raise_for_status()
+    metrics = response.json()
+
+    total = metrics.get("totalTranscripts") or 0
+    prev = metrics.get("transcriptsPrev") or 0
+    delta = total - prev
+    complete_rate = metrics.get("completeRate") or 0.0
+    avg_processing = metrics.get("avgProcessingTime") or 0.0
+    stage_data = metrics.get("stageData", {}) or {}
+
+    stage_lines = []
+    for stage, data in stage_data.items():
+        if isinstance(data, dict) and data:
+            pairs = ", ".join(f"{key}: {value}" for key, value in data.items())
+            stage_lines.append(f"- {stage.title()}: {pairs}")
+    stages_text = "\n".join(stage_lines) if stage_lines else "- No stage metrics available"
+
+    return f"""📊 Dashboard Metrics
+
+Transcripts (7d): {total} (Δ {delta:+})
+Completion Rate: {complete_rate * 100:.1f}%
+Avg Processing Time: {avg_processing:.1f}s
+
+Stage Snapshot:
+{stages_text}
+
+Last Updated: {metrics.get('lastUpdated', 'N/A')}"""
+
+
+async def _handle_get_workflow_steps(args: Dict[str, Any]) -> str:
+    """Step control: Fetch workflow step breakdown via FastAPI."""
+    workflow_id = args.get("workflow_id")
+    if not workflow_id:
+        raise ValueError("workflow_id is required")
+
+    response = await http_client.get(f"/api/v1/workflows/{workflow_id}/steps")
+    response.raise_for_status()
+    payload = response.json()
+
+    steps = payload.get("steps", []) or []
+    if not steps:
+        return f"Workflow {workflow_id} has no recorded steps."
+
+    lines = []
+    for idx, step in enumerate(steps, start=1):
+        number = step.get("step_number") or step.get("number") or idx
+        action = step.get("action") or step.get("description") or "(no description)"
+        tool_needed = step.get("tool_needed") or step.get("tool") or "--"
+        lines.append(f"  Step {number}: {action} (tool: {tool_needed})")
+
+    return f"""🧭 Workflow {workflow_id} Steps ({len(steps)} total)
+
+{"\n".join(lines)}
+
+Use execute_workflow_step to run an individual step or get_step_status to inspect progress."""
+
+
+async def _handle_execute_workflow_step(args: Dict[str, Any]) -> str:
+    """Step control: Execute a single workflow step via FastAPI."""
+    workflow_id = args.get("workflow_id")
+    step_number = args.get("step_number")
+    executed_by = args.get("executed_by")
+
+    if not workflow_id:
+        raise ValueError("workflow_id is required")
+    if step_number is None:
+        raise ValueError("step_number is required")
+    if executed_by is None or executed_by == "":
+        raise ValueError("executed_by is required")
+
+    try:
+        step_number_int = int(step_number)
+    except (TypeError, ValueError):
+        raise ValueError("step_number must be an integer")
+
+    response = await http_client.post(
+        f"/api/v1/workflows/{workflow_id}/steps/{step_number_int}/execute",
+        json={"executed_by": executed_by},
+    )
+    response.raise_for_status()
+    result = response.json()
+
+    execution_id = result.get("execution_id")
+    status = result.get("status")
+    executed_at = result.get("executed_at", "N/A")
+    duration_ms = result.get("duration_ms")
+
+    duration_text = f"{duration_ms} ms" if duration_ms is not None else "Unknown"
+
+    return f"""✅ Step {step_number_int} executed for workflow {workflow_id}
+
+Execution ID: {execution_id}
+Status: {status}
+Executed By: {result.get('executed_by', executed_by)}
+Executed At: {executed_at}
+Duration: {duration_text}
+
+Use get_step_status with the same step to review stored execution details."""
+
+
+async def _handle_get_step_status(args: Dict[str, Any]) -> str:
+    """Step control: Fetch execution status for a specific step via FastAPI."""
+    workflow_id = args.get("workflow_id")
+    step_number = args.get("step_number")
+
+    if not workflow_id:
+        raise ValueError("workflow_id is required")
+    if step_number is None:
+        raise ValueError("step_number is required")
+
+    try:
+        step_number_int = int(step_number)
+    except (TypeError, ValueError):
+        raise ValueError("step_number must be an integer")
+
+    response = await http_client.get(
+        f"/api/v1/workflows/{workflow_id}/steps/{step_number_int}/status"
+    )
+    response.raise_for_status()
+    status_payload = response.json()
+
+    if not status_payload.get("executed"):
+        return f"Step {step_number_int} for workflow {workflow_id} has not been executed yet."
+
+    details = status_payload.get("execution_details", {}) or {}
+    execution_id = details.get("execution_id")
+    executed_by = details.get("executed_by")
+    executed_at = details.get("executed_at", "N/A")
+    result_summary = details.get("result")
+    if isinstance(result_summary, dict):
+        items = list(result_summary.items())
+        preview = ", ".join(f"{key}: {value}" for key, value in items[:3])
+        if len(items) > 3:
+            preview += ", …"
+        result_summary = preview
+    elif isinstance(result_summary, list):
+        preview = ", ".join(str(item) for item in result_summary[:3])
+        if len(result_summary) > 3:
+            preview += ", …"
+        result_summary = preview
+
+    return f"""📝 Step {step_number_int} status for workflow {workflow_id}
+
+Status: {details.get('status', 'Unknown')}
+Execution ID: {execution_id}
+Executed By: {executed_by}
+Executed At: {executed_at}
+Result: {result_summary or 'No result payload recorded.'}"""
 
 async def _handle_run_orchestration(args: Dict[str, Any]) -> str:
     """Orchestration: Run complete pipeline via FastAPI."""
@@ -1089,7 +958,13 @@ async def _handle_get_orchestration_status(args: Dict[str, Any]) -> str:
     successful = len(result.get('results', []))
     failed = len(result.get('errors', []))
 
-    return f"""📊 Orchestration Run {run_id}
+    # Extract pipeline IDs for ChatGPT to use in follow-up queries
+    analysis_id = result.get('analysis_id', 'N/A')
+    plan_id = result.get('plan_id', 'N/A')
+    workflow_count = result.get('workflow_count', 0)
+
+    # Build response with IDs included
+    response_text = f"""📊 Orchestration Run {run_id}
 
 Status: {status}
 Current Stage: {stage}
@@ -1100,6 +975,17 @@ Progress: {progress.get('processed', 0)}/{progress.get('total', 0)} ({progress.g
 
 Started: {result.get('started_at', 'N/A')}
 Completed: {result.get('completed_at', 'In progress')}"""
+
+    # Add pipeline IDs if available (helps ChatGPT query workflows correctly)
+    if analysis_id != 'N/A' or plan_id != 'N/A':
+        response_text += f"""
+
+Pipeline IDs:
+- Analysis ID: {analysis_id}
+- Plan ID: {plan_id}
+- Workflows Created: {workflow_count}"""
+
+    return response_text
 
 async def _handle_list_orchestration_runs(args: Dict[str, Any]) -> str:
     """Orchestration: List all orchestration runs via FastAPI."""
@@ -1157,7 +1043,8 @@ if __name__ == "__main__":
     logger.info("🌐 Server will run on http://0.0.0.0:8001")
     logger.info("📡 SSE endpoint: /mcp")
     logger.info("💬 Messages endpoint: /mcp/messages")
-    logger.info("🔧 Tools registered: 16")
+    tool_count = len(get_all_tool_definitions())
+    logger.info(f"🔧 Tools registered: {tool_count}")
     logger.info("=" * 60)
     logger.info("WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute")
     logger.info("ORCHESTRATION: Complete end-to-end pipeline automation")
