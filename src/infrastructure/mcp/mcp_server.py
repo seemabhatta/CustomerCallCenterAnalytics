@@ -244,6 +244,23 @@ GET_EXECUTION_STATUS_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
+# List Transcripts
+LIST_TRANSCRIPTS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "limit": {
+            "type": "integer",
+            "description": "Max number of results (default: 10)",
+        },
+        "customer_id": {
+            "type": "string",
+            "description": "Filter by customer ID (optional)",
+        }
+    },
+    "required": [],
+    "additionalProperties": False,
+}
+
 # ========================================
 # TOOL DEFINITIONS
 # ========================================
@@ -355,6 +372,22 @@ async def _list_tools() -> List[types.Tool]:
         ),
         # QUERY TOOLS
         types.Tool(
+            name="list_transcripts",
+            title="List Transcripts",
+            description="Use this when the user wants to see all calls, view call history, list transcripts, or count how many calls/transcripts exist. Returns a list of all call transcripts with metadata.",
+            inputSchema=deepcopy(LIST_TRANSCRIPTS_SCHEMA),
+            _meta={
+                "openai/toolInvocation/invoking": "Listing transcripts",
+                "openai/toolInvocation/invoked": "Transcripts listed",
+
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
+            },
+        ),
+        types.Tool(
             name="get_transcript",
             title="Get Transcript",
             description="Use this when the user wants to view the full content of a specific transcript by its ID.",
@@ -362,7 +395,7 @@ async def _list_tools() -> List[types.Tool]:
             _meta={
                 "openai/toolInvocation/invoking": "Fetching transcript",
                 "openai/toolInvocation/invoked": "Transcript retrieved",
-            
+
                 "annotations": {
                     "destructiveHint": False,
                     "openWorldHint": False,
@@ -444,6 +477,8 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
         # Route to appropriate handler
         if tool_name == "create_transcript":
             result = await _handle_create_transcript(arguments)
+        elif tool_name == "list_transcripts":
+            result = await _handle_list_transcripts(arguments)
         elif tool_name == "analyze_transcript":
             result = await _handle_analyze_transcript(arguments)
         elif tool_name == "create_action_plan":
@@ -610,6 +645,18 @@ Steps completed: {len(result.get('results', []))}
 
 ➡️ WORKFLOW COMPLETE! Use get_execution_status with execution_id="{execution_id}" to see detailed results."""
 
+async def _handle_list_transcripts(args: Dict[str, Any]) -> str:
+    """Query: List transcripts - returns simple count."""
+    limit = args.get("limit", 10)
+
+    result = await transcript_service.list_all(limit=limit)
+    transcripts = result.get('transcripts', [])
+
+    if not transcripts:
+        return "No call transcripts found in the system."
+
+    return f"Found {len(transcripts)} call transcripts in the system."
+
 async def _handle_get_transcript(args: Dict[str, Any]) -> str:
     """Query: Get transcript."""
     transcript_id = args.get("transcript_id")
@@ -707,7 +754,7 @@ if __name__ == "__main__":
     logger.info("🌐 Server will run on http://0.0.0.0:8001")
     logger.info("📡 SSE endpoint: /mcp")
     logger.info("💬 Messages endpoint: /mcp/messages")
-    logger.info("🔧 Tools registered: 10")
+    logger.info("🔧 Tools registered: 11")
     logger.info("=" * 60)
     logger.info("WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute")
     logger.info("=" * 60)
