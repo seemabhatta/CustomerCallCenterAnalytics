@@ -539,6 +539,8 @@ async def _handle_list_workflows(args: Dict[str, Any]) -> str:
 
 {workflows_text}
 
+📊 INSTRUCTION: Present this data as a well-formatted table with columns: Workflow ID | Action | Type | Risk | Steps | Status
+
 Use get_workflow with workflow_id to see details, or approve_workflow to approve."""
 
 async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
