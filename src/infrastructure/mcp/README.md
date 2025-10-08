@@ -27,7 +27,7 @@ This MCP (Model Context Protocol) server enables ChatGPT to interact with the Cu
 └─────────────────┘
 ```
 
-## Available Tools (24)
+## Available Tools (26)
 
 > The tool catalog is defined once in `src/infrastructure/mcp/tool_definitions.py` and consumed by the MCP server at runtime. Update that module to add, remove, or edit tools—documentation and runtime stay in sync.
 
@@ -57,13 +57,17 @@ This MCP (Model Context Protocol) server enables ChatGPT to interact with the Cu
 19. **get_step_status** – Check execution status for a workflow step.
 20. **get_execution_status** – Review results of a workflow execution run.
 
+### Execution Tracking (2)
+21. **list_executions** – List all workflow executions with optional filters.
+22. **get_execution_statistics** – Get comprehensive execution statistics and success rates.
+
 ### Orchestration Operations (3)
-21. **run_orchestration** – Kick off the full Transcript→Execute pipeline for one or more calls.
-22. **get_orchestration_status** – Track progress of an orchestration run.
-23. **list_orchestration_runs** – Review prior orchestration runs.
+23. **run_orchestration** – Kick off the full Transcript→Execute pipeline for one or more calls.
+24. **get_orchestration_status** – Track progress of an orchestration run.
+25. **list_orchestration_runs** – Review prior orchestration runs.
 
 ### Analytics & Health (1)
-24. **get_dashboard_metrics** – Surface platform KPIs and pipeline stage load.
+26. **get_dashboard_metrics** – Surface platform KPIs and pipeline stage load.
 
 ## Quick Start
 

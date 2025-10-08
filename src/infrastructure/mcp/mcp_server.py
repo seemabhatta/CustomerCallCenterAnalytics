@@ -139,6 +139,10 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
             result = await _handle_list_workflows(arguments)
         elif tool_name == "get_execution_status":
             result = await _handle_get_execution_status(arguments)
+        elif tool_name == "list_executions":
+            result = await _handle_list_executions(arguments)
+        elif tool_name == "get_execution_statistics":
+            result = await _handle_get_execution_statistics(arguments)
         elif tool_name == "get_dashboard_metrics":
             result = await _handle_get_dashboard_metrics(arguments)
         elif tool_name == "get_workflow_steps":
@@ -684,6 +688,77 @@ Executed At: {executed_at}
 Mock Execution: {mock}
 
 Use get_workflow with workflow_id="{workflow_id}" to see all workflow steps."""
+
+async def _handle_list_executions(args: Dict[str, Any]) -> str:
+    """Query: List all executions via FastAPI."""
+    params = {}
+    if args.get("workflow_id"):
+        params["workflow_id"] = args["workflow_id"]
+    if args.get("limit"):
+        params["limit"] = args["limit"]
+    if args.get("status"):
+        params["status"] = args["status"]
+    if args.get("executor_type"):
+        params["executor_type"] = args["executor_type"]
+
+    response = await http_client.get("/api/v1/executions", params=params)
+    response.raise_for_status()
+    executions = response.json()
+
+    if not executions or len(executions) == 0:
+        return "No executions found."
+
+    # Build execution list - NO FALLBACK
+    execution_list = []
+    for execution in executions:
+        execution_id = execution['execution_id']
+        workflow_id = execution['workflow_id']
+        status = execution['execution_status']
+        executor_type = execution['executor_type']
+        executed_at = execution.get('executed_at', 'N/A')
+
+        execution_list.append(
+            f"• {execution_id}\n"
+            f"  Workflow: {workflow_id} | Status: {status} | Executor: {executor_type} | Executed: {executed_at}"
+        )
+
+    executions_text = "\n\n".join(execution_list)
+    return f"""Found {len(executions)} executions:
+
+{executions_text}
+
+Use get_execution_status with execution_id to see details."""
+
+async def _handle_get_execution_statistics(args: Dict[str, Any]) -> str:
+    """Analytics: Get execution statistics via FastAPI."""
+    response = await http_client.get("/api/v1/executions/statistics")
+    response.raise_for_status()
+    stats = response.json()
+
+    # NO FALLBACK - fail if keys missing
+    total = stats['total_executions']
+    successful = stats['successful_executions']
+    failed = stats['failed_executions']
+    success_rate = stats['success_rate']
+
+    by_type = stats.get('by_executor_type', {})
+    by_status = stats.get('by_status', {})
+
+    type_breakdown = "\n".join([f"  - {k}: {v}" for k, v in by_type.items()])
+    status_breakdown = "\n".join([f"  - {k}: {v}" for k, v in by_status.items()])
+
+    return f"""📊 Execution Statistics
+
+Total Executions: {total}
+Successful: {successful}
+Failed: {failed}
+Success Rate: {success_rate:.1f}%
+
+By Executor Type:
+{type_breakdown}
+
+By Status:
+{status_breakdown}"""
 
 async def _handle_get_dashboard_metrics(args: Dict[str, Any]) -> str:
     """Analytics: Fetch dashboard metrics via FastAPI."""

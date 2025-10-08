@@ -226,6 +226,37 @@ GET_EXECUTION_STATUS_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
+LIST_EXECUTIONS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "workflow_id": {
+            "type": "string",
+            "description": "Filter by workflow ID (optional)",
+        },
+        "limit": {
+            "type": "integer",
+            "description": "Max number of results (optional)",
+        },
+        "status": {
+            "type": "string",
+            "description": "Filter by execution status (optional)",
+        },
+        "executor_type": {
+            "type": "string",
+            "description": "Filter by executor type (optional)",
+        },
+    },
+    "required": [],
+    "additionalProperties": False,
+}
+
+GET_EXECUTION_STATISTICS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": False,
+}
+
 LIST_ANALYSES_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -650,6 +681,38 @@ TOOL_DEFINITIONS: Dict[str, ToolDefinition] = {
         "_meta": {
             "openai/toolInvocation/invoking": "Checking status",
             "openai/toolInvocation/invoked": "Status retrieved",
+            "annotations": {
+                "destructiveHint": False,
+                "openWorldHint": False,
+                "readOnlyHint": True,
+            },
+        },
+        "active": True,
+    },
+    "list_executions": {
+        "name": "list_executions",
+        "title": "List Executions",
+        "description": "Use this to list all workflow executions with optional filters (workflow_id, status, executor_type).",
+        "input_schema": LIST_EXECUTIONS_SCHEMA,
+        "_meta": {
+            "openai/toolInvocation/invoking": "Listing executions",
+            "openai/toolInvocation/invoked": "Executions listed",
+            "annotations": {
+                "destructiveHint": False,
+                "openWorldHint": False,
+                "readOnlyHint": True,
+            },
+        },
+        "active": True,
+    },
+    "get_execution_statistics": {
+        "name": "get_execution_statistics",
+        "title": "Get Execution Statistics",
+        "description": "Use this to get comprehensive statistics about workflow executions (success rates, timing, etc.).",
+        "input_schema": GET_EXECUTION_STATISTICS_SCHEMA,
+        "_meta": {
+            "openai/toolInvocation/invoking": "Fetching statistics",
+            "openai/toolInvocation/invoked": "Statistics retrieved",
             "annotations": {
                 "destructiveHint": False,
                 "openWorldHint": False,
