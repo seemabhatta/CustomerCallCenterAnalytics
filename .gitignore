@@ -64,3 +64,9 @@ frontend/yarn-error.log*
 data/explorer.db
 attached_assets/logs-ui.txt
 attached_assets/logs_server.txt
+
+# Database files (runtime data)
+data/call_center.db
+data/call_center.db-shm
+data/call_center.db-wal
+data/knowledge_graph_v2.db
