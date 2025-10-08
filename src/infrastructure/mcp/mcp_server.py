@@ -246,6 +246,45 @@ LIST_TRANSCRIPTS_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
+# Get Analysis
+GET_ANALYSIS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "transcript_id": {
+            "type": "string",
+            "description": "Transcript ID to get analysis for (e.g., 'CALL_ABC123')",
+        }
+    },
+    "required": ["transcript_id"],
+    "additionalProperties": False,
+}
+
+# Get Action Plan
+GET_ACTION_PLAN_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "analysis_id": {
+            "type": "string",
+            "description": "Analysis ID to get action plan for (e.g., 'ANALYSIS_XYZ')",
+        }
+    },
+    "required": ["analysis_id"],
+    "additionalProperties": False,
+}
+
+# Get Workflow
+GET_WORKFLOW_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "workflow_id": {
+            "type": "string",
+            "description": "Workflow ID to retrieve (e.g., 'a905585d-7b09-44fa-837b-45cada8115bf')",
+        }
+    },
+    "required": ["workflow_id"],
+    "additionalProperties": False,
+}
+
 # ========================================
 # TOOL DEFINITIONS
 # ========================================
@@ -389,6 +428,54 @@ async def _list_tools() -> List[types.Tool]:
             },
         ),
         types.Tool(
+            name="get_analysis",
+            title="Get Analysis",
+            description="Use this when the user wants to check if analysis exists for a transcript, view existing analysis results, or see if a call has already been analyzed. Returns analysis details if it exists.",
+            inputSchema=deepcopy(GET_ANALYSIS_SCHEMA),
+            _meta={
+                "openai/toolInvocation/invoking": "Fetching analysis",
+                "openai/toolInvocation/invoked": "Analysis retrieved",
+
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
+            },
+        ),
+        types.Tool(
+            name="get_action_plan",
+            title="Get Action Plan",
+            description="Use this when the user wants to check if an action plan exists for an analysis, view existing plan details, or see borrower/advisor/supervisor plans. Returns plan if it exists.",
+            inputSchema=deepcopy(GET_ACTION_PLAN_SCHEMA),
+            _meta={
+                "openai/toolInvocation/invoking": "Fetching action plan",
+                "openai/toolInvocation/invoked": "Action plan retrieved",
+
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
+            },
+        ),
+        types.Tool(
+            name="get_workflow",
+            title="Get Workflow",
+            description="Use this when the user wants to view a specific workflow's details including all steps, tools needed, and execution status.",
+            inputSchema=deepcopy(GET_WORKFLOW_SCHEMA),
+            _meta={
+                "openai/toolInvocation/invoking": "Fetching workflow",
+                "openai/toolInvocation/invoked": "Workflow retrieved",
+
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
+            },
+        ),
+        types.Tool(
             name="list_workflows",
             title="List Workflows",
             description="Use this when the user wants to see available workflows, filter workflows by status/risk, or find workflows for a specific plan.",
@@ -396,7 +483,7 @@ async def _list_tools() -> List[types.Tool]:
             _meta={
                 "openai/toolInvocation/invoking": "Listing workflows",
                 "openai/toolInvocation/invoked": "Workflows listed",
-            
+
                 "annotations": {
                     "destructiveHint": False,
                     "openWorldHint": False,
@@ -476,6 +563,12 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
             result = await _handle_execute_workflow(arguments)
         elif tool_name == "get_transcript":
             result = await _handle_get_transcript(arguments)
+        elif tool_name == "get_analysis":
+            result = await _handle_get_analysis(arguments)
+        elif tool_name == "get_action_plan":
+            result = await _handle_get_action_plan(arguments)
+        elif tool_name == "get_workflow":
+            result = await _handle_get_workflow(arguments)
         elif tool_name == "list_workflows":
             result = await _handle_list_workflows(arguments)
         elif tool_name == "get_execution_status":
@@ -692,6 +785,108 @@ Urgency: {result.get('urgency', 'Unknown')}
 
 {formatted_messages}"""
 
+async def _handle_get_analysis(args: Dict[str, Any]) -> str:
+    """Query: Get analysis for a transcript via FastAPI."""
+    transcript_id = args.get("transcript_id")
+    if not transcript_id:
+        raise ValueError("transcript_id is required")
+
+    response = await http_client.get(f"/api/v1/analyses?transcript_id={transcript_id}")
+    response.raise_for_status()
+    analyses = response.json()
+
+    if not analyses or len(analyses) == 0:
+        return f"""❌ No analysis found for transcript {transcript_id}
+
+➡️ NEXT STEP: Use analyze_transcript with transcript_id="{transcript_id}" to create analysis."""
+
+    # Get the most recent analysis
+    analysis = analyses[0]
+    analysis_id = analysis.get('analysis_id')
+
+    return f"""✅ Analysis found for transcript {transcript_id}
+
+Analysis ID: {analysis_id}
+- Primary Intent: {analysis.get('primary_intent', 'N/A')}
+- Urgency: {analysis.get('urgency_level', 'N/A')}
+- Sentiment: {analysis.get('borrower_sentiment', {}).get('overall', 'N/A')}
+- Issue Resolved: {analysis.get('issue_resolved', False)}
+- First Call Resolution: {analysis.get('first_call_resolution', False)}
+- Compliance Flags: {len(analysis.get('compliance_flags', []))}
+- Topics: {', '.join(analysis.get('topics_discussed', []))}
+
+➡️ NEXT STEP: Use get_action_plan with analysis_id="{analysis_id}" to check if plan exists, or create_action_plan to generate new plan."""
+
+async def _handle_get_action_plan(args: Dict[str, Any]) -> str:
+    """Query: Get action plan for an analysis via FastAPI."""
+    analysis_id = args.get("analysis_id")
+    if not analysis_id:
+        raise ValueError("analysis_id is required")
+
+    response = await http_client.get(f"/api/v1/plans?analysis_id={analysis_id}")
+    response.raise_for_status()
+    plans = response.json()
+
+    if not plans or len(plans) == 0:
+        return f"""❌ No action plan found for analysis {analysis_id}
+
+➡️ NEXT STEP: Use create_action_plan with analysis_id="{analysis_id}" to generate action plan."""
+
+    # Get the most recent plan
+    plan = plans[0]
+    plan_id = plan.get('plan_id')
+
+    borrower_actions = len(plan.get('borrower_plan', {}).get('immediate_actions', []))
+    advisor_items = len(plan.get('advisor_plan', {}).get('coaching_items', []))
+    supervisor_items = len(plan.get('supervisor_plan', {}).get('escalation_items', []))
+
+    return f"""✅ Action plan found for analysis {analysis_id}
+
+Plan ID: {plan_id}
+- Borrower Immediate Actions: {borrower_actions}
+- Advisor Coaching Items: {advisor_items}
+- Supervisor Escalations: {supervisor_items}
+
+➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see extracted workflows, or extract_workflows to create them."""
+
+async def _handle_get_workflow(args: Dict[str, Any]) -> str:
+    """Query: Get specific workflow with steps via FastAPI."""
+    workflow_id = args.get("workflow_id")
+    if not workflow_id:
+        raise ValueError("workflow_id is required")
+
+    # Use list_workflows with limit=100 and filter by ID
+    response = await http_client.get(f"/api/v1/workflows?limit=100")
+    response.raise_for_status()
+    workflows = response.json()
+
+    # Find the specific workflow
+    workflow = next((w for w in workflows if w.get('id') == workflow_id), None)
+
+    if not workflow:
+        return f"❌ Workflow {workflow_id} not found"
+
+    steps = workflow.get('workflow_steps', [])
+    action = workflow.get('workflow_data', {}).get('action_item', 'N/A')
+    status = workflow.get('status', 'UNKNOWN')
+    risk = workflow.get('risk_level', 'UNKNOWN')
+
+    steps_text = "\n".join([
+        f"  Step {s.get('step_number')}: {s.get('action')} (tool: {s.get('tool_needed')})"
+        for s in steps
+    ])
+
+    return f"""✅ Workflow {workflow_id}
+
+Action: {action}
+Status: {status}
+Risk Level: {risk}
+
+Steps ({len(steps)}):
+{steps_text}
+
+➡️ NEXT STEP: Use approve_workflow with workflow_id="{workflow_id}" to approve, then execute_workflow to run."""
+
 async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     """Query: List workflows via FastAPI."""
     params = {}
@@ -785,7 +980,7 @@ if __name__ == "__main__":
     logger.info("🌐 Server will run on http://0.0.0.0:8001")
     logger.info("📡 SSE endpoint: /mcp")
     logger.info("💬 Messages endpoint: /mcp/messages")
-    logger.info("🔧 Tools registered: 11")
+    logger.info("🔧 Tools registered: 14")
     logger.info("=" * 60)
     logger.info("WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute")
     logger.info("=" * 60)
