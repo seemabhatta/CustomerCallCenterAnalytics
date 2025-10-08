@@ -747,7 +747,13 @@ async def _handle_get_orchestration_status(args: Dict[str, Any]) -> str:
     successful = len(result.get('results', []))
     failed = len(result.get('errors', []))
 
-    return f"""📊 Orchestration Run {run_id}
+    # Extract pipeline IDs for ChatGPT to use in follow-up queries
+    analysis_id = result.get('analysis_id', 'N/A')
+    plan_id = result.get('plan_id', 'N/A')
+    workflow_count = result.get('workflow_count', 0)
+
+    # Build response with IDs included
+    response_text = f"""📊 Orchestration Run {run_id}
 
 Status: {status}
 Current Stage: {stage}
@@ -758,6 +764,17 @@ Progress: {progress.get('processed', 0)}/{progress.get('total', 0)} ({progress.g
 
 Started: {result.get('started_at', 'N/A')}
 Completed: {result.get('completed_at', 'In progress')}"""
+
+    # Add pipeline IDs if available (helps ChatGPT query workflows correctly)
+    if analysis_id != 'N/A' or plan_id != 'N/A':
+        response_text += f"""
+
+Pipeline IDs:
+- Analysis ID: {analysis_id}
+- Plan ID: {plan_id}
+- Workflows Created: {workflow_count}"""
+
+    return response_text
 
 async def _handle_list_orchestration_runs(args: Dict[str, Any]) -> str:
     """Orchestration: List all orchestration runs via FastAPI."""
