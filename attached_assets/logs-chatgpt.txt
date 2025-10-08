@@ -12,45 +12,32 @@ Request
 
 {
 path: 
-'CallIQ'
+''
 , 
 only_tools: 
-true
+false
 }
 Response
-{"finite": true} // Use this when the user wants to generate a customer call transcript, simulate a call, or start analyzing a mortgage/lending customer interaction. Creates realistic transcripts for scenarios like payment inquiries, PMI removal, hardship assistance, etc. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/create_transcript = (_: { // Topic of the call (e.g., 'payment_inquiry', 'pmi_removal', 'hardship') topic?: string, // Urgency level: 'low', 'medium', 'high', 'critical' urgency?: string, // Whether the call has financial impact financial_impact?: boolean, // Customer sentiment: 'positive', 'neutral', 'negative', 'frustrated' customer_sentiment?: string, // Customer ID (e.g., 'CUST_001') customer_id?: string, }) => any; // Use this when the user wants to analyze a call transcript for customer intent, sentiment, urgency, risks, or compliance issues. Extracts key insights from customer conversations. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/analyze_transcript = (_: { // Transcript ID from create_transcript (e.g., 'CALL_ABC123') transcript_id: string, // Type of analysis: 'comprehensive', 'quick', 'detailed' analysis_type?: string, }) => any; // Use this when the user wants to generate an action plan based on analysis results. Creates strategic recommendations and next steps for handling customer requests. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/create_action_plan = (_: { // Analysis ID from analyze_transcript (e.g., 'ANALYSIS_XYZ') analysis_id: string, // Plan type: 'standard', 'expedited', 'comprehensive' plan_type?: string, // Urgency: 'low', 'medium', 'high', 'critical' urgency?: string, }) => any; // Use this when the user wants to break down an action plan into detailed, executable workflows. Converts high-level actions into step-by-step operational workflows. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/extract_workflows = (_: { // Plan ID from create_action_plan (e.g., 'PLAN_123') plan_id: string, }) => any; // Use this when the user wants to approve a workflow for execution. Marks a workflow as ready to run. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/approve_workflow = (_: { // Workflow ID from list_workflows workflow_id: string, // Name/ID of approver approved_by: string, // Reason for approval reasoning?: string, }) => any; // Use this when the user wants to execute an approved workflow. Runs all workflow steps automatically and returns execution results. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/execute_workflow = (_: { // Workflow ID to execute workflow_id: string, // Name/ID of executor executed_by: string, }) => any; // Use this when the user wants to see all calls, view call history, list transcripts, or count how many calls/transcripts exist. Returns a list of all call transcripts with metadata. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/list_transcripts = (_: { // Max number of results (default: 10) limit?: number, // Filter by customer ID (optional) customer_id?: string, }) => any; // Use this when the user wants to view the full content of a specific transcript by its ID. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_transcript = (_: { // Transcript ID to retrieve transcript_id: string, }) => any; // Use this when the user wants to see available workflows, filter workflows by status/risk, or find workflows for a specific plan. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/list_workflows = (_: { // Filter by plan ID (optional) plan_id?: string, // Filter by status: 'pending', 'approved', 'executing', 'completed' (optional) status?: string, // Filter by risk level: 'low', 'medium', 'high' (optional) risk_level?: string, // Max number of results (default: 10) limit?: number, }) => any; // Use this when the user wants to check the status and results of a workflow execution. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_execution_status = (_: { // Execution ID to check status execution_id: string, }) => any; // Use this when the user wants to see system-wide statistics including total transcripts, analyses, workflows, and executions. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_dashboard_metrics = () => any;
+{"finite": true} // Use this when the user wants to generate a customer call transcript, simulate a call, or start analyzing a mortgage/lending customer interaction. Creates realistic transcripts for scenarios like payment inquiries, PMI removal, hardship assistance, etc. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/create_transcript = (_: { // Topic of the call (e.g., 'payment_inquiry', 'pmi_removal', 'hardship') topic?: string, // Urgency level: 'low', 'medium', 'high', 'critical' urgency?: string, // Whether the call has financial impact financial_impact?: boolean, // Customer sentiment: 'positive', 'neutral', 'negative', 'frustrated' customer_sentiment?: string, // Customer ID (e.g., 'CUST_001') customer_id?: string, }) => any; // Use this when the user wants to analyze a call transcript for customer intent, sentiment, urgency, risks, or compliance issues. Extracts key insights from customer conversations. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/analyze_transcript = (_: { // Transcript ID from create_transcript (e.g., 'CALL_ABC123') transcript_id: string, // Type of analysis: 'comprehensive', 'quick', 'detailed' analysis_type?: string, }) => any; // Use this when the user wants to generate an action plan based on analysis results. Creates strategic recommendations and next steps for handling customer requests. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/create_action_plan = (_: { // Analysis ID from analyze_transcript (e.g., 'ANALYSIS_XYZ') analysis_id: string, // Plan type: 'standard', 'expedited', 'comprehensive' plan_type?: string, // Urgency: 'low', 'medium', 'high', 'critical' urgency?: string, }) => any; // Use this when the user wants to break down an action plan into detailed, executable workflows. Converts high-level actions into step-by-step operational workflows. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/extract_workflows = (_: { // Plan ID from create_action_plan (e.g., 'PLAN_123') plan_id: string, }) => any; // Use this when the user wants to approve a workflow for execution. Marks a workflow as ready to run. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/approve_workflow = (_: { // Workflow ID from list_workflows workflow_id: string, // Name/ID of approver approved_by: string, // Reason for approval reasoning?: string, }) => any; // Use this when the user wants to execute an approved workflow. Runs all workflow steps automatically and returns execution results. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/execute_workflow = (_: { // Workflow ID to execute workflow_id: string, // Name/ID of executor executed_by: string, }) => any; // Use this when the user wants to see all calls, view call history, list transcripts, or count how many calls/transcripts exist. Returns a list of all call transcripts with metadata. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/list_transcripts = (_: { // Max number of results (default: 10) limit?: number, // Filter by customer ID (optional) customer_id?: string, }) => any; // Use this when the user wants to view the full content of a specific transcript by its ID. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_transcript = (_: { // Transcript ID to retrieve transcript_id: string, }) => any; // Use this when the user wants to check if analysis exists for a transcript, view existing analysis results, or see if a call has already been analyzed. Returns analysis details if it exists. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_analysis = (_: { // Transcript ID to get analysis for (e.g., 'CALL_ABC123') transcript_id: string, }) => any; // Use this when the user wants to check if an action plan exists for an analysis, view existing plan details, or see borrower/advisor/supervisor plans. Returns plan if it exists. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_action_plan = (_: { // Analysis ID to get action plan for (e.g., 'ANALYSIS_XYZ') analysis_id: string, }) => any; // Use this when the user wants to view a specific workflow's details including all steps, tools needed, and execution status. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_workflow = (_: { // Workflow ID to retrieve (e.g., 'a905585d-7b09-44fa-837b-45cada8115bf') workflow_id: string, }) => any; // Use this when the user wants to see available workflows, filter workflows by status/risk, or find workflows for a specific plan. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/list_workflows = (_: { // Filter by plan ID (optional) plan_id?: string, // Filter by status: 'pending', 'approved', 'executing', 'completed' (optional) status?: string, // Filter by risk level: 'low', 'medium', 'high' (optional) risk_level?: string, // Max number of results (default: 10) limit?: number, }) => any; // Use this when the user wants to check the status and results of a workflow execution. type /CallIQ/link_68e55305be2c819187c682df6eecbba4/get_execution_status = (_: { // Execution ID to check status execution_id: string, }) => any;
 
 Called tool
-CallIQ
-CallIQ
-list_transcripts
-Request
-
-{
-limit: 
-50
-}
-Response
-
-{
-text: 
-'Found 1 call transcript(s): - CALL_F4E7E08E: payment_issues'
-}
-Here’s what I found — 1 call on file:
+Here’s what I found — there’s currently 1 call transcript in the system:
 
 ID: CALL_F4E7E08E
-Topic: payment_issues
+Topic: Payment issues
 
-Want me to open that transcript or filter by a customer ID?
+Would you like me to show the full transcript for this call?
 
 You said:
 yes
+You said:
+show the analysis for this call
 ChatGPT said:
 
 Called tool
 CallIQ
 CallIQ
-get_transcript
+get_analysis
 Request
 
 {
@@ -61,66 +48,150 @@ Response
 
 {
 text: 
-'Transcript CALL_F4E7E08E Topic: payment_issues Customer: CUST_001 Duration: 0 Urgency: medium **Date: ** October 12, 2023 **Time: ** 2:15 PM **Customer ID: ** CUST_001 **Loan Number: ** 123456789 **Property Address: ** 123 Maple Street, Springfield, IL **Representative ID: ** REP_98765 **Customer: ** Hello, this is John Smith. My customer ID is CUST_001. I'm calling about some issues I've been having with my mortgage payment. **Representative: ** Hi John, thanks for calling. This is Lisa from the mortgage servicing department. How can I assist you today? **Customer: ** Hi Lisa. I noticed that my last payment of $1,500 was not processed properly. I want to make sure everything is in order. **Representative: ** Let me pull up your account. One moment please… Okay, I see your loan number, 123456789, associated with the property at 123 Maple Street. Can you provide me with the date you made that payment? **Customer: ** Sure, I made the payment on September 30th. **Representative: ** Thank you. I see that the payment was scheduled but it appears there was an error in processing. It hasn’t been applied to your account yet. **Customer: ** That’s concerning. I want to make sure I don’t incur any late fees or negative impacts on my credit. **Representative: ** I understand your concern, and I assure you that since the payment was made on time, you won’t incur any late fees. I’ll make a note to ensure this is rectified and applied to your account promptly. **Customer: ** That’s a relief. When can I expect it to be resolved? **Representative: ** Typically, once we identify the issue, it should be resolved within 24 to 48 hours. I’ll escalate this to our payment processing team right away. **Customer: ** Great, thank you for the quick response. Is there anything else I should be aware of regarding my account? **Representative: ** Your account is currently in good standing, and your next payment is due on October 30th for $1,500. Just to confirm, would you like to set up any payment reminders? **Customer: ** Yeah, that would be helpful. A reminder a few days before the due date would work for me. **Representative: ** Absolutely. I’ll set that up for you. You’ll receive a reminder via email three days before the due date. **Customer: ** Thanks, Lisa. I appreciate your help today. **Representative: ** You’re welcome, John. Is there anything else I can assist you with? **Customer: ** No, that’s all for now. **Representative: ** Alright, thank you for calling. Have a great day! **Customer: ** You too, goodbye. **Representative: ** Goodbye!'
+'✅ Analysis found for transcript CALL_F4E7E08E Analysis ID: ANALYSIS_CALL_F4E7E08E_1b6d6e74 - Primary Intent: The primary intent of the call was to resolve an issue regarding a missed mortgage payment processing and to ensure that the customer's account remains in good standing without incurring late fees. - Urgency: Medium - Sentiment: Relieved - Issue Resolved: True - First Call Resolution: True - Compliance Flags: 0 - Topics: payment issues, payment processing, account standing, payment reminders ➡️ NEXT STEP: Use get_action_plan with analysis_id="ANALYSIS_CALL_F4E7E08E_1b6d6e74" to check if plan exists, or create_action_plan to generate new plan.'
 }
-Here’s the full transcript for CALL_F4E7E08E (Topic: payment_issues):
+Here’s the analysis for Call ID: CALL_F4E7E08E
 
-Date: October 12, 2023
-Time: 2:15 PM
-Customer ID: CUST_001
-Loan Number: 123456789
-Property Address: 123 Maple Street, Springfield, IL
-Representative ID: REP_98765
+Analysis ID: ANALYSIS_CALL_F4E7E08E_1b6d6e74
+
+Primary Intent: Resolve an issue with missed mortgage payment processing and ensure the account remains in good standing.
+
 Urgency: Medium
 
-Customer (John Smith): Hello, this is John Smith. My customer ID is CUST_001. I'm calling about some issues I've been having with my mortgage payment.
-Representative (Lisa): Hi John, thanks for calling. This is Lisa from the mortgage servicing department. How can I assist you today?
-Customer: Hi Lisa. I noticed that my last payment of $1,500 was not processed properly. I want to make sure everything is in order.
-Representative: Let me pull up your account. One moment please… Okay, I see your loan number, 123456789, associated with the property at 123 Maple Street. Can you provide me with the date you made that payment?
-Customer: Sure, I made the payment on September 30th.
-Representative: Thank you. I see that the payment was scheduled but it appears there was an error in processing. It hasn’t been applied to your account yet.
-Customer: That’s concerning. I want to make sure I don’t incur any late fees or negative impacts on my credit.
-Representative: I understand your concern, and I assure you that since the payment was made on time, you won’t incur any late fees. I’ll make a note to ensure this is rectified and applied to your account promptly.
-Customer: That’s a relief. When can I expect it to be resolved?
-Representative: Typically, once we identify the issue, it should be resolved within 24 to 48 hours. I’ll escalate this to our payment processing team right away.
-Customer: Great, thank you for the quick response. Is there anything else I should be aware of regarding my account?
-Representative: Your account is currently in good standing, and your next payment is due on October 30th for $1,500. Just to confirm, would you like to set up any payment reminders?
-Customer: Yeah, that would be helpful. A reminder a few days before the due date would work for me.
-Representative: Absolutely. I’ll set that up for you. You’ll receive a reminder via email three days before the due date.
-Customer: Thanks, Lisa. I appreciate your help today.
-Representative: You’re welcome, John. Is there anything else I can assist you with?
-Customer: No, that’s all for now.
-Representative: Alright, thank you for calling. Have a great day!
-Customer: You too, goodbye.
-Representative: Goodbye!
+Customer Sentiment: Relieved
 
-Would you like me to analyze this call for sentiment, urgency, and compliance next?
+Issue Resolved: ✅ Yes
+
+First Call Resolution: ✅ Achieved
+
+Compliance Flags: 0
+
+Topics Covered: Payment issues, payment processing, account standing, payment reminders
+
+Would you like me to show or create the action plan for this analysis?
 
 You said:
-is analysys already done?
+yes
 ChatGPT said:
 
 Called tool
 CallIQ
 CallIQ
-get_dashboard_metrics
+get_action_plan
 Request
 
 {
+analysis_id: 
+'ANALYSIS_CALL_F4E7E08E_1b6d6e74'
 }
 Response
 
 {
 text: 
-'Dashboard metrics temporarily unavailable'
+'✅ Action plan found for analysis ANALYSIS_CALL_F4E7E08E_1b6d6e74 Plan ID: PLAN_ANALYSIS_CALL_F - Borrower Immediate Actions: 1 - Advisor Coaching Items: 2 - Supervisor Escalations: 1 ➡️ NEXT STEP: Use list_workflows with plan_id="PLAN_ANALYSIS_CALL_F" to see extracted workflows, or extract_workflows to create them.'
 }
-It looks like the dashboard metrics (which would show whether this call has already been analyzed) are temporarily unavailable right now.
+Here’s the action plan linked to the analysis:
 
-Would you like me to go ahead and run a new analysis on this call’s transcript?
+Plan ID: PLAN_ANALYSIS_CALL_F
+
+Borrower Immediate Actions: 1
+
+Advisor Coaching Items: 2
+
+Supervisor Escalations: 1
+
+Would you like me to list or extract the workflows for this plan next?
+
+You said:
+yes
+ChatGPT said:
+
+Called tool
+CallIQ
+CallIQ
+list_workflows
+Request
+
+{
+plan_id: 
+'PLAN_ANALYSIS_CALL_F'
+}
+Response
+
+{
+text: 
+'Error: 'list' object has no attribute 'get''
+, 
+is_error: 
+true
+}
+It looks like there was an issue retrieving the workflows — the system returned an unexpected data format.
+
+I can try an alternative approach to extract workflows directly from the action plan instead (this will regenerate detailed step-by-step operational tasks).
+
+Would you like me to go ahead and extract them?
+
+You said:
+retry
+ChatGPT said:
+
+Called tool
+CallIQ
+CallIQ
+extract_workflows
+Request
+
+{
+plan_id: 
+'PLAN_ANALYSIS_CALL_F'
+}
+Response
+
+{
+text: 
+'✅ STEP 4 COMPLETE: Workflows extracted! Plan ID: PLAN_ANALYSIS_CALL_F - Status: started - Workflows created: 0 - Message: Workflow extraction started for plan PLAN_ANALYSIS_CALL_F ➡️ NEXT STEP: Use list_workflows with plan_id="PLAN_ANALYSIS_CALL_F" to see all workflows, then use approve_workflow to approve each one.'
+}
+✅ Workflow extraction for Plan ID: PLAN_ANALYSIS_CALL_F has started successfully.
+No workflows are listed yet — they’re being generated in the background.
+
+Next, I can check again to list all extracted workflows once they’re ready.
+Would you like me to refresh and show them now?
+
+You said:
+yes list
+ChatGPT said:
+
+Called tool
+CallIQ
+CallIQ
+list_workflows
+Request
+
+{
+plan_id: 
+'PLAN_ANALYSIS_CALL_F'
+}
+Response
+
+{
+text: 
+'Error: 'list' object has no attribute 'get''
+, 
+is_error: 
+true
+}
+It seems the system is still returning the same data format error when listing workflows for this plan — likely because the extraction process hasn’t finished populating them yet.
+
+Here’s what I can do next:
+
+Retry once more after a short delay (to give extraction time to complete), or
+
+Attempt a direct retrieval of any known workflows once IDs are available.
+
+Would you like me to retry the listing one more time now?
 
 DEVELOPER MODE
 
 
 No file chosenNo file chosen
 ChatGPT can make mistakes. Check important info.
-ChatGPT says: It looks like the dashboard metrics (which would show whether this call has already been analyzed) are temporarily unavailable right now. Would you like me to go ahead and **run a new analysis** on this call’s transcript?

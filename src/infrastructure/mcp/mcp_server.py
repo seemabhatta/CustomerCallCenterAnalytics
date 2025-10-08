@@ -285,6 +285,36 @@ GET_WORKFLOW_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
+# Orchestration Tools
+RUN_ORCHESTRATION_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "transcript_ids": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of transcript IDs to process (e.g., ['CALL_ABC123', 'CALL_XYZ789'])",
+        },
+        "auto_approve": {
+            "type": "boolean",
+            "description": "Automatically approve all workflows (default: false)",
+        }
+    },
+    "required": ["transcript_ids"],
+    "additionalProperties": False,
+}
+
+GET_ORCHESTRATION_STATUS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "run_id": {
+            "type": "string",
+            "description": "Orchestration run ID (e.g., 'RUN_A1B2C3D4')",
+        }
+    },
+    "required": ["run_id"],
+    "additionalProperties": False,
+}
+
 # ========================================
 # TOOL DEFINITIONS
 # ========================================
@@ -507,6 +537,55 @@ async def _list_tools() -> List[types.Tool]:
                 }
             },
         ),
+        # ORCHESTRATION TOOLS
+        types.Tool(
+            name="run_orchestration",
+            title="Run Orchestration Pipeline",
+            description="Use this when the user wants to run the COMPLETE pipeline for one or more transcripts automatically: Transcript → Analysis → Plan → Workflows → Execute. This orchestrates all steps end-to-end.",
+            inputSchema=deepcopy(RUN_ORCHESTRATION_SCHEMA),
+            _meta={
+                "openai/toolInvocation/invoking": "Starting orchestration pipeline",
+                "openai/toolInvocation/invoked": "Orchestration started",
+
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": False,
+                }
+            },
+        ),
+        types.Tool(
+            name="get_orchestration_status",
+            title="Get Orchestration Status",
+            description="Use this when the user wants to check the progress and status of an orchestration run, see how many transcripts were processed, or view results and errors.",
+            inputSchema=deepcopy(GET_ORCHESTRATION_STATUS_SCHEMA),
+            _meta={
+                "openai/toolInvocation/invoking": "Checking orchestration status",
+                "openai/toolInvocation/invoked": "Status retrieved",
+
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
+            },
+        ),
+        types.Tool(
+            name="list_orchestration_runs",
+            title="List Orchestration Runs",
+            description="Use this when the user wants to see all orchestration runs, view pipeline execution history, or check recent batch processing jobs.",
+            inputSchema={"type": "object", "properties": {}, "additionalProperties": False},
+            _meta={
+                "openai/toolInvocation/invoking": "Listing orchestration runs",
+                "openai/toolInvocation/invoked": "Runs listed",
+
+                "annotations": {
+                    "destructiveHint": False,
+                    "openWorldHint": False,
+                    "readOnlyHint": True,
+                }
+            },
+        ),
     ]
 
 # ========================================
@@ -557,6 +636,12 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
             result = await _handle_list_workflows(arguments)
         elif tool_name == "get_execution_status":
             result = await _handle_get_execution_status(arguments)
+        elif tool_name == "run_orchestration":
+            result = await _handle_run_orchestration(arguments)
+        elif tool_name == "get_orchestration_status":
+            result = await _handle_get_orchestration_status(arguments)
+        elif tool_name == "list_orchestration_runs":
+            result = await _handle_list_orchestration_runs(arguments)
         else:
             return types.ServerResult(
                 types.CallToolResult(
@@ -881,14 +966,13 @@ async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     params["limit"] = args.get("limit", 10)
     response = await http_client.get("/api/v1/workflows", params=params)
     response.raise_for_status()
-    result = response.json()
+    workflows = response.json()  # FastAPI returns list directly, not dict
 
-    workflows = result.get('workflows', [])
-    if not workflows:
+    if not workflows or not isinstance(workflows, list):
         return "No workflows found with the given filters."
 
     workflow_list = "\n".join([
-        f"- {w.get('workflow_id')}: {w.get('workflow_type')} ({w.get('status')})"
+        f"- {w.get('id')}: {w.get('workflow_type')} ({w.get('status')})"
         for w in workflows[:10]
     ])
     return f"""Found {len(workflows)} workflows:
@@ -910,6 +994,84 @@ async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
 - Workflow: {result.get('workflow_id')}
 - Started: {result.get('started_at')}
 - Completed: {result.get('completed_at', 'In progress')}"""
+
+async def _handle_run_orchestration(args: Dict[str, Any]) -> str:
+    """Orchestration: Run complete pipeline via FastAPI."""
+    transcript_ids = args.get("transcript_ids", [])
+    auto_approve = args.get("auto_approve", False)
+
+    if not transcript_ids:
+        raise ValueError("transcript_ids is required")
+
+    response = await http_client.post("/api/v1/orchestrate/run", json={
+        "transcript_ids": transcript_ids,
+        "auto_approve": auto_approve
+    })
+    response.raise_for_status()
+    result = response.json()
+
+    run_id = result.get('run_id')
+    transcript_count = result.get('transcript_count', len(transcript_ids))
+
+    return f"""🚀 Orchestration pipeline started!
+
+Run ID: {run_id}
+Transcripts to process: {transcript_count}
+Auto-approve: {auto_approve}
+Status: {result.get('status')}
+
+Pipeline: Transcript → Analysis → Plan → Workflows → Execute
+
+➡️ NEXT STEP: Use get_orchestration_status with run_id="{run_id}" to check progress."""
+
+async def _handle_get_orchestration_status(args: Dict[str, Any]) -> str:
+    """Orchestration: Get orchestration status via FastAPI."""
+    run_id = args.get("run_id")
+    if not run_id:
+        raise ValueError("run_id is required")
+
+    response = await http_client.get(f"/api/v1/orchestrate/status/{run_id}")
+    response.raise_for_status()
+    result = response.json()
+
+    progress = result.get('progress', {})
+    status = result.get('status')
+    stage = result.get('stage')
+
+    successful = len(result.get('results', []))
+    failed = len(result.get('errors', []))
+
+    return f"""📊 Orchestration Run {run_id}
+
+Status: {status}
+Current Stage: {stage}
+
+Progress: {progress.get('processed', 0)}/{progress.get('total', 0)} ({progress.get('percentage', 0)}%)
+- Successful: {successful}
+- Failed: {failed}
+
+Started: {result.get('started_at', 'N/A')}
+Completed: {result.get('completed_at', 'In progress')}"""
+
+async def _handle_list_orchestration_runs(args: Dict[str, Any]) -> str:
+    """Orchestration: List all orchestration runs via FastAPI."""
+    response = await http_client.get("/api/v1/orchestrate/runs")
+    response.raise_for_status()
+    runs = response.json()
+
+    if not runs:
+        return "No orchestration runs found."
+
+    runs_list = "\n".join([
+        f"- {r.get('id')}: {r.get('status')} ({len(r.get('transcript_ids', []))} transcripts)"
+        for r in runs[:10]
+    ])
+
+    return f"""Found {len(runs)} orchestration run(s):
+
+{runs_list}
+
+Use get_orchestration_status with run_id to see details."""
 
 # ========================================
 # REGISTER REQUEST HANDLERS
@@ -947,9 +1109,10 @@ if __name__ == "__main__":
     logger.info("🌐 Server will run on http://0.0.0.0:8001")
     logger.info("📡 SSE endpoint: /mcp")
     logger.info("💬 Messages endpoint: /mcp/messages")
-    logger.info("🔧 Tools registered: 13")
+    logger.info("🔧 Tools registered: 16")
     logger.info("=" * 60)
     logger.info("WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute")
+    logger.info("ORCHESTRATION: Complete end-to-end pipeline automation")
     logger.info("=" * 60)
 
     uvicorn.run("src.infrastructure.mcp.mcp_server:app", host="0.0.0.0", port=8001, reload=False)
