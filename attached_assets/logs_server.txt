@@ -1,60 +1,370 @@
-(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python3 src/infrastructure/mcp/mcp_server.py
-INFO:__main__:🔧 MCP Server will proxy requests to: http://localhost:8000
-INFO:__main__:✅ MCP HTTP client initialized
-INFO:__main__:🚀 Starting MCP Server for Customer Call Center Analytics
-INFO:__main__:🌐 Server will run on http://0.0.0.0:8001
-INFO:__main__:📡 SSE endpoint: /mcp
-INFO:__main__:💬 Messages endpoint: /mcp/messages
-INFO:__main__:🔧 Tools registered: 11
-INFO:__main__:============================================================
-INFO:__main__:WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute
-INFO:__main__:============================================================
-INFO:src.infrastructure.mcp.mcp_server:🔧 MCP Server will proxy requests to: http://localhost:8000
-INFO:src.infrastructure.mcp.mcp_server:✅ MCP HTTP client initialized
-INFO:     Started server process [113450]
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python3 server.py
+🔍 Validating system configuration...
+✅ Configuration validation passed
+🗄️ Initializing knowledge graph schema...
+Initializing KuzuDB schema at: data/knowledge_graph_v2.db
+
+=== Creating Node Tables ===
+Creating Customer...
+⚠️  Customer already exists, skipping
+Creating Transcript...
+⚠️  Transcript already exists, skipping
+Creating Analysis...
+⚠️  Analysis already exists, skipping
+Creating Plan...
+⚠️  Plan already exists, skipping
+Creating Workflow...
+⚠️  Workflow already exists, skipping
+Creating Execution...
+⚠️  Execution already exists, skipping
+Creating Advisor...
+⚠️  Advisor already exists, skipping
+Creating Hypothesis...
+⚠️  Hypothesis already exists, skipping
+Creating CandidatePattern...
+⚠️  CandidatePattern already exists, skipping
+Creating ValidatedPattern...
+⚠️  ValidatedPattern already exists, skipping
+Creating Prediction...
+⚠️  Prediction already exists, skipping
+Creating LearningNode...
+⚠️  LearningNode already exists, skipping
+Creating KnowledgeEntity...
+⚠️  KnowledgeEntity already exists, skipping
+Creating MetaLearning...
+⚠️  MetaLearning already exists, skipping
+Creating Wisdom...
+⚠️  Wisdom already exists, skipping
+Creating Call...
+⚠️  Call already exists, skipping
+
+=== Creating Relationship Tables ===
+Creating TRANSCRIPT_BELONGS_TO...
+⚠️  TRANSCRIPT_BELONGS_TO already exists, skipping
+Creating ANALYSIS_ANALYZES...
+⚠️  ANALYSIS_ANALYZES already exists, skipping
+Creating PLAN_PLANS_FOR...
+⚠️  PLAN_PLANS_FOR already exists, skipping
+Creating WORKFLOW_IMPLEMENTS...
+⚠️  WORKFLOW_IMPLEMENTS already exists, skipping
+Creating EXECUTION_EXECUTES...
+⚠️  EXECUTION_EXECUTES already exists, skipping
+Creating HYPOTHESIS_DERIVED_FROM...
+⚠️  HYPOTHESIS_DERIVED_FROM already exists, skipping
+Creating HYPOTHESIS_DERIVED_FROM_PLAN...
+⚠️  HYPOTHESIS_DERIVED_FROM_PLAN already exists, skipping
+Creating HYPOTHESIS_DERIVED_FROM_EXECUTION...
+⚠️  HYPOTHESIS_DERIVED_FROM_EXECUTION already exists, skipping
+Creating PATTERN_FORMED_FROM...
+⚠️  PATTERN_FORMED_FROM already exists, skipping
+Creating PATTERN_VALIDATED...
+⚠️  PATTERN_VALIDATED already exists, skipping
+Creating PREDICTION_BASED_ON...
+⚠️  PREDICTION_BASED_ON already exists, skipping
+Creating TARGETS_CUSTOMER...
+⚠️  TARGETS_CUSTOMER already exists, skipping
+Creating LEARNING_CONNECTS...
+⚠️  LEARNING_CONNECTS already exists, skipping
+Creating KNOWLEDGE_EXTRACTED_FROM...
+⚠️  KNOWLEDGE_EXTRACTED_FROM already exists, skipping
+Creating HYPOTHESIS_CONNECTS...
+⚠️  HYPOTHESIS_CONNECTS already exists, skipping
+Creating PATTERN_INVOLVES...
+⚠️  PATTERN_INVOLVES already exists, skipping
+Creating TRIGGERED_HYPOTHESIS...
+⚠️  TRIGGERED_HYPOTHESIS already exists, skipping
+Creating CALL_BELONGS_TO_CUSTOMER...
+⚠️  CALL_BELONGS_TO_CUSTOMER already exists, skipping
+Creating CALL_HANDLED_BY...
+⚠️  CALL_HANDLED_BY already exists, skipping
+Creating CALL_HAS_TRANSCRIPT...
+⚠️  CALL_HAS_TRANSCRIPT already exists, skipping
+Creating ADVISOR_HANDLES_WORKFLOW...
+⚠️  ADVISOR_HANDLES_WORKFLOW already exists, skipping
+Creating ADVISOR_LEARNS_FROM...
+⚠️  ADVISOR_LEARNS_FROM already exists, skipping
+Creating PATTERN_TEACHES_ADVISOR...
+⚠️  PATTERN_TEACHES_ADVISOR already exists, skipping
+Creating WISDOM_DERIVED_FROM_PLAN...
+⚠️  WISDOM_DERIVED_FROM_PLAN already exists, skipping
+Creating WISDOM_GUIDES_EXECUTION...
+⚠️  WISDOM_GUIDES_EXECUTION already exists, skipping
+Creating WISDOM_VALIDATES_PATTERN...
+⚠️  WISDOM_VALIDATES_PATTERN already exists, skipping
+Creating METALEARNING_ANALYZES_HYPOTHESIS...
+⚠️  METALEARNING_ANALYZES_HYPOTHESIS already exists, skipping
+Creating METALEARNING_IMPROVES_PATTERN...
+⚠️  METALEARNING_IMPROVES_PATTERN already exists, skipping
+Creating METALEARNING_GENERATES_WISDOM...
+⚠️  METALEARNING_GENERATES_WISDOM already exists, skipping
+
+=== Schema Initialization Complete ===
+All tables and relationships have been created successfully!
+
+=== Verifying Schema ===
+✅ Customer: 1 nodes
+✅ Transcript: 2 nodes
+✅ Analysis: 4 nodes
+✅ Plan: 3 nodes
+✅ Workflow: 68 nodes
+✅ Execution: 0 nodes
+✅ Advisor: 1 nodes
+✅ Hypothesis: 4 nodes
+✅ CandidatePattern: 0 nodes
+✅ ValidatedPattern: 0 nodes
+✅ Prediction: 14 nodes
+✅ LearningNode: 0 nodes
+✅ KnowledgeEntity: 0 nodes
+✅ MetaLearning: 8 nodes
+✅ Wisdom: 10 nodes
+✅ Call: 4 nodes
+
+🎉 KuzuDB schema initialized successfully at data/knowledge_graph_v2.db
+✅ Knowledge graph schema initialized successfully
+✅ All services initialized successfully
+✅ Knowledge event handling system initialized
+✅ Graph event handlers initialized - complete event-driven pipeline active
+✅ Graph event handlers initialized
+✅ Prediction cleanup system initialized
+🚀 Starting Customer Call Center Analytics API Server
+📚 API Documentation: http://localhost:8000/docs
+🌐 Server URL: http://0.0.0.0:8000
+✅ Streamlined API with core endpoints only
+INFO:     Started server process [115140]
 INFO:     Waiting for application startup.
-INFO:mcp.server.streamable_http_manager:StreamableHTTP session manager started
+🚀 Starting application lifespan...
+✅ Background prediction cleanup task started with error recovery
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     57.154.187.40:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.47:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.40:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.46:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type ListToolsRequest
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.47:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.44:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.37:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.36:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: list_transcripts with args: {'limit': 50}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/transcripts?limit=50 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.47:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.40:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.35:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.34:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_transcript with args: {'transcript_id': 'CALL_F4E7E08E'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/transcripts/CALL_F4E7E08E "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.37:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.39:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.45:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     57.154.187.37:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_dashboard_metrics with args: {}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/metrics "HTTP/1.1 500 Internal Server Error"
-INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+^CINFO:     Shutting down
+INFO:     Waiting for application shutdown.
+🛑 Shutting down application...
+✅ All background tasks shut down
+INFO:     Application shutdown complete.
+INFO:     Finished server process [115140]
+(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python3 server.py
+🔍 Validating system configuration...
+✅ Configuration validation passed
+🗄️ Initializing knowledge graph schema...
+Initializing KuzuDB schema at: data/knowledge_graph_v2.db
+
+=== Creating Node Tables ===
+Creating Customer...
+⚠️  Customer already exists, skipping
+Creating Transcript...
+⚠️  Transcript already exists, skipping
+Creating Analysis...
+⚠️  Analysis already exists, skipping
+Creating Plan...
+⚠️  Plan already exists, skipping
+Creating Workflow...
+⚠️  Workflow already exists, skipping
+Creating Execution...
+⚠️  Execution already exists, skipping
+Creating Advisor...
+⚠️  Advisor already exists, skipping
+Creating Hypothesis...
+⚠️  Hypothesis already exists, skipping
+Creating CandidatePattern...
+⚠️  CandidatePattern already exists, skipping
+Creating ValidatedPattern...
+⚠️  ValidatedPattern already exists, skipping
+Creating Prediction...
+⚠️  Prediction already exists, skipping
+Creating LearningNode...
+⚠️  LearningNode already exists, skipping
+Creating KnowledgeEntity...
+⚠️  KnowledgeEntity already exists, skipping
+Creating MetaLearning...
+⚠️  MetaLearning already exists, skipping
+Creating Wisdom...
+⚠️  Wisdom already exists, skipping
+Creating Call...
+⚠️  Call already exists, skipping
+
+=== Creating Relationship Tables ===
+Creating TRANSCRIPT_BELONGS_TO...
+⚠️  TRANSCRIPT_BELONGS_TO already exists, skipping
+Creating ANALYSIS_ANALYZES...
+⚠️  ANALYSIS_ANALYZES already exists, skipping
+Creating PLAN_PLANS_FOR...
+⚠️  PLAN_PLANS_FOR already exists, skipping
+Creating WORKFLOW_IMPLEMENTS...
+⚠️  WORKFLOW_IMPLEMENTS already exists, skipping
+Creating EXECUTION_EXECUTES...
+⚠️  EXECUTION_EXECUTES already exists, skipping
+Creating HYPOTHESIS_DERIVED_FROM...
+⚠️  HYPOTHESIS_DERIVED_FROM already exists, skipping
+Creating HYPOTHESIS_DERIVED_FROM_PLAN...
+⚠️  HYPOTHESIS_DERIVED_FROM_PLAN already exists, skipping
+Creating HYPOTHESIS_DERIVED_FROM_EXECUTION...
+⚠️  HYPOTHESIS_DERIVED_FROM_EXECUTION already exists, skipping
+Creating PATTERN_FORMED_FROM...
+⚠️  PATTERN_FORMED_FROM already exists, skipping
+Creating PATTERN_VALIDATED...
+⚠️  PATTERN_VALIDATED already exists, skipping
+Creating PREDICTION_BASED_ON...
+⚠️  PREDICTION_BASED_ON already exists, skipping
+Creating TARGETS_CUSTOMER...
+⚠️  TARGETS_CUSTOMER already exists, skipping
+Creating LEARNING_CONNECTS...
+⚠️  LEARNING_CONNECTS already exists, skipping
+Creating KNOWLEDGE_EXTRACTED_FROM...
+⚠️  KNOWLEDGE_EXTRACTED_FROM already exists, skipping
+Creating HYPOTHESIS_CONNECTS...
+⚠️  HYPOTHESIS_CONNECTS already exists, skipping
+Creating PATTERN_INVOLVES...
+⚠️  PATTERN_INVOLVES already exists, skipping
+Creating TRIGGERED_HYPOTHESIS...
+⚠️  TRIGGERED_HYPOTHESIS already exists, skipping
+Creating CALL_BELONGS_TO_CUSTOMER...
+⚠️  CALL_BELONGS_TO_CUSTOMER already exists, skipping
+Creating CALL_HANDLED_BY...
+⚠️  CALL_HANDLED_BY already exists, skipping
+Creating CALL_HAS_TRANSCRIPT...
+⚠️  CALL_HAS_TRANSCRIPT already exists, skipping
+Creating ADVISOR_HANDLES_WORKFLOW...
+⚠️  ADVISOR_HANDLES_WORKFLOW already exists, skipping
+Creating ADVISOR_LEARNS_FROM...
+⚠️  ADVISOR_LEARNS_FROM already exists, skipping
+Creating PATTERN_TEACHES_ADVISOR...
+⚠️  PATTERN_TEACHES_ADVISOR already exists, skipping
+Creating WISDOM_DERIVED_FROM_PLAN...
+⚠️  WISDOM_DERIVED_FROM_PLAN already exists, skipping
+Creating WISDOM_GUIDES_EXECUTION...
+⚠️  WISDOM_GUIDES_EXECUTION already exists, skipping
+Creating WISDOM_VALIDATES_PATTERN...
+⚠️  WISDOM_VALIDATES_PATTERN already exists, skipping
+Creating METALEARNING_ANALYZES_HYPOTHESIS...
+⚠️  METALEARNING_ANALYZES_HYPOTHESIS already exists, skipping
+Creating METALEARNING_IMPROVES_PATTERN...
+⚠️  METALEARNING_IMPROVES_PATTERN already exists, skipping
+Creating METALEARNING_GENERATES_WISDOM...
+⚠️  METALEARNING_GENERATES_WISDOM already exists, skipping
+
+=== Schema Initialization Complete ===
+All tables and relationships have been created successfully!
+
+=== Verifying Schema ===
+✅ Customer: 1 nodes
+✅ Transcript: 2 nodes
+✅ Analysis: 4 nodes
+✅ Plan: 3 nodes
+✅ Workflow: 68 nodes
+✅ Execution: 0 nodes
+✅ Advisor: 1 nodes
+✅ Hypothesis: 4 nodes
+✅ CandidatePattern: 0 nodes
+✅ ValidatedPattern: 0 nodes
+✅ Prediction: 14 nodes
+✅ LearningNode: 0 nodes
+✅ KnowledgeEntity: 0 nodes
+✅ MetaLearning: 8 nodes
+✅ Wisdom: 10 nodes
+✅ Call: 4 nodes
+
+🎉 KuzuDB schema initialized successfully at data/knowledge_graph_v2.db
+✅ Knowledge graph schema initialized successfully
+✅ All services initialized successfully
+✅ Knowledge event handling system initialized
+✅ Graph event handlers initialized - complete event-driven pipeline active
+✅ Graph event handlers initialized
+✅ Prediction cleanup system initialized
+🚀 Starting Customer Call Center Analytics API Server
+📚 API Documentation: http://localhost:8000/docs
+🌐 Server URL: http://0.0.0.0:8000
+✅ Streamlined API with core endpoints only
+INFO:     Started server process [115174]
+INFO:     Waiting for application startup.
+🚀 Starting application lifespan...
+✅ Background prediction cleanup task started with error recovery
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:58398 - "POST /api/v1/workflows/6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b/execute HTTP/1.1" 500 Internal Server Error
+{
+    "body": "Workflow not found: workflow_id=6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b",
+    "severity_number": 17,
+    "severity_text": "ERROR",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/workflow_execution_engine.py",
+        "code.function.name": "execute_workflow",
+        "code.line.number": 245
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-10-08T15:14:29.239917Z",
+    "observed_timestamp": "2025-10-08T15:14:29.240107Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
+{
+    "body": "Workflow execution failed: workflow_id=6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b, executed_by=Supervisor_AI, duration=4ms",
+    "severity_number": 17,
+    "severity_text": "ERROR",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/src/services/workflow_execution_engine.py",
+        "code.function.name": "execute_workflow",
+        "code.line.number": 429,
+        "exception.type": "ValueError",
+        "exception.message": "Workflow not found: 6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b",
+        "exception.stacktrace": "Traceback (most recent call last):\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/src/services/workflow_execution_engine.py\", line 246, in execute_workflow\n    raise ValueError(f\"Workflow not found: {workflow_id}\")\nValueError: Workflow not found: 6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b\n"
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-10-08T15:14:29.240524Z",
+    "observed_timestamp": "2025-10-08T15:14:29.240655Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
+{
+    "body": "Workflow execution failed: workflow_id=6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b, executed_by=Supervisor_AI",
+    "severity_number": 17,
+    "severity_text": "ERROR",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/server.py",
+        "code.function.name": "execute_workflow",
+        "code.line.number": 764,
+        "exception.type": "Exception",
+        "exception.message": "Workflow execution failed for 6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b: Workflow not found: 6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b",
+        "exception.stacktrace": "Traceback (most recent call last):\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/src/services/workflow_execution_engine.py\", line 246, in execute_workflow\n    raise ValueError(f\"Workflow not found: {workflow_id}\")\nValueError: Workflow not found: 6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/server.py\", line 754, in execute_workflow\n    result = await workflow_service.execute_workflow(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/src/services/workflow_service.py\", line 569, in execute_workflow\n    execution_result = await execution_engine.execute_workflow(workflow_id, executed_by)\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ujjal/code/CustomerCallCenterAnalytics/src/services/workflow_execution_engine.py\", line 452, in execute_workflow\n    raise Exception(f\"Workflow execution failed for {workflow_id}: {e}\")\nException: Workflow execution failed for 6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b: Workflow not found: 6f4b83cf-f2df-4a01-ae7a-66d0f5f6003b\n"
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-10-08T15:14:29.264278Z",
+    "observed_timestamp": "2025-10-08T15:14:29.264365Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
