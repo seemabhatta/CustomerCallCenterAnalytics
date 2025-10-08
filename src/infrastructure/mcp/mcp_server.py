@@ -673,7 +673,8 @@ async def _handle_get_transcript(args: Dict[str, Any]) -> str:
     if not result:
         return f"❌ Transcript {transcript_id} not found"
     return f"""Transcript {transcript_id}:
-{result.get('content', '')[:1000]}..."""
+
+{result.get('content', '')}"""
 
 async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     """Query: List workflows via FastAPI."""
