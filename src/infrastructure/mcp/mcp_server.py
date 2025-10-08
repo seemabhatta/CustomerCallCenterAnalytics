@@ -672,9 +672,25 @@ async def _handle_get_transcript(args: Dict[str, Any]) -> str:
     result = response.json()
     if not result:
         return f"❌ Transcript {transcript_id} not found"
-    return f"""Transcript {transcript_id}:
 
-{result.get('content', '')}"""
+    # Format messages into readable transcript
+    messages = result.get('messages', [])
+    if not messages:
+        return f"❌ Transcript {transcript_id} has no messages"
+
+    formatted_messages = "\n".join([
+        f"{msg.get('speaker', 'Unknown')}: {msg.get('text', '')}"
+        for msg in messages
+    ])
+
+    return f"""Transcript {transcript_id}
+
+Topic: {result.get('topic', 'Unknown')}
+Customer: {result.get('customer_id', 'Unknown')}
+Duration: {result.get('duration', 'Unknown')}
+Urgency: {result.get('urgency', 'Unknown')}
+
+{formatted_messages}"""
 
 async def _handle_list_workflows(args: Dict[str, Any]) -> str:
     """Query: List workflows via FastAPI."""
