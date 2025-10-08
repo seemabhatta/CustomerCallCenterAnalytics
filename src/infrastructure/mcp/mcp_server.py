@@ -125,6 +125,14 @@ async def _call_tool_request(req: types.CallToolRequest) -> types.ServerResult:
             result = await _handle_get_analysis(arguments)
         elif tool_name == "get_action_plan":
             result = await _handle_get_action_plan(arguments)
+        elif tool_name == "list_analyses":
+            result = await _handle_list_analyses(arguments)
+        elif tool_name == "get_analysis_by_id":
+            result = await _handle_get_analysis_by_id(arguments)
+        elif tool_name == "get_plan_by_id":
+            result = await _handle_get_plan_by_id(arguments)
+        elif tool_name == "get_plan_by_transcript":
+            result = await _handle_get_plan_by_transcript(arguments)
         elif tool_name == "get_workflow":
             result = await _handle_get_workflow(arguments)
         elif tool_name == "list_workflows":
@@ -421,6 +429,111 @@ Plan ID: {plan_id}
 - Supervisor Escalations: {supervisor_items}
 
 ➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see extracted workflows, or extract_workflows to create them."""
+
+async def _handle_list_analyses(args: Dict[str, Any]) -> str:
+    """Query: List all analyses via FastAPI."""
+    params = {}
+    if args.get("limit"):
+        params["limit"] = args["limit"]
+
+    response = await http_client.get("/api/v1/analyses", params=params)
+    response.raise_for_status()
+    analyses = response.json()
+
+    if not analyses or len(analyses) == 0:
+        return "No analyses found."
+
+    # Build analysis list
+    analysis_list = []
+    for analysis in analyses:
+        analysis_id = analysis['analysis_id']
+        transcript_id = analysis['transcript_id']
+        primary_intent = analysis.get('primary_intent', 'N/A')
+        urgency = analysis.get('urgency_level', 'N/A')
+        sentiment = analysis.get('borrower_sentiment', {}).get('overall', 'N/A')
+
+        analysis_list.append(
+            f"• {analysis_id}\n"
+            f"  Transcript: {transcript_id} | Intent: {primary_intent} | Urgency: {urgency} | Sentiment: {sentiment}"
+        )
+
+    analyses_text = "\n\n".join(analysis_list)
+    return f"""Found {len(analyses)} analyses:
+
+{analyses_text}
+
+Use get_analysis_by_id with analysis_id to see details."""
+
+async def _handle_get_analysis_by_id(args: Dict[str, Any]) -> str:
+    """Query: Get specific analysis by ID via FastAPI."""
+    analysis_id = args.get("analysis_id")
+    if not analysis_id:
+        raise ValueError("analysis_id is required")
+
+    response = await http_client.get(f"/api/v1/analyses/{analysis_id}")
+    response.raise_for_status()
+    analysis = response.json()
+
+    return f"""✅ Analysis {analysis_id}
+
+Transcript ID: {analysis['transcript_id']}
+- Primary Intent: {analysis.get('primary_intent', 'N/A')}
+- Urgency: {analysis.get('urgency_level', 'N/A')}
+- Sentiment: {analysis.get('borrower_sentiment', {}).get('overall', 'N/A')}
+- Issue Resolved: {analysis.get('issue_resolved', False)}
+- First Call Resolution: {analysis.get('first_call_resolution', False)}
+- Compliance Flags: {len(analysis.get('compliance_flags', []))}
+- Topics: {', '.join(analysis.get('topics_discussed', []))}
+
+➡️ NEXT STEP: Use create_action_plan with analysis_id="{analysis_id}" to generate plan."""
+
+async def _handle_get_plan_by_id(args: Dict[str, Any]) -> str:
+    """Query: Get specific plan by ID via FastAPI."""
+    plan_id = args.get("plan_id")
+    if not plan_id:
+        raise ValueError("plan_id is required")
+
+    response = await http_client.get(f"/api/v1/plans/{plan_id}")
+    response.raise_for_status()
+    plan = response.json()
+
+    borrower_actions = len(plan.get('borrower_plan', {}).get('immediate_actions', []))
+    advisor_items = len(plan.get('advisor_plan', {}).get('coaching_items', []))
+    supervisor_items = len(plan.get('supervisor_plan', {}).get('escalation_items', []))
+
+    return f"""✅ Plan {plan_id}
+
+Analysis ID: {plan['analysis_id']}
+- Borrower Immediate Actions: {borrower_actions}
+- Advisor Coaching Items: {advisor_items}
+- Supervisor Escalations: {supervisor_items}
+
+➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see workflows."""
+
+async def _handle_get_plan_by_transcript(args: Dict[str, Any]) -> str:
+    """Query: Get plan by transcript ID via FastAPI."""
+    transcript_id = args.get("transcript_id")
+    if not transcript_id:
+        raise ValueError("transcript_id is required")
+
+    response = await http_client.get(f"/api/v1/plans/by-transcript/{transcript_id}")
+    response.raise_for_status()
+    plan = response.json()
+
+    plan_id = plan['plan_id']
+    borrower_actions = len(plan.get('borrower_plan', {}).get('immediate_actions', []))
+    advisor_items = len(plan.get('advisor_plan', {}).get('coaching_items', []))
+    supervisor_items = len(plan.get('supervisor_plan', {}).get('escalation_items', []))
+
+    return f"""✅ Plan found for transcript {transcript_id}
+
+Plan ID: {plan_id}
+Analysis ID: {plan['analysis_id']}
+- Borrower Immediate Actions: {borrower_actions}
+- Advisor Coaching Items: {advisor_items}
+- Supervisor Escalations: {supervisor_items}
+
+➡️ NEXT STEP: Use list_workflows with plan_id="{plan_id}" to see workflows."""
 
 async def _handle_get_workflow(args: Dict[str, Any]) -> str:
     """Query: Get specific workflow with steps via FastAPI."""

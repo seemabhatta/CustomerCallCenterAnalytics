@@ -226,6 +226,54 @@ GET_EXECUTION_STATUS_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
 }
 
+LIST_ANALYSES_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "limit": {
+            "type": "integer",
+            "description": "Max number of analyses to return (optional)",
+        }
+    },
+    "required": [],
+    "additionalProperties": False,
+}
+
+GET_ANALYSIS_BY_ID_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "analysis_id": {
+            "type": "string",
+            "description": "Analysis ID to retrieve",
+        }
+    },
+    "required": ["analysis_id"],
+    "additionalProperties": False,
+}
+
+GET_PLAN_BY_ID_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "plan_id": {
+            "type": "string",
+            "description": "Plan ID to retrieve",
+        }
+    },
+    "required": ["plan_id"],
+    "additionalProperties": False,
+}
+
+GET_PLAN_BY_TRANSCRIPT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "transcript_id": {
+            "type": "string",
+            "description": "Transcript ID to get plan for",
+        }
+    },
+    "required": ["transcript_id"],
+    "additionalProperties": False,
+}
+
 RUN_ORCHESTRATION_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -490,6 +538,70 @@ TOOL_DEFINITIONS: Dict[str, ToolDefinition] = {
         "_meta": {
             "openai/toolInvocation/invoking": "Fetching action plan",
             "openai/toolInvocation/invoked": "Action plan retrieved",
+            "annotations": {
+                "destructiveHint": False,
+                "openWorldHint": False,
+                "readOnlyHint": True,
+            },
+        },
+        "active": True,
+    },
+    "list_analyses": {
+        "name": "list_analyses",
+        "title": "List Analyses",
+        "description": "Use this to list all analyses in the system with optional limit.",
+        "input_schema": LIST_ANALYSES_SCHEMA,
+        "_meta": {
+            "openai/toolInvocation/invoking": "Listing analyses",
+            "openai/toolInvocation/invoked": "Analyses listed",
+            "annotations": {
+                "destructiveHint": False,
+                "openWorldHint": False,
+                "readOnlyHint": True,
+            },
+        },
+        "active": True,
+    },
+    "get_analysis_by_id": {
+        "name": "get_analysis_by_id",
+        "title": "Get Analysis By ID",
+        "description": "Use this to retrieve a specific analysis by its analysis ID.",
+        "input_schema": GET_ANALYSIS_BY_ID_SCHEMA,
+        "_meta": {
+            "openai/toolInvocation/invoking": "Fetching analysis by ID",
+            "openai/toolInvocation/invoked": "Analysis retrieved",
+            "annotations": {
+                "destructiveHint": False,
+                "openWorldHint": False,
+                "readOnlyHint": True,
+            },
+        },
+        "active": True,
+    },
+    "get_plan_by_id": {
+        "name": "get_plan_by_id",
+        "title": "Get Plan By ID",
+        "description": "Use this to retrieve a specific plan by its plan ID.",
+        "input_schema": GET_PLAN_BY_ID_SCHEMA,
+        "_meta": {
+            "openai/toolInvocation/invoking": "Fetching plan by ID",
+            "openai/toolInvocation/invoked": "Plan retrieved",
+            "annotations": {
+                "destructiveHint": False,
+                "openWorldHint": False,
+                "readOnlyHint": True,
+            },
+        },
+        "active": True,
+    },
+    "get_plan_by_transcript": {
+        "name": "get_plan_by_transcript",
+        "title": "Get Plan By Transcript",
+        "description": "Use this to retrieve a plan by its transcript ID.",
+        "input_schema": GET_PLAN_BY_TRANSCRIPT_SCHEMA,
+        "_meta": {
+            "openai/toolInvocation/invoking": "Fetching plan by transcript",
+            "openai/toolInvocation/invoked": "Plan retrieved",
             "annotations": {
                 "destructiveHint": False,
                 "openWorldHint": False,

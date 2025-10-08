@@ -27,7 +27,7 @@ This MCP (Model Context Protocol) server enables ChatGPT to interact with the Cu
 └─────────────────┘
 ```
 
-## Available Tools (20)
+## Available Tools (24)
 
 > The tool catalog is defined once in `src/infrastructure/mcp/tool_definitions.py` and consumed by the MCP server at runtime. Update that module to add, remove, or edit tools—documentation and runtime stay in sync.
 
@@ -39,27 +39,31 @@ This MCP (Model Context Protocol) server enables ChatGPT to interact with the Cu
 5. **approve_workflow** – Approve workflows for execution.
 6. **execute_workflow** – Execute approved workflows end-to-end.
 
-### Transcript & Analysis Insights (4)
+### Transcript & Analysis Insights (8)
 7. **list_transcripts** – List recorded calls with lightweight metadata.
 8. **get_transcript** – Retrieve the full transcript by ID.
 9. **get_analysis** – Fetch analysis details for a transcript.
-10. **get_action_plan** – Fetch existing action plans for an analysis.
+10. **list_analyses** – List all analyses in the system.
+11. **get_analysis_by_id** – Retrieve a specific analysis by its ID.
+12. **get_action_plan** – Fetch existing action plans for an analysis.
+13. **get_plan_by_id** – Retrieve a specific plan by its ID.
+14. **get_plan_by_transcript** – Retrieve a plan by its transcript ID.
 
 ### Workflow Monitoring & Control (6)
-11. **get_workflow** – Inspect workflow metadata and configured steps.
-12. **list_workflows** – Filter workflows by plan, status, or risk.
-13. **get_workflow_steps** – Retrieve step-by-step instructions for a workflow.
-14. **execute_workflow_step** – Run an individual workflow step.
-15. **get_step_status** – Check execution status for a workflow step.
-16. **get_execution_status** – Review results of a workflow execution run.
+15. **get_workflow** – Inspect workflow metadata and configured steps.
+16. **list_workflows** – Filter workflows by plan, status, or risk.
+17. **get_workflow_steps** – Retrieve step-by-step instructions for a workflow.
+18. **execute_workflow_step** – Run an individual workflow step.
+19. **get_step_status** – Check execution status for a workflow step.
+20. **get_execution_status** – Review results of a workflow execution run.
 
 ### Orchestration Operations (3)
-17. **run_orchestration** – Kick off the full Transcript→Execute pipeline for one or more calls.
-18. **get_orchestration_status** – Track progress of an orchestration run.
-19. **list_orchestration_runs** – Review prior orchestration runs.
+21. **run_orchestration** – Kick off the full Transcript→Execute pipeline for one or more calls.
+22. **get_orchestration_status** – Track progress of an orchestration run.
+23. **list_orchestration_runs** – Review prior orchestration runs.
 
 ### Analytics & Health (1)
-20. **get_dashboard_metrics** – Surface platform KPIs and pipeline stage load.
+24. **get_dashboard_metrics** – Surface platform KPIs and pipeline stage load.
 
 ## Quick Start
 
