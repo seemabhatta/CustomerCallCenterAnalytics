@@ -989,11 +989,25 @@ async def _handle_get_execution_status(args: Dict[str, Any]) -> str:
     response = await http_client.get(f"/api/v1/executions/{execution_id}")
     response.raise_for_status()
     result = response.json()
-    return f"""Execution {execution_id}:
-- Status: {result.get('status')}
-- Workflow: {result.get('workflow_id')}
-- Started: {result.get('started_at')}
-- Completed: {result.get('completed_at', 'In progress')}"""
+
+    # FastAPI returns {execution_record: {...}, audit_trail: [...]}
+    exec_record = result.get('execution_record', {})
+
+    status = exec_record.get('execution_status', 'Unknown')
+    workflow_id = exec_record.get('workflow_id', 'Unknown')
+    executed_at = exec_record.get('executed_at', 'Unknown')
+    executor_type = exec_record.get('executor_type', 'Unknown')
+    mock = exec_record.get('mock_execution', False)
+
+    return f"""✅ Execution {execution_id}
+
+Status: {status}
+Workflow: {workflow_id}
+Executor: {executor_type}
+Executed At: {executed_at}
+Mock Execution: {mock}
+
+Use get_workflow with workflow_id="{workflow_id}" to see all workflow steps."""
 
 async def _handle_run_orchestration(args: Dict[str, Any]) -> str:
     """Orchestration: Run complete pipeline via FastAPI."""
