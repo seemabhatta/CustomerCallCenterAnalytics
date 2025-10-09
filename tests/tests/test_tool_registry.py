@@ -62,7 +62,7 @@ def sample_tool_config():
                             'get_transcript',
                             'get_analysis_by_transcript',
                             'get_plan_by_transcript',
-                            'query_knowledge_graph'
+                            'ask_intelligence_question'
                         ],
                         'tool_filters': {
                             'workflow_types': ['BORROWER', 'ADVISOR', 'COMPLIANCE'],
@@ -136,6 +136,9 @@ def mock_tool_functions():
     async def query_knowledge_graph(question: str):
         return {'answer': 'data'}
 
+    async def ask_intelligence_question(question: str, persona: str = None):
+        return {'insight': 'data'}
+
     return {
         'get_transcripts': get_transcripts,
         'get_transcript': get_transcript,
@@ -143,7 +146,8 @@ def mock_tool_functions():
         'get_plan_by_transcript': get_plan_by_transcript,
         'get_workflows_for_plan': get_workflows_for_plan,
         'execute_workflow_step': execute_workflow_step,
-        'query_knowledge_graph': query_knowledge_graph
+        'query_knowledge_graph': query_knowledge_graph,
+        'ask_intelligence_question': ask_intelligence_question
     }
 
 
@@ -259,7 +263,8 @@ class TestToolListExtraction:
         tools = get_tools_for_role_mode('leadership', 'borrower', temp_config_file)
 
         assert isinstance(tools, list)
-        assert 'query_knowledge_graph' in tools
+        assert 'ask_intelligence_question' in tools
+        assert 'query_knowledge_graph' not in tools
         # Leadership should NOT have execute_workflow_step
         assert 'execute_workflow_step' not in tools
 

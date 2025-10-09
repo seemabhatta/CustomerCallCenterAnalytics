@@ -88,7 +88,6 @@ roles:
           - get_workflow
           - get_workflow_steps
           - get_transcript_pipeline
-          - query_knowledge_graph
           - ask_intelligence_question
         tool_filters:
           workflow_types:
@@ -99,16 +98,16 @@ roles:
         quick_actions:
           - icon: "Users"
             label: "High-Risk Customers"
-            message: "Show me all high-risk customers"
+            message: "Ask intelligence which customers are highest risk right now"
           - icon: "TrendingUp"
             label: "Success Patterns"
             message: "What patterns lead to successful resolutions?"
           - icon: "Brain"
             label: "Wisdom Insights"
-            message: "What wisdom has been extracted from successful plans?"
-          - icon: "Network"
-            label: "Graph Overview"
-            message: "How many nodes are in the knowledge graph?"
+            message: "What strategic insights should leadership focus on this week?"
+          - icon: "BarChart3"
+            label: "Portfolio Metrics"
+            message: "Provide a portfolio performance summary for leadership"
 
       selfreflection:
         prompt_file: "prompts/leadership_agent/selfreflection_system_prompt.md"
@@ -117,25 +116,25 @@ roles:
         tools:
           - get_transcripts
           - get_analysis_by_transcript
-          - query_knowledge_graph
         tool_filters:
           access_level: leadership
           focus: strategic_insights
         quick_actions:
           - icon: "GitBranch"
-            label: "MetaLearning Insights"
-            message: "Show me all MetaLearning insights"
+            label: "Strategic Insights"
+            message: "Summarize the most impactful leadership insights"
           - icon: "Link"
-            label: "Pattern Connections"
-            message: "How are wisdom nodes connected to plans?"
+            label: "Team Alignment"
+            message: "Assess how aligned our teams are with strategic goals"
           - icon: "Target"
-            label: "Predictive Patterns"
-            message: "Show me all validated patterns and their confidence scores"
+            label: "Predictive Signals"
+            message: "What predictive signals should leadership watch?"
           - icon: "BarChart3"
-            label: "Entity Relationships"
-            message: "Show me the relationship between calls, analysis, and plans"
+            label: "Performance Drivers"
+            message: "Identify the top drivers of recent performance"
 
 # Future roles - marked as TBD for implementation
+# These roles are placeholders for future expansion in the product roadmap.
 future_roles:
   supervisor:
     display_name: "Supervisor Assistant"
