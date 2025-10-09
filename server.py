@@ -71,6 +71,7 @@ from src.services.workflow_service import WorkflowService
 from src.services.system_service import SystemService
 from src.services.leadership_insights_service import LeadershipInsightsService
 from src.services.advisor_service import AdvisorService
+from src.services.forecasting_service import ForecastingService
 
 # Import execution models for step-by-step workflow execution
 from src.models.execution_models import (
@@ -95,6 +96,7 @@ workflow_service = WorkflowService(db_path=db_path)
 system_service = SystemService(api_key=api_key)
 # Advisor service is reused to avoid re-initializing agents and session storage per request
 advisor_service = AdvisorService(db_path=db_path)
+forecasting_service = ForecastingService(db_path=db_path)
 
 print("✅ All services initialized successfully")
 
@@ -303,6 +305,15 @@ class AdvisorChatRequest(BaseModel):
     role: Optional[str] = "advisor"  # Role parameter: "advisor" or "leadership"
 
 
+class ForecastGenerateRequest(BaseModel):
+    forecast_type: str
+    horizon_days: Optional[int] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    use_cache: bool = True
+    ttl_hours: int = 24
+
+
 @app.get("/")
 async def root():
     """Root endpoint with basic info."""
@@ -321,7 +332,8 @@ async def root():
             "executions": "/api/v1/executions",
             "metrics": "/api/v1/metrics",
             "health": "/api/v1/health",
-            "chat": "/api/v1/advisor/chat (universal endpoint for all roles)"
+            "chat": "/api/v1/advisor/chat (universal endpoint for all roles)",
+            "forecasts": "/api/v1/forecasts"
         }
     }
 
@@ -1187,6 +1199,131 @@ async def advisor_chat_stream(request: AdvisorChatRequest):
 #     """Get recent sessions for an advisor."""
 #     # Session tracking now handled automatically by OpenAI Agents
 #     return {"message": "Session management is now handled by OpenAI Agents"}
+
+
+# ===============================================
+# FORECASTING ENDPOINTS
+# ===============================================
+
+@app.post("/api/v1/forecasts/generate")
+async def generate_forecast(request: ForecastGenerateRequest):
+    """Generate time-series forecast using Prophet.
+
+    Generates forecasts for call volume, sentiment, risk scores, etc.
+    Uses cached forecasts when available.
+    """
+    try:
+        result = await forecasting_service.generate_forecast(
+            forecast_type=request.forecast_type,
+            horizon_days=request.horizon_days,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            use_cache=request.use_cache,
+            ttl_hours=request.ttl_hours
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Forecast generation failed: {str(e)}")
+
+
+@app.get("/api/v1/forecasts/{forecast_id}")
+async def get_forecast(forecast_id: str):
+    """Get forecast by ID."""
+    try:
+        result = await forecasting_service.get_forecast_by_id(forecast_id)
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Forecast {forecast_id} not found")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve forecast: {str(e)}")
+
+
+@app.get("/api/v1/forecasts/types/available")
+async def get_available_forecast_types():
+    """Get list of available forecast types."""
+    try:
+        return await forecasting_service.get_available_forecast_types()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get forecast types: {str(e)}")
+
+
+@app.get("/api/v1/forecasts/types/{forecast_type}")
+async def get_forecast_type_info(forecast_type: str):
+    """Get detailed information about a forecast type."""
+    try:
+        return await forecasting_service.get_forecast_type_info(forecast_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get forecast type info: {str(e)}")
+
+
+@app.get("/api/v1/forecasts/data/readiness")
+async def check_data_readiness(forecast_type: Optional[str] = None):
+    """Check if sufficient data exists for forecasting.
+
+    Args:
+        forecast_type: Specific type to check, or None for all types
+    """
+    try:
+        return await forecasting_service.check_data_readiness(forecast_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Data readiness check failed: {str(e)}")
+
+
+@app.get("/api/v1/forecasts/data/summary")
+async def get_data_summary():
+    """Get summary of available historical data for forecasting."""
+    try:
+        return await forecasting_service.get_data_summary()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Data summary failed: {str(e)}")
+
+
+@app.get("/api/v1/forecasts/statistics")
+async def get_forecast_statistics():
+    """Get statistics about stored forecasts."""
+    try:
+        return await forecasting_service.get_forecast_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Statistics retrieval failed: {str(e)}")
+
+
+@app.delete("/api/v1/forecasts/{forecast_id}")
+async def delete_forecast(forecast_id: str):
+    """Delete a forecast."""
+    try:
+        deleted = await forecasting_service.delete_forecast(forecast_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Forecast {forecast_id} not found")
+        return {"message": f"Forecast {forecast_id} deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Forecast deletion failed: {str(e)}")
+
+
+@app.post("/api/v1/forecasts/cleanup")
+async def cleanup_expired_forecasts():
+    """Clean up expired forecasts."""
+    try:
+        deleted_count = await forecasting_service.cleanup_expired_forecasts()
+        return {"message": f"Cleaned up {deleted_count} expired forecasts"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+
+
+@app.get("/api/v1/forecasts/type/{forecast_type}/history")
+async def get_forecast_history(forecast_type: str, limit: int = Query(10, ge=1, le=50)):
+    """Get forecast history for a specific type."""
+    try:
+        return await forecasting_service.get_all_forecasts_by_type(
+            forecast_type=forecast_type,
+            include_expired=True,
+            limit=limit
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get forecast history: {str(e)}")
 
 
 # ===============================================
