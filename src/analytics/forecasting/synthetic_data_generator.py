@@ -201,16 +201,19 @@ class SyntheticDataGenerator:
                     ''', (t['id'], msg['speaker'], msg['text'],
                          t['timestamp']))
 
-            # Insert analyses
+            # Insert analyses with matching timestamps
             for a in analyses:
+                # Find matching transcript timestamp
+                transcript = next(t for t in transcripts if t['id'] == a['transcript_id'])
+
                 cursor.execute('''
                     INSERT OR REPLACE INTO analysis
                     (id, transcript_id, analysis_data, primary_intent, urgency_level,
                      borrower_sentiment, delinquency_risk, churn_risk, complaint_risk,
                      refinance_likelihood, empathy_score, compliance_adherence,
                      solution_effectiveness, compliance_issues, escalation_needed,
-                     issue_resolved, first_call_resolution, confidence_score)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     issue_resolved, first_call_resolution, confidence_score, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     a['analysis_id'],
                     a['transcript_id'],
@@ -229,7 +232,8 @@ class SyntheticDataGenerator:
                     a['escalation_needed'],
                     a['issue_resolved'],
                     a['first_call_resolution'],
-                    a['confidence_score']
+                    a['confidence_score'],
+                    transcript['timestamp']  # Match transcript timestamp
                 ))
 
             conn.commit()
