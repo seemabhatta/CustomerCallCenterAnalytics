@@ -1226,6 +1226,15 @@ async def generate_forecast(request: ForecastGenerateRequest):
         raise HTTPException(status_code=500, detail=f"Forecast generation failed: {str(e)}")
 
 
+@app.get("/api/v1/forecasts/statistics")
+async def get_forecast_statistics():
+    """Get statistics about stored forecasts."""
+    try:
+        return await forecasting_service.get_forecast_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Statistics retrieval failed: {str(e)}")
+
+
 @app.get("/api/v1/forecasts/{forecast_id}")
 async def get_forecast(forecast_id: str):
     """Get forecast by ID."""
@@ -1278,15 +1287,6 @@ async def get_data_summary():
         return await forecasting_service.get_data_summary()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Data summary failed: {str(e)}")
-
-
-@app.get("/api/v1/forecasts/statistics")
-async def get_forecast_statistics():
-    """Get statistics about stored forecasts."""
-    try:
-        return await forecasting_service.get_forecast_statistics()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Statistics retrieval failed: {str(e)}")
 
 
 @app.delete("/api/v1/forecasts/{forecast_id}")
