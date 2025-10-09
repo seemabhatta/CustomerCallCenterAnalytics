@@ -98,6 +98,25 @@ system_service = SystemService(api_key=api_key)
 advisor_service = AdvisorService(db_path=db_path)
 forecasting_service = ForecastingService(db_path=db_path)
 
+# Initialize intelligence services (Prophet + GenAI hybrid)
+from src.storage.insight_store import InsightStore
+from src.analytics.intelligence.hybrid_analyzer import HybridAnalyzer
+from src.services.intelligence_service import IntelligenceService
+from src.infrastructure.llm.llm_client_v2 import LLMClient
+
+llm_client = LLMClient()
+insight_store = InsightStore(db_path=db_path)
+hybrid_analyzer = HybridAnalyzer(
+    forecasting_service=forecasting_service,
+    llm_client=llm_client,
+    db_path=db_path
+)
+intelligence_service = IntelligenceService(
+    hybrid_analyzer=hybrid_analyzer,
+    insight_store=insight_store,
+    db_path=db_path
+)
+
 print("✅ All services initialized successfully")
 
 # Initialize knowledge event handling system
@@ -314,6 +333,17 @@ class ForecastGenerateRequest(BaseModel):
     ttl_hours: int = 24
 
 
+class IntelligenceQueryRequest(BaseModel):
+    question: str
+    persona: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
+
+
+class CampaignPerformanceRequest(BaseModel):
+    campaign_id: Optional[str] = None
+    date_range: Optional[str] = "last_30_days"
+
+
 @app.get("/")
 async def root():
     """Root endpoint with basic info."""
@@ -333,7 +363,13 @@ async def root():
             "metrics": "/api/v1/metrics",
             "health": "/api/v1/health",
             "chat": "/api/v1/advisor/chat (universal endpoint for all roles)",
-            "forecasts": "/api/v1/forecasts"
+            "forecasts": "/api/v1/forecasts",
+            "intelligence": {
+                "leadership": "/api/v1/intelligence/leadership/*",
+                "servicing": "/api/v1/intelligence/servicing/*",
+                "marketing": "/api/v1/intelligence/marketing/*",
+                "cross_persona": "/api/v1/intelligence/ask, /insights, /cache, /health"
+            }
         }
     }
 
@@ -1324,6 +1360,371 @@ async def get_forecast_history(forecast_type: str, limit: int = Query(10, ge=1, 
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get forecast history: {str(e)}")
+
+
+# ===============================================
+# INTELLIGENCE ENDPOINTS - Prophet + GenAI Hybrid
+# ===============================================
+
+# ---------------------------------------------
+# LEADERSHIP INTELLIGENCE
+# ---------------------------------------------
+
+@app.get("/api/v1/intelligence/leadership/briefing")
+async def get_leadership_briefing(
+    use_cache: bool = Query(True),
+    ttl_hours: int = Query(1, ge=1, le=24)
+):
+    """Get daily executive briefing with urgent items and financial impact.
+
+    Returns:
+        - Portfolio health status
+        - Urgent items requiring attention
+        - Financial summary ($$ impact)
+        - Strategic recommendations
+    """
+    try:
+        return await intelligence_service.get_leadership_briefing(
+            use_cache=use_cache,
+            ttl_hours=ttl_hours
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate leadership briefing: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/leadership/dollar-impact")
+async def get_dollar_impact():
+    """Get portfolio risk quantified in dollars.
+
+    Returns financial impact of:
+        - Churn risk (lost servicing fees)
+        - Delinquency risk (potential losses)
+        - Compliance violations (penalty exposure)
+    """
+    try:
+        return await intelligence_service.get_dollar_impact()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to calculate dollar impact: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/leadership/decision-queue")
+async def get_decision_queue():
+    """Get items requiring executive decision today.
+
+    Returns workflows and recommendations sorted by:
+        - Financial impact
+        - Urgency
+        - Risk level
+    """
+    try:
+        return await intelligence_service.get_decision_queue()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get decision queue: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/leadership/risk-waterfall")
+async def get_risk_waterfall():
+    """Get cascading risk breakdown across portfolio.
+
+    Shows how risks compound from individual loans to portfolio level.
+    """
+    try:
+        return await intelligence_service.get_risk_waterfall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate risk waterfall: {str(e)}")
+
+
+# ---------------------------------------------
+# SERVICING OPERATIONS INTELLIGENCE
+# ---------------------------------------------
+
+@app.get("/api/v1/intelligence/servicing/queue-status")
+async def get_queue_status():
+    """Get real-time and predicted queue status.
+
+    Returns:
+        - Current queue depth
+        - Predicted peak times
+        - Staffing recommendations
+    """
+    try:
+        return await intelligence_service.get_queue_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get queue status: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/servicing/sla-monitor")
+async def get_sla_monitor():
+    """Get SLA compliance tracking and breach predictions.
+
+    Monitors:
+        - First call resolution
+        - Answer rate
+        - Escalation rate
+    """
+    try:
+        return await intelligence_service.get_sla_monitor()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get SLA monitor: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/servicing/advisor-heatmap")
+async def get_advisor_heatmap():
+    """Get advisor performance matrix for visualization.
+
+    Returns heatmap data showing:
+        - Empathy scores
+        - Compliance adherence
+        - First call resolution
+        - Color-coded status (green/yellow/red)
+    """
+    try:
+        return await intelligence_service.get_advisor_heatmap()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate advisor heatmap: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/servicing/coaching-alerts")
+async def get_coaching_alerts():
+    """Get advisor coaching recommendations.
+
+    Identifies advisors needing:
+        - Compliance training
+        - Empathy coaching
+        - Escalation protocol review
+    """
+    try:
+        return await intelligence_service.get_coaching_alerts()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get coaching alerts: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/servicing/workload-balance")
+async def get_workload_balance():
+    """Get staffing optimization recommendations.
+
+    Returns:
+        - Current capacity vs demand
+        - Predicted staffing gaps
+        - Reallocation suggestions
+    """
+    try:
+        return await intelligence_service.get_workload_balance()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workload balance: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/servicing/case-resolution")
+async def get_case_resolution_insights():
+    """Get case resolution trends and bottlenecks.
+
+    Analyzes:
+        - Most common issues
+        - Resolution time patterns
+        - Escalation triggers
+    """
+    try:
+        return await intelligence_service.get_case_resolution_insights()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get case resolution insights: {str(e)}")
+
+
+# ---------------------------------------------
+# MARKETING INTELLIGENCE
+# ---------------------------------------------
+
+@app.get("/api/v1/intelligence/marketing/segments")
+async def get_marketing_segments():
+    """Get customer segmentation with targeting opportunities.
+
+    Returns segments:
+        - Refi-ready
+        - At-risk (churn prevention)
+        - Loyal champions (referrals)
+        - PMI removal eligible
+    """
+    try:
+        return await intelligence_service.get_marketing_segments()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get marketing segments: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/marketing/campaign-recommendations")
+async def get_campaign_recommendations():
+    """Get AI-generated campaign recommendations with ROI.
+
+    Provides campaign ideas with:
+        - Target segment
+        - Expected conversion rate
+        - Cost estimates
+        - Projected ROI
+    """
+    try:
+        return await intelligence_service.get_campaign_recommendations()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get campaign recommendations: {str(e)}")
+
+
+@app.post("/api/v1/intelligence/marketing/campaign-performance")
+async def analyze_campaign_performance(request: CampaignPerformanceRequest):
+    """Analyze campaign performance metrics.
+
+    Returns performance analysis based on intent patterns.
+    """
+    try:
+        return await intelligence_service.get_campaign_performance(
+            campaign_id=request.campaign_id,
+            date_range=request.date_range
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to analyze campaign performance: {str(e)}")
+
+
+@app.post("/api/v1/intelligence/marketing/churn-analysis")
+async def get_churn_analysis(
+    use_cache: bool = Query(True),
+    ttl_hours: int = Query(2, ge=1, le=24)
+):
+    """Get detailed churn risk intelligence.
+
+    Returns:
+        - Root cause analysis
+        - High-risk borrower segments
+        - Retention strategies
+        - Financial impact ($$ at risk)
+    """
+    try:
+        return await intelligence_service.get_churn_analysis(
+            use_cache=use_cache,
+            ttl_hours=ttl_hours
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate churn analysis: {str(e)}")
+
+
+@app.post("/api/v1/intelligence/marketing/message-optimizer")
+async def optimize_message(request: dict):
+    """Optimize campaign messaging for target segment.
+
+    Takes draft message and segment, returns optimized version.
+    """
+    try:
+        message = request.get("message")
+        segment = request.get("segment", "general")
+
+        if not message:
+            raise HTTPException(status_code=400, detail="Message required")
+
+        return await intelligence_service.optimize_campaign_message(
+            message=message,
+            segment=segment
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to optimize message: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/marketing/customer-journey")
+async def get_customer_journey_insights():
+    """Get customer journey analysis and touchpoint effectiveness.
+
+    Analyzes interaction patterns across channels.
+    """
+    try:
+        return await intelligence_service.get_customer_journey_insights()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get customer journey insights: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/marketing/roi-attribution")
+async def get_roi_attribution():
+    """Get ROI attribution analysis for campaigns.
+
+    Tracks revenue/retention impact by campaign theme.
+    """
+    try:
+        return await intelligence_service.get_roi_attribution()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get ROI attribution: {str(e)}")
+
+
+# ---------------------------------------------
+# CROSS-PERSONA INTELLIGENCE
+# ---------------------------------------------
+
+@app.post("/api/v1/intelligence/ask")
+async def ask_intelligence_question(request: IntelligenceQueryRequest):
+    """Ask natural language question to intelligence system.
+
+    Routes question to appropriate persona(s) and synthesizes answer.
+    Works like a universal query interface across all intelligence.
+    """
+    try:
+        return await intelligence_service.ask(
+            question=request.question,
+            persona=request.persona,
+            context=request.context
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to answer intelligence question: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/insights")
+async def get_cached_insights(
+    persona: Optional[str] = Query(None),
+    insight_type: Optional[str] = Query(None),
+    limit: int = Query(10, ge=1, le=50)
+):
+    """Get cached insights from insight store.
+
+    Useful for reviewing previously generated intelligence.
+    """
+    try:
+        return await intelligence_service.get_cached_insights(
+            persona=persona,
+            insight_type=insight_type,
+            limit=limit
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve cached insights: {str(e)}")
+
+
+@app.delete("/api/v1/intelligence/cache")
+async def clear_intelligence_cache(
+    persona: Optional[str] = Query(None),
+    insight_type: Optional[str] = Query(None)
+):
+    """Clear intelligence cache (all or filtered by persona/type).
+
+    Use when you want to force fresh analysis.
+    """
+    try:
+        cleared_count = await intelligence_service.clear_cache(
+            persona=persona,
+            insight_type=insight_type
+        )
+        return {
+            "message": f"Cleared {cleared_count} cached insights",
+            "cleared_count": cleared_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/health")
+async def get_intelligence_health():
+    """Get intelligence system health and statistics.
+
+    Returns:
+        - Cache hit rates
+        - Recent insight generation stats
+        - Available personas and capabilities
+    """
+    try:
+        return await intelligence_service.get_health()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get intelligence health: {str(e)}")
 
 
 # ===============================================
