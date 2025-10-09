@@ -29,7 +29,7 @@ import { ExecutionView } from "@/views/ExecutionView";
 import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
-import { AnalyticsView } from "@/views/AnalyticsView";
+import { AnalyticsViewV2 } from "@/views/AnalyticsViewV2";
 import { SimpleChatView } from "@/components/SimpleChatView";
 
 import { TabValue, UserRole } from "@/types";
@@ -220,7 +220,7 @@ export default function App() {
 
         {/* Analytics - Available for Leadership and Admin */}
         <TabsContent value="analytics">
-          <AnalyticsView />
+          <AnalyticsViewV2 />
         </TabsContent>
 
         {/* Insights - Leadership only */}
@@ -243,7 +243,7 @@ export default function App() {
 
         {/* Dashboard - Supervisor only (reuse Analytics) */}
         <TabsContent value="dashboard">
-          <AnalyticsView />
+          <AnalyticsViewV2 />
         </TabsContent>
 
         {/* Approvals - Supervisor only (reuse Workflow) */}

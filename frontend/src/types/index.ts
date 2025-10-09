@@ -327,6 +327,128 @@ export interface ExecutionDetails {
   retrieved_at: string;
 }
 
+// Forecast Types
+export interface ForecastPrediction {
+  date: string;
+  predicted: number;
+  lower_bound: number;
+  upper_bound: number;
+  confidence_interval: number;
+}
+
+export interface ForecastSummary {
+  average_predicted: number;
+  min_predicted: number;
+  max_predicted: number;
+  total_periods: number;
+  prediction_start: string;
+  prediction_end: string;
+}
+
+export interface ForecastMetadata {
+  model_type?: string;
+  seasonality_mode?: string;
+  growth?: string;
+  forecast_type?: string;
+  granularity?: string;
+  data_points_used?: number;
+  training_start?: string;
+  training_end?: string;
+  [key: string]: any;
+}
+
+export type ForecastComponents = Record<string, any>;
+
+export interface ForecastResult {
+  forecast_id?: string;
+  forecast_type: string;
+  cached?: boolean;
+  generated_at?: string;
+  expires_at?: string | null;
+  summary: ForecastSummary;
+  predictions: ForecastPrediction[];
+  metadata: ForecastMetadata;
+  components?: ForecastComponents;
+}
+
+export interface ForecastTypeSummary {
+  type: string;
+  description: string;
+  granularity: string;
+  min_data_days: number;
+  default_horizon_days: number;
+}
+
+export interface ForecastTypeInfo extends ForecastTypeSummary {
+  model_type: string;
+  prophet_config: Record<string, any>;
+}
+
+export interface ForecastGenerateRequest {
+  forecast_type: string;
+  horizon_days?: number;
+  start_date?: string;
+  end_date?: string;
+  use_cache?: boolean;
+  ttl_hours?: number;
+}
+
+export interface ForecastReadiness {
+  forecast_type: string;
+  ready: boolean;
+  days_of_data: number;
+  min_required: number;
+  recommendation: string;
+  earliest_date?: string | null;
+  latest_date?: string | null;
+}
+
+export interface ForecastReadinessOverview {
+  total_types: number;
+  ready_types: number;
+  not_ready_types: number;
+  overall_status: 'ready' | 'not_ready';
+  by_type: Record<string, ForecastReadiness>;
+}
+
+export type ForecastReadinessResponse = ForecastReadiness | ForecastReadinessOverview;
+
+export interface ForecastDataSummary {
+  transcripts: {
+    total: number;
+    earliest_date: string | null;
+    latest_date: string | null;
+    unique_days: number;
+  };
+  analyses: {
+    total: number;
+    unique_intents: number;
+    avg_delinquency_risk: number;
+    avg_churn_risk: number;
+  };
+  top_intents: Record<string, number>;
+}
+
+export interface ForecastStatistics {
+  total_forecasts: number;
+  active_by_type: Record<string, number>;
+  average_mae?: number | null;
+  average_mape?: number | null;
+  most_accessed: Array<{
+    id: string;
+    forecast_type: string;
+    access_count: number;
+  }>;
+}
+
+export interface ForecastHistoryItem {
+  forecast_id: string;
+  forecast_type: string;
+  generated_at: string;
+  expires_at?: string | null;
+  summary?: ForecastSummary;
+}
+
 // Dashboard & Metrics Types
 export interface DashboardMetrics {
   transcripts: {

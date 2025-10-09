@@ -26,7 +26,15 @@ import {
   LeadershipChatRequest,
   LeadershipChatResponse,
   AdvisorChatRequest,
-  AdvisorChatResponse
+  AdvisorChatResponse,
+  ForecastGenerateRequest,
+  ForecastResult,
+  ForecastTypeSummary,
+  ForecastTypeInfo,
+  ForecastReadinessResponse,
+  ForecastDataSummary,
+  ForecastStatistics,
+  ForecastHistoryItem
 } from '@/types';
 
 // Create axios instance with base configuration
@@ -326,6 +334,61 @@ export const executionApi = {
   getStatistics: () => 
     apiCall<any>(() => 
       api.get('/api/v1/executions/statistics')
+    ),
+};
+
+// Forecast API
+export const forecastApi = {
+  generate: (payload: ForecastGenerateRequest) =>
+    apiCall<ForecastResult>(() =>
+      api.post('/api/v1/forecasts/generate', payload)
+    ),
+
+  getById: (forecastId: string) =>
+    apiCall<ForecastResult>(() =>
+      api.get(`/api/v1/forecasts/${forecastId}`)
+    ),
+
+  getAvailableTypes: () =>
+    apiCall<ForecastTypeSummary[]>(() =>
+      api.get('/api/v1/forecasts/types/available')
+    ),
+
+  getTypeInfo: (forecastType: string) =>
+    apiCall<ForecastTypeInfo>(() =>
+      api.get(`/api/v1/forecasts/types/${forecastType}`)
+    ),
+
+  getReadiness: (forecastType?: string) =>
+    apiCall<ForecastReadinessResponse>(() =>
+      api.get('/api/v1/forecasts/data/readiness', {
+        params: forecastType ? { forecast_type: forecastType } : undefined,
+      })
+    ),
+
+  getDataSummary: () =>
+    apiCall<ForecastDataSummary>(() =>
+      api.get('/api/v1/forecasts/data/summary')
+    ),
+
+  getStatistics: () =>
+    apiCall<ForecastStatistics>(() =>
+      api.get('/api/v1/forecasts/statistics')
+    ),
+
+  delete: (forecastId: string) =>
+    apiCall<{ message: string }>(() =>
+      api.delete(`/api/v1/forecasts/${forecastId}`)
+    ),
+
+  cleanupExpired: () =>
+    apiCall<{ message: string }>(() =>
+      api.post('/api/v1/forecasts/cleanup')
+    ),
+
+  getHistory: (forecastType: string, limit: number = 10) =>
+    apiCall<ForecastHistoryItem[]>(() =>
+      api.get(`/api/v1/forecasts/type/${forecastType}/history`, { params: { limit } })
     ),
 };
 
