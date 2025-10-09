@@ -441,202 +441,106 @@ export function AnalyticsViewV2() {
         </div>
       </header>
 
-      <section className="grid gap-4 xl:grid-cols-3">
-        <Card className="xl:col-span-2 border border-slate-200/80 shadow-sm">
-          <CardHeader className="flex flex-col gap-2 border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <LineChart className="h-4 w-4 text-indigo-500" /> Forecast Outlook
-            </div>
-            <CardTitle className="text-xl font-semibold text-slate-900">
-              {selectedForecastType
-                ? selectedForecastType.description
-                : "Select a forecast"}
-            </CardTitle>
-            {forecast?.generated_at && (
-              <p className="text-xs text-slate-500">
-                Generated {dateLabel(forecast.generated_at)} · Horizon {forecast?.summary?.total_periods ?? "—"} periods
-              </p>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <ForecastMetric
-                label="Average"
-                value={formatNumber(forecast?.summary?.average_predicted, { maximumFractionDigits: 0 })}
-                helper="Across prediction window"
-              />
-              <ForecastMetric
-                label="Peak"
-                value={formatNumber(forecast?.summary?.max_predicted, { maximumFractionDigits: 0 })}
-                helper="Highest predicted value"
-              />
-              <ForecastMetric
-                label="Confidence band"
-                value={formatNumber(
-                  forecast?.predictions?.[0]?.confidence_interval ?? null,
-                  { maximumFractionDigits: 0 }
-                )}
-                helper="First-period interval width"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>Prediction horizon</span>
-                <span>
-                  {dateLabel(forecast?.summary?.prediction_start)} – {dateLabel(forecast?.summary?.prediction_end)}
-                </span>
+      <section className="space-y-4">
+        <SectionHeader
+          title="Forecast Intelligence"
+          description="Live output from the forecasting engine"
+          paths={["/api/v1/forecasts/types/available", "/api/v1/forecasts/generate", "/api/v1/forecasts/*"]}
+        />
+
+        <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+          <Card className="border border-slate-200/80 shadow-sm">
+            <CardHeader className="flex flex-col gap-2 border-b border-slate-100 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <LineChart className="h-4 w-4 text-indigo-500" /> Forecast Outlook
+                </div>
+                <ApiBadgeGroup paths={["/api/v1/forecasts/generate", "/api/v1/forecasts/types/available"]} />
               </div>
-              <div className="h-2 w-full rounded-full bg-slate-100">
-                <div
-                  className="h-2 rounded-full bg-indigo-500 transition-all"
-                  style={{
-                    width: `${Math.min(100, ((forecast?.summary?.average_predicted ?? 0) /
-                      Math.max(forecast?.summary?.max_predicted ?? 1, 1)) * 100)}%`,
-                  }}
+              <CardTitle className="text-xl font-semibold text-slate-900">
+                {selectedForecastType
+                  ? selectedForecastType.description
+                  : "Select a forecast"}
+              </CardTitle>
+              {forecast?.generated_at && (
+                <p className="text-xs text-slate-500">
+                  Generated {dateLabel(forecast.generated_at)} · Horizon {forecast?.summary?.total_periods ?? "—"} periods
+                </p>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <ForecastMetric
+                  label="Average"
+                  value={formatNumber(forecast?.summary?.average_predicted, { maximumFractionDigits: 0 })}
+                  helper="Across prediction window"
+                />
+                <ForecastMetric
+                  label="Peak"
+                  value={formatNumber(forecast?.summary?.max_predicted, { maximumFractionDigits: 0 })}
+                  helper="Highest predicted value"
+                />
+                <ForecastMetric
+                  label="Confidence band"
+                  value={formatNumber(
+                    forecast?.predictions?.[0]?.confidence_interval ?? null,
+                    { maximumFractionDigits: 0 }
+                  )}
+                  helper="First-period interval width"
                 />
               </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {forecast?.predictions?.slice(0, 4).map((item) => (
-                <div key={item.date} className="rounded-xl border border-slate-100 p-3 text-xs">
-                  <div className="flex items-center justify-between text-[11px] text-slate-500">
-                    <span>{dateLabel(item.date)}</span>
-                    <Badge variant="outline" className="uppercase">
-                      {ROLE_LABELS[selectedForecastType?.type?.includes("advisor") ? "ADVISOR" : "BORROWER"] ?? "Focus"}
-                    </Badge>
-                  </div>
-                  <div className="mt-2 flex items-baseline gap-2 text-slate-800">
-                    <span className="text-lg font-semibold">
-                      {formatNumber(item.predicted, { maximumFractionDigits: 0 })}
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      ({formatNumber(item.lower_bound, { maximumFractionDigits: 0 })} – {formatNumber(item.upper_bound, { maximumFractionDigits: 0 })})
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {!forecast?.predictions?.length && (
-                <div className="rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-500">
-                  Forecast predictions will appear after data is available.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border border-slate-200/80 shadow-sm">
-          <CardHeader className="border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <Target className="h-4 w-4 text-emerald-500" /> Role Execution Snapshot
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            {roleInsights.map((insight) => (
-              <div key={insight.key} className="rounded-xl border border-slate-100 p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-semibold ${ROLE_ACCENT[insight.key] ?? "text-slate-600"}`}>
-                    {ROLE_LABELS[insight.key]}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Prediction horizon</span>
+                  <span>
+                    {dateLabel(forecast?.summary?.prediction_start)} – {dateLabel(forecast?.summary?.prediction_end)}
                   </span>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                    <span>Pending {insight.pending}</span>
-                    <span>•</span>
-                    <span>Done {insight.completed}</span>
-                  </div>
                 </div>
-                <ul className="mt-2 space-y-1 text-slate-600">
-                  {insight.highlights.map((note, index) => (
-                    <li key={`${insight.key}-${index}`} className="flex items-center gap-2">
-                      <CircleDot className="h-3 w-3 text-slate-300" /> {note}
-                    </li>
-                  ))}
-                </ul>
+                <div className="h-2 w-full rounded-full bg-slate-100">
+                  <div
+                    className="h-2 rounded-full bg-indigo-500 transition-all"
+                    style={{
+                      width: `${Math.min(100, ((forecast?.summary?.average_predicted ?? 0) /
+                        Math.max(forecast?.summary?.max_predicted ?? 1, 1)) * 100)}%`,
+                    }}
+                  />
+                </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-        <Card className="border border-slate-200/80 shadow-sm">
-          <CardHeader className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <PlayCircle className="h-4 w-4 text-blue-500" /> Prescriptive Playbooks
-            </div>
-            <Badge variant="secondary" className="text-[11px]">
-              {playbooks.length} active
-            </Badge>
-          </CardHeader>
-          <CardContent className="grid gap-4 pt-4 md:grid-cols-2">
-            {playbooks.map((card) => (
-              <div key={card.id} className="rounded-2xl border border-slate-100 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                      <Sparkles className="h-4 w-4 text-indigo-500" /> {card.title}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {forecast?.predictions?.slice(0, 4).map((item) => (
+                  <div key={item.date} className="rounded-xl border border-slate-100 p-3 text-xs">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{dateLabel(item.date)}</span>
+                      <Badge variant="outline" className="uppercase">
+                        {ROLE_LABELS[selectedForecastType?.type?.includes("advisor") ? "ADVISOR" : "BORROWER"] ?? "Focus"}
+                      </Badge>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">{card.summary}</p>
+                    <div className="mt-2 flex items-baseline gap-2 text-slate-800">
+                      <span className="text-lg font-semibold">
+                        {formatNumber(item.predicted, { maximumFractionDigits: 0 })}
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        ({formatNumber(item.lower_bound, { maximumFractionDigits: 0 })} – {formatNumber(item.upper_bound, { maximumFractionDigits: 0 })})
+                      </span>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="capitalize text-[11px]">
-                    {card.persona}
-                  </Badge>
-                </div>
-                <ul className="mt-3 space-y-1 text-xs text-slate-600">
-                  {card.actions.map((action) => (
-                    <li key={action} className="flex items-center gap-2">
-                      <ArrowRight className="h-3 w-3 text-slate-300" /> {action}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Auto-ready: {card.autoExecutable}</span>
-                  <Button variant="link" size="sm" className="px-0 text-xs">
-                    Launch <ChevronsRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {!playbooks.length && (
-              <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-xs text-slate-500">
-                Playbook recommendations will populate once plans are generated.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <Card className="border border-slate-200/80 shadow-sm">
-            <CardHeader className="border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Activity className="h-4 w-4 text-amber-500" /> Live Signals
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-4 text-xs text-slate-600">
-              {signals.map((signal) => (
-                <div key={signal.id} className="flex items-start gap-3">
-                  <span className="w-12 text-slate-400">{signal.timestamp}</span>
-                  {signal.tone === "warn" ? (
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" />
-                  ) : signal.tone === "success" ? (
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" />
-                  ) : (
-                    <CircleDot className="mt-0.5 h-3.5 w-3.5 text-slate-300" />
-                  )}
-                  <div>
-                    <div className="font-semibold text-slate-700">{signal.persona}</div>
-                    <p className="text-slate-600">{signal.summary}</p>
+                ))}
+                {!forecast?.predictions?.length && (
+                  <div className="rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-500">
+                    Forecast predictions will appear after data is available.
                   </div>
-                </div>
-              ))}
-              {!signals.length && (
-                <p className="text-slate-500">Workflow activity will stream in once orchestrations run.</p>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
 
           <Card className="border border-slate-200/80 shadow-sm">
             <CardHeader className="border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" /> Data Readiness
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" /> Data Readiness
+                </div>
+                <ApiBadgeGroup paths={["/api/v1/forecasts/data/readiness"]} />
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-4 text-xs text-slate-600">
@@ -666,14 +570,13 @@ export function AnalyticsViewV2() {
             </CardContent>
           </Card>
         </div>
-      </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
         <Card className="border border-slate-200/80 shadow-sm">
-          <CardHeader className="border-b border-slate-100 pb-4">
+          <CardHeader className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
               <BarChart3 className="h-4 w-4 text-indigo-500" /> Forecast Operations Summary
             </div>
+            <ApiBadgeGroup paths={["/api/v1/forecasts/data/summary", "/api/v1/forecasts/statistics"]} />
           </CardHeader>
           <CardContent className="space-y-3 pt-4 text-xs text-slate-600">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -698,57 +601,185 @@ export function AnalyticsViewV2() {
             </div>
           </CardContent>
         </Card>
+      </section>
 
-        <Card className="border border-slate-200/80 shadow-sm">
-          <CardHeader className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <Users className="h-4 w-4 text-rose-500" /> Executive Briefing
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500">
-              <Button variant="secondary" size="sm" className="inline-flex items-center gap-2 text-xs">
-                <Download className="h-3.5 w-3.5" /> Download PDF
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-4 text-xs text-slate-600">
-            <div>
-              <div className="text-sm font-semibold text-slate-800">{briefing.forecastHeadline}</div>
-              <ul className="mt-2 space-y-1">
-                {briefing.riskCallouts.map((item, idx) => (
-                  <li key={`risk-${idx}`} className="flex items-start gap-2">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" /> {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-slate-800">Automation & enablement</div>
-              <ul className="mt-2 space-y-1">
-                {briefing.automationWins.map((item, idx) => (
-                  <li key={`auto-${idx}`} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" /> {item}
-                  </li>
-                ))}
-                {!briefing.automationWins.length && (
-                  <li className="text-slate-500">Run auto workflows to capture automation metrics.</li>
-                )}
-              </ul>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-slate-800">Coaching priorities</div>
-              <ul className="mt-2 space-y-1">
-                {briefing.coachingNotes.map((item, idx) => (
-                  <li key={`coach-${idx}`} className="flex items-start gap-2">
-                    <Target className="mt-0.5 h-3.5 w-3.5 text-indigo-500" /> {item}
-                  </li>
-                ))}
-                {!briefing.coachingNotes.length && (
-                  <li className="text-slate-500">Advisor coaching insights will flow once plans are generated.</li>
-                )}
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
+      <section className="space-y-4">
+        <SectionHeader
+          title="Workflow & Playbooks"
+          description="Execution context from action plans and workflow orchestration"
+          paths={["/api/v1/plans", "/api/v1/workflows"]}
+        />
+
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+          <Card className="border border-slate-200/80 shadow-sm">
+            <CardHeader className="border-b border-slate-100 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Target className="h-4 w-4 text-emerald-500" /> Role Execution Snapshot
+                </div>
+                <ApiBadgeGroup paths={["/api/v1/plans", "/api/v1/workflows"]} />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {roleInsights.map((insight) => (
+                <div key={insight.key} className="rounded-xl border border-slate-100 p-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-semibold ${ROLE_ACCENT[insight.key] ?? "text-slate-600"}`}>
+                      {ROLE_LABELS[insight.key]}
+                    </span>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                      <span>Pending {insight.pending}</span>
+                      <span>•</span>
+                      <span>Done {insight.completed}</span>
+                    </div>
+                  </div>
+                  <ul className="mt-2 space-y-1 text-slate-600">
+                    {insight.highlights.map((note, index) => (
+                      <li key={`${insight.key}-${index}`} className="flex items-center gap-2">
+                        <CircleDot className="h-3 w-3 text-slate-300" /> {note}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm">
+            <CardHeader className="border-b border-slate-100 pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Activity className="h-4 w-4 text-amber-500" /> Live Signals
+                </div>
+                <ApiBadgeGroup paths={["/api/v1/workflows"]} />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-4 text-xs text-slate-600">
+              {signals.map((signal) => (
+                <div key={signal.id} className="flex items-start gap-3">
+                  <span className="w-12 text-slate-400">{signal.timestamp}</span>
+                  {signal.tone === "warn" ? (
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" />
+                  ) : signal.tone === "success" ? (
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" />
+                  ) : (
+                    <CircleDot className="mt-0.5 h-3.5 w-3.5 text-slate-300" />
+                  )}
+                  <div>
+                    <div className="font-semibold text-slate-700">{signal.persona}</div>
+                    <p className="text-slate-600">{signal.summary}</p>
+                  </div>
+                </div>
+              ))}
+              {!signals.length && (
+                <p className="text-slate-500">Workflow activity will stream in once orchestrations run.</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          <Card className="border border-slate-200/80 shadow-sm">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <PlayCircle className="h-4 w-4 text-blue-500" /> Prescriptive Playbooks
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ApiBadgeGroup paths={["/api/v1/plans"]} />
+                <Badge variant="secondary" className="text-[11px]">
+                  {playbooks.length} active
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-4 pt-4 md:grid-cols-2">
+              {playbooks.map((card) => (
+                <div key={card.id} className="rounded-2xl border border-slate-100 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                        <Sparkles className="h-4 w-4 text-indigo-500" /> {card.title}
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">{card.summary}</p>
+                    </div>
+                    <Badge variant="outline" className="capitalize text-[11px]">
+                      {card.persona}
+                    </Badge>
+                  </div>
+                  <ul className="mt-3 space-y-1 text-xs text-slate-600">
+                    {card.actions.map((action) => (
+                      <li key={action} className="flex items-center gap-2">
+                        <ArrowRight className="h-3 w-3 text-slate-300" /> {action}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Auto-ready: {card.autoExecutable}</span>
+                    <Button variant="link" size="sm" className="px-0 text-xs">
+                      Launch <ChevronsRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {!playbooks.length && (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-xs text-slate-500">
+                  Playbook recommendations will populate once plans are generated.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <Users className="h-4 w-4 text-rose-500" /> Executive Briefing
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ApiBadgeGroup paths={["/api/v1/forecasts/generate", "/api/v1/forecasts/statistics", "/api/v1/plans"]} />
+                <Button variant="secondary" size="sm" className="inline-flex items-center gap-2 text-xs">
+                  <Download className="h-3.5 w-3.5" /> Download PDF
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-4 text-xs text-slate-600">
+              <div>
+                <div className="text-sm font-semibold text-slate-800">{briefing.forecastHeadline}</div>
+                <ul className="mt-2 space-y-1">
+                  {briefing.riskCallouts.map((item, idx) => (
+                    <li key={`risk-${idx}`} className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" /> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">Automation & enablement</div>
+                <ul className="mt-2 space-y-1">
+                  {briefing.automationWins.map((item, idx) => (
+                    <li key={`auto-${idx}`} className="flex items-start gap-2">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" /> {item}
+                    </li>
+                  ))}
+                  {!briefing.automationWins.length && (
+                    <li className="text-slate-500">Run auto workflows to capture automation metrics.</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">Coaching priorities</div>
+                <ul className="mt-2 space-y-1">
+                  {briefing.coachingNotes.map((item, idx) => (
+                    <li key={`coach-${idx}`} className="flex items-start gap-2">
+                      <Target className="mt-0.5 h-3.5 w-3.5 text-indigo-500" /> {item}
+                    </li>
+                  ))}
+                  {!briefing.coachingNotes.length && (
+                    <li className="text-slate-500">Advisor coaching insights will flow once plans are generated.</li>
+                  )}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </section>
     </div>
   );
@@ -786,6 +817,47 @@ function SummaryTile({
       <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
       <div className="mt-2 text-lg font-semibold text-slate-900">{value}</div>
       <p className="mt-1 text-[11px] text-slate-500">{helper}</p>
+    </div>
+  );
+}
+
+function ApiBadge({ path }: { path: string }) {
+  return (
+    <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-tight text-slate-600">
+      {path}
+    </Badge>
+  );
+}
+
+function ApiBadgeGroup({ paths }: { paths?: string[] }) {
+  if (!paths || !paths.length) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {paths.map((path) => (
+        <ApiBadge key={path} path={path} />
+      ))}
+    </div>
+  );
+}
+
+function SectionHeader({
+  title,
+  description,
+  paths,
+}: {
+  title: string;
+  description: string;
+  paths: string[];
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+        <p className="text-xs text-slate-500">{description}</p>
+      </div>
+      <ApiBadgeGroup paths={paths} />
     </div>
   );
 }
