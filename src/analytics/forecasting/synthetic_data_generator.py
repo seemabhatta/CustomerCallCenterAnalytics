@@ -174,6 +174,7 @@ class SyntheticDataGenerator:
             Summary of generated data
         """
         import sqlite3
+        import json
 
         # Generate data
         transcripts = self.generate_transcripts(days, base_daily_calls)
@@ -213,7 +214,7 @@ class SyntheticDataGenerator:
                 ''', (
                     a['analysis_id'],
                     a['transcript_id'],
-                    str(a),  # JSON dump would be better but keeping it simple
+                    json.dumps(a),  # Proper JSON serialization
                     a['primary_intent'],
                     a['urgency_level'],
                     a['borrower_sentiment'],
