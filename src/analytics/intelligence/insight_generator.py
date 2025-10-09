@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import time
 
-from src.infrastructure.llm.llm_client_v2 import LLMClient
+from src.infrastructure.llm.llm_client_v2 import LLMClientV2
 from .prompt_loader import PromptLoader
 
 
@@ -24,7 +24,7 @@ class InsightGenerator:
 
     def __init__(
         self,
-        llm_client: Optional[LLMClient] = None,
+        llm_client: Optional[LLMClientV2] = None,
         prompts_dir: str = "prompts"
     ):
         """
@@ -34,7 +34,7 @@ class InsightGenerator:
             llm_client: LLM client for generating insights (creates default if None)
             prompts_dir: Directory containing prompt templates
         """
-        self.llm_client = llm_client or LLMClient()
+        self.llm_client = llm_client or LLMClientV2()
         self.prompt_loader = PromptLoader(prompts_dir)
 
     def generate(

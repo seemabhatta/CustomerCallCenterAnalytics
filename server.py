@@ -102,9 +102,9 @@ forecasting_service = ForecastingService(db_path=db_path)
 from src.storage.insight_store import InsightStore
 from src.analytics.intelligence.hybrid_analyzer import HybridAnalyzer
 from src.services.intelligence_service import IntelligenceService
-from src.infrastructure.llm.llm_client_v2 import LLMClient
+from src.infrastructure.llm.llm_client_v2 import LLMClientV2
 
-llm_client = LLMClient()
+llm_client = LLMClientV2()
 insight_store = InsightStore(db_path=db_path)
 hybrid_analyzer = HybridAnalyzer(
     forecasting_service=forecasting_service,

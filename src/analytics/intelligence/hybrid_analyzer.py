@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 
 from src.services.forecasting_service import ForecastingService
-from src.infrastructure.llm.llm_client_v2 import LLMClient
+from src.infrastructure.llm.llm_client_v2 import LLMClientV2
 from .insight_generator import InsightGenerator
 
 
@@ -30,7 +30,7 @@ class HybridAnalyzer:
     def __init__(
         self,
         forecasting_service: ForecastingService,
-        llm_client: Optional[LLMClient] = None,
+        llm_client: Optional[LLMClientV2] = None,
         db_path: str = "data/call_center.db"
     ):
         """
@@ -42,7 +42,7 @@ class HybridAnalyzer:
             db_path: Path to SQLite database
         """
         self.forecasting_service = forecasting_service
-        self.llm_client = llm_client or LLMClient()
+        self.llm_client = llm_client or LLMClientV2()
         self.insight_generator = InsightGenerator(llm_client)
         self.db_path = db_path
 
