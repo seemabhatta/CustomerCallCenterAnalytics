@@ -643,6 +643,9 @@ export type PipelineStage =
 // UI State Types
 export type TabValue =
   | 'analytics'
+  | 'control-tower'
+  | 'servicing-intel'
+  | 'marketing-intel'
   | 'transcripts'
   | 'analysis'
   | 'plan'
@@ -792,6 +795,399 @@ export interface SystemConfiguration {
     last_updated: string;
     description: string;
   };
+}
+
+// Intelligence Types
+export type PortfolioHealthStatus = 'STABLE' | 'ATTENTION' | 'CRITICAL' | (string & {});
+
+export interface LeadershipUrgentItem {
+  title: string;
+  urgency: 'high' | 'medium' | 'low' | (string & {});
+  financial_impact: number;
+  description: string;
+  recommendation: string;
+}
+
+export interface LeadershipRecommendation {
+  action: string;
+  expected_roi: number;
+  timeline: 'immediate' | 'this_week' | 'this_month' | (string & {});
+  confidence: 'high' | 'medium' | 'low' | (string & {});
+  reasoning: string;
+}
+
+export interface LeadershipFinancialSummary {
+  total_at_risk: number;
+  delinquency_risk: number;
+  churn_risk: number;
+  compliance_risk: number;
+  recoverable_with_action: number;
+  net_impact: number;
+}
+
+export interface LeadershipBriefing {
+  portfolio_health: PortfolioHealthStatus;
+  health_summary: string;
+  urgent_items: LeadershipUrgentItem[];
+  financial_summary: LeadershipFinancialSummary;
+  recommendations: LeadershipRecommendation[];
+  generated_at: string;
+  _generated_at?: string;
+  _cached?: boolean;
+}
+
+export interface LeadershipDollarImpact {
+  total_at_risk: number;
+  by_category: Record<string, number>;
+  portfolio_value: number;
+  high_risk_customers: number;
+  trend: string;
+  trend_delta_pct?: number | null;
+  recent_delinquency_avg?: number | null;
+  previous_delinquency_avg?: number | null;
+  generated_at: string;
+}
+
+export interface LeadershipDecisionQueueItem {
+  id: string;
+  type: string;
+  workflow_type?: string;
+  waiting_since?: string;
+  risk_level?: string;
+  urgency: 'high' | 'medium' | 'low' | (string & {});
+  title?: string;
+  recommendation?: string;
+  expected_impact?: number;
+  cost_estimate?: number;
+  roi?: number;
+}
+
+export interface LeadershipDecisionQueue {
+  count: number;
+  urgent_count: number;
+  decisions: LeadershipDecisionQueueItem[];
+  generated_at: string;
+}
+
+export interface LeadershipWaterfallStage {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+export interface LeadershipRiskWaterfall {
+  starting_portfolio: number;
+  at_risk: number;
+  recoverable_with_action: number;
+  net_risk: number;
+  stages: LeadershipWaterfallStage[];
+  generated_at: string;
+}
+
+export interface QueueBreakdown {
+  high_priority: number;
+  standard: number;
+  callback_scheduled: number;
+  [key: string]: number;
+}
+
+export interface PredictedVolumePoint {
+  hour: string;
+  predicted_calls: number;
+  confidence?: [number, number] | { lower: number; upper: number } | null;
+}
+
+export interface QueueStatusResponse {
+  current_queue: QueueBreakdown;
+  predicted_volume: PredictedVolumePoint[];
+  current_capacity: number;
+  staffing_status: string;
+  staffing_gap?: number;
+  generated_at: string;
+}
+
+export interface SlaPerformanceMetrics {
+  fcr_rate: number;
+  fcr_target: number;
+  fcr_status: string;
+  escalation_rate: number;
+  escalation_target: number;
+  escalation_status: string;
+  compliance_score: number;
+}
+
+export interface SlaMonitorResponse {
+  current_performance: SlaPerformanceMetrics;
+  predictions: Record<string, any>;
+  generated_at: string;
+}
+
+export interface AdvisorHeatmapEntry {
+  advisor_id?: string;
+  advisor_name?: string;
+  empathy_score: number;
+  compliance_score: number;
+  fcr_rate: number;
+  status: 'green' | 'yellow' | 'red' | (string & {});
+  segment?: string;
+}
+
+export interface AdvisorHeatmapResponse {
+  advisors: AdvisorHeatmapEntry[];
+  summary: {
+    total_advisors: number;
+    green_status: number;
+    yellow_status: number;
+    red_status: number;
+  };
+  generated_at: string;
+}
+
+export interface CoachingAlert {
+  id?: string;
+  title?: string;
+  type: string;
+  urgency: 'high' | 'medium' | 'low' | (string & {});
+  advisor_id?: string;
+  recommendation?: string;
+  expected_impact?: number;
+}
+
+export interface CoachingAlertsResponse {
+  critical_alerts: CoachingAlert[];
+  team_summary: {
+    total_advisors: number;
+    advisors_needing_coaching: number;
+    avg_empathy_score: number;
+    avg_compliance_score: number;
+    team_health: string;
+  };
+  generated_at: string;
+}
+
+export interface WorkloadBalanceResponse {
+  current_staff: number;
+  needed_for_peak: number;
+  gap: number;
+  recommendation: string;
+  peak_hour: number;
+  generated_at: string;
+}
+
+export interface CaseResolutionSummary {
+  total_active_cases: number;
+  resolved_last_7_days: number;
+  avg_case_age_days: number;
+  total_resolved_cases: number;
+}
+
+export interface CaseResolutionCase {
+  analysis_id: string;
+  transcript_id: string;
+  topic: string;
+  delinquency_risk: number;
+  churn_risk: number;
+  opened_at: string | null;
+  age_days: number | null;
+}
+
+export interface CaseResolutionResponse {
+  message: string;
+  summary: CaseResolutionSummary;
+  urgent_cases: CaseResolutionCase[];
+  generated_at: string;
+}
+
+export interface MarketingSegment {
+  segment_name: string;
+  segment_id: string;
+  count: number;
+  profile: string;
+  avg_score?: number;
+  satisfaction_rate?: number;
+  opportunity: string;
+  opportunity_value: number;
+  engagement_strategy?: string;
+  expected_response_rate?: number;
+  priority: 'high' | 'medium' | 'low' | (string & {});
+}
+
+export interface MarketingSegmentsResponse {
+  segments: MarketingSegment[];
+  summary: {
+    total_segments: number;
+    high_priority_segments: number;
+    total_opportunity_value: number;
+  };
+  generated_at: string;
+}
+
+export interface MarketingCampaign {
+  id: string;
+  title: string;
+  type: string;
+  urgency: 'high' | 'medium' | 'low' | (string & {});
+  target_segment: string;
+  target_count: number;
+  campaign_cost: number;
+  expected_revenue: number;
+  roi: number;
+  recommendation: string;
+  expected_retention_rate?: number;
+  expected_save?: number;
+}
+
+export interface CampaignRecommendationsResponse {
+  campaigns: MarketingCampaign[];
+  summary: {
+    total_campaigns: number;
+    high_priority: number;
+    total_potential_revenue: number;
+    total_cost: number;
+    avg_roi: number;
+  };
+  generated_at: string;
+}
+
+export interface CampaignPerformanceResponse {
+  campaign_id?: string | null;
+  segment: string | null;
+  date_range: string;
+  touchpoints: number;
+  resolved_cases: number;
+  open_cases: number;
+  conversion_rate: number;
+  avg_churn_risk: number;
+  avg_delinquency_risk: number;
+  avg_compliance_score: number;
+  sentiment_index: number;
+  opportunity_value?: number | null;
+  message: string;
+  generated_at: string;
+}
+
+export interface ChurnRootCause {
+  cause: string;
+  impact: 'high' | 'medium' | 'low' | (string & {});
+  evidence: string;
+}
+
+export interface ChurnTargetSegment {
+  segment_name: string;
+  count: number;
+  characteristics: string[];
+  risk_drivers: string[];
+}
+
+export interface RetentionStrategy {
+  strategy: string;
+  target_segment: string;
+  approach: string;
+  messaging: string[];
+  channels: string[];
+  timing: 'immediate' | 'this_week' | 'this_month' | (string & {});
+  expected_retention_rate: number;
+  cost_per_contact: number;
+  roi_estimate: number;
+}
+
+export interface ChurnAnalysisResponse {
+  forecast: Record<string, any>;
+  insights: {
+    churn_summary?: {
+      current_rate?: number;
+      trend?: string;
+      high_risk_count?: number;
+      revenue_at_risk?: number;
+    };
+    root_causes?: ChurnRootCause[];
+    target_segments?: ChurnTargetSegment[];
+    retention_strategies?: RetentionStrategy[];
+    financial_impact?: Record<string, number>;
+    confidence?: string;
+  };
+  at_risk_segment?: MarketingSegment | null;
+  generated_at: string;
+}
+
+export interface MessageOptimizerResponse {
+  segment: string;
+  message: string;
+  optimized_message: string;
+  suggestions: string[];
+  generated_at: string;
+}
+
+export interface JourneyStage {
+  stage: string;
+  count: number;
+  conversion_rate: number;
+  description: string;
+}
+
+export interface CustomerJourneyResponse {
+  message: string;
+  stages: JourneyStage[];
+  top_intents: string;
+  generated_at: string;
+}
+
+export interface RoiAttributionResponse {
+  total_opportunity_value: number;
+  by_category: Record<string, number>;
+  generated_at: string;
+}
+
+export interface IntelligenceAskRequest {
+  question: string;
+  persona?: string;
+  context?: Record<string, any>;
+}
+
+export interface IntelligenceAskResponse {
+  question: string;
+  persona?: string;
+  answer: string;
+  generated_at: string;
+  [key: string]: any;
+}
+
+export interface CachedInsightSummary {
+  id: string;
+  insight_type: string;
+  persona: string;
+  generated_at: string;
+  expires_at: string;
+  access_count: number;
+  confidence_score: number | null;
+}
+
+export interface ClearCacheParams {
+  persona?: string;
+  insightType?: string;
+}
+
+export interface ClearCacheResponse {
+  message: string;
+  cleared_count: number;
+}
+
+export interface IntelligenceHealth {
+  status: 'healthy' | 'unhealthy' | (string & {});
+  cache_statistics?: Record<string, any>;
+  services?: Record<string, string>;
+  checked_at: string;
+  error?: string;
+}
+
+export interface CampaignPerformanceRequest {
+  campaign_id?: string;
+  date_range?: string;
+}
+
+export interface MessageOptimizerRequest {
+  message: string;
+  segment?: string;
 }
 
 // Error Types

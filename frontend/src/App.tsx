@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Eye,
   Target,
+  Megaphone,
 } from "lucide-react";
 
 import { TranscriptsView } from "@/views/TranscriptsView";
@@ -30,6 +31,9 @@ import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
 import { AnalyticsViewV2 } from "@/views/AnalyticsViewV2";
+import ControlTowerView from "@/views/ControlTowerView";
+import ServicingOpsView from "@/views/ServicingOpsView";
+import MarketingView from "@/views/MarketingView";
 import { SimpleChatView } from "@/components/SimpleChatView";
 
 import { TabValue, UserRole } from "@/types";
@@ -47,7 +51,7 @@ export default function App() {
   // Switch to appropriate default tab when role changes
   useEffect(() => {
     const roleDefaultTabs: Record<UserRole, TabValue> = {
-      leadership: "analytics",
+      leadership: "control-tower",
       supervisor: "dashboard",
       advisor: "calls",
       admin: "pipeline"
@@ -116,6 +120,18 @@ export default function App() {
           {/* Leadership View: Analytics, Insights, Governance */}
           {userRole === "leadership" && (
             <>
+              <TabsTrigger value="control-tower" className="tab-trigger">
+                <Shield className="h-3 w-3 mr-1" />
+                Control Tower
+              </TabsTrigger>
+              <TabsTrigger value="servicing-intel" className="tab-trigger">
+                <Headphones className="h-3 w-3 mr-1" />
+                Servicing Ops
+              </TabsTrigger>
+              <TabsTrigger value="marketing-intel" className="tab-trigger">
+                <Megaphone className="h-3 w-3 mr-1" />
+                Marketing
+              </TabsTrigger>
               <TabsTrigger value="analytics" className="tab-trigger">
                 <BarChart3 className="h-3 w-3 mr-1" />
                 Analytics
@@ -182,10 +198,6 @@ export default function App() {
                 <Settings2 className="h-3 w-3 mr-1" />
                 Pipeline
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="tab-trigger">
-                <Activity className="h-3 w-3 mr-1" />
-                Analytics
-              </TabsTrigger>
               <TabsTrigger value="generator" className="tab-trigger ml-3">
                 <Plus className="h-3 w-3 mr-1" />
                 Generator
@@ -217,6 +229,18 @@ export default function App() {
             </>
           )}
         </TabsList>
+
+        <TabsContent value="control-tower">
+          <ControlTowerView />
+        </TabsContent>
+
+        <TabsContent value="servicing-intel">
+          <ServicingOpsView />
+        </TabsContent>
+
+        <TabsContent value="marketing-intel">
+          <MarketingView />
+        </TabsContent>
 
         {/* Analytics - Available for Leadership and Admin */}
         <TabsContent value="analytics">

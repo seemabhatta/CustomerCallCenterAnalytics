@@ -86,7 +86,7 @@ class HybridAnalyzer:
             context.update(additional_context)
 
         # Step 4: Generate GenAI insights
-        insights = self.insight_generator.generate(
+        insights = await self.insight_generator.generate(
             prompt_name=prompt_name,
             context=context
         )
@@ -284,7 +284,7 @@ class HybridAnalyzer:
         }
 
         # Generate briefing
-        briefing = self.insight_generator.generate(
+        briefing = await self.insight_generator.generate(
             prompt_name='executive_briefing',
             context=context
         )
@@ -387,7 +387,7 @@ class HybridAnalyzer:
             'timestamp': datetime.utcnow().isoformat()
         }
 
-        insights = self.insight_generator.generate(
+        insights = await self.insight_generator.generate(
             prompt_name='operations_alerts',
             context=context
         )

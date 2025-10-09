@@ -71,7 +71,7 @@ from src.services.workflow_service import WorkflowService
 from src.services.system_service import SystemService
 from src.services.leadership_insights_service import LeadershipInsightsService
 from src.services.advisor_service import AdvisorService
-from src.services.forecasting_service import ForecastingService
+from src.services.forecasting_service import ForecastingService, ForecastingServiceError
 
 # Import execution models for step-by-step workflow execution
 from src.models.execution_models import (
@@ -1258,6 +1258,12 @@ async def generate_forecast(request: ForecastGenerateRequest):
             ttl_hours=request.ttl_hours
         )
         return result
+    except ForecastingServiceError as exc:
+        return {
+            "status": "insufficient_data",
+            "forecast_type": request.forecast_type,
+            "detail": str(exc),
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Forecast generation failed: {str(e)}")
 
@@ -1700,13 +1706,13 @@ async def clear_intelligence_cache(
     Use when you want to force fresh analysis.
     """
     try:
-        cleared_count = await intelligence_service.clear_cache(
+        result = await intelligence_service.clear_cache(
             persona=persona,
             insight_type=insight_type
         )
         return {
-            "message": f"Cleared {cleared_count} cached insights",
-            "cleared_count": cleared_count
+            "message": f"Cleared {result['cleared_count']} cached insights",
+            **result
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")

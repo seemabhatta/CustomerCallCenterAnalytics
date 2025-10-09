@@ -28,6 +28,18 @@ class MarketingPersona(BasePersona):
     REFI_REVENUE_PER_LOAN = 2800
     CAMPAIGN_COST_PER_CONTACT = 15  # Email + SMS + potential call
 
+    SEGMENT_FILTERS = {
+        'refi_ready': "a.refinance_likelihood > 0.7",
+        'at_risk': "(a.churn_risk > 0.6 OR a.delinquency_risk > 0.6)",
+        'loyal': "(a.churn_risk < 0.3 AND a.borrower_sentiment IN ('Positive','Satisfied'))",
+        'pmi_ready': "a.primary_intent = 'PMI removal request'"
+    }
+
+    def get_segment_condition(self, segment_id: Optional[str]) -> Optional[str]:
+        if not segment_id:
+            return None
+        return self.SEGMENT_FILTERS.get(segment_id)
+
     def transform_forecast(self, forecast: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transform forecast to show marketing opportunities.

@@ -27,6 +27,7 @@ class LeadershipPersona(BasePersona):
     AVG_SERVICING_FEE_ANNUAL = 250  # $250/year servicing fee per loan
     DELINQUENCY_LOSS_RATE = 0.15  # 15% loss on defaulted loans
     CHURN_REVENUE_LOSS = 250  # Lost servicing fees per churned loan
+    COMPLIANCE_FINE_PER_ISSUE = 5000  # Estimated fine per compliance breach
 
     def transform_forecast(self, forecast: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -223,6 +224,35 @@ class LeadershipPersona(BasePersona):
         executed_wf = result[1] if result and result[1] else 0
         pending_wf = result[2] if result and result[2] else 0
 
+        # Compliance incidents (last 30 days)
+        result = self._query_db_one("""
+            SELECT SUM(COALESCE(compliance_issues, 0))
+            FROM analysis
+            WHERE created_at >= datetime('now', '-30 days')
+        """)
+        compliance_issues = result[0] if result and result[0] else 0
+        compliance_penalty = compliance_issues * self.COMPLIANCE_FINE_PER_ISSUE
+
+        # Risk trend (compare last 7 days vs previous period)
+        recent = self._query_db_one("""
+            SELECT AVG(delinquency_risk)
+            FROM analysis
+            WHERE created_at >= datetime('now', '-7 days')
+        """)
+        prev = self._query_db_one("""
+            SELECT AVG(delinquency_risk)
+            FROM analysis
+            WHERE created_at >= datetime('now', '-14 days')
+              AND created_at < datetime('now', '-7 days')
+        """)
+
+        recent_delinq = recent[0] if recent and recent[0] is not None else 0
+        previous_delinq = prev[0] if prev and prev[0] is not None else 0
+        delta = recent_delinq - previous_delinq
+        delta_pct = None
+        if previous_delinq:
+            delta_pct = delta / previous_delinq
+
         return {
             'portfolio': {
                 'total_customers': total_customers,
@@ -237,12 +267,20 @@ class LeadershipPersona(BasePersona):
             },
             'compliance': {
                 'compliance_score': compliance_score,
-                'status': 'good' if compliance_score > 0.9 else 'needs_attention'
+                'status': 'good' if compliance_score > 0.9 else 'needs_attention',
+                'issue_count': compliance_issues,
+                'estimated_penalty': compliance_penalty
             },
             'operational_efficiency': {
                 'workflows_last_7d': total_wf,
                 'execution_rate': (executed_wf / total_wf * 100) if total_wf > 0 else 0,
                 'pending_decisions': pending_wf
+            },
+            'trend_metrics': {
+                'recent_delinquency': recent_delinq,
+                'previous_delinquency': previous_delinq,
+                'delta': delta,
+                'delta_pct': delta_pct
             }
         }
 

@@ -55,21 +55,37 @@ class ForecastingService:
         """
         try:
             # Check if cached forecast exists
+            readiness = None
+
             if use_cache:
                 cached = self.forecast_store.get_latest_by_type(forecast_type)
                 if cached:
-                    logger.info(f"Using cached forecast for {forecast_type}")
-                    return {
-                        'forecast_id': cached['id'],
-                        'forecast_type': forecast_type,
-                        'cached': True,
-                        'generated_at': cached['generated_at'],
-                        'expires_at': cached['expires_at'],
-                        **cached['forecast_data']
-                    }
+                    # Ensure cached forecast is still valid for current data window
+                    try:
+                        readiness = self.forecast_generator.check_data_readiness(forecast_type)
+                    except ValueError:
+                        readiness = None
+
+                    if readiness and readiness.get('ready'):
+                        logger.info(f"Using cached forecast for {forecast_type}")
+                        return {
+                            'forecast_id': cached['id'],
+                            'forecast_type': forecast_type,
+                            'cached': True,
+                            'generated_at': cached['generated_at'],
+                            'expires_at': cached['expires_at'],
+                            **cached['forecast_data']
+                        }
+
+                    # Cached forecast is stale relative to current data; remove and regenerate
+                    logger.info(
+                        "Discarding cached forecast for %s due to insufficient or outdated data",
+                        forecast_type,
+                    )
+                    self.forecast_store.delete(cached['id'])
 
             # Check data readiness
-            readiness = self.forecast_generator.check_data_readiness(forecast_type)
+            readiness = readiness or self.forecast_generator.check_data_readiness(forecast_type)
             if not readiness['ready']:
                 raise ForecastingServiceError(
                     f"Insufficient data for {forecast_type}. {readiness['recommendation']}"

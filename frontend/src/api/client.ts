@@ -34,7 +34,32 @@ import {
   ForecastReadinessResponse,
   ForecastDataSummary,
   ForecastStatistics,
-  ForecastHistoryItem
+  ForecastHistoryItem,
+  LeadershipBriefing,
+  LeadershipDollarImpact,
+  LeadershipDecisionQueue,
+  LeadershipRiskWaterfall,
+  QueueStatusResponse,
+  SlaMonitorResponse,
+  AdvisorHeatmapResponse,
+  CoachingAlertsResponse,
+  WorkloadBalanceResponse,
+  CaseResolutionResponse,
+  MarketingSegmentsResponse,
+  CampaignRecommendationsResponse,
+  CampaignPerformanceResponse,
+  ChurnAnalysisResponse,
+  MessageOptimizerResponse,
+  CustomerJourneyResponse,
+  RoiAttributionResponse,
+  IntelligenceAskRequest,
+  IntelligenceAskResponse,
+  CachedInsightSummary,
+  ClearCacheParams,
+  ClearCacheResponse,
+  IntelligenceHealth,
+  CampaignPerformanceRequest,
+  MessageOptimizerRequest
 } from '@/types';
 
 // Create axios instance with base configuration
@@ -551,6 +576,147 @@ export const advisorApi = {
     apiCall<{ sessions: any[] }>(() =>
       api.get(`/api/v1/advisor/sessions/${advisorId}`, { params: { limit } })
     ),
+};
+
+// Intelligence API (Leadership, Servicing Ops, Marketing, Cross-persona)
+export const intelligenceApi = {
+  leadership: {
+    briefing: (options?: { useCache?: boolean; ttlHours?: number }) => {
+      const params = {
+        use_cache: options?.useCache ?? true,
+        ttl_hours: options?.ttlHours ?? 1,
+      };
+
+      return apiCall<LeadershipBriefing>(() =>
+        api.get('/api/v1/intelligence/leadership/briefing', { params })
+      );
+    },
+
+    dollarImpact: () =>
+      apiCall<LeadershipDollarImpact>(() =>
+        api.get('/api/v1/intelligence/leadership/dollar-impact')
+      ),
+
+    decisionQueue: () =>
+      apiCall<LeadershipDecisionQueue>(() =>
+        api.get('/api/v1/intelligence/leadership/decision-queue')
+      ),
+
+    riskWaterfall: () =>
+      apiCall<LeadershipRiskWaterfall>(() =>
+        api.get('/api/v1/intelligence/leadership/risk-waterfall')
+      ),
+  },
+
+  servicing: {
+    queueStatus: () =>
+      apiCall<QueueStatusResponse>(() =>
+        api.get('/api/v1/intelligence/servicing/queue-status')
+      ),
+
+    slaMonitor: () =>
+      apiCall<SlaMonitorResponse>(() =>
+        api.get('/api/v1/intelligence/servicing/sla-monitor')
+      ),
+
+    advisorHeatmap: () =>
+      apiCall<AdvisorHeatmapResponse>(() =>
+        api.get('/api/v1/intelligence/servicing/advisor-heatmap')
+      ),
+
+    coachingAlerts: () =>
+      apiCall<CoachingAlertsResponse>(() =>
+        api.get('/api/v1/intelligence/servicing/coaching-alerts')
+      ),
+
+    workloadBalance: () =>
+      apiCall<WorkloadBalanceResponse>(() =>
+        api.get('/api/v1/intelligence/servicing/workload-balance')
+      ),
+
+    caseResolution: () =>
+      apiCall<CaseResolutionResponse>(() =>
+        api.get('/api/v1/intelligence/servicing/case-resolution')
+      ),
+  },
+
+  marketing: {
+    segments: () =>
+      apiCall<MarketingSegmentsResponse>(() =>
+        api.get('/api/v1/intelligence/marketing/segments')
+      ),
+
+    campaignRecommendations: () =>
+      apiCall<CampaignRecommendationsResponse>(() =>
+        api.get('/api/v1/intelligence/marketing/campaign-recommendations')
+      ),
+
+    campaignPerformance: (payload: CampaignPerformanceRequest = {}) =>
+      apiCall<CampaignPerformanceResponse>(() =>
+        api.post('/api/v1/intelligence/marketing/campaign-performance', payload)
+      ),
+
+    churnAnalysis: (options?: { useCache?: boolean; ttlHours?: number }) => {
+      const params = {
+        use_cache: options?.useCache ?? true,
+        ttl_hours: options?.ttlHours ?? 2,
+      };
+
+      return apiCall<ChurnAnalysisResponse>(() =>
+        api.post('/api/v1/intelligence/marketing/churn-analysis', {}, { params })
+      );
+    },
+
+    messageOptimizer: (payload: MessageOptimizerRequest) =>
+      apiCall<MessageOptimizerResponse>(() =>
+        api.post('/api/v1/intelligence/marketing/message-optimizer', payload)
+      ),
+
+    customerJourney: () =>
+      apiCall<CustomerJourneyResponse>(() =>
+        api.get('/api/v1/intelligence/marketing/customer-journey')
+      ),
+
+    roiAttribution: () =>
+      apiCall<RoiAttributionResponse>(() =>
+        api.get('/api/v1/intelligence/marketing/roi-attribution')
+      ),
+  },
+
+  crossPersona: {
+    ask: (payload: IntelligenceAskRequest) =>
+      apiCall<IntelligenceAskResponse>(() =>
+        api.post('/api/v1/intelligence/ask', payload)
+      ),
+
+    listInsights: (params?: { persona?: string; insightType?: string; limit?: number }) => {
+      const queryParams = {
+        persona: params?.persona,
+        insight_type: params?.insightType,
+        limit: params?.limit ?? 10,
+      };
+
+      return apiCall<CachedInsightSummary[]>(() =>
+        api.get('/api/v1/intelligence/insights', { params: queryParams })
+      );
+    },
+
+    clearCache: (params?: ClearCacheParams) => {
+      const queryParams = {
+        persona: params?.persona,
+        insight_type: params?.insightType,
+      };
+
+      return apiCall<ClearCacheResponse>(() =>
+        api.delete('/api/v1/intelligence/cache', { params: queryParams })
+      );
+    },
+
+    health: () =>
+      apiCall<IntelligenceHealth>(() =>
+        api.get('/api/v1/intelligence/health')
+      ),
+  },
 };
 
 export default api;

@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import time
 
-from src.infrastructure.llm.llm_client_v2 import LLMClientV2
+from src.infrastructure.llm.llm_client_v2 import LLMClientV2, RequestOptions
 from .prompt_loader import PromptLoader
 
 
@@ -37,7 +37,7 @@ class InsightGenerator:
         self.llm_client = llm_client or LLMClientV2()
         self.prompt_loader = PromptLoader(prompts_dir)
 
-    def generate(
+    async def generate(
         self,
         prompt_name: str,
         context: Dict[str, Any],
@@ -67,22 +67,24 @@ class InsightGenerator:
             # Load and format prompt
             prompt = self.prompt_loader.load(prompt_name, context)
 
-            # Call LLM
-            if system_instructions:
-                full_prompt = f"{system_instructions}\n\n{prompt}"
-            else:
-                full_prompt = prompt
-
-            response = self.llm_client.generate(
-                prompt=full_prompt,
+            # Prepare LLM options
+            options = RequestOptions(
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_output_tokens=max_tokens,
+            )
+
+            # Invoke the LLM asynchronously
+            response = await self.llm_client.arun(
+                messages=[{"role": "user", "content": prompt}],
+                system_prompt=system_instructions,
+                options=options,
             )
 
             generation_time_ms = int((time.time() - start_time) * 1000)
 
             # Try to parse as JSON if response looks like JSON
-            insight_data = self._parse_response(response)
+            raw_text = response.require_text()
+            insight_data = self._parse_response(raw_text)
 
             # Add metadata
             result = {
@@ -132,7 +134,7 @@ class InsightGenerator:
         # Return as plain text
         return {'text': response}
 
-    def generate_structured(
+    async def generate_structured(
         self,
         prompt_name: str,
         context: Dict[str, Any],
@@ -156,7 +158,7 @@ class InsightGenerator:
 
         full_system = (system_instructions or "") + schema_instruction
 
-        result = self.generate(
+        result = await self.generate(
             prompt_name=prompt_name,
             context=context,
             system_instructions=full_system,
@@ -175,7 +177,7 @@ class InsightGenerator:
 
         return result
 
-    def batch_generate(
+    async def batch_generate(
         self,
         prompts: List[Dict[str, Any]],
         parallel: bool = False
@@ -195,7 +197,7 @@ class InsightGenerator:
 
         for prompt_config in prompts:
             try:
-                result = self.generate(**prompt_config)
+                result = await self.generate(**prompt_config)
                 results.append({
                     'success': True,
                     'result': result
@@ -209,7 +211,7 @@ class InsightGenerator:
 
         return results
 
-    def explain_data(
+    async def explain_data(
         self,
         data: Any,
         question: str,
@@ -238,10 +240,13 @@ Question: {question}
 Provide a clear, concise explanation in natural language.
 Focus on actionable insights for mortgage servicing leadership."""
 
-        response = self.llm_client.generate(prompt=prompt, temperature=0.5)
-        return response.strip()
+        response = await self.llm_client.arun(
+            messages=[{"role": "user", "content": prompt}],
+            options=RequestOptions(temperature=0.5)
+        )
+        return response.require_text().strip()
 
-    def summarize_forecast(
+    async def summarize_forecast(
         self,
         forecast: Dict[str, Any],
         audience: str = "leadership"
@@ -262,7 +267,7 @@ Focus on actionable insights for mortgage servicing leadership."""
             'date': datetime.utcnow().strftime('%Y-%m-%d')
         }
 
-        result = self.generate(
+        result = await self.generate(
             prompt_name='forecast_summary',
             context=context,
             temperature=0.6
