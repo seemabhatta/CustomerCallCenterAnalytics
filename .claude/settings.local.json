@@ -62,7 +62,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm uninstall:*)",
       "WebFetch(domain:developers.openai.com)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
