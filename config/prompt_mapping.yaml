@@ -89,6 +89,7 @@ roles:
           - get_workflow_steps
           - get_transcript_pipeline
           - query_knowledge_graph
+          - ask_intelligence_question
         tool_filters:
           workflow_types:
             - BORROWER
@@ -336,6 +337,19 @@ tool_registry:
       - name: question
         type: str
         required: true
+
+  # Intelligence System Tools
+  ask_intelligence_question:
+    description: "Ask strategic questions to intelligence system (Prophet forecasts + GenAI)"
+    category: "intelligence"
+    parameters:
+      - name: question
+        type: str
+        required: true
+      - name: persona
+        type: str
+        required: false
+        default: null
 
 # Metadata
 metadata:

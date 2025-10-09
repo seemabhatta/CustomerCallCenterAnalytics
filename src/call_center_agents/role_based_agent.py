@@ -605,6 +605,49 @@ async def query_knowledge_graph(question: str) -> Dict[str, Any]:
             return result
 
 
+@function_tool
+async def ask_intelligence_question(question: str, persona: str = None) -> Dict[str, Any]:
+    """Ask natural language question to the intelligence system.
+
+    The intelligence system combines Prophet forecasts with GenAI analysis to provide
+    actionable insights across Leadership, Servicing Operations, and Marketing personas.
+
+    Use this for analytical and strategic questions like:
+    - "What is our biggest operational risk today?"
+    - "How many advisors do we need tomorrow afternoon?"
+    - "Which customer segment should we target for our next campaign?"
+    - "What's the financial impact of our current churn risk?"
+    - "Should I approve this staffing change?"
+    - "What are the top 3 actions I should take this week?"
+
+    Args:
+        question: Natural language question about portfolio, operations, or marketing strategy
+        persona: Optional persona filter (leadership|servicing|marketing).
+                 If not specified, system will route to appropriate persona automatically.
+
+    Returns:
+        Comprehensive answer with recommendations, key numbers, actions, and confidence level
+    """
+    logger.info(f"🧠 ask_intelligence_question called: {question} (persona: {persona})")
+
+    async with aiohttp.ClientSession() as session:
+        payload = {"question": question}
+        if persona:
+            payload["persona"] = persona
+
+        async with session.post(
+            "http://localhost:8000/api/v1/intelligence/ask",
+            json=payload
+        ) as response:
+            logger.info(f"📡 Intelligence API response status: {response.status}")
+            if response.status != 200:
+                logger.error(f"❌ Failed to get intelligence answer: HTTP {response.status}")
+                raise Exception(f"Failed to get intelligence answer: {response.status}")
+            result = await response.json()
+            logger.info(f"✅ Intelligence answer retrieved successfully")
+            return result
+
+
 # ============================================
 # CONFIGURATION MANAGEMENT
 # ============================================
@@ -801,7 +844,8 @@ def create_role_based_agent(role: str, mode: str = "borrower") -> Agent:
         'get_transcript_pipeline': get_transcript_pipeline,
         'get_borrower_pending_workflows': get_borrower_pending_workflows,
         'get_pending_workflows_by_transcript': get_pending_workflows_by_transcript,
-        'query_knowledge_graph': query_knowledge_graph
+        'query_knowledge_graph': query_knowledge_graph,
+        'ask_intelligence_question': ask_intelligence_question
     }
 
     # Get tool configuration for this role+mode
