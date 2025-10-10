@@ -90,70 +90,70 @@ class TestTranscriptService:
         assert len(result) == 3
 
     @pytest.mark.asyncio
-    @patch('src.generators.transcript_generator.TranscriptGenerator.generate')
+    @patch('src.call_center_agents.transcript_agent.TranscriptAgent.generate')
     async def test_create_transcript_with_defaults(self, mock_generate, transcript_service, sample_transcript):
         """Test creating transcript with default parameters."""
         mock_generate.return_value = sample_transcript
-        
+
         request_data = {"topic": "payment_inquiry"}
         result = await transcript_service.create(request_data)
-        
+
         assert result["transcript_id"] == "CALL_TEST123"
-        mock_generate.assert_called_once_with(
-            topic="payment_inquiry",
-            urgency="medium",
-            financial_impact=False,
-            customer_sentiment="neutral",
-            customer_id="CUST_001"
-        )
+        assert result["customer_id"].startswith("CUST-") or result["customer_id"].startswith("CUST_")
+        assert result["advisor_id"].startswith("ADV-")
+        assert "loan_profile" in result
+        kwargs = mock_generate.call_args.kwargs
+        assert kwargs["topic"] == "payment_inquiry"
+        assert kwargs["customer_id"] == result["customer_id"]
+        assert kwargs["advisor_id"] == result["advisor_id"]
+        assert "customer_profile" in kwargs
+        assert "loan_profile" in kwargs
+        assert "property_profile" in kwargs
+        assert "advisor_profile" in kwargs
 
     @pytest.mark.asyncio
-    @patch('src.generators.transcript_generator.TranscriptGenerator.generate')
+    @patch('src.call_center_agents.transcript_agent.TranscriptAgent.generate')
     async def test_create_transcript_with_custom_parameters(self, mock_generate, transcript_service, sample_transcript):
         """Test creating transcript with custom parameters."""
         mock_generate.return_value = sample_transcript
-        
+
         request_data = {
             "topic": "complaint_resolution",
             "urgency": "high",
             "financial_impact": True,
             "customer_sentiment": "frustrated",
-            "customer_id": "CUST_VIP001"
+            "customer_id": "CUST_VIP001",
+            "advisor_id": "ADV-509"
         }
         result = await transcript_service.create(request_data)
-        
-        mock_generate.assert_called_once_with(
-            topic="complaint_resolution",
-            urgency="high",
-            financial_impact=True,
-            customer_sentiment="frustrated",
-            customer_id="CUST_VIP001"
-        )
+
+        kwargs = mock_generate.call_args.kwargs
+        assert kwargs["topic"] == "complaint_resolution"
+        assert kwargs["customer_id"] == "CUST_VIP001"
+        assert kwargs["customer_profile"]["customer_id"] == "CUST_VIP001"
+        assert kwargs["advisor_id"] == "ADV-509"
+        assert result["customer_id"] == "CUST_VIP001"
+        assert result["advisor_id"] == "ADV-509"
 
     @pytest.mark.asyncio
-    @patch('src.generators.transcript_generator.TranscriptGenerator.generate')
+    @patch('src.call_center_agents.transcript_agent.TranscriptAgent.generate')
     async def test_create_transcript_legacy_scenario_parameter(self, mock_generate, transcript_service, sample_transcript):
         """Test creating transcript with legacy 'scenario' parameter."""
         mock_generate.return_value = sample_transcript
-        
+
         request_data = {"scenario": "legacy_payment_inquiry"}
         result = await transcript_service.create(request_data)
-        
-        # Should use scenario as topic
-        mock_generate.assert_called_once_with(
-            topic="legacy_payment_inquiry",
-            urgency="medium",
-            financial_impact=False,
-            customer_sentiment="neutral",
-            customer_id="CUST_001"
-        )
+
+        kwargs = mock_generate.call_args.kwargs
+        assert kwargs["topic"] == "legacy_payment_inquiry"
+        assert result["topic"] == "legacy_payment_inquiry"
 
     @pytest.mark.asyncio
-    @patch('src.generators.transcript_generator.TranscriptGenerator.generate')
+    @patch('src.call_center_agents.transcript_agent.TranscriptAgent.generate')
     async def test_create_transcript_no_store(self, mock_generate, transcript_service, sample_transcript):
         """Test creating transcript without storing."""
         mock_generate.return_value = sample_transcript
-        
+
         request_data = {"topic": "test", "store": False}
         result = await transcript_service.create(request_data)
         
@@ -162,15 +162,44 @@ class TestTranscriptService:
         assert stored_transcript is None
 
     @pytest.mark.asyncio
-    @patch('src.generators.transcript_generator.TranscriptGenerator.generate')
+    @patch('src.call_center_agents.transcript_agent.TranscriptAgent.generate')
     async def test_create_transcript_generator_failure(self, mock_generate, transcript_service):
         """Test create fails fast when generator fails."""
         mock_generate.side_effect = Exception("OpenAI API error")
-        
+
         request_data = {"topic": "test"}
         
         with pytest.raises(Exception, match="OpenAI API error"):
             await transcript_service.create(request_data)
+
+    @pytest.mark.asyncio
+    @patch('src.call_center_agents.transcript_agent.TranscriptAgent.generate')
+    async def test_create_transcript_with_context(self, mock_generate, transcript_service, sample_transcript):
+        """Ensure optional context is forwarded to generator and transcript output."""
+        mock_generate.return_value = sample_transcript
+
+        request_data = {
+            "topic": "payment_inquiry",
+            "context": "Customer following up on unresolved escrow overage.",
+        }
+
+        result = await transcript_service.create(request_data)
+
+        kwargs = mock_generate.call_args.kwargs
+        assert kwargs["conversation_context"] == "Customer following up on unresolved escrow overage."
+        assert result.get("conversation_context") == "Customer following up on unresolved escrow overage."
+
+    @pytest.mark.asyncio
+    @patch('src.call_center_agents.transcript_agent.TranscriptAgent.generate')
+    async def test_create_bulk_transcripts(self, mock_generate, transcript_service, sample_transcript):
+        """Test bulk transcript creation returns count and transcripts."""
+        mock_generate.return_value = sample_transcript
+
+        requests = [{"topic": "payment_inquiry"} for _ in range(3)]
+        result = await transcript_service.create_bulk(requests)
+
+        assert result["count"] == 3
+        assert len(result["transcripts"]) == 3
 
     @pytest.mark.asyncio
     async def test_get_by_id_existing_transcript(self, transcript_service, sample_transcript):

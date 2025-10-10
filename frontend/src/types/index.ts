@@ -9,8 +9,8 @@ export interface ApiResponse<T = any> {
 export interface Transcript {
   id: string;
   customer_id: string;
-  customer: string;
-  advisor: string;
+  customer?: string;
+  advisor?: string;
   topic: string;
   urgency: string;
   financial_impact: boolean;
@@ -21,6 +21,14 @@ export interface Transcript {
   message_count?: number;
   status: string;
   messages?: TranscriptMessage[];
+  advisor_id?: string;
+  loan_id?: string;
+  property_id?: string;
+  customer_profile?: Record<string, any>;
+  loan_profile?: Record<string, any>;
+  property_profile?: Record<string, any>;
+  advisor_profile?: Record<string, any>;
+  conversation_context?: string;
 }
 
 export interface TranscriptMessage {
@@ -35,6 +43,10 @@ export interface TranscriptCreateRequest {
   financial_impact?: boolean;
   customer_sentiment?: string;
   customer_id?: string;
+  advisor_id?: string;
+  loan_id?: string;
+  property_id?: string;
+  context?: string;
   store?: boolean;
 }
 
@@ -46,6 +58,62 @@ export interface TranscriptListResponse {
     total_available: number;
     completeness: 'complete' | 'partial';
   };
+}
+
+export interface TranscriptSeedLoan {
+  loan_id: string;
+  product: string;
+  principal_balance: number;
+  interest_rate: number;
+  monthly_payment: number;
+  escrow_amount: number;
+  payment_due_day: number;
+  delinquency_status: string;
+  start_date: string;
+  maturity_date: string;
+  context_tags: string[];
+  tags: string[];
+  expected_call_duration: number;
+}
+
+export interface TranscriptSeedCustomer {
+  customer_id: string;
+  name: string;
+  segment: string;
+  email: string;
+  phone: string;
+  preferred_channel: string;
+  lifecycle_status: string;
+  risk_flags: string[];
+  display_name: string;
+  property: {
+    property_id: string;
+    address: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    property_type: string;
+    valuation: number;
+    year_built: number;
+  };
+  loans: TranscriptSeedLoan[];
+}
+
+export interface TranscriptSeedAdvisor {
+  advisor_id: string;
+  name: string;
+  team: string;
+  role: string;
+  specialization: string;
+  experience_years: number;
+  shift: string;
+  display_name: string;
+}
+
+export interface TranscriptSeedData {
+  customers: TranscriptSeedCustomer[];
+  advisors: TranscriptSeedAdvisor[];
+  topics: string[];
 }
 
 // Analysis Types

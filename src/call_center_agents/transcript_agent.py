@@ -1,7 +1,7 @@
 """Simple transcript generator - just natural conversations."""
 import os
 import uuid
-from typing import Optional
+from typing import Optional, Any, Dict
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -41,7 +41,7 @@ class TranscriptAgent:
         """
         # Build simple prompt
         if context:
-            params_str = ", ".join([f"{k}: {v}" for k, v in context.items() if v is not None])
+            params_str = self._format_context(context)
             prompt = prompt_loader.format('agents/transcript_generation.txt', context=params_str)
         else:
             prompt = prompt_loader.format('agents/transcript_generation.txt', context="general mortgage servicing topics")
@@ -71,7 +71,56 @@ class TranscriptAgent:
             **context,  # Include original context
             **transcript_attrs  # Include any parsed attributes
         )
-    
+
+    def _format_context(self, context: Dict[str, Any]) -> str:
+        """Serialize structured context for the system prompt."""
+
+        segments = []
+
+        for key, value in context.items():
+            if value is None:
+                continue
+
+            heading = key.replace('_', ' ').title()
+
+            if isinstance(value, str):
+                segments.append(f"{heading}: {value}")
+                continue
+
+            lines = self._stringify_value(value, indent=1)
+            segment_lines = [f"{heading}:"] + lines
+            segments.append("\n".join(segment_lines))
+
+        return "\n\n".join(segments) if segments else "General mortgage servicing interaction"
+
+    def _stringify_value(self, value: Any, indent: int = 0) -> list[str]:
+        """Recursively convert dictionaries/lists into readable bullet lists."""
+
+        indent_str = "  " * indent
+
+        if isinstance(value, dict):
+            lines: list[str] = []
+            for key, inner in value.items():
+                label = key.replace('_', ' ').title()
+                if isinstance(inner, (dict, list)):
+                    lines.append(f"{indent_str}- {label}:")
+                    lines.extend(self._stringify_value(inner, indent + 1))
+                else:
+                    lines.append(f"{indent_str}- {label}: {inner}")
+            return lines
+
+        if isinstance(value, list):
+            lines = []
+            for item in value:
+                if isinstance(item, (dict, list)):
+                    lines.append(f"{indent_str}-")
+                    lines.extend(self._stringify_value(item, indent + 1))
+                else:
+                    lines.append(f"{indent_str}- {item}")
+            return lines
+
+        return [f"{indent_str}{value}"]
+
     def _call_openai(self, prompt: str) -> str:
         """Call OpenAI API using wrapper.
 

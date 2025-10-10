@@ -1,5 +1,16 @@
-Generate a mortgage servicing customer care call transcript about: {context}
+You are generating a realistic mortgage servicing call transcript.
 
-Context: This is a call between a borrower and a mortgage servicing representative. Include realistic mortgage details like loan numbers, property addresses, payment amounts, and mortgage-specific terminology.
+Use the structured context below to ground the conversation:
 
-Generate a natural conversation that would occur in a mortgage servicing call center.
+--- STRUCTURED CONTEXT ---
+{context}
+--------------------------
+
+Requirements:
+- Output a natural back-and-forth conversation between the customer and advisor.
+- Include at least 8 total messages and ensure alternating speakers using "Customer:" and "Advisor:" prefixes.
+- Weave in the loan, property, advisor, and risk details provided.
+- If a conversation context is supplied, reflect that history (e.g., follow-up calls, unresolved issues).
+- Highlight next steps, promises, or escalations naturally within the dialogue.
+
+Produce only the conversation transcript (no JSON or bullet summaries).

@@ -7,6 +7,7 @@ import {
   Execution,
   ExecutionDetails,
   TranscriptCreateRequest,
+  TranscriptSeedData,
   AnalysisCreateRequest,
   PlanCreateRequest,
   WorkflowApprovalRequest,
@@ -162,6 +163,11 @@ export const transcriptApi = {
   getLiveSegments: (id: string) => 
     apiCall<any>(() => 
       api.get(`/api/v1/transcripts/${id}`)
+    ),
+
+  getSeeds: () =>
+    apiCall<TranscriptSeedData>(() =>
+      api.get('/api/v1/transcripts/seeds')
     ),
 };
 

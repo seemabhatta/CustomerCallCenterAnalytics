@@ -6,6 +6,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from ..storage.transcript_store import TranscriptStore
 from ..call_center_agents.transcript_agent import TranscriptAgent
+from ..data.portfolio_seed import PortfolioSeedProvider
 from ..infrastructure.events import (
     EventType,
     create_transcript_event,
@@ -21,6 +22,7 @@ class TranscriptService:
         self.db_path = db_path
         self.store = TranscriptStore(db_path)
         self.generator = TranscriptAgent()
+        self.seed_provider = PortfolioSeedProvider()
     
     async def list_all(self, limit: Optional[int] = None) -> Dict[str, Any]:
         """List all transcripts with optional limit and metadata."""
@@ -47,28 +49,69 @@ class TranscriptService:
         urgency = request_data.get("urgency", "medium")
         financial_impact = request_data.get("financial_impact", False)
         customer_sentiment = request_data.get("customer_sentiment", "neutral")
-        customer_id = request_data.get("customer_id", "CUST_001")
-        
+        requested_customer_id = request_data.get("customer_id")
+        requested_loan_id = request_data.get("loan_id")
+        requested_advisor_id = request_data.get("advisor_id")
+        requested_property_id = request_data.get("property_id")
+        conversation_context = request_data.get("context")
+
+        customer_profile = self.seed_provider.get_customer(requested_customer_id)
+        loan_profile = self.seed_provider.get_loan(customer_profile, loan_id=requested_loan_id, topic=topic)
+        property_profile = self.seed_provider.get_property(customer_profile, loan_profile)
+        advisor_profile = self.seed_provider.get_advisor(requested_advisor_id, topic=topic)
+
+        if requested_property_id and requested_property_id != property_profile.property_id:
+            raise ValueError(
+                f"Property {requested_property_id} does not belong to customer {customer_profile.customer_id}"
+            )
+
+        generation_context = self.seed_provider.build_generation_context(
+            customer=customer_profile,
+            loan=loan_profile,
+            property_profile=property_profile,
+            advisor=advisor_profile,
+        )
+        if conversation_context:
+            generation_context["conversation_context"] = conversation_context
+
         # Generate transcript
         transcript = self.generator.generate(
             topic=topic,
             urgency=urgency,
             financial_impact=financial_impact,
             customer_sentiment=customer_sentiment,
-            customer_id=customer_id
+            customer_id=customer_profile.customer_id,
+            advisor_id=advisor_profile.advisor_id,
+            loan_id=loan_profile.loan_id,
+            property_id=property_profile.property_id,
+            **generation_context
         )
-        
+
+        # Apply canonical metadata so downstream systems see consistent values
+        self.seed_provider.apply_metadata_to_transcript(
+            transcript,
+            customer=customer_profile,
+            loan=loan_profile,
+            property_profile=property_profile,
+            advisor=advisor_profile,
+        )
+
+        if not getattr(transcript, "duration", None):
+            transcript.duration = self.seed_provider.estimate_call_duration(topic, loan_profile)
+
+        if conversation_context:
+            transcript.conversation_context = conversation_context
+
         # Store if requested
         should_store = request_data.get("store", True)
         if should_store:
             self.store.store(transcript)
 
             # Publish transcript event
-            advisor_id = request_data.get("advisor_id", "ADVISOR_SYSTEM")
             transcript_event = create_transcript_event(
                 transcript_id=transcript.id,
                 customer_id=transcript.customer_id,
-                advisor_id=advisor_id,
+                advisor_id=advisor_profile.advisor_id,
                 topic=topic,
                 urgency=urgency,
                 channel="system"
@@ -76,6 +119,16 @@ class TranscriptService:
             publish_event(transcript_event)
 
         return transcript.to_dict()
+
+    async def create_bulk(self, requests: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create multiple transcripts in sequence."""
+
+        transcripts: List[Dict[str, Any]] = []
+        for payload in requests:
+            transcript = await self.create(payload)
+            transcripts.append(transcript)
+
+        return {"count": len(transcripts), "transcripts": transcripts}
     
     async def get_by_id(self, transcript_id: str) -> Optional[Dict[str, Any]]:
         """Get transcript by ID."""
@@ -155,3 +208,7 @@ class TranscriptService:
             "sentiments": sentiments,
             "speakers": dict(sorted(speakers.items(), key=lambda x: x[1], reverse=True)[:10])
         }
+
+    async def get_seed_profiles(self) -> Dict[str, Any]:
+        """Expose seeded customer/advisor/loan profiles for UI selection."""
+        return self.seed_provider.serialize_profiles()

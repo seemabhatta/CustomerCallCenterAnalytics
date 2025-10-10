@@ -284,7 +284,11 @@ class TranscriptCreateRequest(BaseModel):
     urgency: Optional[str] = "medium"
     financial_impact: Optional[bool] = False
     customer_sentiment: Optional[str] = "neutral"
-    customer_id: Optional[str] = "CUST_001"
+    customer_id: Optional[str] = None
+    advisor_id: Optional[str] = None
+    loan_id: Optional[str] = None
+    property_id: Optional[str] = None
+    context: Optional[str] = None
     store: Optional[bool] = True
 
 class AnalysisCreateRequest(BaseModel):
@@ -543,8 +547,31 @@ async def create_transcript(request: TranscriptCreateRequest):
     """Create new transcript - proxies to transcript service."""
     try:
         return await transcript_service.create(request.model_dump())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create transcript: {str(e)}")
+
+
+@app.post("/api/v1/transcripts/bulk")
+async def create_transcripts_bulk(requests: List[TranscriptCreateRequest]):
+    """Bulk create transcripts - proxies to transcript service."""
+    try:
+        payloads = [req.model_dump() for req in requests]
+        return await transcript_service.create_bulk(payloads)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create bulk transcripts: {str(e)}")
+
+
+@app.get("/api/v1/transcripts/seeds")
+async def get_transcript_seed_profiles():
+    """Expose seeded customer/advisor profiles for transcript generator UI."""
+    try:
+        return await transcript_service.get_seed_profiles()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch transcript seeds: {str(e)}")
 
 @app.get("/api/v1/transcripts/{transcript_id}")
 async def get_transcript(transcript_id: str):
