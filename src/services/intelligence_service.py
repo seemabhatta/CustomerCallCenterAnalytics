@@ -448,6 +448,10 @@ class IntelligenceService:
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
 
+                cur.execute("PRAGMA table_info(analysis)")
+                columns = {row[1] for row in cur.fetchall()}
+                has_created_at = "created_at" in columns
+
                 cur.execute(
                     """
                     SELECT COUNT(*)
@@ -457,35 +461,51 @@ class IntelligenceService:
                 )
                 total_active = cur.fetchone()[0] or 0
 
-                cur.execute(
+                if has_created_at:
+                    cur.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM analysis
+                        WHERE COALESCE(issue_resolved, 0) = 1
+                          AND created_at >= datetime('now', '-7 days')
                     """
-                    SELECT COUNT(*)
-                    FROM analysis
-                    WHERE COALESCE(issue_resolved, 0) = 1
-                      AND created_at >= datetime('now', '-7 days')
-                """
-                )
-                resolved_last_7d = cur.fetchone()[0] or 0
+                    )
+                    resolved_last_7d = cur.fetchone()[0] or 0
 
-                cur.execute(
+                    cur.execute(
+                        """
+                        SELECT AVG(julianday('now') - julianday(created_at))
+                        FROM analysis
+                        WHERE COALESCE(issue_resolved, 0) = 0
                     """
-                    SELECT AVG(julianday('now') - julianday(created_at))
-                    FROM analysis
-                    WHERE COALESCE(issue_resolved, 0) = 0
-                """
-                )
-                avg_case_age = cur.fetchone()[0] or 0
+                    )
+                    avg_case_age = cur.fetchone()[0] or 0
+                else:
+                    resolved_last_7d = 0
+                    avg_case_age = None
 
-                cur.execute(
+                if has_created_at:
+                    cur.execute(
+                        """
+                        SELECT a.id, a.transcript_id, a.delinquency_risk, a.churn_risk, a.created_at, t.topic
+                        FROM analysis a
+                        JOIN transcripts t ON t.id = a.transcript_id
+                        WHERE COALESCE(a.issue_resolved, 0) = 0
+                        ORDER BY a.delinquency_risk DESC, a.churn_risk DESC, a.created_at ASC
+                        LIMIT 10
                     """
-                    SELECT a.id, a.transcript_id, a.delinquency_risk, a.churn_risk, a.created_at, t.topic
-                    FROM analysis a
-                    JOIN transcripts t ON t.id = a.transcript_id
-                    WHERE COALESCE(a.issue_resolved, 0) = 0
-                    ORDER BY a.delinquency_risk DESC, a.churn_risk DESC, a.created_at ASC
-                    LIMIT 10
-                """
-                )
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT a.id, a.transcript_id, a.delinquency_risk, a.churn_risk, NULL AS created_at, t.topic
+                        FROM analysis a
+                        JOIN transcripts t ON t.id = a.transcript_id
+                        WHERE COALESCE(a.issue_resolved, 0) = 0
+                        ORDER BY a.delinquency_risk DESC, a.churn_risk DESC, a.rowid ASC
+                        LIMIT 10
+                    """
+                    )
 
                 urgent_cases = []
                 for row in cur.fetchall():
@@ -517,6 +537,10 @@ class IntelligenceService:
                 )
                 total_resolved = cur.fetchone()[0] or 0
 
+            metadata = {'created_at_column': has_created_at}
+            if not has_created_at:
+                metadata['note'] = 'Legacy analysis rows detected without created_at; time-based metrics approximated.'
+
             return {
                 'message': 'Active case backlog overview',
                 'summary': {
@@ -526,7 +550,8 @@ class IntelligenceService:
                     'total_resolved_cases': total_resolved
                 },
                 'urgent_cases': urgent_cases,
-                'generated_at': datetime.utcnow().isoformat()
+                'generated_at': datetime.utcnow().isoformat(),
+                'metadata': metadata,
             }
 
         except Exception as e:
