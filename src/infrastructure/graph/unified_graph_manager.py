@@ -736,18 +736,28 @@ class UnifiedGraphManager:
         """Create a Plan node in the knowledge graph."""
         try:
             query = """
-            CREATE (p:Plan {
-                plan_id: $plan_id,
-                analysis_id: $analysis_id,
-                transcript_id: $transcript_id,
-                customer_id: $customer_id,
-                priority_level: $priority_level,
-                action_count: $action_count,
-                urgency_level: $urgency_level,
-                created_at: $created_at,
-                status: 'generated'
-            })
+            MERGE (p:Plan {plan_id: $plan_id})
+            ON CREATE SET
+                p.analysis_id = $analysis_id,
+                p.transcript_id = $transcript_id,
+                p.customer_id = $customer_id,
+                p.priority_level = $priority_level,
+                p.action_count = $action_count,
+                p.urgency_level = $urgency_level,
+                p.status = 'generated',
+                p.created_at = $created_at
+            ON MATCH SET
+                p.analysis_id = $analysis_id,
+                p.transcript_id = $transcript_id,
+                p.customer_id = $customer_id,
+                p.priority_level = $priority_level,
+                p.action_count = $action_count,
+                p.urgency_level = $urgency_level,
+                p.status = 'generated',
+                p.updated_at = $updated_at
             """
+
+            timestamp = self._format_timestamp()
 
             parameters = {
                 'plan_id': plan_id,
@@ -757,11 +767,12 @@ class UnifiedGraphManager:
                 'priority_level': priority_level,
                 'action_count': action_count,
                 'urgency_level': urgency_level,
-                'created_at': self._format_timestamp()
+                'created_at': timestamp,
+                'updated_at': timestamp
             }
 
             await self._execute_async(query, parameters)
-            logger.info(f"📋 Created Plan node: {plan_id}")
+            logger.info(f"📋 Upserted Plan node: {plan_id}")
 
             # Link the Plan to the Analysis
             await self.link_plan_to_analysis(plan_id, analysis_id)
@@ -1694,12 +1705,16 @@ class UnifiedGraphManager:
         try:
             query = """
             MATCH (p:Plan {plan_id: $plan_id}), (a:Analysis {analysis_id: $analysis_id})
-            CREATE (p)-[:PLAN_PLANS_FOR {created_at: $created_at}]->(a)
+            MERGE (p)-[r:PLAN_PLANS_FOR]->(a)
+            ON CREATE SET r.created_at = $created_at
+            ON MATCH SET r.last_linked_at = $updated_at
             """
+            timestamp = self._format_timestamp()
             parameters = {
                 'plan_id': plan_id,
                 'analysis_id': analysis_id,
-                'created_at': self._format_timestamp()
+                'created_at': timestamp,
+                'updated_at': timestamp
             }
             await self._execute_async(query, parameters)
             logger.info(f"🔗 Linked plan {plan_id} to analysis {analysis_id}")
@@ -1949,4 +1964,3 @@ def close_unified_graph_manager():
         # Note: This is sync, but shutdown is async - need to handle properly in production
         _global_manager = None
         logger.info("✅ UnifiedGraphManager shutdown complete")
-
