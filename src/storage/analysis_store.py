@@ -58,8 +58,28 @@ class AnalysisStore:
             conn.execute('CREATE INDEX IF NOT EXISTS idx_risks ON analysis(delinquency_risk, churn_risk)')
             conn.execute('CREATE INDEX IF NOT EXISTS idx_escalation ON analysis(escalation_needed)')
             conn.execute('CREATE INDEX IF NOT EXISTS idx_resolution ON analysis(issue_resolved, first_call_resolution)')
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_created_at ON analysis(created_at)')
             
+            # Backfill created_at for legacy databases that predate the column
+            cursor = conn.execute('PRAGMA table_info(analysis)')
+            columns = {row[1] for row in cursor.fetchall()}
+            if 'created_at' not in columns:
+                conn.execute('ALTER TABLE analysis ADD COLUMN created_at TEXT')
+
+            # Populate missing created_at values using transcript timestamps when available
+            conn.execute(
+                '''
+                UPDATE analysis
+                SET created_at = (
+                    SELECT COALESCE(t.timestamp, datetime('now'))
+                    FROM transcripts t
+                    WHERE t.id = analysis.transcript_id
+                )
+                WHERE created_at IS NULL OR created_at = ''
+                '''
+            )
+
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_created_at ON analysis(created_at)')
+
             conn.commit()
     
     def store(self, analysis: Dict[str, Any]) -> str:
