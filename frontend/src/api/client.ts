@@ -175,6 +175,11 @@ export const transcriptApi = {
     apiCall<{ message: string; summary: any }>(() =>
       api.post('/api/v1/transcripts/synthetic', payload)
     ),
+
+  deleteAll: () =>
+    apiCall<{ message: string; count: number }>(() =>
+      api.delete('/api/v1/transcripts')
+    ),
 };
 
 // Analysis API

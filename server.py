@@ -592,6 +592,16 @@ async def generate_synthetic_transcripts(request: Dict[str, Any]):
         "summary": summary,
     }
 
+
+@app.delete("/api/v1/transcripts")
+async def delete_all_transcripts():
+    """Delete all transcripts - proxies to transcript service."""
+    try:
+        count = await transcript_service.delete_all()
+        return {"message": f"Deleted {count} transcripts successfully", "count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete all transcripts: {str(e)}")
+
 @app.get("/api/v1/transcripts/{transcript_id}")
 async def get_transcript(transcript_id: str):
     """Get transcript by ID - proxies to transcript service."""

@@ -8,7 +8,7 @@ import tempfile
 import os
 from unittest.mock import Mock, AsyncMock, patch
 from src.services.transcript_service import TranscriptService
-from src.models.transcript import Transcript
+from src.models.transcript import Transcript, Message
 
 
 @pytest.fixture
@@ -236,10 +236,28 @@ class TestTranscriptService:
         assert result is False
 
     @pytest.mark.asyncio
+    async def test_delete_all_transcripts(self, transcript_service):
+        """Test deleting all transcripts returns deleted count."""
+        for i in range(3):
+            transcript_service.store.store(
+                Transcript(
+                    id=f"CALL_BULK_{i}",
+                    customer_id=f"CUST_{i}",
+                    topic="test",
+                    messages=[Message("test", "hello")]
+                )
+            )
+
+        count = await transcript_service.delete_all()
+
+        assert count == 3
+        assert transcript_service.store.get_all() == []
+
+    @pytest.mark.asyncio
     async def test_search_by_customer(self, transcript_service, sample_transcript):
         """Test searching transcripts by customer."""
         transcript_service.store.store(sample_transcript)
-        
+
         result = await transcript_service.search({"customer": "CUST_001"})
         assert len(result) == 1
         assert result[0]["customer_id"] == "CUST_001"

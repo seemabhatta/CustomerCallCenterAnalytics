@@ -140,7 +140,11 @@ class TranscriptService:
     async def delete(self, transcript_id: str) -> bool:
         """Delete transcript by ID."""
         return self.store.delete(transcript_id)
-    
+
+    async def delete_all(self) -> int:
+        """Delete all transcripts from storage."""
+        return self.store.delete_all()
+
     async def search(self, search_params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Search transcripts with various parameters."""
         customer = search_params.get("customer")

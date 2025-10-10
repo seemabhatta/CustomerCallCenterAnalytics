@@ -12,7 +12,15 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from src.data.portfolio_seed import PortfolioSeedProvider, AdvisorProfile, CustomerProfile, LoanProfile, PropertyProfile
+from src.data.portfolio_seed import (
+    PortfolioSeedProvider,
+    AdvisorProfile,
+    CustomerProfile,
+    LoanProfile,
+    PropertyProfile,
+)
+from src.storage.transcript_store import TranscriptStore
+from src.storage.analysis_store import AnalysisStore
 
 
 class SyntheticDataGenerator:
@@ -40,10 +48,37 @@ class SyntheticDataGenerator:
         "complaint_resolution": "high",
     }
 
+    SENTIMENT_SCALE = [
+        "Distressed",
+        "Frustrated",
+        "Anxious",
+        "Concerned",
+        "Neutral",
+        "Calm",
+        "Hopeful",
+        "Satisfied",
+        "Positive",
+    ]
+
+    SENTIMENT_BASE_INDEX = {
+        "distressed": 0,
+        "frustrated": 1,
+        "anxious": 2,
+        "concerned": 3,
+        "neutral": 4,
+        "calm": 5,
+        "hopeful": 6,
+        "satisfied": 7,
+        "positive": 8,
+    }
+
     def __init__(self, db_path: str, seed: Optional[int] = 42):
         self.db_path = db_path
         self.random = random.Random(seed or random.randint(1, 10_000))
         self.seed_provider = PortfolioSeedProvider()
+        # Initialize storage layers to ensure required SQLite schema exists
+        self.transcript_store = TranscriptStore(db_path)
+        self.analysis_store = AnalysisStore(db_path)
 
     # ------------------------------------------------------------------
     # Transcript generation
@@ -96,7 +131,7 @@ class SyntheticDataGenerator:
                         "property_id": property_profile.property_id,
                         "timestamp": timestamp.isoformat() + "Z",
                         "topic": topic,
-                        "duration": self.random.randint(360, 960),
+                        "duration": self.random.randint(210, 360),  # 3–6 minute conversations
                         "urgency": self.TOPIC_URGENCY.get(topic, "medium"),
                         "sentiment": self.random.choice(["positive", "neutral", "frustrated", "concerned"]),
                         "financial_impact": topic in {"mortgage_payment_issue", "hardship_assistance", "payoff_request"},
@@ -124,16 +159,16 @@ class SyntheticDataGenerator:
             churn_risk = round(min(0.9, base_risk + self.random.uniform(0.05, 0.25)), 2)
             empathy_score = round(self.random.uniform(6.5, 9.4), 2)
             compliance_score = round(self.random.uniform(0.78, 0.98), 2)
+            borrower_sentiment = self._build_sentiment_profile(transcript["sentiment"])
 
             analysis_id = f"ANALYSIS_{uuid.uuid4().hex[:8].upper()}"
 
-            analyses.append(
-                {
+            analysis_record = {
                     "analysis_id": analysis_id,
                     "transcript_id": transcript["id"],
                     "primary_intent": topic.replace("_", " ").title(),
                     "urgency_level": transcript["urgency"].upper(),
-                    "borrower_sentiment": transcript["sentiment"].capitalize(),
+                    "borrower_sentiment": borrower_sentiment,
                     "delinquency_risk": delinquency_risk,
                     "churn_risk": churn_risk,
                     "complaint_risk": round(self.random.uniform(0.1, 0.6), 2),
@@ -147,6 +182,7 @@ class SyntheticDataGenerator:
                     "confidence_score": round(self.random.uniform(0.72, 0.94), 2),
                     "call_summary": self._build_analysis_summary(topic, transcript.get("context")),
                     "compliance_flags": [],
+                    "required_disclosures": [],
                     "borrower_risks": {
                         "delinquency_risk": delinquency_risk,
                         "churn_risk": churn_risk,
@@ -157,13 +193,30 @@ class SyntheticDataGenerator:
                         "empathy_score": empathy_score,
                         "compliance_adherence": compliance_score,
                         "solution_effectiveness": round(self.random.uniform(0.65, 0.96), 2),
+                        "coaching_opportunities": [],
                     },
                     "recommendations": [
                         "Provide proactive follow-up within 2 business days",
                         "Reinforce payment options via customer portal",
                     ],
+            }
+
+            topic_insights = self._get_topic_insights(topic, transcript, borrower_sentiment)
+            analysis_record.update(
+                {
+                    "topics_discussed": topic_insights.get("topics_discussed", []),
+                    "payment_concerns": topic_insights.get("payment_concerns", []),
+                    "property_related_issues": topic_insights.get("property_related_issues", []),
+                    "product_opportunities": topic_insights.get("product_opportunities", []),
+                    "required_disclosures": topic_insights.get("required_disclosures", []),
                 }
             )
+            analysis_record["compliance_flags"] = topic_insights.get("compliance_flags", [])
+            analysis_record["advisor_metrics"]["coaching_opportunities"] = topic_insights.get(
+                "coaching_opportunities", []
+            )
+
+            analyses.append(analysis_record)
 
         return analyses
 
@@ -233,7 +286,7 @@ class SyntheticDataGenerator:
                         json.dumps(analysis),
                         analysis["primary_intent"],
                         analysis["urgency_level"],
-                        analysis["borrower_sentiment"],
+                        analysis.get("borrower_sentiment", {}).get("overall", ""),
                         analysis["delinquency_risk"],
                         analysis["churn_risk"],
                         analysis["complaint_risk"],
@@ -304,7 +357,9 @@ class SyntheticDataGenerator:
         messages: List[Dict[str, str]] = []
         current_time = timestamp
 
-        def add_message(speaker: str, text: str) -> None:
+        def add_message(speaker: str, text: str, advance_seconds: Optional[int] = None) -> None:
+            """Append message and move current time forward."""
+
             nonlocal current_time
             messages.append(
                 {
@@ -313,39 +368,37 @@ class SyntheticDataGenerator:
                     "timestamp": current_time.isoformat() + "Z",
                 }
             )
-            current_time += timedelta(seconds=self.random.randint(15, 75))
+
+            increment = advance_seconds if advance_seconds is not None else self.random.randint(30, 65)
+            current_time += timedelta(seconds=increment)
 
         add_message("Customer", f"Hi, this is {customer.name}. I need help regarding {topic.replace('_', ' ')}.")
-        add_message("Advisor", f"Hello {customer.name}, this is {advisor.name} from {advisor.team}. I'm here to assist.")
+        add_message("Advisor", f"Hello {customer.name}, this is {advisor.name} from {advisor.team}. I'm here to assist today.")
 
-        if topic in {"mortgage_payment_issue", "payment_inquiry"}:
-            add_message("Customer", f"Loan {loan.loan_id} shows a payment due on the {loan.payment_due_day}th, but I already paid yesterday.")
-            add_message("Advisor", "Let me review the payment history... I see the payment posted but was flagged for verification.")
-        elif topic == "hardship_assistance":
-            add_message("Customer", "I'm still recovering financially and worried about the next payment.")
-            add_message("Advisor", "We can extend the hardship plan by 60 days while we reassess your income documentation.")
-        elif topic == "escrow_inquiry":
-            add_message("Customer", f"My escrow went up $150 because of new taxes on {property_profile.full_address}.")
-            add_message("Advisor", "I can see that. We received the updated tax bill yesterday; let's explore spreading the shortage over 12 months.")
-        elif topic == "pmi_removal_request":
-            add_message("Customer", "I'm hoping to remove PMI now that my loan-to-value is below 78%.")
-            add_message("Advisor", "I'll order an updated valuation and send the paperwork for your signature.")
-        elif topic == "refinance_inquiry":
-            add_message("Customer", "Rates dropped and I want to see if refinancing makes sense.")
-            add_message("Advisor", "We can run a scenario—your current balance is ${loan.balance:,.0f} at {loan.interest_rate}% and we have a 15-year option available.")
-        elif topic == "payoff_request":
-            add_message("Customer", "Please prepare a payoff quote for my loan; I'm planning to close next month.")
-            add_message("Advisor", "I'll generate a payoff valid for 30 days and email it to you today.")
-        elif topic == "complaint_resolution":
-            add_message("Customer", "I'm disappointed with how my previous inquiry was handled.")
-            add_message("Advisor", "I understand and I'm escalating this to our resolution desk with priority status.")
+        for speaker, text in self._get_topic_dialogue(topic, customer, loan, property_profile, advisor):
+            add_message(speaker, text)
 
-        add_message("Customer", "Is there anything else I should do right now?")
-        add_message("Advisor", "I'll document the case and send a summary with next steps within 24 hours.")
-        add_message("Customer", "Thank you for the help today.")
-        add_message("Advisor", "You're welcome. Please reach out if anything changes.")
+        add_message(
+            "Advisor",
+            "I'll log detailed notes and flag the account so any teammate can see the history if you call back.",
+        )
+        add_message(
+            "Customer",
+            "Please send a recap to my email as well; it helps me keep everything organized.",
+        )
+        add_message(
+            "Advisor",
+            f"Absolutely. I'll send a secure message to {customer.email} once the documentation is updated.",
+        )
+        add_message(
+            "Customer",
+            "Great, I appreciate the thorough follow-up. Is there anything else you need from me?",
+        )
+        add_message(
+            "Advisor",
+            "That's everything for now. If anything changes, I'll call you immediately.",
+        )
 
-        # Add context summary as final message metadata (not spoken)
         messages.append(
             {
                 "speaker": "System",
@@ -361,6 +414,368 @@ class SyntheticDataGenerator:
         if conversation_context:
             return f"{base_summary} Context note: {conversation_context}"
         return base_summary
+
+    def _get_topic_dialogue(
+        self,
+        topic: str,
+        customer: CustomerProfile,
+        loan: LoanProfile,
+        property_profile: PropertyProfile,
+        advisor: AdvisorProfile,
+    ) -> List[tuple[str, str]]:
+        """Return an expanded dialogue tailored to the topic."""
+
+        payment_amount = self._format_currency(loan.payment_amount)
+        balance = self._format_currency(loan.balance)
+        rate = self._format_rate(loan.interest_rate)
+        escrow_amount = self._format_currency(loan.escrow_amount)
+
+        property_address = property_profile.full_address
+        due_day = loan.payment_due_day
+
+        if topic == "mortgage_payment_issue":
+            return [
+                ("Customer", f"I submitted the {payment_amount} payment on the {due_day}th, but the portal still shows I'm past due."),
+                ("Advisor", "I see that payment. It was held for manual verification because it differed from your typical amount."),
+                ("Customer", "That explains the alert. How do we clear the delinquent notice before credit bureaus see it?"),
+                ("Advisor", "I'll release the verification hold now and waive the late fee while the system catches up."),
+                ("Customer", "Thank you. Can you confirm this doesn't impact my credit score?"),
+                ("Advisor", "Yes. I'll add a servicing note that the payment was on time so your credit stays clean."),
+                ("Customer", "Do I need to do anything else on my end today?"),
+                ("Advisor", "Keep the confirmation email handy. If the alert reappears I'll escalate directly to our payment operations team."),
+            ]
+
+        if topic == "payment_inquiry":
+            return [
+                ("Customer", f"I want to confirm the {due_day} automatic draft pulled the full {payment_amount} yesterday."),
+                ("Advisor", "It drafted successfully. The system flagged it for a quick review because escrow adjusted this cycle."),
+                ("Customer", "So next month the amount will be different again?"),
+                ("Advisor", f"Yes, it will include an escrow catch-up of {escrow_amount}. I'll email the detailed schedule."),
+                ("Customer", "Perfect, I rely on those schedules for budgeting."),
+                ("Advisor", "I'll also set a reminder to revisit this with you in six months to ensure the shortage is resolved."),
+                ("Customer", "Thanks for being proactive. It saves me from future surprises."),
+            ]
+
+        if topic == "hardship_assistance":
+            return [
+                ("Customer", "I'm still on reduced hours at work and the forbearance plan expires after this payment."),
+                ("Advisor", "I hear you. We can extend the plan 60 days while underwriting reviews a loan modification."),
+                ("Customer", "What documentation should I gather so we don't lose time?"),
+                ("Advisor", "Pay stubs for the past 30 days, your hardship letter, and any unemployment statements will help."),
+                ("Customer", "I'll send those tonight. Will the payment stay at the reduced amount meanwhile?"),
+                ("Advisor", "Yes. I'll lock that in and pause any automated collections calls."),
+                ("Customer", "Thank you for treating this with urgency."),
+                ("Advisor", "You're welcome. We'll schedule a check-in next Tuesday to confirm underwriting received everything."),
+            ]
+
+        if topic == "escrow_inquiry":
+            return [
+                ("Customer", f"My escrow payment jumped by {escrow_amount} because of new taxes on {property_address}."),
+                ("Advisor", "The tax authority increased the assessment after a recent county audit."),
+                ("Customer", "Can we spread the shortage over more months?"),
+                ("Advisor", "Absolutely. We can re-spread it over twelve months to soften the impact."),
+                ("Customer", "I appreciate that. Is there anything I can dispute on the tax bill?"),
+                ("Advisor", "I'll attach the county appeal instructions to the email so you can file before the deadline."),
+                ("Customer", "Great. Let me know if you need forms from me."),
+                ("Advisor", "I'll note the file to follow up on the appeal status in thirty days."),
+            ]
+
+        if topic == "pmi_removal_request":
+            return [
+                ("Customer", "My loan-to-value is below 78%, so I'd like to remove PMI as fast as possible."),
+                ("Advisor", "Based on your payments and the latest valuation, you do meet the threshold."),
+                ("Customer", "Perfect. What inspection or appraisal fee should I expect?"),
+                ("Advisor", "The drive-by appraisal runs about $135 and I'll waive our administrative charge."),
+                ("Customer", "Thanks! Once that's complete, when will PMI actually drop?"),
+                ("Advisor", "Typically within two billing cycles. I'll also request a manual review in case we can accelerate it."),
+                ("Customer", "Could you send me the checklist so I don't miss signatures?"),
+                ("Advisor", "I'll include the checklist and flag the workflow so underwriting knows it's high priority."),
+            ]
+
+        if topic == "refinance_inquiry":
+            new_rate = max(0.5, loan.interest_rate - 0.75)
+            return [
+                ("Customer", "Rates are trending down and I'm curious whether a refinance makes sense."),
+                ("Advisor", f"You're at {rate} on a balance of {balance}. A 15-year option today would land closer to {self._format_rate(new_rate)}."),
+                ("Customer", "How would that change my monthly payment?"),
+                ("Advisor", "Roughly speaking it would add about $180, but we'd shorten the term by ten years."),
+                ("Customer", "That might still work if closing costs stay reasonable."),
+                ("Advisor", "I'll prepare a no-obligation Loan Estimate and include a break-even analysis for you."),
+                ("Customer", "Please also note that I'm considering cash-out for renovations."),
+                ("Advisor", "Got it. I'll model a cash-out option with 80% loan-to-value so we keep mortgage insurance off the table."),
+            ]
+
+        if topic == "payoff_request":
+            return [
+                ("Customer", "I'm selling the property next month and need an accurate payoff quote."),
+                ("Advisor", f"Today's good-through date will include per-diem interest and your outstanding balance of {balance}."),
+                ("Customer", "Can you email that directly to my title company?"),
+                ("Advisor", "Sure, just confirm their secure email and I'll send it within the hour."),
+                ("Customer", "It's escrow@pinehillssettlement.com. They'll also want wiring instructions."),
+                ("Advisor", "I'll include a payoff authorization form and the full wiring sheet so nothing is delayed."),
+                ("Customer", "Thank you—closing is tight and every day counts."),
+                ("Advisor", "I'll monitor the account daily and call if we need signatures on anything else."),
+            ]
+
+        if topic == "complaint_resolution":
+            return [
+                ("Customer", "I'm frustrated that no one followed up on my complaint from last week."),
+                ("Advisor", "I apologize. I see the case was routed to a team that recently changed leads."),
+                ("Customer", "I spent hours explaining the issue and had to repeat myself today."),
+                ("Advisor", "I'm documenting every detail now and escalating it to the director of customer advocacy."),
+                ("Customer", "Please make sure leadership knows this has already cost me time and money."),
+                ("Advisor", "Absolutely. I'll request they respond to you within one business day and copy me on the email."),
+                ("Customer", "Thank you. I just want consistent communication."),
+                ("Advisor", "I'll personally call you tomorrow to confirm the action plan they provide."),
+            ]
+
+        # Generic support dialogue for other topics
+        return [
+            ("Customer", "I'm trying to make sure I'm following the right steps for this request."),
+            ("Advisor", "Happy to walk you through it. I've reviewed your account notes and everything is up to date."),
+            ("Customer", "I appreciate you checking. I'm juggling a lot right now."),
+            ("Advisor", "No problem at all. I'll send a summary with every requirement spelled out."),
+            ("Customer", "That's exactly what I need."),
+        ]
+
+    def _format_currency(self, amount: float) -> str:
+        return f"${amount:,.2f}"
+
+    def _format_rate(self, rate: float) -> str:
+        return f"{rate:.2f}%"
+
+    def _get_topic_insights(
+        self,
+        topic: str,
+        transcript: Dict[str, Any],
+        sentiment: Dict[str, str],
+    ) -> Dict[str, Any]:
+        """Derive topic-specific opportunities, concerns, and coaching tips."""
+
+        topic_metadata: Dict[str, Dict[str, List[str]]] = {
+            "mortgage_payment_issue": {
+                "topics_discussed": [
+                    "Payment processing",
+                    "Delinquency alerts",
+                    "Manual verification",
+                ],
+                "payment_concerns": [
+                    "Potential credit reporting",
+                    "Late fee reversal",
+                ],
+                "product_opportunities": [
+                    "Enroll in autopay",
+                    "Payment monitoring alerts",
+                ],
+                "coaching_opportunities": [
+                    "Reinforce proactive credit monitoring scripts",
+                ],
+                "required_disclosures": [
+                    "Payment posting timelines",
+                    "Credit bureau reporting policy",
+                ],
+            },
+            "payment_inquiry": {
+                "topics_discussed": [
+                    "Escrow adjustment",
+                    "Automatic draft",
+                    "Budget planning",
+                ],
+                "payment_concerns": [
+                    "Escrow shortage",
+                    "Draft amount changes",
+                ],
+                "product_opportunities": [
+                    "Escrow analysis review",
+                    "Budget planning consultation",
+                ],
+                "coaching_opportunities": [
+                    "Explain escrow math proactively",
+                ],
+                "required_disclosures": [
+                    "Escrow analysis statement",
+                ],
+            },
+            "hardship_assistance": {
+                "topics_discussed": [
+                    "Income disruption",
+                    "Forbearance extension",
+                    "Loan modification path",
+                ],
+                "payment_concerns": [
+                    "Reduced income",
+                    "Modification eligibility",
+                ],
+                "product_opportunities": [
+                    "Hardship assistance program",
+                    "Financial counseling referral",
+                ],
+                "coaching_opportunities": [
+                    "Confirm document checklist up front",
+                ],
+                "required_disclosures": [
+                    "Hardship agreement terms",
+                    "Potential credit impact",
+                ],
+            },
+            "escrow_inquiry": {
+                "topics_discussed": [
+                    "Tax assessment increase",
+                    "Escrow shortage",
+                    "Appeal process",
+                ],
+                "payment_concerns": [
+                    "Higher monthly payment",
+                ],
+                "product_opportunities": [
+                    "Tax appeal assistance",
+                    "Homeowner education webinar",
+                ],
+                "property_related_issues": [
+                    "County tax reassessment",
+                ],
+                "coaching_opportunities": [
+                    "Send appeal instructions proactively",
+                ],
+                "required_disclosures": [
+                    "Escrow analysis statement",
+                ],
+            },
+            "pmi_removal_request": {
+                "topics_discussed": [
+                    "Loan-to-value review",
+                    "Appraisal scheduling",
+                    "PMI waiver timeline",
+                ],
+                "product_opportunities": [
+                    "Cross-sell appraisal service",
+                    "Equity monitoring alerts",
+                ],
+                "property_related_issues": [
+                    "Appraisal requirement",
+                ],
+                "coaching_opportunities": [
+                    "Clarify PMI removal thresholds",
+                ],
+                "required_disclosures": [
+                    "PMI cancellation policy",
+                ],
+            },
+            "refinance_inquiry": {
+                "topics_discussed": [
+                    "Rate comparison",
+                    "Term options",
+                    "Closing costs",
+                ],
+                "product_opportunities": [
+                    "Rate-lock consultation",
+                    "Cash-out equity review",
+                ],
+                "payment_concerns": [
+                    "Closing cost budget",
+                ],
+                "coaching_opportunities": [
+                    "Surface break-even analysis early",
+                ],
+                "required_disclosures": [
+                    "Loan Estimate",
+                ],
+            },
+            "payoff_request": {
+                "topics_discussed": [
+                    "Payoff quote",
+                    "Wiring instructions",
+                    "Closing timeline",
+                ],
+                "product_opportunities": [
+                    "Retention outreach",
+                    "Post-sale servicing transfer",
+                ],
+                "property_related_issues": [
+                    "Title company coordination",
+                ],
+                "coaching_opportunities": [
+                    "Pre-empt title documentation questions",
+                ],
+                "required_disclosures": [
+                    "Payoff statement terms",
+                ],
+            },
+            "complaint_resolution": {
+                "topics_discussed": [
+                    "Case escalation",
+                    "Service breakdown",
+                    "Leadership follow-up",
+                ],
+                "payment_concerns": [],
+                "product_opportunities": [
+                    "Retention save offer",
+                    "Service recovery outreach",
+                ],
+                "coaching_opportunities": [
+                    "Close the loop with detailed recap",
+                ],
+                "required_disclosures": [
+                    "Complaint acknowledgment timeline",
+                ],
+            },
+        }
+
+        metadata = topic_metadata.get(topic, {
+            "topics_discussed": ["General account review"],
+            "product_opportunities": ["Account follow-up"],
+        })
+
+        # Defensive copies so we do not mutate static lists
+        def clone(key: str, default: Optional[List[str]] = None) -> List[str]:
+            return list(metadata.get(key, default or []))
+
+        compliance_flags = clone("compliance_flags") if "compliance_flags" in metadata else []
+        if sentiment.get("overall", "").lower() in {"distressed", "frustrated"} and "Document empathy acknowledgement" not in compliance_flags:
+            compliance_flags.append("Document empathy acknowledgement")
+
+        return {
+            "topics_discussed": clone("topics_discussed"),
+            "payment_concerns": clone("payment_concerns"),
+            "property_related_issues": clone("property_related_issues"),
+            "product_opportunities": clone("product_opportunities"),
+            "required_disclosures": clone("required_disclosures"),
+            "coaching_opportunities": clone("coaching_opportunities"),
+            "compliance_flags": compliance_flags,
+        }
+
+    def _build_sentiment_profile(self, sentiment: str) -> Dict[str, str]:
+        """Create a structured borrower sentiment profile from transcript sentiment."""
+
+        base_index = self.SENTIMENT_BASE_INDEX.get(sentiment.lower(), 4)
+
+        if base_index <= 2:
+            trend_weights = [0.5, 0.35, 0.15]
+        elif base_index >= 6:
+            trend_weights = [0.3, 0.45, 0.25]
+        else:
+            trend_weights = [0.4, 0.4, 0.2]
+
+        trend = self.random.choices(["improving", "stable", "declining"], weights=trend_weights)[0]
+
+        if trend == "improving":
+            start_index = max(0, base_index - self.random.choice([1, 2]))
+            end_index = min(len(self.SENTIMENT_SCALE) - 1, max(base_index, start_index + self.random.choice([1, 2])))
+        elif trend == "declining":
+            start_index = min(len(self.SENTIMENT_SCALE) - 1, max(base_index, base_index + self.random.choice([0, 1])))
+            end_index = max(0, start_index - self.random.choice([1, 2]))
+        else:
+            start_index = base_index
+            end_index = base_index
+
+        overall_index = max(0, min(len(self.SENTIMENT_SCALE) - 1, round((start_index + end_index) / 2)))
+
+        return {
+            "overall": self.SENTIMENT_SCALE[overall_index],
+            "start": self.SENTIMENT_SCALE[start_index],
+            "end": self.SENTIMENT_SCALE[end_index],
+            "trend": trend,
+        }
 
     def _match_transcript_timestamp(self, transcripts: List[Dict[str, Any]], transcript_id: str) -> str:
         for transcript in transcripts:
