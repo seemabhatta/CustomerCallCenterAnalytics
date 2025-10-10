@@ -8,6 +8,7 @@ import {
   ExecutionDetails,
   TranscriptCreateRequest,
   TranscriptSeedData,
+  SyntheticSeedRequest,
   AnalysisCreateRequest,
   PlanCreateRequest,
   WorkflowApprovalRequest,
@@ -168,6 +169,11 @@ export const transcriptApi = {
   getSeeds: () =>
     apiCall<TranscriptSeedData>(() =>
       api.get('/api/v1/transcripts/seeds')
+    ),
+
+  generateSynthetic: (payload: SyntheticSeedRequest) =>
+    apiCall<{ message: string; summary: any }>(() =>
+      api.post('/api/v1/transcripts/synthetic', payload)
     ),
 };
 

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import { transcriptApi } from '@/api/client';
-import { TranscriptCreateRequest, TranscriptSeedData } from '@/types';
+import { TranscriptCreateRequest, TranscriptSeedData, SyntheticSeedRequest } from '@/types';
 
 interface TranscriptGeneratorViewProps {
   goToTranscripts: () => void;
@@ -51,6 +51,8 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
   const [createdTranscriptId, setCreatedTranscriptId] = useState<string | null>(null);
   const [createdTranscripts, setCreatedTranscripts] = useState<any[] | null>(null);
   const [bulkCreatedCount, setBulkCreatedCount] = useState<number>(0);
+  const [syntheticSummary, setSyntheticSummary] = useState<any | null>(null);
+  const [syntheticConfig, setSyntheticConfig] = useState<SyntheticSeedRequest>({ days: 7, base_daily_calls: 8 });
 
   useEffect(() => {
     if (seeds && !initializedSeeds && seeds.customers.length > 0) {
@@ -123,6 +125,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
       setCreatedTranscriptId(newTranscript.id);
       setCreatedTranscripts(null);
       setBulkCreatedCount(0);
+      setSyntheticSummary(null);
     },
     onError: (error) => {
       console.error('Failed to create transcript:', error);
@@ -137,9 +140,27 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
       setCreatedTranscripts(result.transcripts);
       setBulkCreatedCount(result.count);
       setCreatedTranscriptId(null);
+      setSyntheticSummary(null);
     },
     onError: (error) => {
       console.error('Failed to create bulk transcripts:', error);
+    },
+  });
+
+  const seedSyntheticMutation = useMutation({
+    mutationFn: (payload: SyntheticSeedRequest) => transcriptApi.generateSynthetic(payload),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['transcripts'] });
+      queryClient.invalidateQueries({ queryKey: ['transcript-seeds'] });
+      setShowSuccess(true);
+      setCreatedTranscriptId(null);
+      setCreatedTranscripts(null);
+      setBulkCreatedCount(0);
+      setSyntheticSummary(result.summary);
+      console.log('Synthetic dataset generated:', result.summary);
+    },
+    onError: (error) => {
+      console.error('Failed to generate synthetic dataset:', error);
     },
   });
 
@@ -217,7 +238,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
     );
   }
 
-  if (showSuccess && (createdTranscriptId || createdTranscripts)) {
+  if (showSuccess && (createdTranscriptId || createdTranscripts || syntheticSummary)) {
     return (
       <div className="page-shell">
         <div className="flex items-center justify-between">
@@ -240,7 +261,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                     <br />
                     New transcript ID: <code className="font-mono">{createdTranscriptId}</code>
                   </>
-                ) : (
+                ) : createdTranscripts ? (
                   <>
                     <strong>Bulk transcripts created successfully!</strong>
                     <br />
@@ -257,6 +278,14 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                       </div>
                     )}
                   </>
+                ) : (
+                  <>
+                    <strong>Synthetic dataset generated!</strong>
+                    <br />
+                    Transcripts generated: {syntheticSummary?.transcripts_generated ?? 0}
+                    <br />
+                    Date range: {syntheticSummary?.date_range ?? 'N/A'}
+                  </>
                 )}
               </div>
             </div>
@@ -272,6 +301,7 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                   setCreatedTranscriptId(null);
                   setCreatedTranscripts(null);
                   setBulkCreatedCount(0);
+                  setSyntheticSummary(null);
                 }}
                 className="flex-1"
               >
@@ -594,6 +624,78 @@ export function TranscriptGeneratorView({ goToTranscripts }: TranscriptGenerator
                 {createBulkTranscriptsMutation.isPending 
                   ? `Generating ${bulkCount} Transcripts...` 
                   : `Generate ${bulkCount} Transcripts`}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="panel lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm font-bold">
+              <Plus className="h-4 w-4" />
+              Generate Synthetic Dataset
+            </CardTitle>
+            <CardDescription>
+              Populate the database with seeded transcripts and analyses for demos or testing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setShowSuccess(false);
+                seedSyntheticMutation.mutate(syntheticConfig);
+              }}
+              className="space-y-4"
+            >
+              {seedSyntheticMutation.error && (
+                <div className="border border-rose-200 bg-rose-50 p-3 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-rose-600 mt-0.5" />
+                  <div className="text-slate-700">
+                    Failed to generate synthetic dataset. Please try again.
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="synthetic_days" className="text-xs font-medium">Days of History</label>
+                  <Input
+                    id="synthetic_days"
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={syntheticConfig.days ?? 7}
+                    onChange={(e) => setSyntheticConfig(prev => ({ ...prev, days: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                    placeholder="Number of days to simulate"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="synthetic_calls" className="text-xs font-medium">Average Calls per Day</label>
+                  <Input
+                    id="synthetic_calls"
+                    type="number"
+                    min={1}
+                    max={40}
+                    value={syntheticConfig.base_daily_calls ?? 8}
+                    onChange={(e) => setSyntheticConfig(prev => ({ ...prev, base_daily_calls: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                    placeholder="Base number of calls per day"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500">
+                Generates transcripts and analyses using the same seeded customer/advisor profiles. Plans and workflows can then be created via the orchestration pipeline.
+              </p>
+
+              <Button
+                type="submit"
+                className="w-full"
+                variant="secondary"
+                disabled={seedSyntheticMutation.isPending}
+              >
+                {seedSyntheticMutation.isPending ? 'Generating Synthetic Dataset...' : 'Generate Synthetic Dataset'}
               </Button>
             </form>
           </CardContent>

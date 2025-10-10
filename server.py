@@ -573,6 +573,25 @@ async def get_transcript_seed_profiles():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch transcript seeds: {str(e)}")
 
+
+@app.post("/api/v1/transcripts/synthetic")
+async def generate_synthetic_transcripts(request: Dict[str, Any]):
+    """Populate the database with seeded synthetic transcripts and analyses."""
+    from src.analytics.forecasting.synthetic_data_generator import SyntheticDataGenerator
+
+    days = int(request.get("days", 7))
+    base_daily_calls = int(request.get("base_daily_calls", 8))
+
+    if days <= 0 or base_daily_calls <= 0:
+        raise HTTPException(status_code=400, detail="days and base_daily_calls must be positive integers")
+
+    generator = SyntheticDataGenerator(db_path=db_path)
+    summary = generator.populate_database(days=days, base_daily_calls=base_daily_calls)
+    return {
+        "message": "Synthetic data generated successfully",
+        "summary": summary,
+    }
+
 @app.get("/api/v1/transcripts/{transcript_id}")
 async def get_transcript(transcript_id: str):
     """Get transcript by ID - proxies to transcript service."""

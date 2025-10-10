@@ -116,6 +116,11 @@ export interface TranscriptSeedData {
   topics: string[];
 }
 
+export interface SyntheticSeedRequest {
+  days?: number;
+  base_daily_calls?: number;
+}
+
 // Analysis Types
 export interface Analysis {
   id: string;
