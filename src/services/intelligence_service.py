@@ -224,6 +224,438 @@ class IntelligenceService:
             raise IntelligenceServiceError(f"Failed to generate risk waterfall: {str(e)}")
 
     # ============================================================
+    # CONTROL TOWER ENDPOINTS (Executive Dashboard)
+    # ============================================================
+
+    async def get_control_tower_kpis(self, use_cache: bool = True) -> Dict[str, Any]:
+        """
+        Get Control Tower KPI row for executive dashboard.
+
+        Returns unified KPI view with:
+        - Customer Health Index (composite score)
+        - Revenue Momentum ($ lift from campaigns)
+        - Operational Efficiency (SLA%, cost metrics)
+        - Compliance Posture (audit%, exceptions)
+
+        Args:
+            use_cache: Whether to use cached values
+
+        Returns:
+            Complete KPI row data
+
+        Raises:
+            IntelligenceServiceError: If calculation fails (NO FALLBACK)
+        """
+        try:
+            # Get base metrics from personas
+            leadership_metrics = self.leadership.get_key_metrics()
+            servicing_metrics = self.servicing_ops.get_key_metrics()
+            marketing_metrics = self.marketing.get_key_metrics()
+
+            # 1. Customer Health Index (Composite)
+            customer_health = await self._calculate_customer_health_index(
+                leadership_metrics, servicing_metrics, marketing_metrics
+            )
+
+            # 2. Revenue Momentum
+            revenue_momentum = await self._calculate_revenue_momentum(
+                marketing_metrics, leadership_metrics
+            )
+
+            # 3. Operational Efficiency
+            operational_efficiency = await self._calculate_operational_efficiency(
+                servicing_metrics, leadership_metrics
+            )
+
+            # 4. Compliance Posture
+            compliance_posture = await self._calculate_compliance_posture(
+                leadership_metrics
+            )
+
+            return {
+                'customer_health_index': customer_health,
+                'revenue_momentum': revenue_momentum,
+                'operational_efficiency': operational_efficiency,
+                'compliance_posture': compliance_posture,
+                'generated_at': datetime.utcnow().isoformat(),
+                'data_freshness': 'real_time'  # TODO: Add actual timestamp tracking
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Failed to calculate Control Tower KPIs: {str(e)}")
+
+    async def _calculate_customer_health_index(
+        self,
+        leadership_metrics: Dict[str, Any],
+        servicing_metrics: Dict[str, Any],
+        marketing_metrics: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Calculate Customer Health Index composite score.
+
+        Formula: Weighted average of:
+        - FCR rate (30%)
+        - CSAT score (25%) - derived from sentiment
+        - Churn risk (25% - inverted)
+        - Delinquency risk (20% - inverted)
+        """
+        try:
+            # Get FCR from servicing
+            sla = servicing_metrics.get('sla_performance', {})
+            fcr_rate = sla.get('fcr_rate', 0)
+            fcr_contribution = fcr_rate * 0.30
+
+            # Get sentiment as CSAT proxy
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT AVG(CASE
+                        WHEN borrower_sentiment = 'Positive' THEN 100
+                        WHEN borrower_sentiment = 'Satisfied' THEN 85
+                        WHEN borrower_sentiment = 'Neutral' THEN 50
+                        ELSE 20
+                    END) as csat_score
+                    FROM analysis
+                    WHERE created_at >= datetime('now', '-7 days')
+                """)
+                result = cur.fetchone()
+                csat_score = result[0] if result and result[0] else 0
+
+            csat_contribution = csat_score * 0.25
+
+            # Get churn risk (inverted - lower is better)
+            risk_scores = leadership_metrics.get('risk_scores', {})
+            churn_risk = risk_scores.get('avg_churn_risk', 0)
+            churn_contribution = (1 - churn_risk) * 100 * 0.25
+
+            # Get delinquency risk (inverted)
+            delinquency_risk = risk_scores.get('avg_delinquency_risk', 0)
+            delinquency_contribution = (1 - delinquency_risk) * 100 * 0.20
+
+            # Calculate composite score
+            score = fcr_contribution + csat_contribution + churn_contribution + delinquency_contribution
+
+            # Validate score range
+            if not (0 <= score <= 100):
+                raise ValueError(f"Customer Health Index out of valid range: {score}")
+
+            # Calculate trend (compare to 7-day-ago period)
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT AVG(CASE
+                        WHEN borrower_sentiment = 'Positive' THEN 100
+                        WHEN borrower_sentiment = 'Satisfied' THEN 85
+                        WHEN borrower_sentiment = 'Neutral' THEN 50
+                        ELSE 20
+                    END) as csat_score
+                    FROM analysis
+                    WHERE created_at >= datetime('now', '-14 days')
+                      AND created_at < datetime('now', '-7 days')
+                """)
+                result = cur.fetchone()
+                prev_csat = result[0] if result and result[0] else csat_score
+
+            variance_pct = ((csat_score - prev_csat) / prev_csat * 100) if prev_csat > 0 else 0
+
+            if variance_pct > 5:
+                trend = 'improving'
+            elif variance_pct < -5:
+                trend = 'declining'
+            else:
+                trend = 'stable'
+
+            return {
+                'score': round(score, 1),
+                'trend': trend,
+                'variance_pct': round(variance_pct, 2),
+                'components': {
+                    'fcr_contribution': round(fcr_contribution, 2),
+                    'csat_contribution': round(csat_contribution, 2),
+                    'churn_contribution': round(churn_contribution, 2),
+                    'delinquency_contribution': round(delinquency_contribution, 2)
+                }
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Customer Health Index calculation failed: {str(e)}")
+
+    async def _calculate_revenue_momentum(
+        self,
+        marketing_metrics: Dict[str, Any],
+        leadership_metrics: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Calculate Revenue Momentum from marketing activities.
+
+        Aggregates:
+        - Refi opportunity revenue
+        - Retention campaign impact
+        - Referral revenue
+        """
+        try:
+            opportunity = marketing_metrics.get('opportunity_value', {})
+
+            refi_opp = opportunity.get('refi_ready', 0)
+            retention_impact = opportunity.get('at_risk', 0) * 0.70  # 70% retention rate
+            referral_revenue = opportunity.get('loyal_champions', 0) * 0.15  # 15% referral rate
+
+            total_lift = refi_opp + retention_impact + referral_revenue
+
+            # Calculate WoW and MoM trends
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+
+                # This week
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE created_at >= datetime('now', '-7 days')
+                      AND churn_risk < 0.3
+                """)
+                this_week_retention = cur.fetchone()[0] or 0
+
+                # Last week
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE created_at >= datetime('now', '-14 days')
+                      AND created_at < datetime('now', '-7 days')
+                      AND churn_risk < 0.3
+                """)
+                last_week_retention = cur.fetchone()[0] or 0
+
+            wow_change_pct = ((this_week_retention - last_week_retention) / last_week_retention * 100) if last_week_retention > 0 else 0
+
+            if wow_change_pct > 10:
+                trend = 'accelerating'
+            elif wow_change_pct < -10:
+                trend = 'declining'
+            else:
+                trend = 'stable'
+
+            return {
+                'total_lift': round(total_lift, 2),
+                'trend': trend,
+                'wow_change_pct': round(wow_change_pct, 2),
+                'mom_change_pct': round(wow_change_pct * 4, 2),  # Approximate monthly
+                'breakdown': {
+                    'refi_opportunity': round(refi_opp, 2),
+                    'retention_impact': round(retention_impact, 2),
+                    'referral_revenue': round(referral_revenue, 2)
+                }
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Revenue Momentum calculation failed: {str(e)}")
+
+    async def _calculate_operational_efficiency(
+        self,
+        servicing_metrics: Dict[str, Any],
+        leadership_metrics: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Calculate Operational Efficiency metrics.
+
+        Includes:
+        - SLA % (FCR, response time)
+        - Cases resolved per FTE
+        - Cost per loan serviced
+        """
+        try:
+            sla = servicing_metrics.get('sla_performance', {})
+            fcr_rate = sla.get('fcr_rate', 0)
+
+            # Calculate cases per FTE
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE issue_resolved = 1
+                      AND created_at >= datetime('now', '-7 days')
+                """)
+                resolved_cases = cur.fetchone()[0] or 0
+
+                cur.execute("""
+                    SELECT COUNT(DISTINCT advisor_id)
+                    FROM transcripts
+                    WHERE timestamp >= datetime('now', '-7 days')
+                      AND advisor_id IS NOT NULL
+                """)
+                active_ftes = cur.fetchone()[0] or 1  # Avoid division by zero
+
+            cases_per_fte = resolved_cases / active_ftes if active_ftes > 0 else 0
+
+            # Cost per loan (estimated)
+            portfolio = leadership_metrics.get('portfolio', {})
+            total_customers = portfolio.get('total_customers', 1)
+            estimated_monthly_cost = active_ftes * 5000  # $5K per FTE/month
+            cost_per_loan = estimated_monthly_cost / total_customers if total_customers > 0 else 0
+
+            # Compare vs plan (industry standard: FCR > 85%, cases/FTE > 20, cost < $30)
+            fcr_target = 85.0
+            cases_target = 20.0
+            cost_target = 30.0
+
+            variance_vs_plan = {
+                'fcr_variance': fcr_rate - fcr_target,
+                'cases_variance': cases_per_fte - cases_target,
+                'cost_variance': cost_target - cost_per_loan
+            }
+
+            if fcr_rate >= fcr_target and cases_per_fte >= cases_target and cost_per_loan <= cost_target:
+                status = 'exceeding'
+            elif fcr_rate >= fcr_target * 0.95:
+                status = 'on_track'
+            else:
+                status = 'below_target'
+
+            # Determine trend
+            trend = leadership_metrics.get('trend_metrics', {})
+            delta = trend.get('delta', 0)
+            trend_label = 'improving' if delta < 0 else 'declining' if delta > 0 else 'stable'
+
+            return {
+                'sla_percentage': round(fcr_rate, 2),
+                'cases_per_fte': round(cases_per_fte, 2),
+                'cost_per_loan': round(cost_per_loan, 2),
+                'variance_vs_plan': variance_vs_plan,
+                'status': status,
+                'trend': trend_label
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Operational Efficiency calculation failed: {str(e)}")
+
+    async def _calculate_compliance_posture(
+        self,
+        leadership_metrics: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Calculate Compliance Posture.
+
+        Includes:
+        - Audit pass rate
+        - Open exceptions
+        - Compliance score
+        - Risk level
+        """
+        try:
+            compliance = leadership_metrics.get('compliance', {})
+            compliance_score = compliance.get('compliance_score', 0)
+            open_exceptions = compliance.get('issue_count', 0)
+
+            # Calculate audit pass rate (based on compliance adherence)
+            audit_pass_rate = compliance_score * 100
+
+            # Determine status
+            status = compliance.get('status', 'unknown')
+
+            # Determine risk level
+            if audit_pass_rate >= 95 and open_exceptions == 0:
+                risk_level = 'low'
+            elif audit_pass_rate >= 90 and open_exceptions < 3:
+                risk_level = 'medium'
+            elif audit_pass_rate >= 80:
+                risk_level = 'high'
+            else:
+                risk_level = 'critical'
+
+            return {
+                'audit_pass_rate': round(audit_pass_rate, 2),
+                'open_exceptions': open_exceptions,
+                'compliance_score': round(compliance_score, 3),
+                'status': status,
+                'risk_level': risk_level
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Compliance Posture calculation failed: {str(e)}")
+
+    async def get_executive_summary(self) -> Dict[str, Any]:
+        """
+        Generate auto-generated executive narrative summary.
+
+        Returns concise (1-3 sentences) summary of current state,
+        highlighting key risks and opportunities.
+        """
+        try:
+            kpis = await self.get_control_tower_kpis()
+
+            # Extract key metrics
+            health_score = kpis['customer_health_index']['score']
+            health_trend = kpis['customer_health_index']['trend']
+            revenue_lift = kpis['revenue_momentum']['total_lift']
+            revenue_trend = kpis['revenue_momentum']['trend']
+            sla_pct = kpis['operational_efficiency']['sla_percentage']
+            efficiency_status = kpis['operational_efficiency']['status']
+            compliance_status = kpis['compliance_posture']['status']
+            compliance_exceptions = kpis['compliance_posture']['open_exceptions']
+
+            # Build narrative
+            narrative_parts = []
+
+            # Health statement
+            narrative_parts.append(
+                f"Customer Health Index {'stable' if health_trend == 'stable' else health_trend} at {health_score:.1f}."
+            )
+
+            # Operational concern or success
+            if efficiency_status == 'below_target':
+                fcr_info = f"SLA performance at {sla_pct:.0f}% requires attention"
+                narrative_parts.append(fcr_info + ".")
+            elif efficiency_status == 'exceeding':
+                narrative_parts.append("Operations exceeding efficiency targets.")
+
+            # Revenue/Marketing
+            if revenue_trend == 'accelerating':
+                narrative_parts.append(f"Marketing lift ${revenue_lift:,.0f} and accelerating.")
+            elif revenue_lift > 10000:
+                narrative_parts.append(f"Revenue momentum at ${revenue_lift:,.0f}.")
+
+            # Compliance
+            if compliance_status == 'good' or compliance_exceptions == 0:
+                narrative_parts.append("Compliance fully green.")
+            else:
+                narrative_parts.append(f"Compliance: {compliance_exceptions} open exceptions.")
+
+            narrative = " ".join(narrative_parts)
+
+            # Key points
+            key_points = []
+            if health_trend == 'declining':
+                key_points.append("Customer health declining - retention focus needed")
+            if efficiency_status == 'below_target':
+                key_points.append("SLA performance below target")
+            if revenue_trend == 'accelerating':
+                key_points.append("Revenue momentum positive")
+            if compliance_exceptions > 0:
+                key_points.append(f"{compliance_exceptions} compliance exceptions require resolution")
+
+            # Urgent actions
+            urgent_actions = []
+            decisions = self.leadership.get_decision_queue()
+            for decision in decisions[:3]:  # Top 3
+                if decision.get('urgency') == 'high':
+                    urgent_actions.append({
+                        'action': decision.get('title', decision.get('type')),
+                        'impact': decision.get('expected_impact', 0),
+                        'urgency': 'high'
+                    })
+
+            return {
+                'narrative': narrative,
+                'key_points': key_points or ["All metrics within acceptable ranges"],
+                'urgent_actions': urgent_actions,
+                'generated_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Executive summary generation failed: {str(e)}")
+
+    # ============================================================
     # SERVICING OPERATIONS ENDPOINTS
     # ============================================================
 
