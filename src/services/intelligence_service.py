@@ -655,6 +655,272 @@ class IntelligenceService:
         except Exception as e:
             raise IntelligenceServiceError(f"Executive summary generation failed: {str(e)}")
 
+    async def get_forecast_outlook(
+        self,
+        horizons: Optional[List[str]] = None,
+        use_cache: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Get multi-horizon forecast outlook for Control Tower.
+
+        Provides forecasts at multiple time horizons:
+        - 4 hours (real-time tactical)
+        - 24 hours (daily planning)
+        - 7 days (weekly strategic)
+        - 30 days (monthly outlook)
+
+        Args:
+            horizons: List of horizon types ['4h', '24h', '7d', '30d']
+            use_cache: Whether to use cached forecasts
+
+        Returns:
+            Multi-horizon forecast data with:
+            - Predictions at each horizon
+            - Confidence bands
+            - Top predicted deviations
+            - Dollar impact estimates
+            - Drift detection
+
+        Raises:
+            IntelligenceServiceError: If forecast generation fails
+        """
+        try:
+            if not horizons:
+                horizons = ['4h', '24h', '7d', '30d']
+
+            forecasts_by_horizon = {}
+
+            # Map horizon to days
+            horizon_map = {
+                '4h': (1/6, 'call_volume_hourly'),  # 4 hours = 1/6 day
+                '24h': (1, 'call_volume_hourly'),
+                '7d': (7, 'call_volume_daily'),
+                '30d': (30, 'call_volume_daily')
+            }
+
+            for horizon in horizons:
+                if horizon not in horizon_map:
+                    continue
+
+                days, forecast_type = horizon_map[horizon]
+
+                try:
+                    forecast = await self.hybrid_analyzer.forecasting_service.generate_forecast(
+                        forecast_type=forecast_type,
+                        horizon_days=int(days) if days >= 1 else 1,
+                        use_cache=use_cache
+                    )
+
+                    # Extract predictions based on horizon
+                    predictions = forecast.get('predictions', [])
+                    if horizon == '4h':
+                        # Take first 4 hourly predictions
+                        predictions = predictions[:4]
+                    elif horizon == '24h':
+                        # Take first 24 hourly predictions
+                        predictions = predictions[:24]
+
+                    # Calculate confidence and deviation
+                    avg_predicted = sum(p.get('predicted', 0) for p in predictions) / len(predictions) if predictions else 0
+
+                    forecasts_by_horizon[horizon] = {
+                        'horizon': horizon,
+                        'forecast_type': forecast_type,
+                        'predictions': predictions,
+                        'summary': {
+                            'average_predicted': avg_predicted,
+                            'prediction_count': len(predictions),
+                            'confidence': 'high' if forecast.get('cached') else 'medium'
+                        }
+                    }
+
+                except ForecastingServiceError as e:
+                    # If forecast fails, mark as unavailable but continue
+                    forecasts_by_horizon[horizon] = {
+                        'horizon': horizon,
+                        'available': False,
+                        'reason': str(e)
+                    }
+
+            # Detect top deviations
+            deviations = await self._detect_forecast_deviations(forecasts_by_horizon)
+
+            # Calculate dollar impact
+            dollar_impact = await self._calculate_forecast_dollar_impact(forecasts_by_horizon)
+
+            # Drift detection
+            drift_alert = await self._detect_forecast_drift(forecasts_by_horizon)
+
+            return {
+                'forecasts': forecasts_by_horizon,
+                'top_deviations': deviations,
+                'dollar_impact': dollar_impact,
+                'drift_alert': drift_alert,
+                'generated_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Forecast outlook generation failed: {str(e)}")
+
+    async def _detect_forecast_deviations(
+        self,
+        forecasts: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        Detect top predicted deviations from forecasts.
+
+        Args:
+            forecasts: Forecasts by horizon
+
+        Returns:
+            List of top deviations with priority
+        """
+        deviations = []
+
+        for horizon, forecast in forecasts.items():
+            if not forecast.get('available', True):
+                continue
+
+            predictions = forecast.get('predictions', [])
+            if not predictions:
+                continue
+
+            # Calculate historical average for comparison
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT AVG(COUNT(*)) as avg_calls
+                    FROM transcripts
+                    WHERE timestamp >= datetime('now', '-30 days')
+                    GROUP BY date(timestamp)
+                """)
+                result = cur.fetchone()
+                historical_avg = result[0] if result and result[0] else 0
+
+            # Check for significant deviations
+            for pred in predictions[:3]:  # Top 3 predictions
+                predicted = pred.get('predicted', 0)
+                if historical_avg > 0:
+                    deviation_pct = ((predicted - historical_avg) / historical_avg) * 100
+
+                    if abs(deviation_pct) > 20:  # >20% deviation
+                        deviations.append({
+                            'horizon': horizon,
+                            'timestamp': pred.get('date'),
+                            'predicted_value': predicted,
+                            'historical_avg': historical_avg,
+                            'deviation_pct': round(deviation_pct, 1),
+                            'severity': 'high' if abs(deviation_pct) > 40 else 'medium',
+                            'description': f"{'Surge' if deviation_pct > 0 else 'Drop'} of {abs(deviation_pct):.0f}% predicted"
+                        })
+
+        # Sort by severity and absolute deviation
+        deviations.sort(key=lambda x: (
+            0 if x['severity'] == 'high' else 1,
+            -abs(x['deviation_pct'])
+        ))
+
+        return deviations[:5]  # Top 5
+
+    async def _calculate_forecast_dollar_impact(
+        self,
+        forecasts: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Calculate dollar impact of forecast deviations.
+
+        Args:
+            forecasts: Forecasts by horizon
+
+        Returns:
+            Dollar impact estimates
+        """
+        # Cost per call handling
+        COST_PER_CALL = 25  # $25 per call
+
+        impacts = {}
+
+        for horizon, forecast in forecasts.items():
+            if not forecast.get('available', True):
+                continue
+
+            predictions = forecast.get('predictions', [])
+            avg_predicted = forecast.get('summary', {}).get('average_predicted', 0)
+
+            # Calculate cost impact
+            if horizon == '4h':
+                hourly_cost = avg_predicted * COST_PER_CALL * 4
+                impacts['4h_cost'] = round(hourly_cost, 2)
+            elif horizon == '24h':
+                daily_cost = avg_predicted * COST_PER_CALL * 24
+                impacts['24h_cost'] = round(daily_cost, 2)
+            elif horizon == '7d':
+                weekly_cost = avg_predicted * COST_PER_CALL * 7 * 8  # 8 hours/day
+                impacts['7d_cost'] = round(weekly_cost, 2)
+            elif horizon == '30d':
+                monthly_cost = avg_predicted * COST_PER_CALL * 30 * 8
+                impacts['30d_cost'] = round(monthly_cost, 2)
+
+        impacts['total_potential_impact'] = sum(impacts.values())
+
+        return impacts
+
+    async def _detect_forecast_drift(
+        self,
+        forecasts: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Detect if forecast models are drifting from actuals.
+
+        Args:
+            forecasts: Current forecasts
+
+        Returns:
+            Drift alert if detected, None otherwise
+        """
+        # Compare recent forecasts to actuals
+        try:
+            # Get most recent forecast
+            latest_4h = forecasts.get('4h', {})
+            if not latest_4h.get('available', True):
+                return None
+
+            # Check if we have recent actual data
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT COUNT(*), AVG(COUNT(*))
+                    FROM transcripts
+                    WHERE timestamp >= datetime('now', '-4 hours')
+                    GROUP BY strftime('%Y-%m-%d %H', timestamp)
+                """)
+                result = cur.fetchone()
+                actual_avg = result[1] if result and result[1] else None
+
+            if actual_avg is None:
+                return None
+
+            predicted_avg = latest_4h.get('summary', {}).get('average_predicted', 0)
+
+            # Calculate drift
+            if predicted_avg > 0:
+                drift_pct = ((actual_avg - predicted_avg) / predicted_avg) * 100
+
+                if abs(drift_pct) > 30:  # >30% drift
+                    return {
+                        'drift_detected': True,
+                        'drift_percentage': round(drift_pct, 1),
+                        'actual_avg': round(actual_avg, 1),
+                        'predicted_avg': round(predicted_avg, 1),
+                        'severity': 'critical' if abs(drift_pct) > 50 else 'high',
+                        'recommendation': 'Model retraining recommended - significant drift detected'
+                    }
+
+            return None
+
+        except Exception:
+            return None
+
     # ============================================================
     # SERVICING OPERATIONS ENDPOINTS
     # ============================================================
