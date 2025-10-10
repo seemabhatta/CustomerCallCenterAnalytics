@@ -1496,6 +1496,54 @@ async def get_risk_waterfall():
         raise HTTPException(status_code=500, detail=f"Failed to generate risk waterfall: {str(e)}")
 
 
+# NEW Control Tower Endpoints
+@app.get("/api/v1/intelligence/control-tower/kpis")
+async def get_control_tower_kpis(use_cache: bool = Query(True)):
+    """Get Control Tower KPI row for executive dashboard.
+
+    Returns:
+        - Customer Health Index (composite score)
+        - Revenue Momentum ($ lift from campaigns)
+        - Operational Efficiency (SLA%, cost metrics)
+        - Compliance Posture (audit%, exceptions)
+    """
+    try:
+        return await intelligence_service.get_control_tower_kpis(use_cache=use_cache)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get Control Tower KPIs: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/control-tower/executive-summary")
+async def get_control_tower_executive_summary():
+    """Get auto-generated executive summary narrative.
+
+    Returns concise (1-3 sentences) summary of current state.
+    """
+    try:
+        return await intelligence_service.get_executive_summary()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate executive summary: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/control-tower/forecast-outlook")
+async def get_control_tower_forecast_outlook(
+    horizons: Optional[List[str]] = Query(None, description="Forecast horizons: 4h, 24h, 7d, 30d"),
+    use_cache: bool = Query(True)
+):
+    """Get multi-horizon forecast outlook.
+
+    Returns forecasts at 4-hour, 24-hour, 7-day, and 30-day horizons
+    with deviation detection, dollar impact, and drift alerts.
+    """
+    try:
+        return await intelligence_service.get_forecast_outlook(
+            horizons=horizons,
+            use_cache=use_cache
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get forecast outlook: {str(e)}")
+
+
 # ---------------------------------------------
 # SERVICING OPERATIONS INTELLIGENCE
 # ---------------------------------------------
@@ -1589,6 +1637,39 @@ async def get_case_resolution_insights():
         return await intelligence_service.get_case_resolution_insights()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get case resolution insights: {str(e)}")
+
+
+# NEW Servicing Ops Endpoints
+@app.get("/api/v1/intelligence/servicing/advisor-clusters")
+async def get_advisor_clusters():
+    """Get advisor performance clusters (A/B/C tiers).
+
+    Returns:
+        - Tier A: Top performers (empathy ≥8.5, compliance ≥95%, FCR ≥85%)
+        - Tier B: Solid performers (empathy ≥7.5, compliance ≥85%, FCR ≥75%)
+        - Tier C: Needs coaching (below Tier B thresholds)
+    """
+    try:
+        return await intelligence_service.get_advisor_clusters()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get advisor clusters: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/servicing/operational-roi")
+async def get_operational_roi():
+    """Get operational ROI view - converts efficiency metrics to dollars.
+
+    Returns:
+        - Cost per loan serviced
+        - Cases resolved per FTE
+        - FCR improvement value
+        - Coaching ROI calculations
+        - Staffing optimization opportunities
+    """
+    try:
+        return await intelligence_service.get_operational_roi()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get operational ROI: {str(e)}")
 
 
 # ---------------------------------------------
@@ -1709,6 +1790,55 @@ async def get_roi_attribution():
         return await intelligence_service.get_roi_attribution()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get ROI attribution: {str(e)}")
+
+
+# NEW Marketing Intelligence Endpoints
+@app.get("/api/v1/intelligence/marketing/campaign-playbook")
+async def get_campaign_playbook():
+    """Get campaign playbook with active and queued campaigns.
+
+    Returns:
+        - Active campaigns with performance metrics
+        - Queued campaigns with cost estimates
+        - Historical campaign ROI data
+        - Recommended next campaigns
+    """
+    try:
+        return await intelligence_service.get_campaign_playbook()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get campaign playbook: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/marketing/closed-loop-learning")
+async def get_closed_loop_learning():
+    """Get closed-loop learning analysis showing campaign outcomes.
+
+    Returns:
+        - Conversion rates by segment
+        - Retention lift by campaign
+        - ROI realized vs forecast
+        - Learnings for future campaigns
+    """
+    try:
+        return await intelligence_service.get_closed_loop_learning()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get closed-loop learning: {str(e)}")
+
+
+@app.get("/api/v1/intelligence/marketing/cross-signal-triggers")
+async def get_cross_signal_triggers():
+    """Get cross-signal triggers (servicing → marketing automation).
+
+    Returns:
+        - Delinquency spike triggers
+        - Churn risk triggers
+        - Positive sentiment opportunities
+        - Recommended campaign launches
+    """
+    try:
+        return await intelligence_service.get_cross_signal_triggers()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get cross-signal triggers: {str(e)}")
 
 
 # ---------------------------------------------
