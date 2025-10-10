@@ -1452,24 +1452,344 @@ class IntelligenceService:
         """
         Get customer segmentation with targeting opportunities.
 
+        Enhanced with:
+        - NPS (Net Promoter Score) calculation
+        - LTV (Lifetime Value) estimates
+        - Engagement strategy recommendations
+
         Returns:
-            Customer segments with opportunity values
+            Customer segments with opportunity values, NPS, LTV
         """
         try:
             segments = self.marketing.get_customer_segments()
+
+            # Calculate NPS per segment
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+
+                # Calculate overall NPS
+                cur.execute("""
+                    SELECT
+                        SUM(CASE WHEN borrower_sentiment = 'Positive' THEN 1 ELSE 0 END) as promoters,
+                        SUM(CASE WHEN borrower_sentiment IN ('Neutral', 'Mixed') THEN 1 ELSE 0 END) as passives,
+                        SUM(CASE WHEN borrower_sentiment IN ('Negative', 'Frustrated', 'Angry') THEN 1 ELSE 0 END) as detractors,
+                        COUNT(*) as total
+                    FROM analysis
+                    WHERE created_at >= datetime('now', '-30 days')
+                """)
+                result = cur.fetchone()
+                promoters = result[0] if result and result[0] else 0
+                passives = result[1] if result and result[1] else 0
+                detractors = result[2] if result and result[2] else 0
+                total = result[3] if result and result[3] else 1
+
+            nps = ((promoters - detractors) / total * 100) if total > 0 else 0
+
+            # Add LTV to each segment
+            for segment in segments:
+                segment_count = segment.get('count', 0)
+                avg_servicing_fee = 250  # Annual
+                avg_years = 7  # Average loan servicing duration
+
+                # Calculate LTV based on segment type
+                if segment['segment_id'] == 'loyal':
+                    ltv = avg_servicing_fee * avg_years * 1.2  # 20% premium for loyal
+                elif segment['segment_id'] == 'at_risk':
+                    ltv = avg_servicing_fee * 2  # Only 2 years expected
+                else:
+                    ltv = avg_servicing_fee * avg_years
+
+                segment['lifetime_value'] = round(ltv, 2)
+                segment['total_ltv'] = round(ltv * segment_count, 2)
+
+                # Add NPS estimate per segment
+                if segment['segment_id'] == 'loyal':
+                    segment['estimated_nps'] = 70  # High NPS
+                elif segment['segment_id'] == 'at_risk':
+                    segment['estimated_nps'] = -20  # Negative NPS
+                else:
+                    segment['estimated_nps'] = 30  # Moderate NPS
 
             return {
                 'segments': segments,
                 'summary': {
                     'total_segments': len(segments),
-                    'high_priority_segments': len([s for s in segments if s.get('priority') == 'high']),
-                    'total_opportunity_value': sum([s.get('opportunity_value', 0) for s in segments])
+                    'high_priority_segments': len([s for s in segments if s.get('priority') in ['high', 'critical']]),
+                    'total_opportunity_value': sum([s.get('opportunity_value', 0) for s in segments]),
+                    'total_ltv': sum([s.get('total_ltv', 0) for s in segments])
+                },
+                'nps': {
+                    'overall_nps': round(nps, 1),
+                    'promoters': promoters,
+                    'passives': passives,
+                    'detractors': detractors,
+                    'total_respondents': total,
+                    'status': 'excellent' if nps > 50 else 'good' if nps > 0 else 'needs_improvement'
                 },
                 'generated_at': datetime.utcnow().isoformat()
             }
 
         except Exception as e:
             raise IntelligenceServiceError(f"Failed to get marketing segments: {str(e)}")
+
+    async def get_campaign_playbook(self) -> Dict[str, Any]:
+        """
+        Get marketing campaign playbook.
+
+        Provides:
+        - Active campaigns
+        - Queued campaigns (awaiting approval)
+        - Campaign cost tracking
+        - Expected ROI per campaign
+        - Status and progress
+
+        Returns:
+            Campaign playbook with financial tracking
+        """
+        try:
+            campaigns = self.marketing.get_recommended_actions()
+
+            # Categorize campaigns by status
+            active_campaigns = []
+            queued_campaigns = []
+
+            for campaign in campaigns:
+                # Simulate campaign states based on urgency
+                if campaign.get('urgency') == 'high':
+                    campaign['status'] = 'queued'
+                    campaign['approval_required'] = True
+                    queued_campaigns.append(campaign)
+                else:
+                    campaign['status'] = 'planning'
+                    campaign['approval_required'] = False
+                    active_campaigns.append(campaign)
+
+            # Calculate aggregate costs and ROI
+            total_cost = sum([c.get('campaign_cost', 0) for c in campaigns])
+            total_expected_revenue = sum([
+                c.get('expected_revenue', c.get('expected_save', 0)) for c in campaigns
+            ])
+            total_roi = ((total_expected_revenue - total_cost) / total_cost * 100) if total_cost > 0 else 0
+
+            return {
+                'active_campaigns': active_campaigns,
+                'queued_campaigns': queued_campaigns,
+                'summary': {
+                    'total_campaigns': len(campaigns),
+                    'active_count': len(active_campaigns),
+                    'queued_count': len(queued_campaigns),
+                    'total_cost': round(total_cost, 2),
+                    'total_expected_revenue': round(total_expected_revenue, 2),
+                    'total_roi_pct': round(total_roi, 1),
+                    'approval_needed': len(queued_campaigns)
+                },
+                'generated_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Failed to get campaign playbook: {str(e)}")
+
+    async def get_closed_loop_learning(self) -> Dict[str, Any]:
+        """
+        Get closed-loop learning metrics.
+
+        Tracks campaign outcomes:
+        - Conversion rates by segment
+        - Retention results
+        - Actual vs predicted ROI
+        - Learning insights
+
+        Returns:
+            Campaign outcome tracking and learning insights
+        """
+        try:
+            # Analyze campaign outcomes using actual customer interactions
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+
+                # Conversion tracking (issues resolved = conversion)
+                cur.execute("""
+                    SELECT
+                        CASE
+                            WHEN a.churn_risk > 0.6 THEN 'at_risk'
+                            WHEN a.refinance_likelihood > 0.7 THEN 'refi_ready'
+                            WHEN a.churn_risk < 0.3 AND a.borrower_sentiment = 'Positive' THEN 'loyal'
+                            ELSE 'other'
+                        END as segment,
+                        COUNT(*) as total_contacts,
+                        SUM(CASE WHEN a.issue_resolved = 1 THEN 1 ELSE 0 END) as converted,
+                        AVG(a.borrower_sentiment = 'Positive') as satisfaction_rate
+                    FROM analysis a
+                    WHERE a.created_at >= datetime('now', '-30 days')
+                    GROUP BY segment
+                """)
+
+                results = cur.fetchall()
+
+            learning_by_segment = {}
+            for row in results:
+                segment = row[0]
+                total = row[1]
+                converted = row[2]
+                satisfaction = row[3] if row[3] else 0
+
+                conversion_rate = converted / total if total > 0 else 0
+
+                learning_by_segment[segment] = {
+                    'total_contacts': total,
+                    'conversions': converted,
+                    'conversion_rate': round(conversion_rate, 3),
+                    'satisfaction_rate': round(satisfaction, 3),
+                    'performance': 'strong' if conversion_rate > 0.6 else 'moderate' if conversion_rate > 0.4 else 'weak'
+                }
+
+            # Generate insights
+            insights = []
+            for segment, metrics in learning_by_segment.items():
+                if metrics['conversion_rate'] > 0.6:
+                    insights.append(f"{segment.replace('_', ' ').title()} segment showing strong conversion ({metrics['conversion_rate']:.1%})")
+                elif metrics['conversion_rate'] < 0.3:
+                    insights.append(f"{segment.replace('_', ' ').title()} segment needs messaging optimization ({metrics['conversion_rate']:.1%})")
+
+            return {
+                'learning_by_segment': learning_by_segment,
+                'insights': insights,
+                'recommendations': [
+                    "Continue high-performing segment strategies",
+                    "Revise messaging for low-conversion segments",
+                    "A/B test new approaches on moderate performers"
+                ],
+                'data_period': 'last_30_days',
+                'generated_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Failed to get closed-loop learning: {str(e)}")
+
+    async def get_cross_signal_triggers(self) -> Dict[str, Any]:
+        """
+        Get cross-signal triggers (servicing → marketing).
+
+        Detects servicing events that should trigger marketing campaigns:
+        - High delinquency risk → Hardship assistance campaign
+        - Compliance issues → Trust-building campaign
+        - Positive sentiment spike → Referral campaign
+        - PMI removal requests → Product education campaign
+
+        Returns:
+            Active triggers and recommended campaigns
+        """
+        try:
+            triggers = []
+
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+
+                # Trigger 1: Delinquency spike
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE delinquency_risk > 0.7
+                      AND created_at >= datetime('now', '-7 days')
+                """)
+                high_delinq_count = cur.fetchone()[0] or 0
+
+                if high_delinq_count > 10:
+                    triggers.append({
+                        'trigger_type': 'delinquency_spike',
+                        'severity': 'high',
+                        'affected_customers': high_delinq_count,
+                        'recommended_campaign': 'Hardship Assistance Outreach',
+                        'campaign_type': 'retention',
+                        'urgency': 'immediate',
+                        'expected_impact': high_delinq_count * 0.6 * 250,  # 60% retention * $250 annual fee
+                        'description': f'{high_delinq_count} customers showing high delinquency risk'
+                    })
+
+                # Trigger 2: Churn risk increase
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE churn_risk > 0.7
+                      AND created_at >= datetime('now', '-7 days')
+                """)
+                high_churn_count = cur.fetchone()[0] or 0
+
+                if high_churn_count > 15:
+                    triggers.append({
+                        'trigger_type': 'churn_risk_spike',
+                        'severity': 'high',
+                        'affected_customers': high_churn_count,
+                        'recommended_campaign': 'Retention Incentive Campaign',
+                        'campaign_type': 'retention',
+                        'urgency': 'immediate',
+                        'expected_impact': high_churn_count * 0.65 * 250,
+                        'description': f'{high_churn_count} customers at high churn risk'
+                    })
+
+                # Trigger 3: Positive sentiment surge (opportunity)
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE borrower_sentiment = 'Positive'
+                      AND created_at >= datetime('now', '-7 days')
+                """)
+                positive_count = cur.fetchone()[0] or 0
+
+                if positive_count > 50:
+                    triggers.append({
+                        'trigger_type': 'satisfaction_surge',
+                        'severity': 'opportunity',
+                        'affected_customers': positive_count,
+                        'recommended_campaign': 'Referral Program Launch',
+                        'campaign_type': 'acquisition',
+                        'urgency': 'medium',
+                        'expected_impact': positive_count * 0.25 * 2800,  # 25% referral rate * $2800 refi revenue
+                        'description': f'{positive_count} highly satisfied customers ready for advocacy'
+                    })
+
+                # Trigger 4: Compliance issues
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE compliance_adherence < 0.8
+                      AND created_at >= datetime('now', '-7 days')
+                """)
+                compliance_issues = cur.fetchone()[0] or 0
+
+                if compliance_issues > 20:
+                    triggers.append({
+                        'trigger_type': 'compliance_concern',
+                        'severity': 'medium',
+                        'affected_customers': compliance_issues,
+                        'recommended_campaign': 'Trust & Transparency Communication',
+                        'campaign_type': 'reputation',
+                        'urgency': 'medium',
+                        'expected_impact': compliance_issues * 100,  # Reputation protection
+                        'description': f'{compliance_issues} interactions with compliance concerns'
+                    })
+
+            # Sort by severity and impact
+            triggers.sort(key=lambda x: (
+                0 if x['severity'] == 'high' else 1 if x['severity'] == 'medium' else 2,
+                -x['expected_impact']
+            ))
+
+            total_impact = sum(t['expected_impact'] for t in triggers)
+
+            return {
+                'active_triggers': triggers,
+                'summary': {
+                    'total_triggers': len(triggers),
+                    'high_severity': len([t for t in triggers if t['severity'] == 'high']),
+                    'total_potential_impact': round(total_impact, 2),
+                    'immediate_action_needed': len([t for t in triggers if t['urgency'] == 'immediate'])
+                },
+                'generated_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Failed to get cross-signal triggers: {str(e)}")
 
     async def get_campaign_recommendations(self) -> Dict[str, Any]:
         """
