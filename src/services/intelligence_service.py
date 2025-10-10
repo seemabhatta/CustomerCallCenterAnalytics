@@ -1074,6 +1074,216 @@ class IntelligenceService:
         except Exception as e:
             raise IntelligenceServiceError(f"Failed to get advisor heatmap: {str(e)}")
 
+    async def get_advisor_clusters(self) -> Dict[str, Any]:
+        """
+        Get advisor performance clusters (A/B/C tiers).
+
+        Clusters advisors by:
+        - Tier A: Top performers (empathy >= 8.5, compliance >= 0.95, FCR >= 0.85)
+        - Tier B: Good performers (empathy >= 7.5, compliance >= 0.85, FCR >= 0.75)
+        - Tier C: Needs improvement (below Tier B thresholds)
+
+        Returns:
+            Clustered advisor data with aggregated metrics
+        """
+        try:
+            heatmap = self.servicing_ops.get_advisor_heatmap()
+
+            # Cluster advisors into tiers
+            tier_a = []
+            tier_b = []
+            tier_c = []
+
+            for advisor in heatmap:
+                empathy = advisor.get('empathy_score', 0)
+                compliance = advisor.get('compliance_score', 0)
+                fcr = advisor.get('fcr_rate', 0)
+
+                if empathy >= 8.5 and compliance >= 0.95 and fcr >= 0.85:
+                    tier_a.append(advisor)
+                elif empathy >= 7.5 and compliance >= 0.85 and fcr >= 0.75:
+                    tier_b.append(advisor)
+                else:
+                    tier_c.append(advisor)
+
+            # Calculate aggregate metrics per tier
+            def calc_tier_metrics(tier_advisors: List[Dict]) -> Dict[str, Any]:
+                if not tier_advisors:
+                    return {
+                        'count': 0,
+                        'avg_empathy': 0,
+                        'avg_compliance': 0,
+                        'avg_fcr': 0,
+                        'total_calls': 0
+                    }
+
+                return {
+                    'count': len(tier_advisors),
+                    'avg_empathy': round(sum(a['empathy_score'] for a in tier_advisors) / len(tier_advisors), 2),
+                    'avg_compliance': round(sum(a['compliance_score'] for a in tier_advisors) / len(tier_advisors), 3),
+                    'avg_fcr': round(sum(a['fcr_rate'] for a in tier_advisors) / len(tier_advisors), 3),
+                    'total_calls': sum(a['calls_last_7d'] for a in tier_advisors)
+                }
+
+            tier_a_metrics = calc_tier_metrics(tier_a)
+            tier_b_metrics = calc_tier_metrics(tier_b)
+            tier_c_metrics = calc_tier_metrics(tier_c)
+
+            return {
+                'clusters': {
+                    'tier_a': {
+                        'name': 'Top Performers',
+                        'description': 'Elite advisors - mentor candidates',
+                        'advisors': [a['advisor_id'] for a in tier_a],
+                        'metrics': tier_a_metrics,
+                        'color': 'green',
+                        'action': 'Leverage for mentoring and best practice sharing'
+                    },
+                    'tier_b': {
+                        'name': 'Good Performers',
+                        'description': 'Solid performers - growth potential',
+                        'advisors': [a['advisor_id'] for a in tier_b],
+                        'metrics': tier_b_metrics,
+                        'color': 'yellow',
+                        'action': 'Provide advanced training to elevate to Tier A'
+                    },
+                    'tier_c': {
+                        'name': 'Needs Improvement',
+                        'description': 'Requires coaching and support',
+                        'advisors': [a['advisor_id'] for a in tier_c],
+                        'metrics': tier_c_metrics,
+                        'color': 'red',
+                        'action': 'Immediate coaching and performance improvement plan'
+                    }
+                },
+                'summary': {
+                    'total_advisors': len(heatmap),
+                    'tier_distribution': {
+                        'tier_a_pct': round(len(tier_a) / len(heatmap) * 100, 1) if heatmap else 0,
+                        'tier_b_pct': round(len(tier_b) / len(heatmap) * 100, 1) if heatmap else 0,
+                        'tier_c_pct': round(len(tier_c) / len(heatmap) * 100, 1) if heatmap else 0
+                    },
+                    'health_status': 'excellent' if len(tier_a) > len(heatmap) * 0.3 else 'good' if len(tier_c) < len(heatmap) * 0.2 else 'needs_attention'
+                },
+                'generated_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Failed to cluster advisors: {str(e)}")
+
+    async def get_operational_roi(self) -> Dict[str, Any]:
+        """
+        Get operational ROI view - converts efficiency metrics to dollars.
+
+        Calculates:
+        - Cost per loan serviced
+        - Cases resolved per FTE
+        - SLA improvement dollar impact
+        - Coaching ROI
+        - Staffing optimization savings
+
+        Returns:
+            Financial impact of operational metrics
+        """
+        try:
+            metrics = self.servicing_ops.get_key_metrics()
+            leadership_metrics = self.leadership.get_key_metrics()
+
+            sla = metrics.get('sla_performance', {})
+            team = metrics.get('team_performance', {})
+            volume = metrics.get('volume_metrics', {})
+            portfolio = leadership_metrics.get('portfolio', {})
+
+            # Constants
+            AVG_ADVISOR_SALARY_MONTHLY = 5000
+            COST_PER_CALL = 25
+            COST_PER_COACHING_SESSION = 500
+            VALUE_PER_FCR_POINT = 1000  # $1K per 1% FCR improvement
+
+            # Calculate cases resolved per FTE
+            with sqlite3.connect(self.db_path) as conn:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT COUNT(*)
+                    FROM analysis
+                    WHERE issue_resolved = 1
+                      AND created_at >= datetime('now', '-7 days')
+                """)
+                resolved_cases = cur.fetchone()[0] or 0
+
+            total_advisors = team.get('total_advisors', 1)
+            cases_per_fte = resolved_cases / total_advisors if total_advisors > 0 else 0
+
+            # Cost per loan calculation
+            total_customers = portfolio.get('total_customers', 1)
+            monthly_ops_cost = total_advisors * AVG_ADVISOR_SALARY_MONTHLY
+            cost_per_loan = monthly_ops_cost / total_customers if total_customers > 0 else 0
+
+            # SLA improvement ROI
+            fcr_rate = sla.get('fcr_rate', 0)
+            fcr_target = sla.get('fcr_target', 0.75)
+            fcr_gap = max(fcr_target - fcr_rate, 0)
+            fcr_improvement_value = fcr_gap * 100 * VALUE_PER_FCR_POINT  # Gap in percentage points
+
+            # Coaching ROI
+            advisors_needing_coaching = team.get('advisors_needing_coaching', 0)
+            coaching_cost = advisors_needing_coaching * COST_PER_COACHING_SESSION
+            # Assume 15% FCR improvement from coaching
+            coaching_benefit = advisors_needing_coaching * 0.15 * VALUE_PER_FCR_POINT * 12  # Annual
+            coaching_roi = ((coaching_benefit - coaching_cost) / coaching_cost * 100) if coaching_cost > 0 else 0
+
+            # Staffing optimization
+            avg_daily_calls = volume.get('avg_daily_calls', 0)
+            current_capacity = volume.get('current_capacity', 0)
+            daily_cost = total_advisors * (AVG_ADVISOR_SALARY_MONTHLY / 30)
+
+            if current_capacity > avg_daily_calls * 1.2:  # >20% overcapacity
+                surplus_advisors = int((current_capacity - avg_daily_calls) / 6)  # 6 calls/hour/advisor
+                potential_savings = surplus_advisors * AVG_ADVISOR_SALARY_MONTHLY
+            else:
+                surplus_advisors = 0
+                potential_savings = 0
+
+            return {
+                'cost_metrics': {
+                    'cost_per_loan_monthly': round(cost_per_loan, 2),
+                    'cost_per_case_resolved': round(monthly_ops_cost / resolved_cases, 2) if resolved_cases > 0 else 0,
+                    'cost_per_call': COST_PER_CALL,
+                    'total_monthly_ops_cost': round(monthly_ops_cost, 2)
+                },
+                'productivity_metrics': {
+                    'cases_per_fte': round(cases_per_fte, 2),
+                    'calls_per_advisor_daily': round(avg_daily_calls / total_advisors, 2) if total_advisors > 0 else 0,
+                    'utilization_rate': round((avg_daily_calls / current_capacity * 100), 1) if current_capacity > 0 else 0
+                },
+                'improvement_opportunities': {
+                    'fcr_improvement': {
+                        'current_fcr': round(fcr_rate, 3),
+                        'target_fcr': fcr_target,
+                        'gap_percentage_points': round(fcr_gap * 100, 1),
+                        'potential_value': round(fcr_improvement_value, 2),
+                        'description': f'Closing FCR gap to target could generate ${fcr_improvement_value:,.0f} value'
+                    },
+                    'coaching_roi': {
+                        'advisors_to_coach': advisors_needing_coaching,
+                        'coaching_cost': round(coaching_cost, 2),
+                        'estimated_annual_benefit': round(coaching_benefit, 2),
+                        'roi_percentage': round(coaching_roi, 1),
+                        'description': f'{coaching_roi:.0f}% ROI on coaching investment'
+                    },
+                    'staffing_optimization': {
+                        'surplus_advisors': surplus_advisors,
+                        'potential_monthly_savings': round(potential_savings, 2),
+                        'recommendation': f'Reallocate {surplus_advisors} advisors to save ${potential_savings:,.0f}/month' if surplus_advisors > 0 else 'Staffing aligned with demand'
+                    }
+                },
+                'total_roi_potential': round(fcr_improvement_value + coaching_benefit + (potential_savings * 12), 2),
+                'generated_at': datetime.utcnow().isoformat()
+            }
+
+        except Exception as e:
+            raise IntelligenceServiceError(f"Failed to calculate operational ROI: {str(e)}")
+
     async def get_coaching_alerts(self) -> Dict[str, Any]:
         """
         Get advisor coaching recommendations.
