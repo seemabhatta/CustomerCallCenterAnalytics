@@ -209,13 +209,53 @@ class ServicingOpsPersona(BasePersona):
                 'risk': 'high' if predicted_escalation > self.SLA_ESCALATION_RATE * 1.2 else 'medium'
             })
 
+        # Format percentages for better display
+        formatted_fcr = f"{predicted_fcr:.1%}" if predicted_fcr else "N/A"
+        formatted_escalation = f"{predicted_escalation:.1%}" if predicted_escalation else "N/A"
+        formatted_volume_change = f"{volume_change:+.1f}%" if volume_change else "0.0%"
+
+        # Format breaches with better display
+        formatted_breaches = []
+        for breach in breaches:
+            formatted_breaches.append({
+                'metric': breach['metric'],
+                'target': f"{breach['target']:.1%}",
+                'predicted': f"{breach['predicted']:.1%}",
+                'gap': f"{(breach['predicted'] - breach['target']) * 100:.1f} percentage points",
+                'risk': breach['risk']
+            })
+
         return {
             'status': 'at_risk' if breaches else 'on_track',
-            'predicted_fcr': predicted_fcr,
-            'predicted_escalation': predicted_escalation,
-            'potential_breaches': breaches,
-            'volume_change_pct': volume_change
+            'predicted_fcr': round(predicted_fcr, 3),  # Keep raw for calculations
+            'predicted_fcr_display': formatted_fcr,
+            'predicted_escalation': round(predicted_escalation, 3),
+            'predicted_escalation_display': formatted_escalation,
+            'potential_breaches': formatted_breaches,
+            'breach_count': len(breaches),
+            'volume_change_pct': round(volume_change, 2),
+            'volume_change_display': formatted_volume_change,
+            'summary': self._format_sla_summary(breaches, predicted_fcr, predicted_escalation, volume_change)
         }
+
+    def _format_sla_summary(
+        self,
+        breaches: List[Dict[str, Any]],
+        predicted_fcr: float,
+        predicted_escalation: float,
+        volume_change: float
+    ) -> str:
+        """Generate a human-readable SLA summary."""
+        if not breaches:
+            return f"All SLA metrics on track. FCR at {predicted_fcr:.1%}, escalation at {predicted_escalation:.1%}. Volume change: {volume_change:+.1f}%."
+
+        breach_descriptions = []
+        for breach in breaches:
+            metric = breach['metric']
+            gap = abs((breach['predicted'] - breach['target']) * 100)
+            breach_descriptions.append(f"{metric} {gap:.1f} points {'below' if breach['predicted'] < breach['target'] else 'above'} target")
+
+        return f"⚠️ SLA at risk: {', '.join(breach_descriptions)}. Volume change: {volume_change:+.1f}%."
 
     def _identify_coaching_needs(self) -> List[Dict[str, Any]]:
         """
