@@ -179,8 +179,86 @@ const ServicingOpsView = () => {
                   </div>
                 ))}
                 {sla.predictions && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                    Forecast outlook: {JSON.stringify(sla.predictions)}
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Forecast Outlook
+                      </span>
+                      <Badge className={`text-[10px] uppercase ${
+                        sla.predictions.status === 'at_risk'
+                          ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                          : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                      }`}>
+                        {sla.predictions.status}
+                      </Badge>
+                    </div>
+
+                    {sla.predictions.summary && (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                        {sla.predictions.summary}
+                      </div>
+                    )}
+
+                    {sla.predictions.predicted_fcr_display && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600">Predicted FCR</span>
+                        <span className="font-medium text-slate-900">{sla.predictions.predicted_fcr_display}</span>
+                      </div>
+                    )}
+
+                    {sla.predictions.predicted_escalation_display && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600">Predicted escalation</span>
+                        <span className="font-medium text-slate-900">{sla.predictions.predicted_escalation_display}</span>
+                      </div>
+                    )}
+
+                    {sla.predictions.volume_change_display && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600">Volume change</span>
+                        <span className={`font-medium ${
+                          sla.predictions.volume_change_pct > 0 ? 'text-amber-600' : 'text-emerald-600'
+                        }`}>
+                          {sla.predictions.volume_change_display}
+                        </span>
+                      </div>
+                    )}
+
+                    {sla.predictions.potential_breaches && sla.predictions.potential_breaches.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          SLA Breach Risks
+                        </p>
+                        {sla.predictions.potential_breaches.map((breach: any, index: number) => (
+                          <div key={index} className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-rose-900">{breach.metric}</span>
+                              <Badge className={`text-[10px] uppercase ${
+                                breach.risk === 'high'
+                                  ? 'bg-rose-600 text-white'
+                                  : 'bg-amber-100 text-amber-700 border border-amber-200'
+                              }`}>
+                                {breach.risk} risk
+                              </Badge>
+                            </div>
+                            <div className="mt-2 space-y-1 text-rose-700">
+                              <div className="flex justify-between">
+                                <span>Target:</span>
+                                <span className="font-medium">{breach.target}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Predicted:</span>
+                                <span className="font-medium">{breach.predicted}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Gap:</span>
+                                <span className="font-semibold">{breach.gap}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </>
