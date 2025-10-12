@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, CSSProperties } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
@@ -8,9 +8,10 @@ interface DraggableCardProps {
   id: string;
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
 }
 
-export const DraggableCard = ({ id, children, className }: DraggableCardProps) => {
+export const DraggableCard = ({ id, children, className, style: customStyle }: DraggableCardProps) => {
   const {
     attributes,
     listeners,
@@ -21,6 +22,7 @@ export const DraggableCard = ({ id, children, className }: DraggableCardProps) =
   } = useSortable({ id });
 
   const style = {
+    ...customStyle,
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,

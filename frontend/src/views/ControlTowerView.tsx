@@ -19,7 +19,6 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
@@ -30,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import IntelligenceStatusBar from '@/components/IntelligenceStatusBar';
 import DraggableCard from '@/components/DraggableCard';
-import { useLayoutPersistence } from '@/hooks/useLayoutPersistence';
+import { useGridLayout } from '@/hooks/useGridLayout';
 import {
   combineErrors,
   combineLoadingStates,
@@ -71,7 +70,7 @@ const DEFAULT_LAYOUT = ['briefing', 'dollarImpact', 'decisionQueue', 'riskWaterf
 
 const ControlTowerView = () => {
   const intelligence = useLeadershipIntelligence();
-  const { layout, setLayout, resetLayout } = useLayoutPersistence('control-tower-layout', DEFAULT_LAYOUT);
+  const { items, moveItem, resetLayout, getRowGroups } = useGridLayout('control-tower-grid', DEFAULT_LAYOUT, 3);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -111,11 +110,7 @@ const ControlTowerView = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setLayout((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      moveItem(active.id as string, over.id as string);
     }
   };
 
@@ -394,65 +389,77 @@ const ControlTowerView = () => {
       <IntelligenceStatusBar persona="leadership" />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={layout} strategy={rectSortingStrategy}>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {layout.map((cardId) => {
-              if (cardId === 'briefing') {
-                return (
-                  <DraggableCard key={cardId} id={cardId}>
-                    {cardComponents[cardId]}
-                    <CardContent className="space-y-5">
-                      {isLoading ? (
-                        <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
-                      ) : (
-                        <>
-                          <div className="text-slate-700">
-                            {intelligence.briefing.data?.health_summary || 'All systems nominal.'}
-                          </div>
+        <SortableContext items={items.map(item => item.id)} strategy={rectSortingStrategy}>
+          <div className="space-y-6">
+            {getRowGroups().map((rowItems, rowIndex) => (
+              <div
+                key={`row-${rowIndex}`}
+                className="grid gap-6"
+                style={{
+                  gridTemplateColumns: `repeat(${rowItems.length}, 1fr)`,
+                  maxWidth: '100%'
+                }}
+              >
+                {rowItems.map((item) => {
+                  const cardId = item.id;
+                  if (cardId === 'briefing') {
+                    return (
+                      <DraggableCard key={cardId} id={cardId}>
+                        {cardComponents[cardId]}
+                        <CardContent className="space-y-5">
+                          {isLoading ? (
+                            <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+                          ) : (
+                            <>
+                              <div className="text-slate-700">
+                                {intelligence.briefing.data?.health_summary || 'All systems nominal.'}
+                              </div>
 
-                          <div>
-                            <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-indigo-500" />
-                              Urgent priorities
-                            </h3>
-                            <div className="grid gap-3 md:grid-cols-2">
-                              {urgentItems.length === 0 && (
-                                <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
-                                  No urgent items detected in the last run.
-                                </div>
-                              )}
-                              {urgentItems.map((item: LeadershipUrgentItem, index: number) => (
-                                <div key={`${item.title}-${index}`} className="rounded-lg border border-slate-200 bg-white p-4">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div>
-                                      <p className="font-semibold text-slate-900">{item.title}</p>
-                                      <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+                              <div>
+                                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                                  <Sparkles className="h-4 w-4 text-indigo-500" />
+                                  Urgent priorities
+                                </h3>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                  {urgentItems.length === 0 && (
+                                    <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+                                      No urgent items detected in the last run.
                                     </div>
-                                    <Badge className={`${urgencyBadge(item.urgency)} text-[10px] uppercase`}>{item.urgency}</Badge>
-                                  </div>
-                                  <div className="mt-4 flex justify-between text-sm">
-                                    <span className="text-slate-500">Financial impact</span>
-                                    <span className="font-medium">{formatCurrency(item.financial_impact)}</span>
-                                  </div>
-                                  <div className="mt-2 rounded border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
-                                    {item.recommendation}
-                                  </div>
+                                  )}
+                                  {urgentItems.map((item: LeadershipUrgentItem, index: number) => (
+                                    <div key={`${item.title}-${index}`} className="rounded-lg border border-slate-200 bg-white p-4">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                          <p className="font-semibold text-slate-900">{item.title}</p>
+                                          <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+                                        </div>
+                                        <Badge className={`${urgencyBadge(item.urgency)} text-[10px] uppercase`}>{item.urgency}</Badge>
+                                      </div>
+                                      <div className="mt-4 flex justify-between text-sm">
+                                        <span className="text-slate-500">Financial impact</span>
+                                        <span className="font-medium">{formatCurrency(item.financial_impact)}</span>
+                                      </div>
+                                      <div className="mt-2 rounded border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
+                                        {item.recommendation}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </DraggableCard>
-                );
-              }
-              return (
-                <DraggableCard key={cardId} id={cardId}>
-                  {cardComponents[cardId]}
-                </DraggableCard>
-              );
-            })}
+                              </div>
+                            </>
+                          )}
+                        </CardContent>
+                      </DraggableCard>
+                    );
+                  }
+                  return (
+                    <DraggableCard key={cardId} id={cardId}>
+                      {cardComponents[cardId]}
+                    </DraggableCard>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </SortableContext>
       </DndContext>
