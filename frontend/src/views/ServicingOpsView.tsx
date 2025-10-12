@@ -46,7 +46,7 @@ const STATUS_COLOR: Record<string, string> = {
   red: 'bg-rose-100 text-rose-700 border border-rose-200',
 };
 
-const DEFAULT_LAYOUT = ['queueOutlook', 'slaHealth', 'advisorHeatmap', 'coachingAlerts', 'staffingBalance', 'caseResolution'];
+const DEFAULT_LAYOUT = ['queueOutlook', 'slaHealth', 'staffingBalance', 'caseResolution', 'coachingAlerts', 'advisorHeatmap'];
 
 const ServicingOpsView = () => {
   const intelligence = useServicingIntelligence({ pollIntervalMs: 45_000 });
