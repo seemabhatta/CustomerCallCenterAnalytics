@@ -7,6 +7,7 @@ import {
   DollarSign,
   Download,
   CheckCircle2,
+  LineChart,
   RefreshCw,
   RotateCcw,
   ShieldAlert,
@@ -140,7 +141,15 @@ const urgencyBadge = (urgency?: string) => {
   }
 };
 
-const DEFAULT_LAYOUT = ['briefing', 'dollarImpact', 'topIntents', 'recommendations', 'riskWaterfall', 'decisionQueue'];
+const DEFAULT_LAYOUT = [
+  'briefing',
+  'pipelineInsights',
+  'dollarImpact',
+  'topIntents',
+  'recommendations',
+  'riskWaterfall',
+  'decisionQueue',
+];
 
 const ControlTowerView = () => {
   const intelligence = useLeadershipIntelligence();
@@ -200,13 +209,14 @@ const ControlTowerView = () => {
 
   const topIntents = useMemo(
     () =>
-      Object.entries((dataSummary as ForecastDataSummary | undefined)?.top_intents ?? {})
+      Object.entries(dataSummary?.top_intents ?? {})
         .sort((a, b) => b[1] - a[1])
         .slice(0, 6),
     [dataSummary],
   );
 
   const pipelineBriefingLoading = forecastLoading || statisticsLoading || plansLoading;
+  const pipelineInsightsLoading = pipelineBriefingLoading;
 
   const isLoading = combineLoadingStates(
     intelligence.briefing.isLoading,
@@ -215,7 +225,6 @@ const ControlTowerView = () => {
     intelligence.riskWaterfall.isLoading
   );
 
-  const executiveCardLoading = isLoading || pipelineBriefingLoading;
   const topIntentsLoading = summaryLoading;
 
   const error = combineErrors(
@@ -262,6 +271,76 @@ const ControlTowerView = () => {
           {intelligence.briefing.data?.portfolio_health ?? 'Loading'}
         </Badge>
       </CardHeader>
+    ),
+    pipelineInsights: (
+      <>
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <LineChart className="h-4 w-4 text-emerald-500" />
+            Pipeline outlook & enablement
+          </div>
+          <Button variant="secondary" size="sm" className="inline-flex items-center gap-2 text-xs">
+            <Download className="h-3.5 w-3.5" /> Download PDF
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4 text-xs text-slate-600">
+          {pipelineInsightsLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={`pipeline-outlook-loading-${idx}`}
+                  className="h-20 animate-pulse rounded-md border border-dashed border-slate-200 bg-slate-50"
+                />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">Call volume daily outlook</div>
+                <ul className="mt-2 space-y-1">
+                  {executiveBriefing.riskCallouts.length ? (
+                    executiveBriefing.riskCallouts.map((item, idx) => (
+                      <li key={`risk-${idx}`} className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" /> {item}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-slate-500">Run a forecast to populate call volume trends.</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">Automation & enablement</div>
+                <ul className="mt-2 space-y-1">
+                  {executiveBriefing.automationWins.length ? (
+                    executiveBriefing.automationWins.map((item, idx) => (
+                      <li key={`auto-${idx}`} className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" /> {item}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-slate-500">Run auto workflows to capture automation metrics.</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800">Coaching priorities</div>
+                <ul className="mt-2 space-y-1">
+                  {executiveBriefing.coachingNotes.length ? (
+                    executiveBriefing.coachingNotes.map((item, idx) => (
+                      <li key={`coach-${idx}`} className="flex items-start gap-2">
+                        <Target className="mt-0.5 h-3.5 w-3.5 text-indigo-500" /> {item}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-slate-500">Advisor coaching insights will flow once plans are generated.</li>
+                  )}
+                </ul>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </>
     ),
     dollarImpact: (
       <>
@@ -576,65 +655,12 @@ const ControlTowerView = () => {
                       <DraggableCard key={cardId} id={cardId}>
                         {cardComponents[cardId]}
                         <CardContent className="space-y-5">
-                          {executiveCardLoading ? (
+                          {isLoading ? (
                             <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
                           ) : (
                             <>
-                              <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-                                <div className="space-y-3 text-xs text-slate-600">
-                                  <div>
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                      <div className="text-sm font-semibold text-slate-800">
-                                        {executiveBriefing.forecastHeadline}
-                                      </div>
-                                      <Button variant="secondary" size="sm" className="inline-flex items-center gap-2 text-xs">
-                                        <Download className="h-3.5 w-3.5" /> Download PDF
-                                      </Button>
-                                    </div>
-                                    <ul className="mt-2 space-y-1">
-                                      {executiveBriefing.riskCallouts.length ? (
-                                        executiveBriefing.riskCallouts.map((item, idx) => (
-                                          <li key={`risk-${idx}`} className="flex items-start gap-2">
-                                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" /> {item}
-                                          </li>
-                                        ))
-                                      ) : (
-                                        <li className="text-slate-500">Run a forecast to populate risk callouts.</li>
-                                      )}
-                                    </ul>
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-semibold text-slate-800">Automation & enablement</div>
-                                    <ul className="mt-2 space-y-1">
-                                      {executiveBriefing.automationWins.length ? (
-                                        executiveBriefing.automationWins.map((item, idx) => (
-                                          <li key={`auto-${idx}`} className="flex items-start gap-2">
-                                            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" /> {item}
-                                          </li>
-                                        ))
-                                      ) : (
-                                        <li className="text-slate-500">Run auto workflows to capture automation metrics.</li>
-                                      )}
-                                    </ul>
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-semibold text-slate-800">Coaching priorities</div>
-                                    <ul className="mt-2 space-y-1">
-                                      {executiveBriefing.coachingNotes.length ? (
-                                        executiveBriefing.coachingNotes.map((item, idx) => (
-                                          <li key={`coach-${idx}`} className="flex items-start gap-2">
-                                            <Target className="mt-0.5 h-3.5 w-3.5 text-indigo-500" /> {item}
-                                          </li>
-                                        ))
-                                      ) : (
-                                        <li className="text-slate-500">Advisor coaching insights will flow once plans are generated.</li>
-                                      )}
-                                    </ul>
-                                  </div>
-                                </div>
-                                <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                                  {intelligence.briefing.data?.health_summary || 'All systems nominal.'}
-                                </div>
+                              <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                                {intelligence.briefing.data?.health_summary || 'All systems nominal.'}
                               </div>
 
                               <div>
