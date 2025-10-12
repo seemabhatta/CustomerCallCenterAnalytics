@@ -6,14 +6,18 @@ export interface RowItem {
   row: number;
 }
 
-const createDefaultRows = (cardIds: string[]): RowItem[] => {
+const createDefaultRows = (cardIds: string[], defaultRowMap?: Record<string, number>): RowItem[] => {
   return cardIds.map((id, index) => ({
     id,
-    row: index, // Each card starts in its own row
+    row: defaultRowMap?.[id] ?? index,
   }));
 };
 
-export const useRowLayout = (key: string, defaultCards: string[]) => {
+export const useRowLayout = (
+  key: string,
+  defaultCards: string[],
+  defaultRowMap?: Record<string, number>,
+) => {
   const [items, setItems] = useState<RowItem[]>(() => {
     try {
       const stored = localStorage.getItem(key);
@@ -22,13 +26,19 @@ export const useRowLayout = (key: string, defaultCards: string[]) => {
         if (Array.isArray(parsed) && parsed.length === defaultCards.length) {
           const storedIds = parsed.map(item => item.id);
           const hasAllItems = defaultCards.every(id => storedIds.includes(id));
-          if (hasAllItems) return parsed;
+          const matchesDefaultRows = defaultRowMap
+            ? parsed.every(item => {
+                const desiredRow = defaultRowMap[item.id];
+                return desiredRow === undefined || item.row === desiredRow;
+              })
+            : true;
+          if (hasAllItems && matchesDefaultRows) return parsed;
         }
       }
     } catch (error) {
       console.warn('Failed to load row layout from localStorage:', error);
     }
-    return createDefaultRows(defaultCards);
+    return createDefaultRows(defaultCards, defaultRowMap);
   });
 
   useEffect(() => {
@@ -59,7 +69,7 @@ export const useRowLayout = (key: string, defaultCards: string[]) => {
   };
 
   const resetLayout = () => {
-    setItems(createDefaultRows(defaultCards));
+    setItems(createDefaultRows(defaultCards, defaultRowMap));
     try {
       localStorage.removeItem(key);
     } catch (error) {

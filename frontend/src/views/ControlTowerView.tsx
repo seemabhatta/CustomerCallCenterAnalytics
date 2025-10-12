@@ -151,9 +151,23 @@ const DEFAULT_LAYOUT = [
   'decisionQueue',
 ];
 
+const DEFAULT_ROW_MAP: Record<string, number> = {
+  briefing: 0,
+  pipelineInsights: 1,
+  dollarImpact: 1,
+  topIntents: 1,
+  recommendations: 2,
+  riskWaterfall: 3,
+  decisionQueue: 4,
+};
+
 const ControlTowerView = () => {
   const intelligence = useLeadershipIntelligence();
-  const { items, moveItem, resetLayout, getRows } = useRowLayout('control-tower-rows', DEFAULT_LAYOUT);
+  const { items, moveItem, resetLayout, getRows } = useRowLayout(
+    'control-tower-rows',
+    DEFAULT_LAYOUT,
+    DEFAULT_ROW_MAP,
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor),
