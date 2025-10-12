@@ -1,171 +1,140 @@
-(venv) ujjal@DESKTOP-9359DEK:~/code/CustomerCallCenterAnalytics$ python3 src/infrastructure/mcp/mcp_server.py
-INFO:__main__:🔧 MCP Server will proxy requests to: http://localhost:8000
-INFO:__main__:✅ MCP HTTP client initialized
-INFO:__main__:🚀 Starting MCP Server for Customer Call Center Analytics
-INFO:__main__:🌐 Server will run on http://0.0.0.0:8001
-INFO:__main__:📡 SSE endpoint: /mcp
-INFO:__main__:💬 Messages endpoint: /mcp/messages
-INFO:__main__:🔧 Tools registered: 20
-INFO:__main__:============================================================
-INFO:__main__:WORKFLOW: Transcript → Analysis → Plan → Workflows → Steps → Execute
-INFO:__main__:ORCHESTRATION: Complete end-to-end pipeline automation
-INFO:__main__:============================================================
-INFO:src.infrastructure.mcp.mcp_server:🔧 MCP Server will proxy requests to: http://localhost:8000
-INFO:src.infrastructure.mcp.mcp_server:✅ MCP HTTP client initialized
-INFO:     Started server process [119343]
-INFO:     Waiting for application startup.
-INFO:mcp.server.streamable_http_manager:StreamableHTTP session manager started
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     104.210.139.199:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.202:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.194:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.197:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type ListToolsRequest
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.203:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.200:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.194:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.201:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: create_transcript with args: {'topic': 'refinance_inquiry', 'urgency': 'medium', 'financial_impact': True, 'customer_sentiment': 'neutral', 'customer_id': 'CUST_1024'}
-INFO:httpx:HTTP Request: POST http://localhost:8000/api/v1/transcripts "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.207:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.205:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.196:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: run_orchestration with args: {'transcript_ids': ['CALL_F75354BF'], 'auto_approve': True}
-INFO:httpx:HTTP Request: POST http://localhost:8000/api/v1/orchestrate/run "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.201:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.202:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.201:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_orchestration_status with args: {'run_id': 'RUN_26D61F70'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/orchestrate/status/RUN_26D61F70 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.192:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.205:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_orchestration_status with args: {'run_id': 'RUN_26D61F70'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/orchestrate/status/RUN_26D61F70 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.194:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.203:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.205:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_orchestration_status with args: {'run_id': 'RUN_26D61F70'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/orchestrate/status/RUN_26D61F70 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.197:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.200:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.193:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_action_plan with args: {'analysis_id': 'CALL_F75354BF'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/plans?analysis_id=CALL_F75354BF "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.199:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.204:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.199:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: list_workflows with args: {'plan_id': 'PLAN_ANALYSIS_CALL_F'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/workflows?plan_id=PLAN_ANALYSIS_CALL_F&limit=100 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.204:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.205:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.199:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.204:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_workflow with args: {'workflow_id': '8f597dcc-6d3e-4185-b06f-f439fc9a1f16'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/workflows?limit=100 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.198:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.202:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.196:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.198:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: create_transcript with args: {'topic': 'hardship_assistance', 'urgency': 'high', 'financial_impact': True, 'customer_sentiment': 'frustrated', 'customer_id': 'CUST_2099'}
-INFO:httpx:HTTP Request: POST http://localhost:8000/api/v1/transcripts "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.194:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.193:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.205:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.193:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: run_orchestration with args: {'transcript_ids': ['CALL_9DB21148'], 'auto_approve': False}
-INFO:httpx:HTTP Request: POST http://localhost:8000/api/v1/orchestrate/run "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.192:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.197:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.201:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_orchestration_status with args: {'run_id': 'RUN_C5524020'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/orchestrate/status/RUN_C5524020 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.192:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.199:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.202:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.201:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: get_orchestration_status with args: {'run_id': 'RUN_C5524020'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/orchestrate/status/RUN_C5524020 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.199:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.206:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.192:0 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:mcp.server.streamable_http:Terminating session: None
-INFO:     104.210.139.192:0 - "POST /mcp HTTP/1.1" 200 OK
-INFO:mcp.server.lowlevel.server:Processing request of type CallToolRequest
-INFO:src.infrastructure.mcp.mcp_server:🔧 Tool called: list_workflows with args: {'plan_id': 'CALL_9DB21148'}
-INFO:httpx:HTTP Request: GET http://localhost:8000/api/v1/workflows?plan_id=CALL_9DB21148&limit=100 "HTTP/1.1 200 OK"
-INFO:mcp.server.streamable_http:Terminating session: None
+INFO:     127.0.0.1:59368 - "GET /api/v1/intelligence/health HTTP/1.1" 200 OK
+19:49:16 - cmdstanpy - INFO - Chain [1] start processing
+19:49:16 - cmdstanpy - INFO - Chain [1] done processing
+Warning: Could not generate churn_risk forecast: Forecast generation failed: Insufficient data for churn_risk. Close to sufficient. Need 9 more days
+Warning: Could not generate delinquency_risk forecast: Forecast generation failed: Insufficient data for delinquency_risk. Close to sufficient. Need 9 more days
+INFO:     127.0.0.1:59386 - "GET /api/v1/intelligence/leadership/risk-waterfall HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59394 - "GET /api/v1/intelligence/leadership/dollar-impact HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59406 - "GET /api/v1/intelligence/leadership/decision-queue HTTP/1.1" 200 OK
+{
+    "body": "n_changepoints greater than number of observations. Using 15.",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/prophet/forecaster.py",
+        "code.function.name": "set_changepoints",
+        "code.line.number": 434
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-10-10T23:49:16.039958Z",
+    "observed_timestamp": "2025-10-10T23:49:16.040073Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
+{
+    "body": "Chain [1] start processing",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/cmdstanpy/model.py",
+        "code.function.name": "_run_cmdstan",
+        "code.line.number": 2058
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-10-10T23:49:16.055853Z",
+    "observed_timestamp": "2025-10-10T23:49:16.056054Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
+{
+    "body": "Chain [1] done processing",
+    "severity_number": 9,
+    "severity_text": "INFO",
+    "attributes": {
+        "code.file.path": "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/cmdstanpy/model.py",
+        "code.function.name": "_run_cmdstan",
+        "code.line.number": 2115
+    },
+    "dropped_attributes": 0,
+    "timestamp": "2025-10-10T23:49:16.193995Z",
+    "observed_timestamp": "2025-10-10T23:49:16.194184Z",
+    "trace_id": "0x00000000000000000000000000000000",
+    "span_id": "0x0000000000000000",
+    "trace_flags": 0,
+    "resource": {
+        "attributes": {
+            "telemetry.sdk.language": "python",
+            "telemetry.sdk.name": "opentelemetry",
+            "telemetry.sdk.version": "1.36.0",
+            "service.name": "xai",
+            "service.version": "1.0.0"
+        },
+        "schema_url": ""
+    },
+    "event_name": ""
+}
+[19:49:16] ✗ POST | 3.7s | http.method=POST http.url=https://api.openai.com/v1/responses
+[19:49:20]   📝 exception | exception.type=httpx.RemoteProtocolError exception.message=Server disconnected without sending a response. exception.stacktrace=Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpcore/_async/connection.py", line 103, in handle_async_request
+    return await self._connection.handle_async_request(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 136, in handle_async_request
+    raise exc
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 106, in handle_async_request
+    ) = await self._receive_response_headers(**kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 177, in _receive_response_headers
+    event = await self._receive_event(timeout=timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpcore/_async/http11.py", line 231, in _receive_event
+    raise RemoteProtocolError(msg)
+httpcore.RemoteProtocolError: Server disconnected without sending a response.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/trace/__init__.py", line 589, in use_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/sdk/trace/__init__.py", line 1105, in start_as_current_span
+    yield span
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/httpx/__init__.py", line 1134, in _handle_async_request_wrapper
+    raise exception.with_traceback(exception.__traceback__)
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/opentelemetry/instrumentation/httpx/__init__.py", line 1100, in _handle_async_request_wrapper
+    response = await wrapped(*args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/ujjal/code/CustomerCallCenterAnalytics/venv/lib/python3.12/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.RemoteProtocolError: Server disconnected without sending a response.
+
+[19:49:20] ✓ POST | 14.5s | http.method=POST http.url=https://api.openai.com/v1/responses http.statuscode=200
+INFO:     127.0.0.1:59382 - "GET /api/v1/intelligence/leadership/briefing?use_cache=true&ttl_hours=1 HTTP/1.1" 200 OK
+[19:49:16] ✓ openai.response | 18.7s | genai.system=openai genai.request.model=gpt-4o-mini genai.response.id=resp_0609a07a4c2a86790068e99b80fea08195ae1d7b31e6a5d595 genai.response.model=gpt-4o-mini-2024-07-18 genai.usage.inputtokens=1563 genai.usage.outputtokens=578 llm.usage.totaltokens=2141 genai.usage.cachereadinputtokens=0
+[19:49:16] ✓ openai.llm.arun | 18.7s | llm.provider=openai llm.model=gpt-4o-mini llm.attempt=1 llm.latencyms=18709.084231988527 llm.responseid=resp_0609a07a4c2a86790068e99b80fea08195ae1d7b31e6a5d595

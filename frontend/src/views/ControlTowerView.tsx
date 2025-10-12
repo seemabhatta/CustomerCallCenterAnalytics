@@ -395,7 +395,7 @@ const ControlTowerView = () => {
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={layout} strategy={rectSortingStrategy}>
-          <div className="grid gap-6 auto-rows-auto" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))' }}>
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {layout.map((cardId) => {
               if (cardId === 'briefing') {
                 return (
