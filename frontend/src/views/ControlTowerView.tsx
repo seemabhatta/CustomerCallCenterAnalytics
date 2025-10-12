@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import IntelligenceStatusBar from '@/components/IntelligenceStatusBar';
 import DraggableCard from '@/components/DraggableCard';
-import { useGridLayout } from '@/hooks/useGridLayout';
+import { useRowLayout } from '@/hooks/useGridLayout';
 import {
   combineErrors,
   combineLoadingStates,
@@ -70,7 +70,7 @@ const DEFAULT_LAYOUT = ['briefing', 'dollarImpact', 'decisionQueue', 'riskWaterf
 
 const ControlTowerView = () => {
   const intelligence = useLeadershipIntelligence();
-  const { items, moveItem, resetLayout, getRowGroups } = useGridLayout('control-tower-grid', DEFAULT_LAYOUT, 3);
+  const { items, moveItem, resetLayout, getRows } = useRowLayout('control-tower-rows', DEFAULT_LAYOUT);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -391,13 +391,12 @@ const ControlTowerView = () => {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map(item => item.id)} strategy={rectSortingStrategy}>
           <div className="space-y-6">
-            {getRowGroups().map((rowItems, rowIndex) => (
+            {getRows().map((rowItems, rowIndex) => (
               <div
                 key={`row-${rowIndex}`}
                 className="grid gap-6"
                 style={{
                   gridTemplateColumns: `repeat(${rowItems.length}, 1fr)`,
-                  maxWidth: '100%'
                 }}
               >
                 {rowItems.map((item) => {

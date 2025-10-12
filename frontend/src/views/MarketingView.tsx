@@ -20,7 +20,6 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
@@ -34,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import IntelligenceStatusBar from '@/components/IntelligenceStatusBar';
 import DraggableCard from '@/components/DraggableCard';
-import { useLayoutPersistence } from '@/hooks/useLayoutPersistence';
+import { useRowLayout } from '@/hooks/useGridLayout';
 import {
   combineErrors,
   combineLoadingStates,
@@ -56,7 +55,7 @@ const DEFAULT_LAYOUT = ['segments', 'roiAttribution', 'campaigns', 'churnWatchli
 const MarketingView = () => {
   const intelligence = useMarketingIntelligence();
   const messageOptimizer = useMessageOptimizer();
-  const { layout, setLayout, resetLayout } = useLayoutPersistence('marketing-layout', DEFAULT_LAYOUT);
+  const { items, moveItem, resetLayout, getRows } = useRowLayout('marketing-rows', DEFAULT_LAYOUT);
 
   const [messageDraft, setMessageDraft] = useState('We appreciate your loyalty. Here is an exclusive rate just for you.');
   const [targetSegment, setTargetSegment] = useState('general');
@@ -97,11 +96,7 @@ const MarketingView = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setLayout((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      moveItem(active.id as string, over.id as string);
     }
   };
 
@@ -497,12 +492,22 @@ const MarketingView = () => {
       <IntelligenceStatusBar persona="marketing" />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={layout} strategy={rectSortingStrategy}>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {layout.map((cardId) => (
-              <DraggableCard key={cardId} id={cardId}>
-                {cardComponents[cardId]}
-              </DraggableCard>
+        <SortableContext items={items.map(item => item.id)} strategy={rectSortingStrategy}>
+          <div className="space-y-6">
+            {getRows().map((rowItems, rowIndex) => (
+              <div
+                key={`row-${rowIndex}`}
+                className="grid gap-6"
+                style={{
+                  gridTemplateColumns: `repeat(${rowItems.length}, 1fr)`,
+                }}
+              >
+                {rowItems.map((item) => (
+                  <DraggableCard key={item.id} id={item.id}>
+                    {cardComponents[item.id]}
+                  </DraggableCard>
+                ))}
+              </div>
             ))}
           </div>
         </SortableContext>

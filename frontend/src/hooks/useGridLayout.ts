@@ -1,26 +1,24 @@
 import { useState, useEffect } from 'react';
 
-export interface GridItem {
+// Simple row-based layout: each card belongs to a row
+export interface RowItem {
   id: string;
   row: number;
-  col: number;
 }
 
-const createDefaultGrid = (cardIds: string[], maxCols: number): GridItem[] => {
+const createDefaultRows = (cardIds: string[]): RowItem[] => {
   return cardIds.map((id, index) => ({
     id,
-    row: Math.floor(index / maxCols),
-    col: index % maxCols,
+    row: index, // Each card starts in its own row
   }));
 };
 
-export const useGridLayout = (key: string, defaultCards: string[], maxCols: number = 3) => {
-  const [items, setItems] = useState<GridItem[]>(() => {
+export const useRowLayout = (key: string, defaultCards: string[]) => {
+  const [items, setItems] = useState<RowItem[]>(() => {
     try {
       const stored = localStorage.getItem(key);
       if (stored) {
-        const parsed = JSON.parse(stored) as GridItem[];
-        // Validate that stored layout contains all required items
+        const parsed = JSON.parse(stored) as RowItem[];
         if (Array.isArray(parsed) && parsed.length === defaultCards.length) {
           const storedIds = parsed.map(item => item.id);
           const hasAllItems = defaultCards.every(id => storedIds.includes(id));
@@ -28,16 +26,16 @@ export const useGridLayout = (key: string, defaultCards: string[], maxCols: numb
         }
       }
     } catch (error) {
-      console.warn('Failed to load grid layout from localStorage:', error);
+      console.warn('Failed to load row layout from localStorage:', error);
     }
-    return createDefaultGrid(defaultCards, maxCols);
+    return createDefaultRows(defaultCards);
   });
 
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(items));
     } catch (error) {
-      console.warn('Failed to save grid layout to localStorage:', error);
+      console.warn('Failed to save row layout to localStorage:', error);
     }
   }, [key, items]);
 
@@ -53,35 +51,30 @@ export const useGridLayout = (key: string, defaultCards: string[], maxCols: numb
 
       // Swap positions
       const newItems = [...currentItems];
-      newItems[activeIndex] = { ...activeItem, row: overItem.row, col: overItem.col };
-      newItems[overIndex] = { ...overItem, row: activeItem.row, col: activeItem.col };
+      newItems[activeIndex] = { ...activeItem, row: overItem.row };
+      newItems[overIndex] = { ...overItem, row: activeItem.row };
 
       return newItems;
     });
   };
 
   const resetLayout = () => {
-    setItems(createDefaultGrid(defaultCards, maxCols));
+    setItems(createDefaultRows(defaultCards));
     try {
       localStorage.removeItem(key);
     } catch (error) {
-      console.warn('Failed to remove grid layout from localStorage:', error);
+      console.warn('Failed to remove row layout from localStorage:', error);
     }
   };
 
   // Group items by row for rendering
-  const getRowGroups = () => {
-    const rowMap = new Map<number, GridItem[]>();
+  const getRows = () => {
+    const rowMap = new Map<number, RowItem[]>();
     items.forEach(item => {
       if (!rowMap.has(item.row)) {
         rowMap.set(item.row, []);
       }
       rowMap.get(item.row)!.push(item);
-    });
-
-    // Sort items within each row by column
-    rowMap.forEach((rowItems) => {
-      rowItems.sort((a, b) => a.col - b.col);
     });
 
     // Convert to sorted array of rows
@@ -90,5 +83,5 @@ export const useGridLayout = (key: string, defaultCards: string[], maxCols: numb
       .map(([_, rowItems]) => rowItems);
   };
 
-  return { items, moveItem, resetLayout, setItems, getRowGroups, maxCols };
+  return { items, moveItem, resetLayout, getRows };
 };

@@ -19,7 +19,6 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
@@ -30,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import IntelligenceStatusBar from '@/components/IntelligenceStatusBar';
 import DraggableCard from '@/components/DraggableCard';
-import { useLayoutPersistence } from '@/hooks/useLayoutPersistence';
+import { useRowLayout } from '@/hooks/useGridLayout';
 import {
   combineErrors,
   combineLoadingStates,
@@ -51,7 +50,7 @@ const DEFAULT_LAYOUT = ['queueOutlook', 'slaHealth', 'advisorHeatmap', 'coaching
 
 const ServicingOpsView = () => {
   const intelligence = useServicingIntelligence({ pollIntervalMs: 45_000 });
-  const { layout, setLayout, resetLayout } = useLayoutPersistence('servicing-ops-layout', DEFAULT_LAYOUT);
+  const { items, moveItem, resetLayout, getRows } = useRowLayout('servicing-ops-rows', DEFAULT_LAYOUT);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -88,11 +87,7 @@ const ServicingOpsView = () => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setLayout((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      moveItem(active.id as string, over.id as string);
     }
   };
 
@@ -532,12 +527,22 @@ const ServicingOpsView = () => {
       <IntelligenceStatusBar persona="servicing" />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={layout} strategy={rectSortingStrategy}>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {layout.map((cardId) => (
-              <DraggableCard key={cardId} id={cardId}>
-                {cardComponents[cardId]}
-              </DraggableCard>
+        <SortableContext items={items.map(item => item.id)} strategy={rectSortingStrategy}>
+          <div className="space-y-6">
+            {getRows().map((rowItems, rowIndex) => (
+              <div
+                key={`row-${rowIndex}`}
+                className="grid gap-6"
+                style={{
+                  gridTemplateColumns: `repeat(${rowItems.length}, 1fr)`,
+                }}
+              >
+                {rowItems.map((item) => (
+                  <DraggableCard key={item.id} id={item.id}>
+                    {cardComponents[item.id]}
+                  </DraggableCard>
+                ))}
+              </div>
             ))}
           </div>
         </SortableContext>
