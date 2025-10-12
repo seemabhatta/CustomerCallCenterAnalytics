@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
   BarChart3,
@@ -143,6 +143,7 @@ const urgencyBadge = (urgency?: string) => {
 
 const DEFAULT_LAYOUT = [
   'briefing',
+  'forecastOutlook',
   'pipelineInsights',
   'dollarImpact',
   'topIntents',
@@ -153,15 +154,17 @@ const DEFAULT_LAYOUT = [
 
 const DEFAULT_ROW_MAP: Record<string, number> = {
   briefing: 0,
+  forecastOutlook: 1,
   pipelineInsights: 1,
   dollarImpact: 1,
-  topIntents: 1,
-  recommendations: 2,
-  riskWaterfall: 3,
-  decisionQueue: 4,
+  topIntents: 2,
+  recommendations: 3,
+  riskWaterfall: 4,
+  decisionQueue: 5,
 };
 
 const ControlTowerView = () => {
+  const queryClient = useQueryClient();
   const intelligence = useLeadershipIntelligence();
   const { items, moveItem, resetLayout, getRows } = useRowLayout(
     'control-tower-rows',
@@ -241,6 +244,13 @@ const ControlTowerView = () => {
 
   const topIntentsLoading = summaryLoading;
 
+  const handleRefreshForecast = () => {
+    if (!selectedForecastType?.type) return;
+    queryClient.invalidateQueries({
+      queryKey: ['control-tower', 'forecast', selectedForecastType.type],
+    });
+  };
+
   const error = combineErrors(
     intelligence.briefing.error as Error | undefined,
     intelligence.dollarImpact.error as Error | undefined,
@@ -285,6 +295,89 @@ const ControlTowerView = () => {
           {intelligence.briefing.data?.portfolio_health ?? 'Loading'}
         </Badge>
       </CardHeader>
+    ),
+    forecastOutlook: (
+      <>
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <LineChart className="h-4 w-4 text-indigo-500" /> Daily call volume forecast
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-tight text-slate-600">
+              /api/v1/forecasts/generate
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleRefreshForecast}
+              disabled={forecastLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${forecastLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-xs text-slate-600">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="text-sm font-semibold text-slate-800">
+              {selectedForecastType?.description ?? 'Select a forecast'}
+            </div>
+            {forecast?.generated_at && (
+              <span className="text-[11px] text-slate-500">
+                Generated {dateLabel(forecast.generated_at)} · Horizon {forecast?.summary?.total_periods ?? '—'} periods
+              </span>
+            )}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <ForecastMetricCard
+              label="Average"
+              value={formatNumber(forecast?.summary?.average_predicted ?? null, { maximumFractionDigits: 0 })}
+              helper="Across prediction window"
+            />
+            <ForecastMetricCard
+              label="Peak"
+              value={formatNumber(forecast?.summary?.max_predicted ?? null, { maximumFractionDigits: 0 })}
+              helper="Highest interval"
+            />
+            <ForecastMetricCard
+              label="Latest"
+              value={formatNumber(forecast?.predictions?.at(-1)?.predicted ?? null, { maximumFractionDigits: 0 })}
+              helper="Most recent day"
+            />
+          </div>
+
+          <div className="space-y-2">
+            {(forecast?.predictions ?? []).slice(0, 5).map((point) => (
+              <div
+                key={`${point.date}-${point.period}`}
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">
+                    {point.period_label ?? dateLabel(point.date)}
+                  </div>
+                  {point.commentary && (
+                    <p className="text-[11px] text-slate-500">{point.commentary}</p>
+                  )}
+                </div>
+                <div className="text-right text-sm font-semibold text-slate-800">
+                  {formatNumber(point.predicted, { maximumFractionDigits: 0 })}
+                  <div className="text-[11px] text-slate-500">
+                    ({formatNumber(point.lower_bound, { maximumFractionDigits: 0 })} – {formatNumber(point.upper_bound, { maximumFractionDigits: 0 })})
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!forecast?.predictions?.length && (
+              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-3 text-center text-[11px] text-slate-500">
+                Forecast predictions will populate once telemetry is available.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </>
     ),
     pipelineInsights: (
       <>
@@ -730,3 +823,19 @@ const ControlTowerView = () => {
 };
 
 export default ControlTowerView;
+
+const ForecastMetricCard = ({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+}) => (
+  <div className="rounded-lg border border-slate-200 bg-white/80 p-3">
+    <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+    <div className="mt-2 text-lg font-semibold text-slate-900">{value}</div>
+    <p className="mt-1 text-[11px] text-slate-500">{helper}</p>
+  </div>
+);

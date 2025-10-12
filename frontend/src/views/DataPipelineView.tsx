@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ChevronsRight,
   CircleDot,
-  LineChart,
   PlayCircle,
   RefreshCw,
   ShieldCheck,
@@ -386,91 +385,6 @@ export function DataPipelineView() {
         />
 
         <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-          <Card className="border border-slate-200/80 shadow-sm">
-            <CardHeader className="flex flex-col gap-2 border-b border-slate-100 pb-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <LineChart className="h-4 w-4 text-indigo-500" /> Forecast Outlook
-                </div>
-                <ApiBadgeGroup paths={["/api/v1/forecasts/generate", "/api/v1/forecasts/types/available"]} />
-              </div>
-              <CardTitle className="text-xl font-semibold text-slate-900">
-                {selectedForecastType
-                  ? selectedForecastType.description
-                  : "Select a forecast"}
-              </CardTitle>
-              {forecast?.generated_at && (
-                <p className="text-xs text-slate-500">
-                  Generated {dateLabel(forecast.generated_at)} · Horizon {forecast?.summary?.total_periods ?? "—"} periods
-                </p>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4 pt-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <ForecastMetric
-                  label="Average"
-                  value={formatNumber(forecast?.summary?.average_predicted, { maximumFractionDigits: 0 })}
-                  helper="Across prediction window"
-                />
-                <ForecastMetric
-                  label="Peak"
-                  value={formatNumber(forecast?.summary?.max_predicted, { maximumFractionDigits: 0 })}
-                  helper="Highest predicted value"
-                />
-                <ForecastMetric
-                  label="Confidence band"
-                  value={formatNumber(
-                    forecast?.predictions?.[0]?.confidence_interval ?? null,
-                    { maximumFractionDigits: 0 }
-                  )}
-                  helper="First-period interval width"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>Prediction horizon</span>
-                  <span>
-                    {dateLabel(forecast?.summary?.prediction_start)} – {dateLabel(forecast?.summary?.prediction_end)}
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-slate-100">
-                  <div
-                    className="h-2 rounded-full bg-indigo-500 transition-all"
-                    style={{
-                      width: `${Math.min(100, ((forecast?.summary?.average_predicted ?? 0) /
-                        Math.max(forecast?.summary?.max_predicted ?? 1, 1)) * 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {forecast?.predictions?.slice(0, 4).map((item) => (
-                  <div key={item.date} className="rounded-xl border border-slate-100 p-3 text-xs">
-                    <div className="flex items-center justify-between text-[11px] text-slate-500">
-                      <span>{dateLabel(item.date)}</span>
-                      <Badge variant="outline" className="uppercase">
-                        {ROLE_LABELS[selectedForecastType?.type?.includes("advisor") ? "ADVISOR" : "BORROWER"] ?? "Focus"}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2 text-slate-800">
-                      <span className="text-lg font-semibold">
-                        {formatNumber(item.predicted, { maximumFractionDigits: 0 })}
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        ({formatNumber(item.lower_bound, { maximumFractionDigits: 0 })} – {formatNumber(item.upper_bound, { maximumFractionDigits: 0 })})
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {!forecast?.predictions?.length && (
-                  <div className="rounded-xl border border-dashed border-slate-200 p-4 text-xs text-slate-500">
-                    Forecast predictions will appear after data is available.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="border border-slate-200/80 shadow-sm">
             <CardHeader className="border-b border-slate-100 pb-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
