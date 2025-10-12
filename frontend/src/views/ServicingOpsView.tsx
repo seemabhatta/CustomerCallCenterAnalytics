@@ -22,7 +22,7 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useServicingIntelligence } from '@/api/intelligenceHooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -532,8 +532,8 @@ const ServicingOpsView = () => {
       <IntelligenceStatusBar persona="servicing" />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={layout} strategy={verticalListSortingStrategy}>
-          <div className="space-y-6">
+        <SortableContext items={layout} strategy={rectSortingStrategy}>
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {layout.map((cardId) => (
               <DraggableCard key={cardId} id={cardId}>
                 {cardComponents[cardId]}
