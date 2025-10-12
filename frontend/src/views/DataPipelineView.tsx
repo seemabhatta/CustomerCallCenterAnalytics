@@ -8,14 +8,12 @@ import {
   CheckCircle2,
   ChevronsRight,
   CircleDot,
-  Download,
   LineChart,
   PlayCircle,
   RefreshCw,
   ShieldCheck,
   Sparkles,
   Target,
-  Users,
 } from "lucide-react";
 import {
   Card,
@@ -122,13 +120,6 @@ type LiveSignal = {
   persona: string;
   summary: string;
   tone: "info" | "warn" | "success";
-};
-
-type ExecutiveBriefing = {
-  forecastHeadline: string;
-  riskCallouts: string[];
-  automationWins: string[];
-  coachingNotes: string[];
 };
 
 const deriveReadinessMap = (payload?: ForecastReadinessResponse) => {
@@ -256,56 +247,7 @@ const deriveSignals = (workflows?: Workflow[]): LiveSignal[] => {
     });
 };
 
-const deriveBriefing = (
-  forecast?: ForecastResult,
-  statistics?: ForecastStatistics,
-  plans?: Plan[]
-): ExecutiveBriefing => {
-  const riskCallouts: string[] = [];
-  const automationWins: string[] = [];
-  const coachingNotes: string[] = [];
-
-  if (forecast?.summary) {
-    riskCallouts.push(
-      `Forecast horizon spans ${forecast.summary.total_periods} periods (${dateLabel(
-        forecast.summary.prediction_start
-      )} – ${dateLabel(forecast.summary.prediction_end)}).`
-    );
-    riskCallouts.push(
-      `Average predicted volume ${formatNumber(forecast.summary.average_predicted, {
-        maximumFractionDigits: 0,
-      })}.`
-    );
-  }
-
-  if (statistics?.most_accessed?.length) {
-    const top = statistics.most_accessed[0];
-    automationWins.push(`Top referenced forecast: ${top.forecast_type} (${top.access_count} views).`);
-  }
-
-  if (plans?.length) {
-    const plan = plans[0];
-    const advisorCoaching = plan.advisor_plan?.coaching_items?.[0]?.coaching_point;
-    if (advisorCoaching) {
-      coachingNotes.push(`Advisor focus: ${advisorCoaching}`);
-    }
-    const leadershipItem = plan.leadership_plan?.risk_indicators?.[0];
-    if (leadershipItem) {
-      riskCallouts.push(`Leadership indicator: ${leadershipItem}`);
-    }
-  }
-
-  return {
-    forecastHeadline: forecast
-      ? `${forecast.forecast_type.replace(/_/g, " ")} outlook`
-      : "Forecast summary",
-    riskCallouts: riskCallouts.slice(0, 3),
-    automationWins: automationWins.slice(0, 3),
-    coachingNotes: coachingNotes.slice(0, 3),
-  };
-};
-
-export function AnalyticsViewV2() {
+export function DataPipelineView() {
   const queryClient = useQueryClient();
   const [selectedType, setSelectedType] = useState<string | null>(null);
 
@@ -376,11 +318,6 @@ export function AnalyticsViewV2() {
   );
   const playbooks = useMemo(() => derivePlaybooks(plans), [plans]);
   const signals = useMemo(() => deriveSignals(workflows), [workflows]);
-  const briefing = useMemo(
-    () => deriveBriefing(forecast, statistics, plans),
-    [forecast, statistics, plans]
-  );
-
   const handleRefreshForecast = () => {
     if (!selectedType) return;
     queryClient.invalidateQueries({ queryKey: ["forecast", selectedType] });
@@ -410,9 +347,9 @@ export function AnalyticsViewV2() {
     <div className="space-y-6 bg-slate-50 p-6 text-sm">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Analytics Command Center</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">Data Pipeline</h1>
           <p className="text-xs text-slate-500">
-            Unified predictive outlooks and prescriptive playbooks aligned with borrower, advisor, supervisor, and leadership flows.
+            Centralized forecast readiness, data health, and playbook signals for administrative oversight.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -585,20 +522,6 @@ export function AnalyticsViewV2() {
               <SummaryTile label="Unique intents" value={formatNumber(dataSummary?.analyses?.unique_intents ?? null)} helper="Coverage for forecasting" />
               <SummaryTile label="Active forecasts" value={formatNumber(statistics?.total_forecasts ?? null)} helper={`${Object.keys(statistics?.active_by_type ?? {}).length} types cached`} />
             </div>
-            <div>
-              <div className="mb-2 text-[11px] font-semibold uppercase text-slate-500">Top intents</div>
-              <div className="space-y-1">
-                {Object.entries(dataSummary?.top_intents ?? {}).slice(0, 5).map(([intent, count]) => (
-                  <div key={intent} className="flex items-center justify-between text-slate-600">
-                    <span>{intent}</span>
-                    <span>{count}</span>
-                  </div>
-                ))}
-                {!Object.keys(dataSummary?.top_intents ?? {}).length && (
-                  <p className="text-slate-500">Intent distribution will appear as analyses are generated.</p>
-                )}
-              </div>
-            </div>
           </CardContent>
         </Card>
       </section>
@@ -728,57 +651,6 @@ export function AnalyticsViewV2() {
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200/80 shadow-sm">
-            <CardHeader className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Users className="h-4 w-4 text-rose-500" /> Executive Briefing
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <ApiBadgeGroup paths={["/api/v1/forecasts/generate", "/api/v1/forecasts/statistics", "/api/v1/plans"]} />
-                <Button variant="secondary" size="sm" className="inline-flex items-center gap-2 text-xs">
-                  <Download className="h-3.5 w-3.5" /> Download PDF
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 pt-4 text-xs text-slate-600">
-              <div>
-                <div className="text-sm font-semibold text-slate-800">{briefing.forecastHeadline}</div>
-                <ul className="mt-2 space-y-1">
-                  {briefing.riskCallouts.map((item, idx) => (
-                    <li key={`risk-${idx}`} className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-slate-800">Automation & enablement</div>
-                <ul className="mt-2 space-y-1">
-                  {briefing.automationWins.map((item, idx) => (
-                    <li key={`auto-${idx}`} className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" /> {item}
-                    </li>
-                  ))}
-                  {!briefing.automationWins.length && (
-                    <li className="text-slate-500">Run auto workflows to capture automation metrics.</li>
-                  )}
-                </ul>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-slate-800">Coaching priorities</div>
-                <ul className="mt-2 space-y-1">
-                  {briefing.coachingNotes.map((item, idx) => (
-                    <li key={`coach-${idx}`} className="flex items-start gap-2">
-                      <Target className="mt-0.5 h-3.5 w-3.5 text-indigo-500" /> {item}
-                    </li>
-                  ))}
-                  {!briefing.coachingNotes.length && (
-                    <li className="text-slate-500">Advisor coaching insights will flow once plans are generated.</li>
-                  )}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </section>
     </div>
@@ -862,4 +734,4 @@ function SectionHeader({
   );
 }
 
-export default AnalyticsViewV2;
+export default DataPipelineView;

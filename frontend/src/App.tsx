@@ -30,7 +30,7 @@ import { ExecutionView } from "@/views/ExecutionView";
 import { GovernanceSimulator } from "@/views/GovernanceSimulator";
 import { TranscriptGeneratorView } from "@/views/TranscriptGeneratorView";
 import { NewPipeline2View } from "@/views/NewPipeline2View";
-import { AnalyticsViewV2 } from "@/views/AnalyticsViewV2";
+import DataPipelineView from "@/views/DataPipelineView";
 import ControlTowerView from "@/views/ControlTowerView";
 import ServicingOpsView from "@/views/ServicingOpsView";
 import MarketingView from "@/views/MarketingView";
@@ -39,7 +39,7 @@ import { SimpleChatView } from "@/components/SimpleChatView";
 import { TabValue, UserRole } from "@/types";
 
 export default function App() {
-  const [tab, setTab] = useState<TabValue>("analytics");
+  const [tab, setTab] = useState<TabValue>("control-tower");
   const [userRole, setUserRole] = useState<UserRole>("admin");
   const [workflowFocusId, setWorkflowFocusId] = useState<string | null>(null);
 
@@ -47,14 +47,13 @@ export default function App() {
   const [isTranscriptDialogOpen, setIsTranscriptDialogOpen] = useState(false);
   const [activeTranscriptId, setActiveTranscriptId] = useState<string | null>(null);
 
-
   // Switch to appropriate default tab when role changes
   useEffect(() => {
     const roleDefaultTabs: Record<UserRole, TabValue> = {
       leadership: "control-tower",
       supervisor: "dashboard",
       advisor: "calls",
-      admin: "pipeline"
+      admin: "data-pipeline"
     };
 
     setTab(roleDefaultTabs[userRole]);
@@ -117,7 +116,7 @@ export default function App() {
       {/* Main Content */}
       <Tabs value={tab} onValueChange={(value) => setTab(value as TabValue)}>
         <TabsList className="inline-flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg text-xs">
-          {/* Leadership View: Analytics, Insights, Governance */}
+          {/* Leadership View */}
           {userRole === "leadership" && (
             <>
               <TabsTrigger value="control-tower" className="tab-trigger">
@@ -131,10 +130,6 @@ export default function App() {
               <TabsTrigger value="marketing-intel" className="tab-trigger">
                 <Megaphone className="h-3 w-3 mr-1" />
                 Marketing
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="tab-trigger">
-                <BarChart3 className="h-3 w-3 mr-1" />
-                Analytics
               </TabsTrigger>
               <TabsTrigger value="insights" className="tab-trigger">
                 <MessageCircle className="h-3 w-3 mr-1" />
@@ -194,6 +189,10 @@ export default function App() {
           {/* Admin View: All tabs available */}
           {userRole === "admin" && (
             <>
+              <TabsTrigger value="data-pipeline" className="tab-trigger">
+                <BarChart3 className="h-3 w-3 mr-1" />
+                Data Pipeline
+              </TabsTrigger>
               <TabsTrigger value="pipeline" className="tab-trigger">
                 <Settings2 className="h-3 w-3 mr-1" />
                 Pipeline
@@ -242,11 +241,6 @@ export default function App() {
           <MarketingView />
         </TabsContent>
 
-        {/* Analytics - Available for Leadership and Admin */}
-        <TabsContent value="analytics">
-          <AnalyticsViewV2 />
-        </TabsContent>
-
         {/* Insights - Leadership only */}
         <TabsContent value="insights">
           <SimpleChatView
@@ -265,9 +259,9 @@ export default function App() {
           <GovernanceSimulator />
         </TabsContent>
 
-        {/* Dashboard - Supervisor only (reuse Analytics) */}
+        {/* Dashboard - Supervisor only (reuse Data Pipeline) */}
         <TabsContent value="dashboard">
-          <AnalyticsViewV2 />
+          <DataPipelineView />
         </TabsContent>
 
         {/* Approvals - Supervisor only (reuse Workflow) */}
@@ -324,6 +318,10 @@ export default function App() {
         </TabsContent>
 
         {/* Admin-only tabs */}
+        <TabsContent value="data-pipeline">
+          <DataPipelineView />
+        </TabsContent>
+
         <TabsContent value="pipeline">
           <NewPipeline2View />
         </TabsContent>

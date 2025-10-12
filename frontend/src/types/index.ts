@@ -715,7 +715,6 @@ export type PipelineStage =
 
 // UI State Types
 export type TabValue =
-  | 'analytics'
   | 'control-tower'
   | 'servicing-intel'
   | 'marketing-intel'
@@ -726,6 +725,7 @@ export type TabValue =
   | 'execution'
   | 'governance'
   | 'generator'
+  | 'data-pipeline'
   | 'pipeline'
   | 'insights'
   | 'dashboard'

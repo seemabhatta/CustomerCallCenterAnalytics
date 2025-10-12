@@ -1,13 +1,18 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
   BarChart3,
   Briefcase,
   DollarSign,
+  Download,
+  CheckCircle2,
   RefreshCw,
   RotateCcw,
   ShieldAlert,
   Sparkles,
+  Target,
+  Users,
 } from 'lucide-react';
 import {
   DndContext,
@@ -23,6 +28,7 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+import { forecastApi, planApi } from '@/api/client';
 import { useLeadershipIntelligence } from '@/api/intelligenceHooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -45,12 +51,80 @@ import {
   LeadershipRecommendation,
   LeadershipRiskWaterfall,
   LeadershipUrgentItem,
+  ForecastResult,
+  ForecastStatistics,
+  ForecastTypeSummary,
+  ForecastDataSummary,
+  Plan,
 } from '@/types';
 
 const HEALTH_TONE: Record<string, string> = {
   STABLE: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
   ATTENTION: 'bg-amber-100 text-amber-700 border border-amber-200',
   CRITICAL: 'bg-rose-100 text-rose-700 border border-rose-200',
+};
+
+const dateLabel = (iso?: string | null) => {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString();
+};
+
+type ForecastExecutiveBriefing = {
+  forecastHeadline: string;
+  riskCallouts: string[];
+  automationWins: string[];
+  coachingNotes: string[];
+};
+
+const deriveForecastExecutiveBriefing = (
+  forecast?: ForecastResult,
+  statistics?: ForecastStatistics,
+  plans?: Plan[],
+): ForecastExecutiveBriefing => {
+  const riskCallouts: string[] = [];
+  const automationWins: string[] = [];
+  const coachingNotes: string[] = [];
+
+  if (forecast?.summary) {
+    riskCallouts.push(
+      `Forecast horizon spans ${forecast.summary.total_periods} periods (${dateLabel(
+        forecast.summary.prediction_start,
+      )} – ${dateLabel(forecast.summary.prediction_end)}).`,
+    );
+    riskCallouts.push(
+      `Average predicted volume ${formatNumber(forecast.summary.average_predicted, {
+        maximumFractionDigits: 0,
+      })}.`,
+    );
+  }
+
+  if (statistics?.most_accessed?.length) {
+    const top = statistics.most_accessed[0];
+    automationWins.push(`Top referenced forecast: ${top.forecast_type} (${top.access_count} views).`);
+  }
+
+  if (plans?.length) {
+    const plan = plans[0];
+    const advisorCoaching = plan.advisor_plan?.coaching_items?.[0]?.coaching_point;
+    if (advisorCoaching) {
+      coachingNotes.push(`Advisor focus: ${advisorCoaching}`);
+    }
+    const leadershipItem = plan.leadership_plan?.risk_indicators?.[0];
+    if (leadershipItem) {
+      riskCallouts.push(`Leadership indicator: ${leadershipItem}`);
+    }
+  }
+
+  return {
+    forecastHeadline: forecast
+      ? `${forecast.forecast_type.replace(/_/g, ' ')} outlook`
+      : 'Forecast summary',
+    riskCallouts: riskCallouts.slice(0, 3),
+    automationWins: automationWins.slice(0, 3),
+    coachingNotes: coachingNotes.slice(0, 3),
+  };
 };
 
 const urgencyBadge = (urgency?: string) => {
@@ -66,7 +140,7 @@ const urgencyBadge = (urgency?: string) => {
   }
 };
 
-const DEFAULT_LAYOUT = ['briefing', 'dollarImpact', 'recommendations', 'riskWaterfall', 'decisionQueue'];
+const DEFAULT_LAYOUT = ['briefing', 'dollarImpact', 'topIntents', 'recommendations', 'riskWaterfall', 'decisionQueue'];
 
 const ControlTowerView = () => {
   const intelligence = useLeadershipIntelligence();
@@ -79,12 +153,70 @@ const ControlTowerView = () => {
     })
   );
 
+  const { data: forecastTypes } = useQuery({
+    queryKey: ['control-tower', 'forecast-types'],
+    queryFn: forecastApi.getAvailableTypes,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const selectedForecastType: ForecastTypeSummary | undefined = forecastTypes?.[0];
+
+  const {
+    data: forecast,
+    isLoading: forecastLoading,
+  } = useQuery({
+    queryKey: ['control-tower', 'forecast', selectedForecastType?.type],
+    queryFn: () =>
+      forecastApi.generate({
+        forecast_type: selectedForecastType!.type,
+        use_cache: true,
+      }),
+    enabled: Boolean(selectedForecastType?.type),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: statistics, isLoading: statisticsLoading } = useQuery({
+    queryKey: ['control-tower', 'forecast-statistics'],
+    queryFn: forecastApi.getStatistics,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: plans, isLoading: plansLoading } = useQuery({
+    queryKey: ['control-tower', 'plans', 'latest'],
+    queryFn: () => planApi.list({ limit: 6 }),
+    staleTime: 60 * 1000,
+  });
+
+  const { data: dataSummary, isLoading: summaryLoading } = useQuery<ForecastDataSummary>({
+    queryKey: ['control-tower', 'forecast-data-summary'],
+    queryFn: forecastApi.getDataSummary,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const executiveBriefing = useMemo(
+    () => deriveForecastExecutiveBriefing(forecast, statistics, plans),
+    [forecast, statistics, plans],
+  );
+
+  const topIntents = useMemo(
+    () =>
+      Object.entries((dataSummary as ForecastDataSummary | undefined)?.top_intents ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6),
+    [dataSummary],
+  );
+
+  const pipelineBriefingLoading = forecastLoading || statisticsLoading || plansLoading;
+
   const isLoading = combineLoadingStates(
     intelligence.briefing.isLoading,
     intelligence.dollarImpact.isLoading,
     intelligence.decisionQueue.isLoading,
     intelligence.riskWaterfall.isLoading
   );
+
+  const executiveCardLoading = isLoading || pipelineBriefingLoading;
+  const topIntentsLoading = summaryLoading;
 
   const error = combineErrors(
     intelligence.briefing.error as Error | undefined,
@@ -118,7 +250,10 @@ const ControlTowerView = () => {
     briefing: (
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-lg">Executive Briefing</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="h-5 w-5 text-rose-500" />
+            Executive Briefing
+          </CardTitle>
           <p className="text-sm text-slate-500">
             Generated {diffFromNow(intelligence.briefing.data?._generated_at ?? intelligence.briefing.data?.generated_at)}
           </p>
@@ -161,6 +296,41 @@ const ControlTowerView = () => {
             </>
           ) : (
             <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+          )}
+        </CardContent>
+      </>
+    ),
+    topIntents: (
+      <>
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <BarChart3 className="h-4 w-4 text-indigo-500" />
+            Top intents
+          </div>
+          <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-tight text-slate-600">
+            /api/v1/forecasts/data/summary
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-2 text-xs text-slate-600">
+          {topIntentsLoading ? (
+            Array.from({ length: 5 }).map((_, idx) => (
+              <div
+                key={`intent-loading-${idx}`}
+                className="h-8 animate-pulse rounded-md border border-dashed border-slate-200 bg-slate-50"
+              />
+            ))
+          ) : topIntents.length ? (
+            topIntents.map(([intent, count]) => (
+              <div
+                key={intent}
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
+              >
+                <span className="font-medium text-slate-800">{intent}</span>
+                <span className="text-slate-500">{count}</span>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-500">No intent distribution available. Generate analyses to populate this view.</p>
           )}
         </CardContent>
       </>
@@ -406,16 +576,69 @@ const ControlTowerView = () => {
                       <DraggableCard key={cardId} id={cardId}>
                         {cardComponents[cardId]}
                         <CardContent className="space-y-5">
-                          {isLoading ? (
+                          {executiveCardLoading ? (
                             <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
                           ) : (
                             <>
-                              <div className="text-slate-700">
-                                {intelligence.briefing.data?.health_summary || 'All systems nominal.'}
+                              <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+                                <div className="space-y-3 text-xs text-slate-600">
+                                  <div>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="text-sm font-semibold text-slate-800">
+                                        {executiveBriefing.forecastHeadline}
+                                      </div>
+                                      <Button variant="secondary" size="sm" className="inline-flex items-center gap-2 text-xs">
+                                        <Download className="h-3.5 w-3.5" /> Download PDF
+                                      </Button>
+                                    </div>
+                                    <ul className="mt-2 space-y-1">
+                                      {executiveBriefing.riskCallouts.length ? (
+                                        executiveBriefing.riskCallouts.map((item, idx) => (
+                                          <li key={`risk-${idx}`} className="flex items-start gap-2">
+                                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 text-amber-600" /> {item}
+                                          </li>
+                                        ))
+                                      ) : (
+                                        <li className="text-slate-500">Run a forecast to populate risk callouts.</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-semibold text-slate-800">Automation & enablement</div>
+                                    <ul className="mt-2 space-y-1">
+                                      {executiveBriefing.automationWins.length ? (
+                                        executiveBriefing.automationWins.map((item, idx) => (
+                                          <li key={`auto-${idx}`} className="flex items-start gap-2">
+                                            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 text-emerald-500" /> {item}
+                                          </li>
+                                        ))
+                                      ) : (
+                                        <li className="text-slate-500">Run auto workflows to capture automation metrics.</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-semibold text-slate-800">Coaching priorities</div>
+                                    <ul className="mt-2 space-y-1">
+                                      {executiveBriefing.coachingNotes.length ? (
+                                        executiveBriefing.coachingNotes.map((item, idx) => (
+                                          <li key={`coach-${idx}`} className="flex items-start gap-2">
+                                            <Target className="mt-0.5 h-3.5 w-3.5 text-indigo-500" /> {item}
+                                          </li>
+                                        ))
+                                      ) : (
+                                        <li className="text-slate-500">Advisor coaching insights will flow once plans are generated.</li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                </div>
+                                <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                                  {intelligence.briefing.data?.health_summary || 'All systems nominal.'}
+                                </div>
                               </div>
 
                               <div>
-                                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
                                   <Sparkles className="h-4 w-4 text-indigo-500" />
                                   Urgent priorities
                                 </h3>
