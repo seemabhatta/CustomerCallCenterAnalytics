@@ -6,9 +6,25 @@ import {
   MessageCircle,
   PieChart,
   RefreshCw,
+  RotateCcw,
   Target,
   Users,
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import {
   useMarketingIntelligence,
   useMessageOptimizer,
@@ -17,6 +33,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import IntelligenceStatusBar from '@/components/IntelligenceStatusBar';
+import DraggableCard from '@/components/DraggableCard';
+import { useLayoutPersistence } from '@/hooks/useLayoutPersistence';
 import {
   combineErrors,
   combineLoadingStates,
@@ -33,12 +51,22 @@ import {
   RetentionStrategy,
 } from '@/types';
 
+const DEFAULT_LAYOUT = ['segments', 'roiAttribution', 'campaigns', 'churnWatchlist', 'journeyInsights', 'messageOptimizer'];
+
 const MarketingView = () => {
   const intelligence = useMarketingIntelligence();
   const messageOptimizer = useMessageOptimizer();
+  const { layout, setLayout, resetLayout } = useLayoutPersistence('marketing-layout', DEFAULT_LAYOUT);
 
   const [messageDraft, setMessageDraft] = useState('We appreciate your loyalty. Here is an exclusive rate just for you.');
   const [targetSegment, setTargetSegment] = useState('general');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const segments = (intelligence.segments.data?.segments ?? []) as MarketingSegment[];
   const churn = intelligence.churnAnalysis.data;
@@ -65,6 +93,18 @@ const MarketingView = () => {
     messageOptimizer.mutate({ message: messageDraft, segment: targetSegment });
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setLayout((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
   const optimizedMessage = messageOptimizer.data?.optimized_message ?? messageOptimizer.data?.message;
 
   const campaignRecommendations = (intelligence.campaignRecommendations.data?.campaigns ?? []) as MarketingCampaign[];
@@ -77,131 +117,91 @@ const MarketingView = () => {
   const rootCauses = (churn?.insights?.root_causes ?? []) as ChurnRootCause[];
   const targetSegments = (churn?.insights?.target_segments ?? []) as ChurnTargetSegment[];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
-            <Megaphone className="h-6 w-6 text-pink-600" />
-            Marketing Intelligence
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 max-w-2xl">
-            Campaign-ready insight for marketing teams. Combines predictive churn models with GenAI
-            to surface high-value segments, ready-to-run campaigns, and optimized messaging.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => {
-            intelligence.segments.refetch();
-            intelligence.campaignRecommendations.refetch();
-            intelligence.campaignPerformance.refetch();
-            intelligence.churnAnalysis.refetch();
-            intelligence.customerJourney.refetch();
-            intelligence.roiAttribution.refetch();
-          }}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh insights
-        </Button>
-      </div>
-
-      {error && (
-        <Card className="border border-rose-200 bg-rose-50">
-          <CardContent className="py-4 text-sm text-rose-700">
-            Marketing intelligence temporarily unavailable: {error.message}
-          </CardContent>
-        </Card>
-      )}
-
-      <IntelligenceStatusBar persona="marketing" />
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <PieChart className="h-5 w-5 text-indigo-500" />
-                High-value segments
-              </CardTitle>
-              <p className="text-sm text-slate-500">
-                {formatNumber(intelligence.segments.data?.summary?.total_segments)} segments identified •
-                {' '}Total opportunity {formatCurrency(intelligence.segments.data?.summary?.total_opportunity_value)}
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            {segments.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
-                No segmentation data yet. Run the pipeline to populate persona intelligence.
-              </div>
-            ) : (
-              segments.map((segment) => (
-                <div key={segment.segment_id} className="rounded-lg border border-slate-200 bg-white p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{segment.segment_name}</p>
-                      <p className="text-xs text-slate-500">{segment.profile}</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] uppercase">
-                      {segment.priority}
-                    </Badge>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                    <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                      <p className="uppercase tracking-wide text-[10px] text-slate-400">Count</p>
-                      <p className="font-semibold text-slate-800">{formatNumber(segment.count)}</p>
-                    </div>
-                    <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                      <p className="uppercase tracking-wide text-[10px] text-slate-400">Opportunity</p>
-                      <p className="font-semibold text-slate-800">{formatCurrency(segment.opportunity_value)}</p>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs text-slate-500">
-                    Engagement: {segment.engagement_strategy ?? '—'}
-                  </p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
+  const cardComponents: Record<string, JSX.Element> = {
+    segments: (
+      <>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart4 className="h-5 w-5 text-emerald-500" />
-              ROI attribution
+              <PieChart className="h-5 w-5 text-indigo-500" />
+              High-value segments
             </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {intelligence.roiAttribution.data ? (
-              <>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">Total opportunity</p>
-                  <p className="text-xl font-semibold text-slate-900">
-                    {formatCurrency(intelligence.roiAttribution.data.total_opportunity_value)}
-                  </p>
+            <p className="text-sm text-slate-500">
+              {formatNumber(intelligence.segments.data?.summary?.total_segments)} segments identified •
+              {' '}Total opportunity {formatCurrency(intelligence.segments.data?.summary?.total_opportunity_value)}
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
+          {segments.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+              No segmentation data yet. Run the pipeline to populate persona intelligence.
+            </div>
+          ) : (
+            segments.map((segment) => (
+              <div key={segment.segment_id} className="rounded-lg border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{segment.segment_name}</p>
+                    <p className="text-xs text-slate-500">{segment.profile}</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] uppercase">
+                    {segment.priority}
+                  </Badge>
                 </div>
-                <div className="space-y-2">
-                  {Object.entries(intelligence.roiAttribution.data.by_category || {}).map(([category, value]) => (
-                    <div key={category} className="flex items-center justify-between">
-                      <span className="capitalize text-slate-600">{category.replace('_', ' ')}</span>
-                      <span className="font-medium text-slate-900">{formatCurrency(value)}</span>
-                    </div>
-                  ))}
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                  <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                    <p className="uppercase tracking-wide text-[10px] text-slate-400">Count</p>
+                    <p className="font-semibold text-slate-800">{formatNumber(segment.count)}</p>
+                  </div>
+                  <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                    <p className="uppercase tracking-wide text-[10px] text-slate-400">Opportunity</p>
+                    <p className="font-semibold text-slate-800">{formatCurrency(segment.opportunity_value)}</p>
+                  </div>
                 </div>
-              </>
-            ) : (
-              <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
+                <p className="mt-3 text-xs text-slate-500">
+                  Engagement: {segment.engagement_strategy ?? '—'}
+                </p>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </>
+    ),
+    roiAttribution: (
+      <>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BarChart4 className="h-5 w-5 text-emerald-500" />
+            ROI attribution
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {intelligence.roiAttribution.data ? (
+            <>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">Total opportunity</p>
+                <p className="text-xl font-semibold text-slate-900">
+                  {formatCurrency(intelligence.roiAttribution.data.total_opportunity_value)}
+                </p>
+              </div>
+              <div className="space-y-2">
+                {Object.entries(intelligence.roiAttribution.data.by_category || {}).map(([category, value]) => (
+                  <div key={category} className="flex items-center justify-between">
+                    <span className="capitalize text-slate-600">{category.replace('_', ' ')}</span>
+                    <span className="font-medium text-slate-900">{formatCurrency(value)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+          )}
+        </CardContent>
+      </>
+    ),
+    campaigns: (
+      <>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -248,124 +248,125 @@ const MarketingView = () => {
             ))
           )}
         </CardContent>
-      </Card>
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Target className="h-5 w-5 text-rose-500" />
-                Churn watchlist
-              </CardTitle>
-              <p className="text-sm text-slate-500">
-                Revenue at risk {formatCurrency(churnSummary?.revenue_at_risk)} • Trend {churnSummary?.trend ?? '—'} • Current rate {formatPercent((churnSummary?.current_rate ?? 0) * 100)}
-              </p>
-            </div>
-            <Badge variant="outline" className="text-xs">
-              {formatNumber(churnSummary?.high_risk_count)} high-risk customers
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {rootCauses.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">Root causes</h3>
-                <div className="mt-2 grid gap-3 md:grid-cols-2">
-                  {rootCauses.map((cause: ChurnRootCause, index: number) => (
-                    <div key={`${cause.cause}-${index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-slate-900">{cause.cause}</p>
-                        <Badge variant="outline" className="text-[10px] uppercase">
-                          {cause.impact}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">{cause.evidence}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {targetSegments.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">Priority segments</h3>
-                <div className="mt-2 grid gap-3 md:grid-cols-2">
-                  {targetSegments.map((segment: ChurnTargetSegment, index: number) => (
-                    <div key={`${segment.segment_name}-${index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                      <p className="font-medium text-slate-900">{segment.segment_name}</p>
-                      <p className="text-xs text-slate-500">
-                        {formatNumber(segment.count)} customers • Drivers: {segment.risk_drivers.join(', ')}
-                      </p>
-                      <p className="mt-2 text-xs text-slate-500">
-                        Traits: {segment.characteristics.join(', ')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {retentionStrategies.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">Retention strategies</h3>
-                <div className="mt-2 space-y-3">
-                  {retentionStrategies.map((strategy: RetentionStrategy, index: number) => (
-                    <div key={`${strategy.strategy}-${index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-slate-900">{strategy.strategy}</p>
-                        <Badge variant="outline" className="text-[10px] uppercase">
-                          ROI {formatPercent(strategy.roi_estimate)}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">Target: {strategy.target_segment}</p>
-                      <p className="mt-1 text-xs text-slate-500">Approach: {strategy.approach}</p>
-                      <p className="mt-1 text-xs text-slate-500">Messaging: {strategy.messaging.join(', ')}</p>
-                      <p className="mt-1 text-xs text-slate-500">Channels: {strategy.channels.join(', ')}</p>
-                      <p className="mt-2 text-xs text-slate-500">
-                        Expected retention {formatPercent(strategy.expected_retention_rate * 100)} • Cost per contact {formatCurrency(strategy.cost_per_contact)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
+      </>
+    ),
+    churnWatchlist: (
+      <>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5 text-indigo-500" />
-              Journey insights
+              <Target className="h-5 w-5 text-rose-500" />
+              Churn watchlist
             </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-slate-600">
-            <p>{intelligence.customerJourney.data?.message ?? 'Journey analytics not yet available.'}</p>
-            {intelligence.customerJourney.data?.stages?.length ? (
-              <div className="space-y-2 text-xs text-slate-500">
-                {intelligence.customerJourney.data.stages.map((stage) => (
-                  <div key={stage.stage} className="rounded border border-slate-200 bg-white p-3">
-                    <div className="flex items-center justify-between text-slate-700">
-                      <span className="font-medium text-slate-900">{stage.stage}</span>
-                      <span>{formatNumber(stage.count)} records</span>
+            <p className="text-sm text-slate-500">
+              Revenue at risk {formatCurrency(churnSummary?.revenue_at_risk)} • Trend {churnSummary?.trend ?? '—'} • Current rate {formatPercent((churnSummary?.current_rate ?? 0) * 100)}
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {formatNumber(churnSummary?.high_risk_count)} high-risk customers
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {rootCauses.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Root causes</h3>
+              <div className="mt-2 grid gap-3 md:grid-cols-2">
+                {rootCauses.map((cause: ChurnRootCause, index: number) => (
+                  <div key={`${cause.cause}-${index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-slate-900">{cause.cause}</p>
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        {cause.impact}
+                      </Badge>
                     </div>
-                    <div className="mt-1 flex items-center justify-between">
-                      <span>{stage.description}</span>
-                      <span className="text-slate-400">Conversion {formatPercent(stage.conversion_rate * 100)}</span>
-                    </div>
+                    <p className="mt-2 text-xs text-slate-500">{cause.evidence}</p>
                   </div>
                 ))}
-                <p className="text-slate-500">Top intents: {intelligence.customerJourney.data.top_intents}</p>
               </div>
-            ) : null}
-            <div className="text-xs text-slate-500">
-              Generated {diffFromNow(intelligence.customerJourney.data?.generated_at)}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
 
-      <Card>
+          {targetSegments.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Priority segments</h3>
+              <div className="mt-2 grid gap-3 md:grid-cols-2">
+                {targetSegments.map((segment: ChurnTargetSegment, index: number) => (
+                  <div key={`${segment.segment_name}-${index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                    <p className="font-medium text-slate-900">{segment.segment_name}</p>
+                    <p className="text-xs text-slate-500">
+                      {formatNumber(segment.count)} customers • Drivers: {segment.risk_drivers.join(', ')}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Traits: {segment.characteristics.join(', ')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {retentionStrategies.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Retention strategies</h3>
+              <div className="mt-2 space-y-3">
+                {retentionStrategies.map((strategy: RetentionStrategy, index: number) => (
+                  <div key={`${strategy.strategy}-${index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-slate-900">{strategy.strategy}</p>
+                      <Badge variant="outline" className="text-[10px] uppercase">
+                        ROI {formatPercent(strategy.roi_estimate)}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">Target: {strategy.target_segment}</p>
+                    <p className="mt-1 text-xs text-slate-500">Approach: {strategy.approach}</p>
+                    <p className="mt-1 text-xs text-slate-500">Messaging: {strategy.messaging.join(', ')}</p>
+                    <p className="mt-1 text-xs text-slate-500">Channels: {strategy.channels.join(', ')}</p>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Expected retention {formatPercent(strategy.expected_retention_rate * 100)} • Cost per contact {formatCurrency(strategy.cost_per_contact)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </>
+    ),
+    journeyInsights: (
+      <>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="h-5 w-5 text-indigo-500" />
+            Journey insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-slate-600">
+          <p>{intelligence.customerJourney.data?.message ?? 'Journey analytics not yet available.'}</p>
+          {intelligence.customerJourney.data?.stages?.length ? (
+            <div className="space-y-2 text-xs text-slate-500">
+              {intelligence.customerJourney.data.stages.map((stage) => (
+                <div key={stage.stage} className="rounded border border-slate-200 bg-white p-3">
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="font-medium text-slate-900">{stage.stage}</span>
+                    <span>{formatNumber(stage.count)} records</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span>{stage.description}</span>
+                    <span className="text-slate-400">Conversion {formatPercent(stage.conversion_rate * 100)}</span>
+                  </div>
+                </div>
+              ))}
+              <p className="text-slate-500">Top intents: {intelligence.customerJourney.data.top_intents}</p>
+            </div>
+          ) : null}
+          <div className="text-xs text-slate-500">
+            Generated {diffFromNow(intelligence.customerJourney.data?.generated_at)}
+          </div>
+        </CardContent>
+      </>
+    ),
+    messageOptimizer: (
+      <>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -437,7 +438,75 @@ const MarketingView = () => {
             </div>
           </form>
         </CardContent>
-      </Card>
+      </>
+    ),
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+            <Megaphone className="h-6 w-6 text-pink-600" />
+            Marketing Intelligence
+          </h1>
+          <p className="mt-1 text-sm text-slate-600 max-w-2xl">
+            Campaign-ready insight for marketing teams. Combines predictive churn models with GenAI
+            to surface high-value segments, ready-to-run campaigns, and optimized messaging.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={resetLayout}
+            title="Reset card layout to default"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset layout
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              intelligence.segments.refetch();
+              intelligence.campaignRecommendations.refetch();
+              intelligence.campaignPerformance.refetch();
+              intelligence.churnAnalysis.refetch();
+              intelligence.customerJourney.refetch();
+              intelligence.roiAttribution.refetch();
+            }}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh insights
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <Card className="border border-rose-200 bg-rose-50">
+          <CardContent className="py-4 text-sm text-rose-700">
+            Marketing intelligence temporarily unavailable: {error.message}
+          </CardContent>
+        </Card>
+      )}
+
+      <IntelligenceStatusBar persona="marketing" />
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={layout} strategy={verticalListSortingStrategy}>
+          <div className="space-y-6">
+            {layout.map((cardId) => (
+              <DraggableCard key={cardId} id={cardId}>
+                {cardComponents[cardId]}
+              </DraggableCard>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 };

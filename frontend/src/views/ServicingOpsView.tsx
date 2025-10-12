@@ -5,13 +5,32 @@ import {
   Headphones,
   Layers,
   LineChart,
+  RefreshCw,
+  RotateCcw,
   Users,
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useServicingIntelligence } from '@/api/intelligenceHooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import IntelligenceStatusBar from '@/components/IntelligenceStatusBar';
+import DraggableCard from '@/components/DraggableCard';
+import { useLayoutPersistence } from '@/hooks/useLayoutPersistence';
 import {
   combineErrors,
   combineLoadingStates,
@@ -21,7 +40,6 @@ import {
   formatPercent,
   formatTime,
 } from '@/utils/formatters';
-import { RefreshCw } from 'lucide-react';
 
 const STATUS_COLOR: Record<string, string> = {
   green: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
@@ -29,8 +47,18 @@ const STATUS_COLOR: Record<string, string> = {
   red: 'bg-rose-100 text-rose-700 border border-rose-200',
 };
 
+const DEFAULT_LAYOUT = ['queueOutlook', 'slaHealth', 'advisorHeatmap', 'coachingAlerts', 'staffingBalance', 'caseResolution'];
+
 const ServicingOpsView = () => {
   const intelligence = useServicingIntelligence({ pollIntervalMs: 45_000 });
+  const { layout, setLayout, resetLayout } = useLayoutPersistence('servicing-ops-layout', DEFAULT_LAYOUT);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const isLoading = combineLoadingStates(
     intelligence.queueStatus.isLoading,
@@ -56,6 +84,385 @@ const ServicingOpsView = () => {
   const coaching = intelligence.coachingAlerts.data;
   const staffing = intelligence.workloadBalance.data;
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setLayout((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const cardComponents: Record<string, JSX.Element> = {
+    queueOutlook: (
+      <>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <LineChart className="h-5 w-5 text-indigo-500" />
+              Queue outlook (next 4 hours)
+            </CardTitle>
+            <p className="text-sm text-slate-500">
+              Updated {diffFromNow(queue?.generated_at)} • Staffing {queue?.staffing_status ?? 'unknown'}
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {queue ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Live queue</h3>
+                <div className="mt-3 space-y-2 text-sm text-slate-600">
+                  {Object.entries(queue.current_queue || {}).map(([key, value]) => (
+                    <div key={key} className="flex justify-between">
+                      <span className="capitalize">{key.replace('_', ' ')}</span>
+                      <span className="font-medium">{formatNumber(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Forecast window</h3>
+                <div className="mt-3 space-y-3">
+                  {queue.predicted_volume?.map((slot, index) => (
+                    <div key={`${slot.hour}-${index}`} className="flex items-center justify-between text-sm">
+                      <div>
+                        <p className="font-medium text-slate-800">{formatTime(slot.hour)}</p>
+                        <p className="text-xs text-slate-500">Predicted calls</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-slate-900">{formatNumber(slot.predicted_calls)}</p>
+                        {slot.confidence && Array.isArray(slot.confidence) && (
+                          <p className="text-xs text-slate-500">
+                            CI {formatNumber(slot.confidence[0])} - {formatNumber(slot.confidence[1])}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+          )}
+        </CardContent>
+      </>
+    ),
+    slaHealth: (
+      <>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Clock3 className="h-5 w-5 text-emerald-500" />
+            SLA health
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {sla ? (
+            <>
+              {Object.entries(sla.current_performance || {}).map(([metric, value]) => (
+                <div key={metric} className="flex justify-between">
+                  <span className="capitalize text-slate-600">{metric.replace(/_/g, ' ')}</span>
+                  <span className="font-medium text-slate-900">
+                    {typeof value === 'number' ? formatPercent(value * (metric.includes('rate') ? 100 : 1)) : String(value)}
+                  </span>
+                </div>
+              ))}
+              {sla.predictions && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Forecast Outlook
+                    </span>
+                    <Badge className={`text-[10px] uppercase ${
+                      sla.predictions.status === 'at_risk'
+                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    }`}>
+                      {sla.predictions.status}
+                    </Badge>
+                  </div>
+
+                  {sla.predictions.summary && (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                      {sla.predictions.summary}
+                    </div>
+                  )}
+
+                  {sla.predictions.predicted_fcr_display && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-600">Predicted FCR</span>
+                      <span className="font-medium text-slate-900">{sla.predictions.predicted_fcr_display}</span>
+                    </div>
+                  )}
+
+                  {sla.predictions.predicted_escalation_display && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-600">Predicted escalation</span>
+                      <span className="font-medium text-slate-900">{sla.predictions.predicted_escalation_display}</span>
+                    </div>
+                  )}
+
+                  {sla.predictions.volume_change_display && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-600">Volume change</span>
+                      <span className={`font-medium ${
+                        sla.predictions.volume_change_pct > 0 ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
+                        {sla.predictions.volume_change_display}
+                      </span>
+                    </div>
+                  )}
+
+                  {sla.predictions.potential_breaches && sla.predictions.potential_breaches.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        SLA Breach Risks
+                      </p>
+                      {sla.predictions.potential_breaches.map((breach: any, index: number) => (
+                        <div key={index} className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-rose-900">{breach.metric}</span>
+                            <Badge className={`text-[10px] uppercase ${
+                              breach.risk === 'high'
+                                ? 'bg-rose-600 text-white'
+                                : 'bg-amber-100 text-amber-700 border border-amber-200'
+                            }`}>
+                              {breach.risk} risk
+                            </Badge>
+                          </div>
+                          <div className="mt-2 space-y-1 text-rose-700">
+                            <div className="flex justify-between">
+                              <span>Target:</span>
+                              <span className="font-medium">{breach.target}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Predicted:</span>
+                              <span className="font-medium">{breach.predicted}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Gap:</span>
+                              <span className="font-semibold">{breach.gap}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+          )}
+        </CardContent>
+      </>
+    ),
+    advisorHeatmap: (
+      <>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="h-5 w-5 text-sky-500" />
+              Advisor performance heatmap
+            </CardTitle>
+            <p className="text-sm text-slate-500">
+              {formatNumber(heatmapSummary?.total_advisors)} advisors monitored •
+              {' '}
+              {formatNumber(heatmapSummary?.red_status)} in red status
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {heatmap.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
+              Heatmap data unavailable. Ensure advisor analytics pipeline has run in the last 24 hours.
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {heatmap.slice(0, 8).map((advisor, index) => (
+                <div key={`${advisor.advisor_id ?? index}`} className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{advisor.advisor_name ?? `Advisor ${advisor.advisor_id ?? index + 1}`}</p>
+                      <p className="text-xs text-slate-500">Segment: {advisor.segment ?? '—'}</p>
+                    </div>
+                    <Badge className={`${STATUS_COLOR[advisor.status] ?? STATUS_COLOR.yellow} text-[10px] uppercase`}>{advisor.status}</Badge>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">
+                    <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                      <p className="uppercase tracking-wide text-[10px] text-slate-400">Empathy</p>
+                      <p className="font-semibold text-slate-800">{formatNumber(advisor.empathy_score, { maximumFractionDigits: 1 })}</p>
+                    </div>
+                    <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                      <p className="uppercase tracking-wide text-[10px] text-slate-400">Compliance</p>
+                      <p className="font-semibold text-slate-800">{formatPercent(advisor.compliance_score * 100)}</p>
+                    </div>
+                    <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                      <p className="uppercase tracking-wide text-[10px] text-slate-400">FCR</p>
+                      <p className="font-semibold text-slate-800">{formatPercent(advisor.fcr_rate * 100)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </>
+    ),
+    coachingAlerts: (
+      <>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <FlameKindling className="h-5 w-5 text-rose-500" />
+            Coaching alerts
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {coaching ? (
+            <>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                {formatNumber(coaching.team_summary?.advisors_needing_coaching)} of{' '}
+                {formatNumber(coaching.team_summary?.total_advisors)} advisors flagged. Team health:
+                {' '}
+                {coaching.team_summary?.team_health ?? '—'}.
+              </div>
+              <div className="space-y-3">
+                {(coaching.critical_alerts ?? []).map((alert, index) => (
+                  <div key={`${alert.id ?? index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-slate-900">{alert.title ?? alert.type}</p>
+                      <Badge className="bg-rose-100 text-rose-700 border border-rose-200 text-[10px] uppercase">
+                        {alert.urgency}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-slate-600">{alert.recommendation ?? 'Coaching required'}</p>
+                    {alert.expected_impact && (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Impact: {formatCurrency(alert.expected_impact)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {(coaching.critical_alerts ?? []).length === 0 && (
+                  <p className="text-sm text-slate-500">No critical coaching alerts right now.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="h-48 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+          )}
+        </CardContent>
+      </>
+    ),
+    staffingBalance: (
+      <>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Layers className="h-5 w-5 text-indigo-500" />
+            Staffing balance
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {staffing ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Current staff</span>
+                <span className="font-semibold text-slate-900">{formatNumber(staffing.current_staff)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Needed for peak</span>
+                <span className="font-semibold text-slate-900">{formatNumber(staffing.needed_for_peak)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Gap</span>
+                <span className="font-semibold text-slate-900">{formatNumber(staffing.gap)}</span>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                {staffing.recommendation}
+              </div>
+            </>
+          ) : (
+            <div className="h-32 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+          )}
+        </CardContent>
+      </>
+    ),
+    caseResolution: (
+      <>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            Case resolution
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-slate-600">
+          {intelligence.caseResolution.data ? (
+            <>
+              <p>{intelligence.caseResolution.data.message}</p>
+              <div className="grid grid-cols-2 gap-3 rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 sm:grid-cols-4">
+                <div>
+                  <p className="uppercase tracking-wide text-[10px] text-slate-400">Active cases</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatNumber(intelligence.caseResolution.data.summary.total_active_cases)}
+                  </p>
+                </div>
+                <div>
+                  <p className="uppercase tracking-wide text-[10px] text-slate-400">Resolved (7d)</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatNumber(intelligence.caseResolution.data.summary.resolved_last_7_days)}
+                  </p>
+                </div>
+                <div>
+                  <p className="uppercase tracking-wide text-[10px] text-slate-400">Avg age (days)</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatNumber(intelligence.caseResolution.data.summary.avg_case_age_days, { maximumFractionDigits: 1 })}
+                  </p>
+                </div>
+                <div>
+                  <p className="uppercase tracking-wide text-[10px] text-slate-400">Resolved total</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatNumber(intelligence.caseResolution.data.summary.total_resolved_cases)}
+                  </p>
+                </div>
+              </div>
+              {intelligence.caseResolution.data.urgent_cases.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Top open cases</p>
+                  <div className="space-y-2">
+                    {intelligence.caseResolution.data.urgent_cases.map((item) => (
+                      <div key={item.analysis_id} className="rounded border border-slate-200 bg-white p-3 text-xs text-slate-600">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-medium text-slate-900">{item.topic || 'Unspecified issue'}</span>
+                          <span className="text-slate-500">{item.age_days ?? 0}d open</span>
+                        </div>
+                        <div className="mt-2 flex gap-4 text-[11px] text-slate-500">
+                          <span>Delinquency {formatPercent(item.delinquency_risk * 100)}</span>
+                          <span>Churn {formatPercent(item.churn_risk * 100)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">No unresolved cases detected right now.</p>
+              )}
+              <div className="text-xs text-slate-500">
+                Generated {diffFromNow(intelligence.caseResolution.data.generated_at)}
+              </div>
+            </>
+          ) : (
+            <div className="h-32 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
+          )}
+        </CardContent>
+      </>
+    ),
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -69,23 +476,35 @@ const ServicingOpsView = () => {
             advisor coaching intelligence to keep customer promises on track.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => {
-            intelligence.queueStatus.refetch();
-            intelligence.slaMonitor.refetch();
-            intelligence.advisorHeatmap.refetch();
-            intelligence.coachingAlerts.refetch();
-            intelligence.workloadBalance.refetch();
-            intelligence.caseResolution.refetch();
-          }}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Sync now
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={resetLayout}
+            title="Reset card layout to default"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset layout
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              intelligence.queueStatus.refetch();
+              intelligence.slaMonitor.refetch();
+              intelligence.advisorHeatmap.refetch();
+              intelligence.coachingAlerts.refetch();
+              intelligence.workloadBalance.refetch();
+              intelligence.caseResolution.refetch();
+            }}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Sync now
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -104,369 +523,17 @@ const ServicingOpsView = () => {
 
       <IntelligenceStatusBar persona="servicing" />
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <LineChart className="h-5 w-5 text-indigo-500" />
-                Queue outlook (next 4 hours)
-              </CardTitle>
-              <p className="text-sm text-slate-500">
-                Updated {diffFromNow(queue?.generated_at)} • Staffing {queue?.staffing_status ?? 'unknown'}
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {queue ? (
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Live queue</h3>
-                  <div className="mt-3 space-y-2 text-sm text-slate-600">
-                    {Object.entries(queue.current_queue || {}).map(([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="capitalize">{key.replace('_', ' ')}</span>
-                        <span className="font-medium">{formatNumber(value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Forecast window</h3>
-                  <div className="mt-3 space-y-3">
-                    {queue.predicted_volume?.map((slot, index) => (
-                      <div key={`${slot.hour}-${index}`} className="flex items-center justify-between text-sm">
-                        <div>
-                          <p className="font-medium text-slate-800">{formatTime(slot.hour)}</p>
-                          <p className="text-xs text-slate-500">Predicted calls</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-slate-900">{formatNumber(slot.predicted_calls)}</p>
-                          {slot.confidence && Array.isArray(slot.confidence) && (
-                            <p className="text-xs text-slate-500">
-                              CI {formatNumber(slot.confidence[0])} - {formatNumber(slot.confidence[1])}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock3 className="h-5 w-5 text-emerald-500" />
-              SLA health
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            {sla ? (
-              <>
-                {Object.entries(sla.current_performance || {}).map(([metric, value]) => (
-                  <div key={metric} className="flex justify-between">
-                    <span className="capitalize text-slate-600">{metric.replace(/_/g, ' ')}</span>
-                    <span className="font-medium text-slate-900">
-                      {typeof value === 'number' ? formatPercent(value * (metric.includes('rate') ? 100 : 1)) : String(value)}
-                    </span>
-                  </div>
-                ))}
-                {sla.predictions && (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between border-t border-slate-200 pt-3">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Forecast Outlook
-                      </span>
-                      <Badge className={`text-[10px] uppercase ${
-                        sla.predictions.status === 'at_risk'
-                          ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                          : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                      }`}>
-                        {sla.predictions.status}
-                      </Badge>
-                    </div>
-
-                    {sla.predictions.summary && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                        {sla.predictions.summary}
-                      </div>
-                    )}
-
-                    {sla.predictions.predicted_fcr_display && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-600">Predicted FCR</span>
-                        <span className="font-medium text-slate-900">{sla.predictions.predicted_fcr_display}</span>
-                      </div>
-                    )}
-
-                    {sla.predictions.predicted_escalation_display && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-600">Predicted escalation</span>
-                        <span className="font-medium text-slate-900">{sla.predictions.predicted_escalation_display}</span>
-                      </div>
-                    )}
-
-                    {sla.predictions.volume_change_display && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-600">Volume change</span>
-                        <span className={`font-medium ${
-                          sla.predictions.volume_change_pct > 0 ? 'text-amber-600' : 'text-emerald-600'
-                        }`}>
-                          {sla.predictions.volume_change_display}
-                        </span>
-                      </div>
-                    )}
-
-                    {sla.predictions.potential_breaches && sla.predictions.potential_breaches.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          SLA Breach Risks
-                        </p>
-                        {sla.predictions.potential_breaches.map((breach: any, index: number) => (
-                          <div key={index} className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-rose-900">{breach.metric}</span>
-                              <Badge className={`text-[10px] uppercase ${
-                                breach.risk === 'high'
-                                  ? 'bg-rose-600 text-white'
-                                  : 'bg-amber-100 text-amber-700 border border-amber-200'
-                              }`}>
-                                {breach.risk} risk
-                              </Badge>
-                            </div>
-                            <div className="mt-2 space-y-1 text-rose-700">
-                              <div className="flex justify-between">
-                                <span>Target:</span>
-                                <span className="font-medium">{breach.target}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Predicted:</span>
-                                <span className="font-medium">{breach.predicted}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Gap:</span>
-                                <span className="font-semibold">{breach.gap}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="h-5 w-5 text-sky-500" />
-                Advisor performance heatmap
-              </CardTitle>
-              <p className="text-sm text-slate-500">
-                {formatNumber(heatmapSummary?.total_advisors)} advisors monitored •
-                {' '}
-                {formatNumber(heatmapSummary?.red_status)} in red status
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {heatmap.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
-                Heatmap data unavailable. Ensure advisor analytics pipeline has run in the last 24 hours.
-              </div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {heatmap.slice(0, 8).map((advisor, index) => (
-                  <div key={`${advisor.advisor_id ?? index}`} className="rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{advisor.advisor_name ?? `Advisor ${advisor.advisor_id ?? index + 1}`}</p>
-                        <p className="text-xs text-slate-500">Segment: {advisor.segment ?? '—'}</p>
-                      </div>
-                      <Badge className={`${STATUS_COLOR[advisor.status] ?? STATUS_COLOR.yellow} text-[10px] uppercase`}>{advisor.status}</Badge>
-                    </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">
-                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                        <p className="uppercase tracking-wide text-[10px] text-slate-400">Empathy</p>
-                        <p className="font-semibold text-slate-800">{formatNumber(advisor.empathy_score, { maximumFractionDigits: 1 })}</p>
-                      </div>
-                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                        <p className="uppercase tracking-wide text-[10px] text-slate-400">Compliance</p>
-                        <p className="font-semibold text-slate-800">{formatPercent(advisor.compliance_score * 100)}</p>
-                      </div>
-                      <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
-                        <p className="uppercase tracking-wide text-[10px] text-slate-400">FCR</p>
-                        <p className="font-semibold text-slate-800">{formatPercent(advisor.fcr_rate * 100)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <FlameKindling className="h-5 w-5 text-rose-500" />
-              Coaching alerts
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {coaching ? (
-              <>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                  {formatNumber(coaching.team_summary?.advisors_needing_coaching)} of{' '}
-                  {formatNumber(coaching.team_summary?.total_advisors)} advisors flagged. Team health:
-                  {' '}
-                  {coaching.team_summary?.team_health ?? '—'}.
-                </div>
-                <div className="space-y-3">
-                  {(coaching.critical_alerts ?? []).map((alert, index) => (
-                    <div key={`${alert.id ?? index}`} className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold text-slate-900">{alert.title ?? alert.type}</p>
-                        <Badge className="bg-rose-100 text-rose-700 border border-rose-200 text-[10px] uppercase">
-                          {alert.urgency}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-slate-600">{alert.recommendation ?? 'Coaching required'}</p>
-                      {alert.expected_impact && (
-                        <p className="mt-2 text-xs text-slate-500">
-                          Impact: {formatCurrency(alert.expected_impact)}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                  {(coaching.critical_alerts ?? []).length === 0 && (
-                    <p className="text-sm text-slate-500">No critical coaching alerts right now.</p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="h-48 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Layers className="h-5 w-5 text-indigo-500" />
-              Staffing balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {staffing ? (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Current staff</span>
-                  <span className="font-semibold text-slate-900">{formatNumber(staffing.current_staff)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Needed for peak</span>
-                  <span className="font-semibold text-slate-900">{formatNumber(staffing.needed_for_peak)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Gap</span>
-                  <span className="font-semibold text-slate-900">{formatNumber(staffing.gap)}</span>
-                </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                  {staffing.recommendation}
-                </div>
-              </>
-            ) : (
-              <div className="h-32 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Case resolution
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-slate-600">
-            {intelligence.caseResolution.data ? (
-              <>
-                <p>{intelligence.caseResolution.data.message}</p>
-                <div className="grid grid-cols-2 gap-3 rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500 sm:grid-cols-4">
-                  <div>
-                    <p className="uppercase tracking-wide text-[10px] text-slate-400">Active cases</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {formatNumber(intelligence.caseResolution.data.summary.total_active_cases)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="uppercase tracking-wide text-[10px] text-slate-400">Resolved (7d)</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {formatNumber(intelligence.caseResolution.data.summary.resolved_last_7_days)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="uppercase tracking-wide text-[10px] text-slate-400">Avg age (days)</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {formatNumber(intelligence.caseResolution.data.summary.avg_case_age_days, { maximumFractionDigits: 1 })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="uppercase tracking-wide text-[10px] text-slate-400">Resolved total</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {formatNumber(intelligence.caseResolution.data.summary.total_resolved_cases)}
-                    </p>
-                  </div>
-                </div>
-                {intelligence.caseResolution.data.urgent_cases.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Top open cases</p>
-                    <div className="space-y-2">
-                      {intelligence.caseResolution.data.urgent_cases.map((item) => (
-                        <div key={item.analysis_id} className="rounded border border-slate-200 bg-white p-3 text-xs text-slate-600">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="font-medium text-slate-900">{item.topic || 'Unspecified issue'}</span>
-                            <span className="text-slate-500">{item.age_days ?? 0}d open</span>
-                          </div>
-                          <div className="mt-2 flex gap-4 text-[11px] text-slate-500">
-                            <span>Delinquency {formatPercent(item.delinquency_risk * 100)}</span>
-                            <span>Churn {formatPercent(item.churn_risk * 100)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500">No unresolved cases detected right now.</p>
-                )}
-                <div className="text-xs text-slate-500">
-                  Generated {diffFromNow(intelligence.caseResolution.data.generated_at)}
-                </div>
-              </>
-            ) : (
-              <div className="h-32 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={layout} strategy={verticalListSortingStrategy}>
+          <div className="space-y-6">
+            {layout.map((cardId) => (
+              <DraggableCard key={cardId} id={cardId}>
+                {cardComponents[cardId]}
+              </DraggableCard>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 };
