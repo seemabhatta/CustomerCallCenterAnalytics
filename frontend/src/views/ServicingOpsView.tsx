@@ -161,20 +161,26 @@ const ServicingOpsView = () => {
             SLA health
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm">
+        <CardContent>
           {sla ? (
-            <>
-              {Object.entries(sla.current_performance || {}).map(([metric, value]) => (
-                <div key={metric} className="flex justify-between">
-                  <span className="capitalize text-slate-600">{metric.replace(/_/g, ' ')}</span>
-                  <span className="font-medium text-slate-900">
-                    {typeof value === 'number' ? formatPercent(value * (metric.includes('rate') ? 100 : 1)) : String(value)}
-                  </span>
-                </div>
-              ))}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Left Column: Current Performance */}
+              <div className="space-y-4 text-sm">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current Performance</h3>
+                {Object.entries(sla.current_performance || {}).map(([metric, value]) => (
+                  <div key={metric} className="flex justify-between">
+                    <span className="capitalize text-slate-600">{metric.replace(/_/g, ' ')}</span>
+                    <span className="font-medium text-slate-900">
+                      {typeof value === 'number' ? formatPercent(value * (metric.includes('rate') ? 100 : 1)) : String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right Column: Forecast Outlook */}
               {sla.predictions && (
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Forecast Outlook
                     </span>
@@ -193,30 +199,32 @@ const ServicingOpsView = () => {
                     </div>
                   )}
 
-                  {sla.predictions.predicted_fcr_display && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-600">Predicted FCR</span>
-                      <span className="font-medium text-slate-900">{sla.predictions.predicted_fcr_display}</span>
-                    </div>
-                  )}
+                  <div className="space-y-3 text-sm">
+                    {sla.predictions.predicted_fcr_display && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600">Predicted FCR</span>
+                        <span className="font-medium text-slate-900">{sla.predictions.predicted_fcr_display}</span>
+                      </div>
+                    )}
 
-                  {sla.predictions.predicted_escalation_display && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-600">Predicted escalation</span>
-                      <span className="font-medium text-slate-900">{sla.predictions.predicted_escalation_display}</span>
-                    </div>
-                  )}
+                    {sla.predictions.predicted_escalation_display && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600">Predicted escalation</span>
+                        <span className="font-medium text-slate-900">{sla.predictions.predicted_escalation_display}</span>
+                      </div>
+                    )}
 
-                  {sla.predictions.volume_change_display && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-600">Volume change</span>
-                      <span className={`font-medium ${
-                        sla.predictions.volume_change_pct > 0 ? 'text-amber-600' : 'text-emerald-600'
-                      }`}>
-                        {sla.predictions.volume_change_display}
-                      </span>
-                    </div>
-                  )}
+                    {sla.predictions.volume_change_display && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-600">Volume change</span>
+                        <span className={`font-medium ${
+                          sla.predictions.volume_change_pct > 0 ? 'text-amber-600' : 'text-emerald-600'
+                        }`}>
+                          {sla.predictions.volume_change_display}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
                   {sla.predictions.potential_breaches && sla.predictions.potential_breaches.length > 0 && (
                     <div className="mt-3 space-y-2">
@@ -255,7 +263,7 @@ const ServicingOpsView = () => {
                   )}
                 </div>
               )}
-            </>
+            </div>
           ) : (
             <div className="h-40 animate-pulse rounded-lg border border-dashed border-slate-200 bg-slate-50" />
           )}
