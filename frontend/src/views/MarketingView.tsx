@@ -50,7 +50,7 @@ import {
   RetentionStrategy,
 } from '@/types';
 
-const DEFAULT_LAYOUT = ['segments', 'roiAttribution', 'campaigns', 'churnWatchlist', 'journeyInsights', 'messageOptimizer'];
+const DEFAULT_LAYOUT = ['roiAttribution', 'churnWatchlist', 'campaigns', 'segments', 'journeyInsights', 'messageOptimizer'];
 
 const MarketingView = () => {
   const intelligence = useMarketingIntelligence();
