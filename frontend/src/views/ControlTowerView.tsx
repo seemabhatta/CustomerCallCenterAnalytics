@@ -66,7 +66,7 @@ const urgencyBadge = (urgency?: string) => {
   }
 };
 
-const DEFAULT_LAYOUT = ['briefing', 'dollarImpact', 'decisionQueue', 'riskWaterfall', 'recommendations'];
+const DEFAULT_LAYOUT = ['briefing', 'dollarImpact', 'recommendations', 'riskWaterfall', 'decisionQueue'];
 
 const ControlTowerView = () => {
   const intelligence = useLeadershipIntelligence();
