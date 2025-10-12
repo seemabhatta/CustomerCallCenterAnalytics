@@ -153,14 +153,14 @@ const DEFAULT_LAYOUT = [
 ];
 
 const DEFAULT_ROW_MAP: Record<string, number> = {
-  briefing: 0,
-  forecastOutlook: 1,
+  forecastOutlook: 0,
+  dollarImpact: 0,
+  riskWaterfall: 0,
   pipelineInsights: 1,
-  dollarImpact: 1,
-  topIntents: 2,
-  recommendations: 3,
-  riskWaterfall: 4,
-  decisionQueue: 5,
+  topIntents: 1,
+  briefing: 2,
+  decisionQueue: 2,
+  recommendations: 2,
 };
 
 const ControlTowerView = () => {
@@ -244,6 +244,51 @@ const ControlTowerView = () => {
 
   const topIntentsLoading = summaryLoading;
 
+  const dollarImpact = intelligence.dollarImpact.data;
+
+  const summaryStats = useMemo(() => {
+    const stats: SummaryStat[] = [];
+
+    const forecastStamp = forecast?.generated_at;
+    stats.push({
+      label: 'Forecast refresh',
+      value: forecastStamp ? diffFromNow(forecastStamp) || 'Just now' : 'Awaiting run',
+      helper: selectedForecastType?.description ?? 'Select a forecast type',
+    });
+
+    if (dollarImpact) {
+      const delta = dollarImpact.trend_delta_pct ?? null;
+      const tone: SummaryStat['tone'] = delta === null ? 'neutral' : delta > 0 ? 'negative' : delta < 0 ? 'positive' : 'neutral';
+      const deltaLabel =
+        delta === null
+          ? dollarImpact.trend ?? 'vs. prior run'
+          : `${delta > 0 ? '+' : ''}${formatPercent(delta)} ${delta > 0 ? 'increase' : delta < 0 ? 'decrease' : 'flat'}`;
+      stats.push({
+        label: 'Portfolio at risk',
+        value: formatCurrency(dollarImpact.total_at_risk),
+        helper: deltaLabel,
+        tone,
+      });
+    } else {
+      stats.push({
+        label: 'Portfolio at risk',
+        value: '—',
+        helper: 'Risk telemetry unavailable',
+      });
+    }
+
+    const approvalsTotal = intelligence.decisionQueue.data?.count ?? null;
+    const approvalsUrgent = intelligence.decisionQueue.data?.urgent_count ?? 0;
+    stats.push({
+      label: 'Approvals waiting',
+      value: formatNumber(approvalsTotal),
+      helper: approvalsUrgent ? `${formatNumber(approvalsUrgent)} urgent` : 'All standard priority',
+      tone: approvalsUrgent ? 'negative' : 'neutral',
+    });
+
+    return stats;
+  }, [forecast?.generated_at, selectedForecastType?.description, dollarImpact, intelligence.decisionQueue.data]);
+
   const handleRefreshForecast = () => {
     if (!selectedForecastType?.type) return;
     queryClient.invalidateQueries({
@@ -268,7 +313,6 @@ const ControlTowerView = () => {
   const recommendations = (intelligence.briefing.data?.recommendations ?? []) as LeadershipRecommendation[];
   const decisionQueue = (intelligence.decisionQueue.data?.decisions ?? []) as LeadershipDecisionQueueItem[];
   const financialSummary = intelligence.briefing.data?.financial_summary as LeadershipFinancialSummary | undefined;
-  const dollarImpact = intelligence.dollarImpact.data;
   const riskWaterfall = intelligence.riskWaterfall.data as LeadershipRiskWaterfall | undefined;
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -728,6 +772,8 @@ const ControlTowerView = () => {
         </div>
       </div>
 
+      <SummaryRibbon stats={summaryStats} />
+
       {error && (
         <Card className="border border-rose-200 bg-rose-50">
           <CardContent className="py-4">
@@ -822,8 +868,6 @@ const ControlTowerView = () => {
   );
 };
 
-export default ControlTowerView;
-
 const ForecastMetricCard = ({
   label,
   value,
@@ -839,3 +883,43 @@ const ForecastMetricCard = ({
     <p className="mt-1 text-[11px] text-slate-500">{helper}</p>
   </div>
 );
+
+type SummaryStat = {
+  label: string;
+  value: string;
+  helper?: string;
+  tone?: 'neutral' | 'positive' | 'negative';
+};
+
+const SummaryRibbon = ({ stats }: { stats: SummaryStat[] }) => {
+  if (!stats.length) return null;
+
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      {stats.map((stat) => {
+        const toneClass =
+          stat.tone === 'positive'
+            ? 'text-emerald-600'
+            : stat.tone === 'negative'
+            ? 'text-rose-600'
+            : 'text-slate-900';
+        return (
+          <div
+            key={stat.label}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+          >
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              {stat.label}
+            </div>
+            <div className={`mt-2 text-base font-semibold ${toneClass}`}>{stat.value}</div>
+            {stat.helper && (
+              <p className="mt-1 text-[11px] text-slate-500">{stat.helper}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export default ControlTowerView;

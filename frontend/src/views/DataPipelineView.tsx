@@ -571,24 +571,6 @@ export function DataPipelineView() {
   );
 }
 
-function ForecastMetric({
-  label,
-  value,
-  helper,
-}: {
-  label: string;
-  value: string;
-  helper: string;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-100 bg-white/60 p-4 text-xs">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-2 text-xl font-semibold text-slate-900">{value}</div>
-      <p className="mt-1 text-[11px] text-slate-500">{helper}</p>
-    </div>
-  );
-}
-
 function SummaryTile({
   label,
   value,
