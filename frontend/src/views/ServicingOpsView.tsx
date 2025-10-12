@@ -165,7 +165,7 @@ const ServicingOpsView = () => {
           {sla ? (
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Left Column: Current Performance */}
-              <div className="space-y-4 text-sm">
+              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4 text-sm">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current Performance</h3>
                 {Object.entries(sla.current_performance || {}).map(([metric, value]) => (
                   <div key={metric} className="flex justify-between">
@@ -179,7 +179,7 @@ const ServicingOpsView = () => {
 
               {/* Right Column: Forecast Outlook */}
               {sla.predictions && (
-                <div className="space-y-3">
+                <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Forecast Outlook
